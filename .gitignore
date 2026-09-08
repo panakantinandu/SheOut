@@ -30,4 +30,12 @@ Thumbs.db
 # Claude Code harness state - not project source
 .claude/
 
+# Vercel CLI link state, and the per-app build-config files used only for
+# local CLI deploys (vercel.json). Deliberately NOT committed: this repo
+# has two Vercel projects (customer-app, driver-app) watching the same
+# GitHub repo, so a single committed vercel.json would apply to whichever
+# project's git-triggered build runs next - wrong for one of the two.
+# Each project's git-push auto-deploy instead needs its own "Root
+# Directory" set in that project's Vercel dashboard settings (see README).
 .vercel
+vercel*.json
