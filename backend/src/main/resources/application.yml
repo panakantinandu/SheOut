@@ -105,6 +105,16 @@ sheout:
     project-id: ${FIREBASE_PROJECT_ID:}
     credentials-json: ${FIREBASE_CREDENTIALS_JSON:}
 
+  testing:
+    # TESTING AID ONLY, NOT A PRODUCT FEATURE - blank/unset by default,
+    # same "opt-in via env var" treatment as auth's dev-otp-phone. When
+    # set, BookingService.isCustomerVerified lets exactly this phone
+    # number's account skip the real gender-verification check on booking
+    # creation, so an automated QA pass can exercise the full booking flow
+    # without a real admin-verified account. Never set this in a real
+    # production environment.
+    verified-bypass-phone: ${VERIFIED_BYPASS_PHONE:}
+
 management:
   endpoints:
     web:
