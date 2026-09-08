@@ -1,0 +1,5 @@
+# EnvironmentPostProcessor still requires the classic spring.factories
+# registration in Spring Boot 3.x - the newer AutoConfiguration.imports
+# mechanism only covers @AutoConfiguration classes, which load too late for
+# this (it has to run before the DataSource bean is created).
+org.springframework.boot.env.EnvironmentPostProcessor=com.sheout.platform.PostgresUrlEnvironmentPostProcessor

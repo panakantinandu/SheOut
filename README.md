@@ -589,23 +589,39 @@ fail CORS the same way local dev did before `WebConfig` was added.
 
 ## Deploying to Render
 
-The backend deploys to [Render](https://render.com) as a Docker-based web
-service, defined in `render.yaml` at the repo root (a Render "Blueprint").
-Render builds directly from `backend/Dockerfile` - there's no separate
-Render-specific build path.
+The backend, its Postgres database, and its Redis (Render calls this
+"Key Value") instance all deploy together from `render.yaml` at the repo
+root (a Render "Blueprint") - one **New > Blueprint**, pick this repo,
+Apply, and all three resources come up together. Render builds the web
+service directly from `backend/Dockerfile`.
+
+**This is a deliberate choice, not the only option**: Render's free
+Postgres expires after 30 days (the database is deleted, not just
+paused - you'd recreate it and rerun migrations) and its free Key Value
+caps at 25MB. That's an accepted trade-off for now in exchange for zero
+external accounts to manage; move both resources' `plan:` in
+`render.yaml` to a paid tier before that 30-day clock matters, or before
+`dispatch`'s live driver-location data outgrows 25MB.
 
 ### Connecting the repo
 
 1. Push this repo to GitHub.
-2. In the Render dashboard: **New > Blueprint**, pick the repo. Render
-   reads `render.yaml` and proposes the `sheout-backend` web service.
-3. Render will prompt for every env var marked `sync: false` in
-   `render.yaml` (`DATABASE_URL`, `REDIS_URL`, `JWT_SECRET`,
-   `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `FIREBASE_PROJECT_ID`,
-   `FIREBASE_CREDENTIALS_JSON`) - `DATABASE_URL`/`REDIS_URL`/`JWT_SECRET`
-   are required (the app won't start without them); the rest can stay
-   blank until those integrations exist.
-4. Every subsequent push to the connected branch auto-deploys.
+2. In the Render dashboard: **New > Blueprint**, connect your GitHub
+   account if prompted, then pick this repo. Render reads `render.yaml`
+   and proposes three resources: `sheout-db` (Postgres), `sheout-redis`
+   (Key Value), and `sheout-backend` (the web service).
+3. Render will prompt for the env vars marked `sync: false` -
+   **`JWT_SECRET`** (any strong random value, e.g. `openssl rand -base64 48`)
+   is the only one required for startup; `RAZORPAY_KEY_ID`,
+   `RAZORPAY_KEY_SECRET`, `FIREBASE_PROJECT_ID`, and
+   `FIREBASE_CREDENTIALS_JSON` can stay blank until those integrations
+   exist. `DATABASE_URL` and `REDIS_URL` are **not** prompted for - they're
+   wired automatically from `sheout-db`/`sheout-redis` via `fromDatabase`/
+   `fromService` in `render.yaml`, not something you paste in yourself.
+4. Click **Apply**. First build (Docker image, pinned to Java 21) takes a
+   few minutes; watch for `Started SheOutApplication` and Flyway applying
+   its 3 migrations in the logs, same as a local run.
+5. Every subsequent push to the connected branch auto-deploys.
 
 **Document storage on Render:** not declared in `render.yaml`, so it
 defaults to `LocalDiskDocumentStorage` - writing to Render's container
@@ -617,31 +633,32 @@ uploads actually persist.
 
 ### What comes from render.yaml vs. the dashboard
 
-- **`render.yaml`** owns everything that isn't a secret: which Dockerfile
-  to build, the health check path, the region, the plan tier, and the
-  *names* of the required env vars.
+- **`render.yaml`** owns everything that isn't a secret: the Postgres and
+  Key Value resources themselves, which Dockerfile to build, the health
+  check path, the region, the plan tier, and the *names* of the required
+  env vars (including that `DATABASE_URL`/`REDIS_URL` come from those
+  resources automatically).
 - **The dashboard** owns the actual *values* of every `sync: false` var -
-  none of them are ever written to this file or committed.
+  just `JWT_SECRET` and the not-yet-used Razorpay/Firebase placeholders.
+  None of these are ever written to this file or committed.
 
-### DATABASE_URL and REDIS_URL formats
+### Why DATABASE_URL doesn't need manual reshaping (on Render, or anywhere else)
 
-These are the two values you set in the dashboard that aren't already in
-`.env.example` (which only covers local dev):
+Render hands back `DATABASE_URL` as `postgres://user:pass@host:port/db` -
+the standard connection-string form basically every Postgres provider
+uses (Neon, Supabase, AWS RDS included). Spring's JDBC driver can't
+consume that directly (pgjdbc doesn't support `user:pass@` in the URL at
+all), so historically this needed hand-editing into
+`jdbc:postgresql://host:port/db?user=...&password=...` before pasting it
+in.
 
-- **`DATABASE_URL`** (Neon or Supabase) - Neon/Supabase give you a
-  `postgresql://user:password@host/dbname?sslmode=require` style string.
-  Spring needs the JDBC form instead, with credentials as query params:
-  ```
-  jdbc:postgresql://<host>/<dbname>?user=<user>&password=<pass>&sslmode=require
-  ```
-  Take the host/dbname/user/password out of what Neon/Supabase gives you
-  and reassemble it in this form - pasting their string in as-is will not
-  work.
-- **`REDIS_URL`** (Upstash) - Upstash's connection string works as-is,
-  paste it directly:
-  ```
-  rediss://default:<password>@<host>:<port>
-  ```
+That's now automatic: `PostgresUrlEnvironmentPostProcessor`
+(`com.sheout.platform`) rewrites `DATABASE_URL` into the JDBC form at
+startup, for *any* provider that hands back the standard form - not
+Render-specific. If you ever point `DATABASE_URL` at Neon, Supabase, or
+RDS instead, paste their connection string in as-is; no manual reshaping
+needed there either anymore. `REDIS_URL` never needed this - Spring Data
+Redis's URL parser already handles `redis://user:pass@host:port` natively.
 
 ### Free tier trade-off
 
