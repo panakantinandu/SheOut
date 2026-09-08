@@ -1,7 +1,7 @@
 import { MessageCircle, Phone, Radio, ShieldAlert, Star } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Button, Card, IconCircle, StatusBadge, TopHeader } from '@sheout/design-system';
+import { AmountText, Button, Card, IconCircle, StatusBadge, TopHeader } from '@sheout/design-system';
 import { ApiError, bookingApi } from '../api/client';
 import type { BookingSummary } from '../api/types';
 import { MapPlaceholder } from '../components/MapPlaceholder';
@@ -73,6 +73,17 @@ export function Tracking() {
       <MapPlaceholder label="Live location tracking" />
 
       {error && <p className="text-sm text-danger">{error}</p>}
+
+      {/* REAL: fareEstimate comes back from bookingApi.create() at RideBooking/
+          DeliveryBooking time (RequestBookingCommand runs FareCalculator
+          immediately, there's no separate quote step - see those screens'
+          file comments) - this is the first place it's actually shown. */}
+      {booking && (
+        <Card className="flex items-center justify-between">
+          <span className="text-sm text-text-secondary">{booking.status === 'COMPLETED' ? 'Final Fare' : 'Estimated Fare'}</span>
+          <AmountText amount={booking.finalFare ?? booking.fareEstimate} size="lg" />
+        </Card>
+      )}
 
       {!booking ? (
         <p className="text-center text-sm text-text-secondary">Loading...</p>
