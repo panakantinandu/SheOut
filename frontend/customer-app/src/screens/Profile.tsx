@@ -42,7 +42,9 @@ export function Profile() {
         <IconCircle size="lg" tone="soft" icon={<User />} />
         <div>
           <p className="font-heading font-semibold text-text-primary">{profile?.name || 'Add your name'}</p>
-          <p className="text-sm text-text-secondary">{profile?.phoneNumber ?? (error || 'Loading...')}</p>
+          <p className="text-sm text-text-secondary">
+            {profile ? profile.phoneNumber || 'Signed in with Google' : error || 'Loading...'}
+          </p>
         </div>
       </Card>
 

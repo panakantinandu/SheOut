@@ -19,17 +19,31 @@ class UserProfileEventListeners {
     }
 
     /**
-     * Creates the (empty) profile row every account needs one of, so a
-     * profile always exists by the time a client can call any self-service
+     * Creates the profile row every account needs one of, so a profile
+     * always exists by the time a client can call any self-service
      * endpoint here - auth only issues a token after this listener has run
-     * (same transaction as AuthService.verifyOtp).
+     * (same transaction as AuthService.verifyOtp/verifyGoogleSignIn).
+     * <p>
+     * Name is left empty for a phone signup (not known at signup time -
+     * the client fills it in later via the self-service PUT, see
+     * CustomerProfileController), but pre-filled for a Google signup since
+     * the ID token's "name" claim already gives it - event.name() is null
+     * in the phone case, non-null (usually) in the Google case.
      */
     @EventListener
     @Transactional
     public void onAccountRegistered(AccountRegistered event) {
         switch (event.role()) {
-            case CUSTOMER -> customerProfileRepository.save(new CustomerProfileEntity(event.accountId()));
-            case DRIVER -> driverProfileRepository.save(new DriverProfileEntity(event.accountId()));
+            case CUSTOMER -> {
+                CustomerProfileEntity profile = new CustomerProfileEntity(event.accountId());
+                if (event.name() != null) profile.setName(event.name());
+                customerProfileRepository.save(profile);
+            }
+            case DRIVER -> {
+                DriverProfileEntity profile = new DriverProfileEntity(event.accountId());
+                if (event.name() != null) profile.setName(event.name());
+                driverProfileRepository.save(profile);
+            }
             case ADMIN -> {
                 // No profile in this module for admins.
             }

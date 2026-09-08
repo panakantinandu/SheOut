@@ -4,6 +4,7 @@ import com.sheout.auth.AccountRole;
 import com.sheout.auth.AuthenticatedSession;
 import com.sheout.auth.internal.AuthError;
 import com.sheout.auth.internal.AuthService;
+import com.sheout.auth.internal.security.GoogleTokenVerifier;
 import com.sheout.sharedkernel.Result;
 import com.sheout.sharedkernel.web.ApiException;
 import jakarta.validation.Valid;
@@ -17,17 +18,20 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Combined signup/login over phone + OTP. There is no separate "signup"
- * endpoint - verifying a code for a phone number that has no account yet
- * creates one with the role given in the request.
+ * Combined signup/login over phone + OTP, or over Google Sign-In. There is
+ * no separate "signup" endpoint for either - verifying a code (or a Google
+ * ID token) for an identity with no account yet creates one with the role
+ * given in the request.
  */
 @RestController
 public class AuthController {
 
     private final AuthService authService;
+    private final GoogleTokenVerifier googleTokenVerifier;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, GoogleTokenVerifier googleTokenVerifier) {
         this.authService = authService;
+        this.googleTokenVerifier = googleTokenVerifier;
     }
 
     @PostMapping("/api/v1/auth/otp/request")
@@ -45,6 +49,31 @@ public class AuthController {
         requireSelfServiceRole(request.role());
         Result<AuthenticatedSession, AuthError> result =
                 authService.verifyOtp(request.phoneNumber(), request.code(), request.role());
+        if (result.isFailure()) {
+            throw toApiException(result.error());
+        }
+        return ResponseEntity.ok(VerifyOtpResponse.from(result.value()));
+    }
+
+    /**
+     * Google's equivalent of /otp/verify - same response shape
+     * (VerifyOtpResponse) so the rest of the app doesn't need to know which
+     * method was used to sign in. The ID token itself is verified here
+     * (signature/issuer/audience/expiry/email_verified against Google's
+     * public keys - see GoogleTokenVerifier) before anything about it is
+     * trusted; AuthService only ever sees an already-verified email/name.
+     */
+    @PostMapping("/api/v1/auth/google/verify")
+    public ResponseEntity<VerifyOtpResponse> verifyGoogle(@Valid @RequestBody GoogleVerifyRequest request) {
+        requireSelfServiceRole(request.role());
+        if (!googleTokenVerifier.isConfigured()) {
+            throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "Service Unavailable", "Google sign-in is not configured on this server");
+        }
+        GoogleTokenVerifier.VerifiedGoogleUser verified = googleTokenVerifier.verify(request.idToken())
+                .orElseThrow(() -> ApiException.unauthorized("Invalid or expired Google sign-in token"));
+
+        Result<AuthenticatedSession, AuthError> result =
+                authService.verifyGoogleSignIn(verified.email(), verified.name(), request.role());
         if (result.isFailure()) {
             throw toApiException(result.error());
         }
@@ -75,7 +104,9 @@ public class AuthController {
             case OTP_CODE_MISMATCH ->
                     new ApiException(HttpStatus.BAD_REQUEST, "Bad Request", "Incorrect OTP code");
             case ROLE_MISMATCH ->
-                    new ApiException(HttpStatus.CONFLICT, "Conflict", "This phone number is already registered under a different role");
+                    // Shared between the phone and Google flows (see verifyGoogle) - kept
+                    // provider-agnostic rather than saying "phone number" for both.
+                    new ApiException(HttpStatus.CONFLICT, "Conflict", "This account is already registered under a different role");
         };
     }
 
@@ -88,6 +119,12 @@ public class AuthController {
     public record VerifyOtpRequest(
             @NotBlank @Pattern(regexp = "^\\+[1-9]\\d{7,14}$", message = "must be a valid E.164 phone number") String phoneNumber,
             @NotBlank @Pattern(regexp = "^\\d{6}$", message = "must be a 6-digit code") String code,
+            @NotNull AccountRole role
+    ) {
+    }
+
+    public record GoogleVerifyRequest(
+            @NotBlank String idToken,
             @NotNull AccountRole role
     ) {
     }

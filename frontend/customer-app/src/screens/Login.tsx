@@ -1,12 +1,14 @@
-import { Bike, Phone } from 'lucide-react';
+import { Phone, User } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, IconCircle, TextField } from '@sheout/design-system';
-import { ApiError, authApi } from '../api/client';
+import { Button, TextField } from '@sheout/design-system';
+import { ApiError, authApi, usersApi } from '../api/client';
+import type { AuthSession } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
-import { mockAction } from '../lib/mockAction';
+import { signInWithGoogle } from '../lib/googleAuth';
 
 const PHONE_REGEX = /^\+[1-9]\d{7,14}$/;
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
 /**
  * Official Google "G" logomark (4-color, standard OAuth-button asset) -
@@ -27,39 +29,74 @@ function GoogleIcon({ className }: { className?: string }) {
 /**
  * FLAGGED DEVIATION FROM THE MOCKUP: the mockup shows phone number +
  * password fields. The backend (auth module) has no password/credential
- * concept at all - only phone + OTP. Rather than build a password field
- * that does nothing real, this is a two-step phone -> OTP flow, wired to
- * the actual live endpoints. There's no separate Sign Up screen/endpoint
- * either - verifying an OTP for a new number creates the account, so
- * "Sign Up" below is descriptive text, not a dead link.
+ * concept at all - only phone + OTP, or Google Sign-In. There's still no
+ * separate up-front Sign Up form - verifying an OTP (or a Google token)
+ * for an identity with no account creates one; "Sign Up" below describes
+ * that flow rather than linking to a separate form.
  * <p>
- * "Continue with Google" is still non-functional (no Google OAuth wired
- * up) - now uses mockAction on click instead of the disabled HTML
- * attribute, so it reads as "coming soon" (full-opacity, real icon) rather
- * than a greyed-out dead button, per the same convention used elsewhere
- * in this app for unbuilt actions.
+ * NEW ACCOUNT vs RETURNING USER: after either sign-in method succeeds,
+ * this fetches the just-created/found profile and checks whether it has a
+ * name yet - CustomerProfileApi requires one, and neither sign-in method
+ * always has one (phone never does; Google does, but only when the
+ * account is brand new - see afterSignIn). No name means the "Complete
+ * your profile" step runs before Home; a name already present means this
+ * is a returning user and skips straight to Home, unchanged from before.
+ * If the profile fetch itself fails, this falls back to the session's
+ * newAccount flag rather than stranding the user.
  * <p>
- * FLAGGED FOR VISUAL DOUBLE-CHECK: the mockup's bike/scooter graphic is a
- * custom illustration (woman on a scooter with a location pin) - no such
- * SVG asset exists in this project, so it's approximated here with
- * lucide's Bike icon in a primary IconCircle, the same stand-in already
- * used for "Bike Taxi" elsewhere in this app. Heading/subtitle sizes and
- * the gap between them are eyeballed from the mockup image, not measured -
- * worth a pixel check once this is live. The tagline's italic now uses an
- * actual italic Inter font file (added to index.html's Google Fonts
- * request), not browser-synthesized oblique.
+ * GOOGLE SIGN-IN: wired to real Google Identity Services (see
+ * lib/googleAuth.ts) and the backend's /api/v1/auth/google/verify, which
+ * verifies the ID token server-side before trusting anything in it. NOT
+ * YET FUNCTIONAL IN PRODUCTION, though: no real Google Cloud OAuth Client
+ * ID was given for this build (VITE_GOOGLE_CLIENT_ID is unset) - clicking
+ * the button shows a clear "not configured yet" message instead of
+ * attempting a broken flow. Set VITE_GOOGLE_CLIENT_ID (this app's Vercel
+ * project) and GOOGLE_OAUTH_CLIENT_ID (the backend, on Render) to the same
+ * real Client ID and this starts working with no further code changes.
+ * ACCOUNT LINKING: see AuthService.verifyGoogleSignIn's Javadoc - phone
+ * accounts never collect an email, so there's currently no realistic case
+ * where a Google sign-in's email collides with an existing phone account;
+ * building real cross-method linking is flagged there as a separate,
+ * deliberately-not-built product decision.
+ * <p>
+ * FLAGGED FOR VISUAL DOUBLE-CHECK: heading/subtitle sizes and the gap
+ * between them are eyeballed from the mockup image, not measured - worth
+ * a pixel check once live. The Google prompt (GIS's "One Tap" surface,
+ * triggered from this custom-styled button rather than Google's own
+ * rendered button) can silently decline to appear at all in some
+ * browsers/cookie settings - handled as an error rather than a silent
+ * hang, but worth knowing this is a real GIS limitation, not a bug here.
  */
 export function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  const [step, setStep] = useState<'phone' | 'otp'>('phone');
+  const [step, setStep] = useState<'phone' | 'otp' | 'complete-profile'>('phone');
   const [phoneDigits, setPhoneDigits] = useState('');
   const [code, setCode] = useState('');
+  const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const phoneNumber = `+91${phoneDigits}`;
+
+  /** Shared by both sign-in methods - see the file header comment. */
+  async function afterSignIn(session: AuthSession) {
+    login(session);
+    let needsProfile = session.newAccount;
+    try {
+      const profile = await usersApi.getMyProfile();
+      needsProfile = !profile.name;
+    } catch {
+      // Profile fetch failed - fall back to the session's own signal rather than stranding the user here.
+    }
+    if (needsProfile) {
+      setStep('complete-profile');
+    } else {
+      navigate('/home', { replace: true });
+    }
+  }
 
   async function handleSendOtp(e: FormEvent) {
     e.preventDefault();
@@ -85,8 +122,7 @@ export function Login() {
     setSubmitting(true);
     try {
       const session = await authApi.verifyOtp(phoneNumber, code);
-      login(session);
-      navigate('/home', { replace: true });
+      await afterSignIn(session);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not verify code');
     } finally {
@@ -94,81 +130,143 @@ export function Login() {
     }
   }
 
+  async function handleCompleteProfile(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+    if (!name.trim()) {
+      setError('Enter your name');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await usersApi.updateMyProfile({ name: name.trim() });
+      navigate('/home', { replace: true });
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not save your name');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleGoogleSignIn() {
+    setError(null);
+    if (!GOOGLE_CLIENT_ID) {
+      setError('Google sign-in is not configured yet');
+      return;
+    }
+    setGoogleLoading(true);
+    try {
+      const idToken = await signInWithGoogle(GOOGLE_CLIENT_ID);
+      const session = await authApi.googleSignIn(idToken);
+      await afterSignIn(session);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Google sign-in failed');
+    } finally {
+      setGoogleLoading(false);
+    }
+  }
+
   return (
     <div className="flex min-h-screen flex-col justify-center bg-background px-screen py-10">
       <div className="mx-auto mb-6 flex flex-col items-center gap-2">
-        <IconCircle size="lg" icon={<Bike className="h-7 w-7" />} />
+        <img src="/Logo.jpeg" alt="SheOut" className="h-24 w-24 rounded-card object-cover shadow-card" />
         <p className="font-heading text-3xl font-extrabold tracking-tight text-text-primary">
           SHE<span className="text-accent-orange">O</span>UT
         </p>
         <p className="text-sm italic text-text-secondary">Your Delivery, Our Priority</p>
       </div>
 
-      <h1 className="text-center font-heading text-2xl font-bold text-text-primary">Welcome Back!</h1>
-      <p className="mb-6 text-center text-sm text-text-secondary">Sign in to continue</p>
-
-      {step === 'phone' ? (
-        <form onSubmit={handleSendOtp} className="space-y-4">
-          <TextField
-            icon={
-              <span className="flex items-center gap-2 text-text-secondary">
-                <Phone className="h-4 w-4" />
-                <span className="h-4 w-px bg-border" />
-                <span className="text-sm font-medium text-text-primary">+91</span>
-              </span>
-            }
-            type="tel"
-            inputMode="numeric"
-            placeholder="Mobile Number"
-            value={phoneDigits}
-            onChange={(e) => setPhoneDigits(e.target.value.replace(/\D/g, '').slice(0, 10))}
-            error={error ?? undefined}
-          />
-          <Button type="submit" fullWidth disabled={submitting}>
-            {submitting ? 'Sending...' : 'Send OTP'}
-          </Button>
-        </form>
+      {step === 'complete-profile' ? (
+        <>
+          <h1 className="text-center font-heading text-2xl font-bold text-text-primary">Complete Your Profile</h1>
+          <p className="mb-6 text-center text-sm text-text-secondary">Just your name, and you're in</p>
+          <form onSubmit={handleCompleteProfile} className="space-y-4">
+            <TextField
+              icon={<User className="h-4 w-4 text-text-secondary" />}
+              type="text"
+              placeholder="Your Name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              error={error ?? undefined}
+            />
+            <Button type="submit" fullWidth disabled={submitting}>
+              {submitting ? 'Saving...' : 'Continue'}
+            </Button>
+          </form>
+        </>
       ) : (
-        <form onSubmit={handleVerifyOtp} className="space-y-4">
-          <p className="text-center text-sm text-text-secondary">Enter the code sent to {phoneNumber}</p>
-          <TextField
-            type="text"
-            inputMode="numeric"
-            placeholder="6-digit code"
-            value={code}
-            onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-            error={error ?? undefined}
-          />
-          <Button type="submit" fullWidth disabled={submitting}>
-            {submitting ? 'Verifying...' : 'Login'}
-          </Button>
-          <button
-            type="button"
-            onClick={() => setStep('phone')}
-            className="w-full text-center text-sm text-text-secondary underline"
-          >
-            Change number
-          </button>
-        </form>
+        <>
+          <h1 className="text-center font-heading text-2xl font-bold text-text-primary">Welcome Back!</h1>
+          <p className="mb-6 text-center text-sm text-text-secondary">Sign in to continue</p>
+
+          {step === 'phone' ? (
+            <form onSubmit={handleSendOtp} className="space-y-4">
+              <TextField
+                icon={
+                  <span className="flex items-center gap-2 text-text-secondary">
+                    <Phone className="h-4 w-4" />
+                    <span className="h-4 w-px bg-border" />
+                    <span className="text-sm font-medium text-text-primary">+91</span>
+                  </span>
+                }
+                type="tel"
+                inputMode="numeric"
+                placeholder="Mobile Number"
+                value={phoneDigits}
+                onChange={(e) => setPhoneDigits(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                error={error ?? undefined}
+              />
+              <Button type="submit" fullWidth disabled={submitting}>
+                {submitting ? 'Sending...' : 'Send OTP'}
+              </Button>
+            </form>
+          ) : (
+            <form onSubmit={handleVerifyOtp} className="space-y-4">
+              <p className="text-center text-sm text-text-secondary">Enter the code sent to {phoneNumber}</p>
+              <TextField
+                type="text"
+                inputMode="numeric"
+                placeholder="6-digit code"
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                error={error ?? undefined}
+              />
+              <Button type="submit" fullWidth disabled={submitting}>
+                {submitting ? 'Verifying...' : 'Login'}
+              </Button>
+              <button
+                type="button"
+                onClick={() => setStep('phone')}
+                className="w-full text-center text-sm text-text-secondary underline"
+              >
+                Change number
+              </button>
+            </form>
+          )}
+
+          {step === 'phone' && (
+            <>
+              <div className="my-6 text-center text-xs font-medium text-text-secondary">or</div>
+
+              <Button
+                type="button"
+                variant="secondary"
+                fullWidth
+                icon={<GoogleIcon className="h-4 w-4" />}
+                disabled={googleLoading}
+                onClick={handleGoogleSignIn}
+              >
+                {googleLoading ? 'Signing in...' : 'Continue with Google'}
+              </Button>
+
+              <p className="mt-6 text-center text-sm text-text-secondary">
+                Don't have an account? <span className="font-semibold text-primary">Sign Up</span> - enter a new
+                number above, verify the OTP, then add your name to finish.
+              </p>
+            </>
+          )}
+        </>
       )}
-
-      <div className="my-6 text-center text-xs font-medium text-text-secondary">or</div>
-
-      <Button
-        type="button"
-        variant="secondary"
-        fullWidth
-        icon={<GoogleIcon className="h-4 w-4" />}
-        title="Not implemented yet"
-        onClick={() => mockAction('Continue with Google', 'Google OAuth not implemented yet')}
-      >
-        Continue with Google
-      </Button>
-
-      <p className="mt-6 text-center text-sm text-text-secondary">
-        Don't have an account? <span className="font-semibold text-primary">Sign Up</span> - entering a new number
-        above creates one automatically.
-      </p>
     </div>
   );
 }
