@@ -536,6 +536,57 @@ and notifications aren't implemented yet.
 Copy `.env.example` to `.env` (gitignored) for local dev and fill in
 values as each integration gets implemented.
 
+## Deploying to Vercel
+
+`customer-app` and `driver-app` are live:
+
+- **customer-app:** https://sheout-customer-app.vercel.app
+- **driver-app:** https://sheout-driver-app.vercel.app
+
+Both are separate Vercel projects (`sheout-customer-app`, `sheout-driver-app`
+under the `panakantinandus-projects` team) watching the same GitHub repo.
+
+### Why there's no committed `vercel.json`
+
+This repo is an npm-workspaces monorepo - `@sheout/design-system` doesn't
+exist on the npm registry, so `npm install` has to run at the **repo
+root** (where the `workspaces` field lives), not inside
+`frontend/customer-app`/`frontend/driver-app` directly, or it 404s trying
+to fetch the design-system package. That means each project's install/
+build/output settings need to point at the root install + the right
+per-app build script and output folder.
+
+The catch: since both Vercel projects watch the *same* repo, a single
+committed `vercel.json` would apply to **both** projects' git-triggered
+builds - correct for one app, wrong for the other. So:
+
+- **Local CLI deploys** (what was used to stand these up) use a
+  gitignored `vercel.json` at the repo root, swapped between two local
+  configs (`installCommand: npm install`, `buildCommand: npm run build
+  --workspace=<app>`, `outputDirectory: frontend/<app>/dist`) depending
+  on which project is linked via `vercel link` at the time.
+- **Git-push auto-deploy** (not set up yet) needs each project's own
+  **Root Directory** set in its Vercel dashboard (Project Settings >
+  General > Root Directory: `frontend/customer-app` or
+  `frontend/driver-app`) instead - Vercel's own monorepo detection then
+  handles the root-level install automatically, no vercel.json needed.
+  Do this per project in the dashboard if you want pushes to `main` to
+  redeploy automatically; until then, redeploy manually with the CLI
+  commands above.
+
+### VITE_API_BASE_URL
+
+The deployed apps don't know where the backend is yet - `client.ts` reads
+`VITE_API_BASE_URL` (falls back to `http://localhost:8080` for local dev),
+but no value is set on either Vercel project, so **the deployed apps
+can't reach a backend until this is set**. Once the backend has a real
+Render URL (see below), set it as an environment variable on the
+`sheout-customer-app` Vercel project (Project Settings > Environment
+Variables, all environments) and redeploy. The backend's
+`CORS_ALLOWED_ORIGINS` also needs the deployed frontend origin
+(`https://sheout-customer-app.vercel.app`) added, or every request will
+fail CORS the same way local dev did before `WebConfig` was added.
+
 ## Deploying to Render
 
 The backend deploys to [Render](https://render.com) as a Docker-based web
