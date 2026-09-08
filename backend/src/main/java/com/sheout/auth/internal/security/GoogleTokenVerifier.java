@@ -1,12 +1,17 @@
 package com.sheout.auth.internal.security;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Verifies a Google OAuth2 access token (from the frontend's
@@ -32,18 +37,35 @@ import java.util.Optional;
  * (same treatment as Razorpay/Firebase's other unset placeholders) - see
  * isConfigured(). A real Client ID is now set in both environments this
  * app deploys to.
+ * <p>
+ * PERFORMANCE: tokeninfo and userinfo run in parallel (via virtual
+ * threads) rather than one-after-another - they don't actually depend on
+ * each other's response (userinfo only needs the raw access token, not
+ * tokeninfo's result), so there's no reason to pay both round-trips
+ * sequentially. The tokeninfo/audience check still gates whether
+ * userinfo's result is ever used, so this doesn't weaken the security
+ * check, it just stops waiting on it before starting the other call. Both
+ * calls also now have an explicit timeout - previously there was none at
+ * all, so a slow/stuck response from Google's servers had no bound on how
+ * long this would hang.
  */
 @Component
 public class GoogleTokenVerifier {
 
     private static final String TOKENINFO_URL = "https://oauth2.googleapis.com/tokeninfo?access_token={token}";
     private static final String USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo";
+    private static final int TIMEOUT_MS = 5000;
 
     private final String clientId;
-    private final RestClient restClient = RestClient.create();
+    private final RestClient restClient;
+    private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
 
     public GoogleTokenVerifier(@Value("${sheout.auth.google-client-id:}") String clientId) {
         this.clientId = clientId;
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(TIMEOUT_MS);
+        requestFactory.setReadTimeout(TIMEOUT_MS);
+        this.restClient = RestClient.builder().requestFactory(requestFactory).build();
     }
 
     public boolean isConfigured() {
@@ -62,19 +84,18 @@ public class GoogleTokenVerifier {
             return Optional.empty();
         }
         try {
-            Map<String, Object> tokenInfo = restClient.get()
-                    .uri(TOKENINFO_URL, accessToken)
-                    .retrieve()
-                    .body(Map.class);
+            CompletableFuture<Map> tokenInfoFuture = CompletableFuture.supplyAsync(
+                    () -> restClient.get().uri(TOKENINFO_URL, accessToken).retrieve().body(Map.class), executor);
+            CompletableFuture<Map> userInfoFuture = CompletableFuture.supplyAsync(
+                    () -> restClient.get().uri(USERINFO_URL).header("Authorization", "Bearer " + accessToken).retrieve().body(Map.class),
+                    executor);
+
+            Map<String, Object> tokenInfo = tokenInfoFuture.join();
             if (tokenInfo == null || !clientId.equals(tokenInfo.get("aud"))) {
                 return Optional.empty();
             }
 
-            Map<String, Object> userInfo = restClient.get()
-                    .uri(USERINFO_URL)
-                    .header("Authorization", "Bearer " + accessToken)
-                    .retrieve()
-                    .body(Map.class);
+            Map<String, Object> userInfo = userInfoFuture.join();
             if (userInfo == null) {
                 return Optional.empty();
             }
@@ -85,8 +106,8 @@ public class GoogleTokenVerifier {
             }
             Object name = userInfo.get("name");
             return Optional.of(new VerifiedGoogleUser(((String) email).toLowerCase(), name == null ? null : name.toString()));
-        } catch (RestClientException ex) {
-            // Includes 4xx from either endpoint (expired/invalid/revoked token) - not our concern to distinguish further.
+        } catch (RestClientException | CompletionException ex) {
+            // Includes 4xx from either endpoint (expired/invalid/revoked token) and timeouts - not our concern to distinguish further.
             return Optional.empty();
         }
     }
