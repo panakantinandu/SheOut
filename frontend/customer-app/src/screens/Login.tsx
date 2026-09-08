@@ -44,15 +44,18 @@ function GoogleIcon({ className }: { className?: string }) {
  * If the profile fetch itself fails, this falls back to the session's
  * newAccount flag rather than stranding the user.
  * <p>
- * GOOGLE SIGN-IN: wired to real Google Identity Services (see
- * lib/googleAuth.ts) and the backend's /api/v1/auth/google/verify, which
- * verifies the ID token server-side before trusting anything in it. NOT
- * YET FUNCTIONAL IN PRODUCTION, though: no real Google Cloud OAuth Client
- * ID was given for this build (VITE_GOOGLE_CLIENT_ID is unset) - clicking
- * the button shows a clear "not configured yet" message instead of
- * attempting a broken flow. Set VITE_GOOGLE_CLIENT_ID (this app's Vercel
- * project) and GOOGLE_OAUTH_CLIENT_ID (the backend, on Render) to the same
- * real Client ID and this starts working with no further code changes.
+ * GOOGLE SIGN-IN: real Google Identity Services (see lib/googleAuth.ts),
+ * live in production with a real Client ID set on both this app (Vercel)
+ * and the backend (Render). Uses the OAuth2 popup flow
+ * (google.accounts.oauth2.initTokenClient), not One Tap - One Tap's
+ * prompt() is meant for automatic/passive prompts and turned out to
+ * silently decline to display at all when triggered from a button click
+ * (a real, known GIS limitation for that use case, not a bug in this
+ * code) - see googleAuth.ts for the full reasoning. This returns an
+ * OAuth2 access token, which the backend verifies against Google's own
+ * tokeninfo + userinfo endpoints (confirms it was issued for this app's
+ * Client ID, then fetches the verified email/name) rather than checking
+ * a JWT signature locally - see GoogleTokenVerifier.
  * ACCOUNT LINKING: see AuthService.verifyGoogleSignIn's Javadoc - phone
  * accounts never collect an email, so there's currently no realistic case
  * where a Google sign-in's email collides with an existing phone account;
@@ -61,11 +64,7 @@ function GoogleIcon({ className }: { className?: string }) {
  * <p>
  * FLAGGED FOR VISUAL DOUBLE-CHECK: heading/subtitle sizes and the gap
  * between them are eyeballed from the mockup image, not measured - worth
- * a pixel check once live. The Google prompt (GIS's "One Tap" surface,
- * triggered from this custom-styled button rather than Google's own
- * rendered button) can silently decline to appear at all in some
- * browsers/cookie settings - handled as an error rather than a silent
- * hang, but worth knowing this is a real GIS limitation, not a bug here.
+ * a pixel check once live.
  */
 export function Login() {
   const navigate = useNavigate();
@@ -156,8 +155,8 @@ export function Login() {
     }
     setGoogleLoading(true);
     try {
-      const idToken = await signInWithGoogle(GOOGLE_CLIENT_ID);
-      const session = await authApi.googleSignIn(idToken);
+      const accessToken = await signInWithGoogle(GOOGLE_CLIENT_ID);
+      const session = await authApi.googleSignIn(accessToken);
       await afterSignIn(session);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Google sign-in failed');

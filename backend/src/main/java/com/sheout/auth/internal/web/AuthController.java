@@ -58,10 +58,11 @@ public class AuthController {
     /**
      * Google's equivalent of /otp/verify - same response shape
      * (VerifyOtpResponse) so the rest of the app doesn't need to know which
-     * method was used to sign in. The ID token itself is verified here
-     * (signature/issuer/audience/expiry/email_verified against Google's
-     * public keys - see GoogleTokenVerifier) before anything about it is
-     * trusted; AuthService only ever sees an already-verified email/name.
+     * method was used to sign in. accessToken is an OAuth2 access token
+     * from the frontend's popup flow (not an ID token/JWT - see
+     * lib/googleAuth.ts), verified here against Google's own tokeninfo +
+     * userinfo endpoints (see GoogleTokenVerifier) before anything about it
+     * is trusted; AuthService only ever sees an already-verified email/name.
      */
     @PostMapping("/api/v1/auth/google/verify")
     public ResponseEntity<VerifyOtpResponse> verifyGoogle(@Valid @RequestBody GoogleVerifyRequest request) {
@@ -69,7 +70,7 @@ public class AuthController {
         if (!googleTokenVerifier.isConfigured()) {
             throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "Service Unavailable", "Google sign-in is not configured on this server");
         }
-        GoogleTokenVerifier.VerifiedGoogleUser verified = googleTokenVerifier.verify(request.idToken())
+        GoogleTokenVerifier.VerifiedGoogleUser verified = googleTokenVerifier.verify(request.accessToken())
                 .orElseThrow(() -> ApiException.unauthorized("Invalid or expired Google sign-in token"));
 
         Result<AuthenticatedSession, AuthError> result =
@@ -126,7 +127,7 @@ public class AuthController {
     }
 
     public record GoogleVerifyRequest(
-            @NotBlank String idToken,
+            @NotBlank String accessToken,
             @NotNull AccountRole role
     ) {
     }
