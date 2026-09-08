@@ -1,0 +1,98 @@
+server:
+  # Render (and platforms like it) inject PORT at runtime - default here is
+  # only for running the jar directly with no PORT set.
+  port: ${PORT:8080}
+
+spring:
+  application:
+    name: sheout-backend
+
+  # No default here on purpose: this is the Render/production profile, and
+  # a missing DATABASE_URL should fail startup loudly rather than silently
+  # trying to reach a localhost Postgres that doesn't exist in that
+  # environment. Format is a standard JDBC url with credentials as query
+  # params, e.g. from Neon:
+  #   jdbc:postgresql://<host>/<dbname>?user=<user>&password=<pass>&sslmode=require
+  # Local dev overrides this - see application-local.yml.
+  datasource:
+    url: ${DATABASE_URL}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+  data:
+    redis:
+      # Same reasoning as datasource.url - required, no default. Paste
+      # Upstash's connection string as-is, e.g.:
+      #   rediss://default:<password>@<host>:<port>
+      # Local dev overrides this - see application-local.yml.
+      url: ${REDIS_URL}
+
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+# Placeholders for services not implemented yet. Every value is sourced
+# from an env var with no default secret - set real values via a local
+# .env (see .env.example) or the deploy environment's secret store. Never
+# put a real value directly in this file.
+sheout:
+  cors:
+    # Comma-separated origins allowed to call the API from a browser (see
+    # WebConfig) - defaults cover the frontend apps' local dev ports.
+    # Add the deployed frontend's real origin here once one exists.
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:5174,http://localhost:5175}
+
+  auth:
+    # No default - see JwtService Javadoc for why a missing/weak secret
+    # should fail startup rather than silently signing with something
+    # guessable. Local dev gets a dev-only default - see application-local.yml.
+    jwt-secret: ${JWT_SECRET}
+    jwt-expiry-minutes: ${JWT_EXPIRY_MINUTES:43200}
+    otp-ttl-seconds: ${OTP_TTL_SECONDS:300}
+
+  document-storage:
+    # local | s3 - see DocumentStorage/LocalDiskDocumentStorage/S3DocumentStorage.
+    provider: ${DOCUMENT_STORAGE_PROVIDER:local}
+    local:
+      path: ${DOCUMENT_STORAGE_LOCAL_PATH:./data/documents}
+    s3:
+      bucket: ${DOCUMENT_STORAGE_S3_BUCKET:}
+      region: ${DOCUMENT_STORAGE_S3_REGION:ap-south-1}
+      # Only needed for a non-AWS S3-compatible provider - leave empty for real AWS S3.
+      endpoint: ${DOCUMENT_STORAGE_S3_ENDPOINT:}
+      presign-expiry-minutes: ${DOCUMENT_STORAGE_S3_PRESIGN_EXPIRY_MINUTES:15}
+      # Credentials are NOT a sheout.* property - S3DocumentStorage uses the
+      # AWS SDK's own default credential chain, which already reads the
+      # standard AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY env vars.
+
+  dispatch:
+    # None of these were specified beyond the offer window's "e.g. 15
+    # seconds" - all illustrative defaults, flagged in the dispatch module
+    # README section. Tune once there's real matching data to tune against.
+    initial-radius-km: ${DISPATCH_INITIAL_RADIUS_KM:3.0}
+    radius-expansion-factor: ${DISPATCH_RADIUS_EXPANSION_FACTOR:2.0}
+    candidate-count: ${DISPATCH_CANDIDATE_COUNT:5}
+    offer-window-seconds: ${DISPATCH_OFFER_WINDOW_SECONDS:15}
+    max-retries: ${DISPATCH_MAX_RETRIES:3}
+    sweep-interval-ms: ${DISPATCH_SWEEP_INTERVAL_MS:2000}
+
+  payments:
+    razorpay:
+      key-id: ${RAZORPAY_KEY_ID:}
+      key-secret: ${RAZORPAY_KEY_SECRET:}
+  firebase:
+    project-id: ${FIREBASE_PROJECT_ID:}
+    credentials-json: ${FIREBASE_CREDENTIALS_JSON:}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized

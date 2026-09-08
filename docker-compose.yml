@@ -1,0 +1,65 @@
+services:
+  app:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      # `local` activates application-local.yml, which builds datasource/
+      # redis URLs from the DB_*/REDIS_* vars below. Deliberately NOT
+      # setting DATABASE_URL/REDIS_URL here (even to an empty value) -
+      # Spring's ${VAR:default} placeholder only falls back to its default
+      # when the var is completely unset, not when it's set-but-empty, so
+      # declaring either as "" would break the local profile's fallback.
+      SPRING_PROFILES_ACTIVE: local
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-sheout}
+      DB_USERNAME: ${DB_USERNAME:-sheout}
+      DB_PASSWORD: ${DB_PASSWORD:-sheout}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      # JWT_SECRET deliberately has NO line here at all (not even set to
+      # ""): application-local.yml's dev-only default only takes over when
+      # the var is completely absent from the container's environment -
+      # same empty-string-vs-unset reasoning as DATABASE_URL/REDIS_URL above.
+      JWT_EXPIRY_MINUTES: ${JWT_EXPIRY_MINUTES:-43200}
+      OTP_TTL_SECONDS: ${OTP_TTL_SECONDS:-300}
+      DOCUMENT_STORAGE_PROVIDER: ${DOCUMENT_STORAGE_PROVIDER:-local}
+      DOCUMENT_STORAGE_LOCAL_PATH: ${DOCUMENT_STORAGE_LOCAL_PATH:-./data/documents}
+      DOCUMENT_STORAGE_S3_BUCKET: ${DOCUMENT_STORAGE_S3_BUCKET:-}
+      DOCUMENT_STORAGE_S3_REGION: ${DOCUMENT_STORAGE_S3_REGION:-ap-south-1}
+      DOCUMENT_STORAGE_S3_ENDPOINT: ${DOCUMENT_STORAGE_S3_ENDPOINT:-}
+      DOCUMENT_STORAGE_S3_PRESIGN_EXPIRY_MINUTES: ${DOCUMENT_STORAGE_S3_PRESIGN_EXPIRY_MINUTES:-15}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-}
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-}
+      FIREBASE_CREDENTIALS_JSON: ${FIREBASE_CREDENTIALS_JSON:-}
+    depends_on:
+      - postgres
+      - redis
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${DB_NAME:-sheout}
+      POSTGRES_USER: ${DB_USERNAME:-sheout}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-sheout}
+    ports:
+      - "5432:5432"
+    volumes:
+      - sheout_postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - sheout_redis_data:/data
+
+volumes:
+  sheout_postgres_data:
+  sheout_redis_data:
