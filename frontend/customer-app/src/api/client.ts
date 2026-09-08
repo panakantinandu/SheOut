@@ -10,7 +10,11 @@ import type {
   VerificationSummary,
 } from './types';
 
-const API_BASE = 'http://localhost:8080';
+// VITE_API_BASE_URL lets each deployment point at its own backend (Vercel
+// env var for prod, .env.local for local dev override) - hardcoding
+// localhost:8080 here would make the deployed app unusable, since that
+// only resolves on the machine running the backend, not a visitor's browser.
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080';
 const TOKEN_STORAGE_KEY = 'sheout_access_token';
 
 export class ApiError extends Error {
