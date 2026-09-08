@@ -23,17 +23,29 @@ public class OtpService {
     private final Duration ttl;
     private final String devOtpPhone;
     private final String devOtpCode;
+    private final String devOtpPhone2;
+    private final String devOtpCode2;
 
+    /**
+     * Two independent fixed-phone/fixed-code slots, not a general list -
+     * this is deliberately just enough for "one CUSTOMER demo number, one
+     * DRIVER demo number" (accounts are one-role-per-phone, so the same
+     * number can't demo both roles), not a speculative N-number mechanism.
+     */
     public OtpService(StringRedisTemplate redisTemplate,
                        OtpSender otpSender,
                        @Value("${sheout.auth.otp-ttl-seconds:300}") long ttlSeconds,
                        @Value("${sheout.auth.dev-otp-phone:}") String devOtpPhone,
-                       @Value("${sheout.auth.dev-otp-code:}") String devOtpCode) {
+                       @Value("${sheout.auth.dev-otp-code:}") String devOtpCode,
+                       @Value("${sheout.auth.dev-otp-phone-2:}") String devOtpPhone2,
+                       @Value("${sheout.auth.dev-otp-code-2:}") String devOtpCode2) {
         this.redisTemplate = redisTemplate;
         this.otpSender = otpSender;
         this.ttl = Duration.ofSeconds(ttlSeconds);
         this.devOtpPhone = devOtpPhone;
         this.devOtpCode = devOtpCode;
+        this.devOtpPhone2 = devOtpPhone2;
+        this.devOtpCode2 = devOtpCode2;
     }
 
     /**
@@ -43,13 +55,14 @@ public class OtpService {
      * since a delivery-layer false negative (provider says failed but the
      * SMS actually arrives) shouldn't lock the user out of retrying.
      * <p>
-     * Exception: if this phone number matches sheout.auth.dev-otp-phone
-     * (unset/blank by default), the fixed dev-otp-code is stored instead of
-     * a random one - lets a live deploy be demoed without a real SMS
-     * provider or watching logs for the code.
+     * Exception: if this phone number matches sheout.auth.dev-otp-phone or
+     * dev-otp-phone-2 (both unset/blank by default), the corresponding
+     * fixed code is stored instead of a random one - lets a live deploy be
+     * demoed without a real SMS provider or watching logs for the code.
      */
     public boolean requestCode(String phoneNumber) {
-        String code = isDevOtpPhone(phoneNumber) ? devOtpCode : generateCode();
+        String code = resolveDevCode(phoneNumber);
+        if (code == null) code = generateCode();
         redisTemplate.opsForValue().set(key(phoneNumber), code, ttl);
         try {
             otpSender.send(phoneNumber, code);
@@ -92,7 +105,9 @@ public class OtpService {
         return KEY_PREFIX + phoneNumber;
     }
 
-    private boolean isDevOtpPhone(String phoneNumber) {
-        return !devOtpPhone.isBlank() && devOtpPhone.equals(phoneNumber);
+    private String resolveDevCode(String phoneNumber) {
+        if (!devOtpPhone.isBlank() && devOtpPhone.equals(phoneNumber)) return devOtpCode;
+        if (!devOtpPhone2.isBlank() && devOtpPhone2.equals(phoneNumber)) return devOtpCode2;
+        return null;
     }
 }
