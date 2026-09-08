@@ -94,21 +94,27 @@ public class AuthService implements AuthApi {
      * code vs. this method resolving the account from an already-verified
      * outcome.
      * <p>
-     * ACCOUNT LINKING - FLAGGED AS A DELIBERATE NON-DECISION, NOT AN
-     * OVERSIGHT: the brief asked for "if a Google email matches an existing
-     * phone-verified account, link them" but the phone+OTP flow never
-     * collects an email at all (see AccountEntity/V4 migration) - a phone
-     * account's email column is always null. So there is currently no data
-     * for a Google sign-in to match against a phone account by email in
-     * the first place; this only ever finds a PREVIOUS Google sign-in
-     * (findByEmail), never merges into a phone-created account. Building
-     * real cross-method linking would need a deliberate "add email to your
-     * phone account" or "link your phone" step with its own confirmation
-     * UX - flagging that back rather than silently guessing at one.
+     * ACCOUNT LINKING: explicitly refused, not silently done. If the
+     * matched account also has a phone number on file, this is a deliberate
+     * "don't merge auth methods without the account owner's knowledge"
+     * refusal (EMAIL_LINKED_TO_PHONE_ACCOUNT) rather than logging into it -
+     * the frontend shows a message directing them to sign in with phone
+     * instead. NOTE: no current flow can actually reach that branch today -
+     * phone+OTP signup never collects an email at all (see AccountEntity/V4
+     * migration), so a phone account's email column is always null, and
+     * this check can only ever match a *previous* Google sign-in. It's
+     * built now so the right thing happens automatically the moment some
+     * future flow (e.g. a "add email" profile field) makes it reachable,
+     * rather than needing to remember to add this check later.
      */
     @Transactional
     public Result<AuthenticatedSession, AuthError> verifyGoogleSignIn(String email, String name, AccountRole role) {
         Optional<AccountEntity> existing = accountRepository.findByEmail(email);
+
+        if (existing.isPresent() && existing.get().getPhoneNumber() != null) {
+            return Result.failure(AuthError.EMAIL_LINKED_TO_PHONE_ACCOUNT);
+        }
+
         boolean isNewAccount = existing.isEmpty();
 
         AccountEntity account;

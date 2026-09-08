@@ -18,5 +18,16 @@ public enum AuthError {
     OTP_CODE_MISMATCH,
 
     /** Account already exists for this phone number under a different role. */
-    ROLE_MISMATCH
+    ROLE_MISMATCH,
+
+    /**
+     * A Google sign-in's email matches an account that also has a phone
+     * number on file - deliberately refused rather than silently signing
+     * into it, since that would combine two different auth methods into
+     * one account without the account owner's knowledge. See
+     * AuthService.verifyGoogleSignIn's Javadoc: no current flow can
+     * actually produce this today (phone signup never collects an email),
+     * this exists so it's handled correctly the moment one does.
+     */
+    EMAIL_LINKED_TO_PHONE_ACCOUNT
 }
