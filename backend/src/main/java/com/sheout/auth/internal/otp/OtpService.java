@@ -21,13 +21,19 @@ public class OtpService {
     private final StringRedisTemplate redisTemplate;
     private final OtpSender otpSender;
     private final Duration ttl;
+    private final String devOtpPhone;
+    private final String devOtpCode;
 
     public OtpService(StringRedisTemplate redisTemplate,
                        OtpSender otpSender,
-                       @Value("${sheout.auth.otp-ttl-seconds:300}") long ttlSeconds) {
+                       @Value("${sheout.auth.otp-ttl-seconds:300}") long ttlSeconds,
+                       @Value("${sheout.auth.dev-otp-phone:}") String devOtpPhone,
+                       @Value("${sheout.auth.dev-otp-code:}") String devOtpCode) {
         this.redisTemplate = redisTemplate;
         this.otpSender = otpSender;
         this.ttl = Duration.ofSeconds(ttlSeconds);
+        this.devOtpPhone = devOtpPhone;
+        this.devOtpCode = devOtpCode;
     }
 
     /**
@@ -36,9 +42,14 @@ public class OtpService {
      * if delivery itself failed - the code is still stored either way,
      * since a delivery-layer false negative (provider says failed but the
      * SMS actually arrives) shouldn't lock the user out of retrying.
+     * <p>
+     * Exception: if this phone number matches sheout.auth.dev-otp-phone
+     * (unset/blank by default), the fixed dev-otp-code is stored instead of
+     * a random one - lets a live deploy be demoed without a real SMS
+     * provider or watching logs for the code.
      */
     public boolean requestCode(String phoneNumber) {
-        String code = generateCode();
+        String code = isDevOtpPhone(phoneNumber) ? devOtpCode : generateCode();
         redisTemplate.opsForValue().set(key(phoneNumber), code, ttl);
         try {
             otpSender.send(phoneNumber, code);
@@ -79,5 +90,9 @@ public class OtpService {
 
     private String key(String phoneNumber) {
         return KEY_PREFIX + phoneNumber;
+    }
+
+    private boolean isDevOtpPhone(String phoneNumber) {
+        return !devOtpPhone.isBlank() && devOtpPhone.equals(phoneNumber);
     }
 }

@@ -64,6 +64,19 @@ services:
       - key: JWT_SECRET
         sync: false
 
+      # No real SMS provider is wired up yet (see ConsoleOtpSender) - OTPs
+      # only ever reach Render's logs, never a phone. These two make demoing
+      # login possible without watching logs: requesting an OTP for exactly
+      # this phone number always issues this fixed code instead of a random
+      # one. Not a secret in the usual sense (it's meant to be handed to
+      # demo viewers), but kept out of render.yaml so it's not sitting in
+      # git history - set both in the dashboard. Remove once a real SMS
+      # provider exists.
+      - key: DEV_OTP_PHONE
+        sync: false
+      - key: DEV_OTP_CODE
+        sync: false
+
       # Not implemented yet - leave blank until they are.
       - key: RAZORPAY_KEY_ID
         sync: false
