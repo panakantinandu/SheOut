@@ -1,74 +1,101 @@
 package com.sheout.auth.internal.security;
 
-import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
-import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
-import com.google.api.client.http.javanet.NetHttpTransport;
-import com.google.api.client.json.gson.GsonFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 
-import java.io.IOException;
-import java.security.GeneralSecurityException;
-import java.util.Collections;
+import java.util.Map;
 import java.util.Optional;
 
 /**
- * Verifies a Google Sign-In ID token server-side against Google's own
- * public keys (signature, issuer, audience, expiry) - the frontend hands
- * over the raw token, this never trusts its claims until GoogleIdTokenVerifier
- * has validated it.
+ * Verifies a Google OAuth2 access token (from the frontend's
+ * google.accounts.oauth2.initTokenClient popup flow - see
+ * lib/googleAuth.ts for why this is an access token, not an ID token/JWT)
+ * by calling Google's own endpoints, rather than checking a JWT signature
+ * locally:
  * <p>
- * NOT WIRED TO A REAL CLIENT ID YET: no Google Cloud OAuth Client ID was
- * given for this build - sheout.auth.google-client-id is blank by default,
- * same "opt-in via env var, not fail-fast at boot" treatment as
- * Razorpay/Firebase's other unset placeholders (unlike JWT_SECRET, a
- * missing Google config shouldn't prevent the rest of the app from
- * starting). Set GOOGLE_OAUTH_CLIENT_ID and this starts working with no
- * code changes - see isConfigured().
+ * 1. tokeninfo - confirms the token was actually issued FOR THIS APP
+ * (its `aud` claim must equal our Client ID) and is still valid. Skipping
+ * this step would mean trusting ANY valid Google access token, including
+ * one issued to a completely different application - the equivalent of
+ * GoogleIdTokenVerifier's audience check in the ID-token flow.
+ * 2. userinfo - only called once step 1 passes; fetches the verified
+ * email/name Google has on file for whoever the token belongs to.
+ * <p>
+ * Both are plain HTTPS calls to Google, not a library - no
+ * signature-verification code to get wrong, and no google-api-client
+ * dependency needed.
+ * <p>
+ * NOT WIRED TO A REAL CLIENT ID ORIGINALLY: sheout.auth.google-client-id
+ * is blank by default, opt-in via env var rather than fail-fast at boot
+ * (same treatment as Razorpay/Firebase's other unset placeholders) - see
+ * isConfigured(). A real Client ID is now set in both environments this
+ * app deploys to.
  */
 @Component
 public class GoogleTokenVerifier {
 
-    private final GoogleIdTokenVerifier verifier;
+    private static final String TOKENINFO_URL = "https://oauth2.googleapis.com/tokeninfo?access_token={token}";
+    private static final String USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo";
+
+    private final String clientId;
+    private final RestClient restClient = RestClient.create();
 
     public GoogleTokenVerifier(@Value("${sheout.auth.google-client-id:}") String clientId) {
-        this.verifier = clientId.isBlank()
-                ? null
-                : new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), GsonFactory.getDefaultInstance())
-                        .setAudience(Collections.singletonList(clientId))
-                        .build();
+        this.clientId = clientId;
     }
 
     public boolean isConfigured() {
-        return verifier != null;
+        return !clientId.isBlank();
     }
 
     /**
-     * Empty if the token is missing/expired/wrongly-signed/for-a-different-
-     * client, or if Google hasn't itself verified the email on this
-     * account (email_verified claim) - a Google account with an unverified
-     * email shouldn't be trusted as proof of that email's identity.
+     * Empty if not configured, the token is missing/expired/revoked, was
+     * issued for a different app, or Google hasn't itself verified the
+     * email on this account (email_verified) - a Google account with an
+     * unverified email shouldn't be trusted as proof of that email's
+     * identity.
      */
-    public Optional<VerifiedGoogleUser> verify(String idTokenString) {
-        if (verifier == null) {
+    public Optional<VerifiedGoogleUser> verify(String accessToken) {
+        if (!isConfigured()) {
             return Optional.empty();
         }
         try {
-            GoogleIdToken idToken = verifier.verify(idTokenString);
-            if (idToken == null) {
+            Map<String, Object> tokenInfo = restClient.get()
+                    .uri(TOKENINFO_URL, accessToken)
+                    .retrieve()
+                    .body(Map.class);
+            if (tokenInfo == null || !clientId.equals(tokenInfo.get("aud"))) {
                 return Optional.empty();
             }
-            GoogleIdToken.Payload payload = idToken.getPayload();
-            String email = payload.getEmail();
-            Boolean emailVerified = payload.getEmailVerified();
-            if (email == null || emailVerified == null || !emailVerified) {
+
+            Map<String, Object> userInfo = restClient.get()
+                    .uri(USERINFO_URL)
+                    .header("Authorization", "Bearer " + accessToken)
+                    .retrieve()
+                    .body(Map.class);
+            if (userInfo == null) {
                 return Optional.empty();
             }
-            Object name = payload.get("name");
-            return Optional.of(new VerifiedGoogleUser(email.toLowerCase(), name == null ? null : name.toString()));
-        } catch (GeneralSecurityException | IOException | IllegalArgumentException ex) {
+            Object email = userInfo.get("email");
+            Object emailVerified = userInfo.get("email_verified");
+            if (!(email instanceof String) || !isTrue(emailVerified)) {
+                return Optional.empty();
+            }
+            Object name = userInfo.get("name");
+            return Optional.of(new VerifiedGoogleUser(((String) email).toLowerCase(), name == null ? null : name.toString()));
+        } catch (RestClientException ex) {
+            // Includes 4xx from either endpoint (expired/invalid/revoked token) - not our concern to distinguish further.
             return Optional.empty();
         }
+    }
+
+    /** Google's endpoints return email_verified as a real JSON boolean in this response - defensively also accept a string, in case that ever changes. */
+    private boolean isTrue(Object value) {
+        if (value instanceof Boolean b) return b;
+        if (value instanceof String s) return Boolean.parseBoolean(s);
+        return false;
     }
 
     public record VerifiedGoogleUser(String email, String name) {

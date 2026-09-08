@@ -1,22 +1,20 @@
 // Minimal ambient typing for the bits of Google Identity Services (GIS) this
 // file actually calls - GIS ships no official TS types, and pulling in a
-// full @types package for four methods isn't worth it.
+// full @types package for two methods isn't worth it.
 declare global {
   interface Window {
     google?: {
       accounts: {
-        id: {
-          initialize(config: { client_id: string; callback: (response: { credential?: string }) => void }): void;
-          prompt(momentListener?: (notification: GsiMoment) => void): void;
+        oauth2: {
+          initTokenClient(config: {
+            client_id: string;
+            scope: string;
+            callback: (response: { access_token?: string; error?: string }) => void;
+          }): { requestAccessToken(): void };
         };
       };
     };
   }
-}
-
-interface GsiMoment {
-  isNotDisplayed(): boolean;
-  isSkippedMoment(): boolean;
 }
 
 const GIS_SCRIPT_SRC = 'https://accounts.google.com/gsi/client';
@@ -26,7 +24,7 @@ let scriptLoadPromise: Promise<void> | null = null;
 function loadGisScript(): Promise<void> {
   if (scriptLoadPromise) return scriptLoadPromise;
   scriptLoadPromise = new Promise((resolve, reject) => {
-    if (window.google?.accounts?.id) {
+    if (window.google?.accounts?.oauth2) {
       resolve();
       return;
     }
@@ -42,17 +40,26 @@ function loadGisScript(): Promise<void> {
 }
 
 /**
- * Triggers Google's One Tap credential prompt from our own custom-styled
- * button rather than rendering Google's own branded button - both surfaces
- * share the same underlying google.accounts.id API. Resolves with the raw
- * ID token JWT on success; the backend verifies it server-side, this
- * frontend code never inspects or trusts its contents.
+ * CHANGED FROM google.accounts.id (One Tap) TO google.accounts.oauth2
+ * (the OAuth2 popup flow) - One Tap's prompt() is meant for automatic,
+ * passive prompts, not a button click, and Google's own docs point a
+ * custom-triggered "Continue with Google" button at this API instead.
+ * In practice, One Tap's prompt() also silently declines to show at all
+ * for reasons it won't fully report (no active Google session in the
+ * browser, third-party-cookie/FedCM restrictions in current Chrome, a
+ * previous dismissal, ...) - exactly the "closed, or unavailable in this
+ * browser" failure this app hit. A real user-gesture-triggered popup
+ * (this function is called directly from the button's onClick) doesn't
+ * have that failure mode - browsers only block *programmatic* popups
+ * with no direct user gesture behind them.
  * <p>
- * KNOWN GIS LIMITATION, NOT A BUG HERE: prompt() can silently decline to
- * show anything at all (third-party cookies blocked, user previously
- * dismissed One Tap, unsupported browser, ...) without an error by
- * default - the moment listener below turns that into a rejected promise
- * instead of leaving the caller hanging forever.
+ * Returns an OAuth2 access token, not an ID token (JWT) - the backend
+ * verifies it by calling Google's own tokeninfo endpoint (confirms the
+ * token was actually issued for this app's Client ID, not just any
+ * Google token) and then the userinfo endpoint (fetches the verified
+ * email/name) rather than checking a JWT signature locally. Both are
+ * equally valid ways to establish trust; this one is simply the correct
+ * fit for a popup-triggered flow. See GoogleTokenVerifier on the backend.
  */
 export function signInWithGoogle(clientId: string): Promise<string> {
   return loadGisScript().then(
@@ -62,18 +69,15 @@ export function signInWithGoogle(clientId: string): Promise<string> {
           reject(new Error('Google Identity Services unavailable'));
           return;
         }
-        window.google.accounts.id.initialize({
+        const client = window.google.accounts.oauth2.initTokenClient({
           client_id: clientId,
+          scope: 'openid email profile',
           callback: (response) => {
-            if (response.credential) resolve(response.credential);
-            else reject(new Error('Google sign-in did not return a credential'));
+            if (response.access_token) resolve(response.access_token);
+            else reject(new Error(response.error || 'Google sign-in was cancelled'));
           },
         });
-        window.google.accounts.id.prompt((notification) => {
-          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-            reject(new Error('Google sign-in was closed, or is unavailable in this browser'));
-          }
-        });
+        client.requestAccessToken();
       })
   );
 }
