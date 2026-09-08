@@ -60,6 +60,11 @@ sheout:
     # watching Render's logs. Leave unset once a real provider exists.
     dev-otp-phone: ${DEV_OTP_PHONE:}
     dev-otp-code: ${DEV_OTP_CODE:}
+    # Second slot, same idea - accounts are one-role-per-phone, so the first
+    # slot's number (already used for a CUSTOMER demo login) can't also
+    # demo a DRIVER login. Use this one for that.
+    dev-otp-phone-2: ${DEV_OTP_PHONE_2:}
+    dev-otp-code-2: ${DEV_OTP_CODE_2:}
 
   document-storage:
     # local | s3 - see DocumentStorage/LocalDiskDocumentStorage/S3DocumentStorage.

@@ -76,6 +76,13 @@ services:
         sync: false
       - key: DEV_OTP_CODE
         sync: false
+      # Second slot for a DRIVER demo login - accounts are one-role-per-phone,
+      # so DEV_OTP_PHONE above (already a CUSTOMER account) can't double as
+      # a driver login too.
+      - key: DEV_OTP_PHONE_2
+        sync: false
+      - key: DEV_OTP_CODE_2
+        sync: false
 
       # Not implemented yet - leave blank until they are.
       - key: RAZORPAY_KEY_ID
