@@ -37,6 +37,13 @@ services:
       - key: SPRING_PROFILES_ACTIVE
         value: render
 
+      # Browser-based calls from the two Vercel PWAs - without this, WebConfig
+      # falls back to its localhost-only default and every fetch() from the
+      # live frontends gets rejected by the browser's CORS check (curl-based
+      # health checks never catch this - CORS is browser-enforced only).
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://sheout-customer-app.vercel.app,https://sheout-driver-app.vercel.app
+
       # Render hands these back as postgres://user:pass@host:port/db and
       # redis://[user:pass@]host:port respectively. The Postgres one gets
       # automatically reshaped into the jdbc:postgresql://...?user=...
