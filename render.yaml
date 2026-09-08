@@ -84,6 +84,14 @@ services:
       - key: DEV_OTP_CODE_2
         sync: false
 
+      # TESTING AID ONLY, NOT A PRODUCT FEATURE - see BookingService's
+      # Javadoc on isVerifiedBypassAccount. Blank/unset here by default;
+      # only ever set this on a throwaway QA/staging account, never in a
+      # real production deploy - it lets that one phone number's account
+      # skip the real gender-verification check on booking creation.
+      - key: VERIFIED_BYPASS_PHONE
+        sync: false
+
       # Google Sign-In - see GoogleTokenVerifier. Not set yet: no real
       # Google Cloud OAuth Client ID exists for this build. Until it's set,
       # the /api/v1/auth/google/verify endpoint returns 503 rather than

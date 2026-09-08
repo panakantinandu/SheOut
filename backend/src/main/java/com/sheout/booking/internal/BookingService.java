@@ -1,5 +1,6 @@
 package com.sheout.booking.internal;
 
+import com.sheout.auth.AuthApi;
 import com.sheout.booking.BookingApi;
 import com.sheout.booking.BookingAccepted;
 import com.sheout.booking.BookingCancelled;
@@ -18,6 +19,7 @@ import com.sheout.driververification.VerificationStatus;
 import com.sheout.driververification.VerificationSummary;
 import com.sheout.sharedkernel.Result;
 import com.sheout.sharedkernel.event.DomainEventPublisher;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,15 +36,21 @@ public class BookingService implements BookingApi {
     private final VerificationApi verificationApi;
     private final FareCalculator fareCalculator;
     private final DomainEventPublisher eventPublisher;
+    private final AuthApi authApi;
+    private final String verifiedBypassPhone;
 
     public BookingService(BookingRepository bookingRepository,
                            VerificationApi verificationApi,
                            FareCalculator fareCalculator,
-                           DomainEventPublisher eventPublisher) {
+                           DomainEventPublisher eventPublisher,
+                           AuthApi authApi,
+                           @Value("${sheout.testing.verified-bypass-phone:}") String verifiedBypassPhone) {
         this.bookingRepository = bookingRepository;
         this.verificationApi = verificationApi;
         this.fareCalculator = fareCalculator;
         this.eventPublisher = eventPublisher;
+        this.authApi = authApi;
+        this.verifiedBypassPhone = verifiedBypassPhone;
     }
 
     @Override
@@ -207,9 +215,32 @@ public class BookingService implements BookingApi {
         return bookingRepository.findByDriverId(driverId).stream().map(this::toSummary).toList();
     }
 
+    /**
+     * TESTING AID ONLY, NOT A PRODUCT FEATURE: if sheout.testing.verified-
+     * bypass-phone is set (blank/unset by default in every real
+     * environment, same as sheout.auth.dev-otp-phone) and this customer's
+     * account phone number matches it exactly, the real verification check
+     * below is skipped for this one account so an automated QA pass can
+     * exercise the full booking flow without a real admin-verified test
+     * account. Every other account - including every other test number -
+     * still goes through the unmodified VerificationApi check with no
+     * change in behavior.
+     */
     private boolean isCustomerVerified(UUID customerId) {
+        if (isVerifiedBypassAccount(customerId)) {
+            return true;
+        }
         Optional<VerificationSummary> verification = verificationApi.findByAccountId(customerId);
         return verification.map(v -> v.genderVerificationStatus() == VerificationStatus.VERIFIED).orElse(false);
+    }
+
+    private boolean isVerifiedBypassAccount(UUID customerId) {
+        if (verifiedBypassPhone.isBlank()) {
+            return false;
+        }
+        return authApi.findAccount(customerId)
+                .map(account -> verifiedBypassPhone.equals(account.phoneNumber()))
+                .orElse(false);
     }
 
     private BookingSummary toSummary(BookingEntity booking) {

@@ -10,18 +10,28 @@ import { mockAction } from '../lib/mockAction';
 export function Home() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<CustomerProfileSummary | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
 
   useEffect(() => {
-    usersApi.getMyProfile().then(setProfile).catch(() => setProfile(null));
+    usersApi
+      .getMyProfile()
+      .then(setProfile)
+      .catch(() => setProfile(null))
+      .finally(() => setProfileLoading(false));
   }, []);
 
   const firstName = profile?.name?.split(' ')[0];
+  // Blank while the profile fetch is in flight, rather than "Hello, there" -
+  // that fallback is only correct once we actually know the name is
+  // missing, not while we simply don't know yet (was flashing briefly for
+  // every user, including ones with a saved name, before the fetch resolved).
+  const greeting = profileLoading ? '' : `Hello, ${firstName || 'there'} 👋`;
 
   return (
     <div className="space-y-6">
       <TopHeader
         variant="greeting"
-        title={`Hello, ${firstName || 'there'} 👋`}
+        title={greeting}
         subtitle="Your safety, our priority"
         // No side-drawer/menu screen exists - "Open menu" goes to the
         // closest thing that already serves that purpose (account/settings).
