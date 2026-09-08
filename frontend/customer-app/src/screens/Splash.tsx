@@ -101,12 +101,15 @@ export function Splash() {
 
       <div className="relative z-10 flex min-h-screen flex-col items-center px-screen py-10">
         <div className="flex flex-1 flex-col items-center justify-center gap-3">
-          <div className="relative flex items-center justify-center">
-            <span className="absolute h-44 w-44 rounded-full border-8 border-accent-orange/15" aria-hidden="true" />
+          <div className="relative flex w-full items-center justify-center">
+            <span
+              className="absolute h-56 w-56 max-h-[70vw] max-w-[70vw] rounded-full bg-accent-orange/20 blur-3xl"
+              aria-hidden="true"
+            />
             <img
-              src="/Logo.jpeg"
+              src="/sheout-illustration.png"
               alt="SheOut"
-              className="relative h-36 w-36 rounded-card object-cover shadow-card"
+              className="relative w-[58%] max-w-xs object-contain"
             />
           </div>
 
@@ -114,13 +117,7 @@ export function Splash() {
             SHE<span className="text-accent-orange">O</span>UT
           </p>
 
-          <div className="flex items-center gap-2">
-            <span className="h-px w-6 bg-accent-orange" aria-hidden="true" />
-            <p className="text-xs font-semibold uppercase tracking-wide text-accent-orange">
-              Your Delivery, Our Priority
-            </p>
-            <span className="h-px w-6 bg-accent-orange" aria-hidden="true" />
-          </div>
+          <p className="text-sm italic text-text-secondary">&mdash; Your Delivery, Our Priority &mdash;</p>
         </div>
 
         <div className="flex w-full flex-col items-center gap-5 pb-4">

@@ -169,11 +169,11 @@ export function Login() {
   return (
     <div className="flex min-h-screen flex-col justify-center bg-background px-screen py-10">
       <div className="mx-auto mb-6 flex flex-col items-center gap-2">
-        <img src="/Logo.jpeg" alt="SheOut" className="h-24 w-24 rounded-card object-cover shadow-card" />
+        <img src="/sheout-illustration.png" alt="SheOut" className="h-28 w-28 object-contain" />
         <p className="font-heading text-3xl font-extrabold tracking-tight text-text-primary">
           SHE<span className="text-accent-orange">O</span>UT
         </p>
-        <p className="text-sm italic text-text-secondary">Your Delivery, Our Priority</p>
+        <p className="text-sm italic text-text-secondary">&mdash; Your Delivery, Our Priority &mdash;</p>
       </div>
 
       {step === 'complete-profile' ? (
@@ -196,8 +196,8 @@ export function Login() {
         </>
       ) : (
         <>
-          <h1 className="text-center font-heading text-2xl font-bold text-text-primary">Welcome Back!</h1>
-          <p className="mb-6 text-center text-sm text-text-secondary">Sign in to continue</p>
+          <h1 className="font-heading text-2xl font-bold text-text-primary">Welcome Back!</h1>
+          <p className="mb-6 text-sm text-text-secondary">Sign in to continue</p>
 
           {step === 'phone' ? (
             <form onSubmit={handleSendOtp} className="space-y-4">
