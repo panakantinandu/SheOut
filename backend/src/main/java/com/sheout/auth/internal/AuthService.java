@@ -86,9 +86,49 @@ public class AuthService implements AuthApi {
         return Result.success(new AuthenticatedSession(token, account.getId(), account.getRole(), isNewAccount));
     }
 
+    /**
+     * Google's equivalent of verifyOtp: the caller (AuthController) has
+     * already verified the ID token server-side and hands over only the
+     * claims it trusts (email, name) - this method's job is purely account
+     * resolution, same split of responsibility as OtpService verifying the
+     * code vs. this method resolving the account from an already-verified
+     * outcome.
+     * <p>
+     * ACCOUNT LINKING - FLAGGED AS A DELIBERATE NON-DECISION, NOT AN
+     * OVERSIGHT: the brief asked for "if a Google email matches an existing
+     * phone-verified account, link them" but the phone+OTP flow never
+     * collects an email at all (see AccountEntity/V4 migration) - a phone
+     * account's email column is always null. So there is currently no data
+     * for a Google sign-in to match against a phone account by email in
+     * the first place; this only ever finds a PREVIOUS Google sign-in
+     * (findByEmail), never merges into a phone-created account. Building
+     * real cross-method linking would need a deliberate "add email to your
+     * phone account" or "link your phone" step with its own confirmation
+     * UX - flagging that back rather than silently guessing at one.
+     */
+    @Transactional
+    public Result<AuthenticatedSession, AuthError> verifyGoogleSignIn(String email, String name, AccountRole role) {
+        Optional<AccountEntity> existing = accountRepository.findByEmail(email);
+        boolean isNewAccount = existing.isEmpty();
+
+        AccountEntity account;
+        if (isNewAccount) {
+            account = accountRepository.save(AccountEntity.forGoogleSignIn(email, role));
+            eventPublisher.publish(new AccountRegistered(account.getId(), role, name));
+        } else {
+            account = existing.get();
+            if (account.getRole() != role) {
+                return Result.failure(AuthError.ROLE_MISMATCH);
+            }
+        }
+
+        String token = jwtService.issue(account.getId(), account.getRole());
+        return Result.success(new AuthenticatedSession(token, account.getId(), account.getRole(), isNewAccount));
+    }
+
     @Override
     public Optional<AccountSummary> findAccount(UUID accountId) {
         return accountRepository.findById(accountId)
-                .map(a -> new AccountSummary(a.getId(), a.getPhoneNumber(), a.getRole(), a.getCreatedAt()));
+                .map(a -> new AccountSummary(a.getId(), a.getPhoneNumber(), a.getEmail(), a.getRole(), a.getCreatedAt()));
     }
 }

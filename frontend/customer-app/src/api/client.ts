@@ -105,6 +105,17 @@ export const authApi = {
     return session;
   },
 
+  /** idToken is the raw JWT from Google Identity Services - the backend verifies it, this never inspects it. */
+  async googleSignIn(idToken: string): Promise<AuthSession> {
+    const session = await request<AuthSession>('/api/v1/auth/google/verify', {
+      method: 'POST',
+      body: { idToken, role: 'CUSTOMER' },
+      auth: false,
+    });
+    setStoredToken(session.accessToken);
+    return session;
+  },
+
   logout(): void {
     setStoredToken(null);
   },

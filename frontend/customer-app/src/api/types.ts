@@ -25,7 +25,8 @@ export interface VerificationSummary {
 export interface CustomerProfileSummary {
   accountId: string;
   name: string | null;
-  phoneNumber: string;
+  /** Null for a Google-signed-in account - phone signup is the only path that collects one. */
+  phoneNumber: string | null;
   homeAddress: string | null;
   workAddress: string | null;
   verified: boolean;

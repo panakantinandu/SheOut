@@ -65,6 +65,11 @@ sheout:
     # demo a DRIVER login. Use this one for that.
     dev-otp-phone-2: ${DEV_OTP_PHONE_2:}
     dev-otp-code-2: ${DEV_OTP_CODE_2:}
+    # Blank by default - opt-in, not fail-fast (see GoogleTokenVerifier's
+    # Javadoc for why this doesn't block startup the way JWT_SECRET does).
+    # No real Google Cloud OAuth Client ID exists yet for this build; set
+    # GOOGLE_OAUTH_CLIENT_ID once one does.
+    google-client-id: ${GOOGLE_OAUTH_CLIENT_ID:}
 
   document-storage:
     # local | s3 - see DocumentStorage/LocalDiskDocumentStorage/S3DocumentStorage.
