@@ -1,0 +1,20 @@
+# Activated by SPRING_PROFILES_ACTIVE=local (docker-compose.yml sets this,
+# and it's the default assumption for `mvn spring-boot:run` against local
+# Postgres/Redis). Overrides the required-with-no-default datasource/redis
+# urls in application.yml with ones built from discrete local env vars, so
+# local dev never needs a fake DATABASE_URL/REDIS_URL.
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:sheout}
+    username: ${DB_USERNAME:sheout}
+    password: ${DB_PASSWORD:sheout}
+
+  data:
+    redis:
+      url: redis://${REDIS_HOST:localhost}:${REDIS_PORT:6379}
+
+sheout:
+  auth:
+    # Dev-only default so local dev doesn't need a real JWT_SECRET set -
+    # this exact value must never be used anywhere but a local machine.
+    jwt-secret: ${JWT_SECRET:local-dev-only-secret-do-not-use-in-production-32bytes}

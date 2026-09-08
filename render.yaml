@@ -1,0 +1,56 @@
+# Render Blueprint - defines how the SheOut backend deploys to Render.
+# https://render.com/docs/blueprint-spec
+#
+# Postgres and Redis are deliberately NOT declared as Render resources here:
+# - Postgres is Neon (or Supabase) - Render's own free Postgres expires
+#   after 30 days.
+# - Redis is Upstash - Render's own free Redis caps at 25MB, not enough
+#   headroom for live driver geolocation once dispatch is implemented.
+# Both are wired in purely via env vars (DATABASE_URL / REDIS_URL), set
+# manually in the Render dashboard (sync: false below) so no connection
+# string or credential is ever committed to this file. Swapping either
+# provider later (e.g. to AWS RDS / ElastiCache) is a dashboard env var
+# change only - no code or render.yaml change required.
+services:
+  - type: web
+    name: sheout-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free # bump to `starter` before any real user/driver testing - see README
+    region: singapore # closest Render region to Hyderabad
+    healthCheckPath: /actuator/health
+    envVars:
+      # Non-secret, safe to store directly in the blueprint.
+      - key: SPRING_PROFILES_ACTIVE
+        value: render
+
+      # Secrets / environment-specific values - intentionally left unset
+      # here (sync: false). Render will prompt for each on first deploy;
+      # set the real value in the Render dashboard, never in this file.
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: FIREBASE_PROJECT_ID
+        sync: false
+      - key: FIREBASE_CREDENTIALS_JSON
+        sync: false
+
+      # driver-verification document storage: not declared here, so it
+      # defaults to LocalDiskDocumentStorage - which writes to Render's
+      # container filesystem, wiped on every restart/redeploy. Fine while
+      # no real documents are being collected yet; before that changes,
+      # set DOCUMENT_STORAGE_PROVIDER=s3 plus DOCUMENT_STORAGE_S3_BUCKET,
+      # AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY in the dashboard (see
+      # README) so uploads persist.
+
+      # Not declared: PORT. Render injects it automatically (defaults to
+      # 10000) for every web service, Docker-based ones included - the app
+      # already binds to it via server.port=${PORT:8080} in application.yml.
