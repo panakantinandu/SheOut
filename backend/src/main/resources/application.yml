@@ -53,6 +53,13 @@ sheout:
     jwt-secret: ${JWT_SECRET}
     jwt-expiry-minutes: ${JWT_EXPIRY_MINUTES:43200}
     otp-ttl-seconds: ${OTP_TTL_SECONDS:300}
+    # Both blank by default - opt-in only, for demoing a live deploy without
+    # a real SMS provider wired up (see ConsoleOtpSender/OtpService). When
+    # set, requesting an OTP for exactly this phone number always issues
+    # dev-otp-code instead of a random one, so a demo login doesn't require
+    # watching Render's logs. Leave unset once a real provider exists.
+    dev-otp-phone: ${DEV_OTP_PHONE:}
+    dev-otp-code: ${DEV_OTP_CODE:}
 
   document-storage:
     # local | s3 - see DocumentStorage/LocalDiskDocumentStorage/S3DocumentStorage.
