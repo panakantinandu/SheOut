@@ -107,6 +107,8 @@ public class AuthController {
                     // Shared between the phone and Google flows (see verifyGoogle) - kept
                     // provider-agnostic rather than saying "phone number" for both.
                     new ApiException(HttpStatus.CONFLICT, "Conflict", "This account is already registered under a different role");
+            case EMAIL_LINKED_TO_PHONE_ACCOUNT ->
+                    new ApiException(HttpStatus.CONFLICT, "Conflict", "An account already exists with this email - sign in with your phone number instead");
         };
     }
 
