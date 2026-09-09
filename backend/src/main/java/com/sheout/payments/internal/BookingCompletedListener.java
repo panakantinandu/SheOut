@@ -5,8 +5,6 @@ import com.sheout.payments.PaymentError;
 import com.sheout.payments.internal.gateway.GatewayOrder;
 import com.sheout.payments.internal.gateway.PaymentGateway;
 import com.sheout.sharedkernel.Result;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -43,8 +41,6 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @Component
 class BookingCompletedListener {
 
-    private static final Logger log = LoggerFactory.getLogger(BookingCompletedListener.class);
-
     private final PaymentService paymentService;
     private final PaymentGateway paymentGateway;
 
@@ -62,7 +58,5 @@ class BookingCompletedListener {
         Result<GatewayOrder, PaymentError> orderResult =
                 paymentGateway.createOrder(event.bookingId(), event.finalFare());
         paymentService.applyGatewayResult(payment.getId(), orderResult);
-        log.info("POST-COMMIT check - paymentId: {}, orderId actually in DB: [{}]",
-                payment.getId(), paymentService.readPersistedOrderId(payment.getId()));
     }
 }
