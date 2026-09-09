@@ -8,6 +8,7 @@ import com.sheout.payments.PaymentSummary;
 import com.sheout.payments.internal.gateway.GatewayOrder;
 import com.sheout.payments.internal.gateway.PaymentGateway;
 import com.sheout.sharedkernel.Result;
+import jakarta.persistence.EntityManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -27,10 +28,12 @@ public class PaymentService implements PaymentApi {
 
     private final PaymentRepository paymentRepository;
     private final PaymentGateway paymentGateway;
+    private final EntityManager entityManager;
 
-    public PaymentService(PaymentRepository paymentRepository, PaymentGateway paymentGateway) {
+    public PaymentService(PaymentRepository paymentRepository, PaymentGateway paymentGateway, EntityManager entityManager) {
         this.paymentRepository = paymentRepository;
         this.paymentGateway = paymentGateway;
+        this.entityManager = entityManager;
     }
 
     @Override
@@ -125,8 +128,9 @@ public class PaymentService implements PaymentApi {
         }
         log.info("Saving payment with orderId: {}", payment.getRazorpayOrderId());
         paymentRepository.save(payment);
-        paymentRepository.flush();  // Force immediate database flush instead of relying on transaction commit
-        log.info("Payment saved and flushed - verifying: {}", paymentRepository.findById(paymentId).map(p -> p.getRazorpayOrderId()).orElse("NOT FOUND"));
+        paymentRepository.flush();  // Force immediate database flush
+        entityManager.clear();      // Clear session cache to force fresh database reads
+        log.info("Payment saved, flushed, and session cleared - verifying: {}", paymentRepository.findById(paymentId).map(p -> p.getRazorpayOrderId()).orElse("NOT FOUND"));
     }
 
     /** Called by RazorpayWebhookController after signature verification. */
