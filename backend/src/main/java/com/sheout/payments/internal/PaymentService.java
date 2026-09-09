@@ -84,15 +84,20 @@ public class PaymentService implements PaymentApi {
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public PaymentEntity createPendingPayment(UUID bookingId, BigDecimal finalFare) {
+        log.info("createPendingPayment called - bookingId: {}, finalFare: {}", bookingId, finalFare);
         if (paymentRepository.findByBookingId(bookingId).isPresent()) {
+            log.warn("Payment already exists for bookingId: {}", bookingId);
             return null;
         }
         PaymentEntity payment = new PaymentEntity(bookingId, finalFare, PaymentMethod.UPI, PaymentStatus.PENDING);
         try {
-            return paymentRepository.save(payment);
+            PaymentEntity saved = paymentRepository.save(payment);
+            log.info("Payment created and saved - id: {}, bookingId: {}, orderId: {}", saved.getId(), saved.getBookingId(), saved.getRazorpayOrderId());
+            return saved;
         } catch (DataIntegrityViolationException e) {
             // Two BookingCompleted deliveries raced past the findByBookingId check above -
             // the unique constraint on booking_id is the real guard; losing this race is fine.
+            log.warn("DataIntegrityViolationException - duplicate payment for bookingId: {}", bookingId);
             return null;
         }
     }
