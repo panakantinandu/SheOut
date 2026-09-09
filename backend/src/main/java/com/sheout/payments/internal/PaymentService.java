@@ -156,6 +156,19 @@ public class PaymentService implements PaymentApi {
         paymentRepository.save(payment);
     }
 
+    /**
+     * Diagnostic probe: reads the row in a transaction of its own, so the
+     * caller can see what actually survived applyGatewayResult's commit
+     * rather than what was merely flushed inside it.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public String readPersistedOrderId(UUID paymentId) {
+        entityManager.clear();
+        return paymentRepository.findById(paymentId)
+                .map(p -> p.getRazorpayOrderId() == null ? "NULL" : p.getRazorpayOrderId())
+                .orElse("ROW NOT FOUND");
+    }
+
     private PaymentSummary toSummary(PaymentEntity payment) {
         return new PaymentSummary(
                 payment.getId(),
