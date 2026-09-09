@@ -82,8 +82,7 @@ public class SosService {
 
         List<SosOutcome.ContactOutcome> outcomes = new ArrayList<>();
         int notified = 0;
-        String message = "SOS ALERT from SheOut: " + customerName
-                + " may need help and shared this location: https://www.google.com/maps?q=" + lat + "," + lng;
+        String message = "SOS from SheOut user " + customerName + ". Location: maps.google.com/?q=" + lat + "," + lng;
 
         for (EmergencyContact contact : contacts) {
             Result<Void, NotificationError> result = smsChannel.send(contact.phoneNumber(), message);
