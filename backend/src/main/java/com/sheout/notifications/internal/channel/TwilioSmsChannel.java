@@ -55,6 +55,9 @@ public class TwilioSmsChannel implements NotificationChannel {
         form.add("To", recipient);
         form.add("From", fromNumber);
         form.add("Body", message);
+
+        log.debug("Twilio SMS send attempt - To: [{}], From: [{}], AccountSid: [{}]", recipient, fromNumber, accountSid);
+
         try {
             restClient.post()
                     .uri(MESSAGES_URL, accountSid)
@@ -65,7 +68,10 @@ public class TwilioSmsChannel implements NotificationChannel {
                     .toBodilessEntity();
             return Result.success(null);
         } catch (RestClientException e) {
-            log.error("Twilio SMS send failed (to a redacted recipient)", e);
+            log.error("Twilio SMS send failed - To: [{}], From: [{}], Status: [{}], Response: [{}]",
+                recipient, fromNumber,
+                e.getMessage().split(":")[0],
+                e.getMessage());
             return Result.failure(NotificationError.PROVIDER_ERROR);
         }
     }
