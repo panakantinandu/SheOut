@@ -10,6 +10,8 @@ import com.sheout.payments.PaymentSummary;
 import com.sheout.payments.internal.PaymentService;
 import com.sheout.sharedkernel.Result;
 import com.sheout.sharedkernel.web.ApiException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -37,6 +39,8 @@ import java.util.UUID;
 @RequestMapping("/api/v1/payments")
 public class PaymentController {
 
+    private static final Logger log = LoggerFactory.getLogger(PaymentController.class);
+
     private final PaymentService paymentService;
     private final BookingApi bookingApi;
 
@@ -48,7 +52,11 @@ public class PaymentController {
     @GetMapping("/bookings/{bookingId}")
     public ResponseEntity<PaymentSummary> getStatus(@PathVariable UUID bookingId) {
         requireParticipant(bookingId);
-        return respond(paymentService.getPaymentStatus(bookingId));
+        Result<PaymentSummary, PaymentError> result = paymentService.getPaymentStatus(bookingId);
+        log.info("getStatus DTO check - bookingId: {}, success: {}, razorpayOrderId: [{}]",
+                bookingId, result.isSuccess(),
+                result.isSuccess() ? result.value().razorpayOrderId() : "N/A");
+        return respond(result);
     }
 
     @PostMapping("/bookings/{bookingId}/cash")
