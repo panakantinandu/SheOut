@@ -23,8 +23,8 @@ function categoryIcon(category: BookingCategory) {
   return <IconCircle tone="soft" size="sm" icon={<Bike />} />;
 }
 
-/** Fully real - fetches the driver's actual trips from GET /api/v1/bookings/me. */
-export function Trips() {
+/** Fully real - fetches the driver's actual bookings from GET /api/v1/bookings/me. */
+export function Bookings() {
   const navigate = useNavigate();
   const [bookings, setBookings] = useState<BookingSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +33,7 @@ export function Trips() {
     bookingApi
       .listMine()
       .then(setBookings)
-      .catch((err) => setError(err instanceof ApiError ? err.message : 'Could not load trips'));
+      .catch((err) => setError(err instanceof ApiError ? err.message : 'Could not load bookings'));
   }, []);
 
   const sorted = useMemo(
@@ -43,11 +43,11 @@ export function Trips() {
 
   return (
     <div className="space-y-6">
-      <TopHeader variant="back" title="My Trips" onBack={() => navigate('/home')} />
+      <TopHeader variant="back" title="My Bookings" onBack={() => navigate('/home')} />
 
       {error && <p className="text-sm text-danger">{error}</p>}
       {!bookings && !error && <p className="text-center text-sm text-text-secondary">Loading...</p>}
-      {bookings && sorted.length === 0 && <p className="text-center text-sm text-text-secondary">No trips yet.</p>}
+      {bookings && sorted.length === 0 && <p className="text-center text-sm text-text-secondary">No bookings yet.</p>}
 
       <div className="space-y-3">
         {sorted.map((booking) => (

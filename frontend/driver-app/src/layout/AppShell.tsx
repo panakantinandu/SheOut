@@ -1,23 +1,17 @@
-import { Home, User, Wallet, ClipboardList } from 'lucide-react';
+import { ClipboardList, Home, User, Wallet } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { BottomNavBar } from '@sheout/design-system';
 import { useLocation, useNavigate } from 'react-router-dom';
 
-/**
- * Wraps every authenticated dashboard-level screen. No mockup was given
- * for the driver app (unlike customer-app's 10-screen brief) - this tab
- * set is derived from what the backend actually supports for a driver:
- * Home (online toggle + offers/active trip), Trips (history), Earnings
- * (computed from completed trips - see Earnings.tsx), Profile.
- */
+/** Wraps every authenticated dashboard-level screen. Tab order/naming matches the mockup: Home/Earnings/Bookings/Profile. */
 export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
 
   const items = [
     { key: 'home', label: 'Home', icon: <Home />, path: '/home' },
-    { key: 'trips', label: 'Trips', icon: <ClipboardList />, path: '/trips' },
     { key: 'earnings', label: 'Earnings', icon: <Wallet />, path: '/earnings' },
+    { key: 'bookings', label: 'Bookings', icon: <ClipboardList />, path: '/bookings' },
     { key: 'profile', label: 'Profile', icon: <User />, path: '/profile' },
   ];
 
