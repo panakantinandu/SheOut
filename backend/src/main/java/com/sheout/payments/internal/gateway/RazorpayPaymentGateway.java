@@ -7,6 +7,8 @@ import com.razorpay.Utils;
 import com.sheout.payments.PaymentError;
 import com.sheout.sharedkernel.Result;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -25,6 +27,8 @@ import java.util.UUID;
 @Component
 public class RazorpayPaymentGateway implements PaymentGateway {
 
+    private static final Logger log = LoggerFactory.getLogger(RazorpayPaymentGateway.class);
+
     private final RazorpayClient client;
     private final String webhookSecret;
 
@@ -34,6 +38,8 @@ public class RazorpayPaymentGateway implements PaymentGateway {
             @Value("${sheout.payments.razorpay.webhook-secret}") String webhookSecret) {
         try {
             this.client = new RazorpayClient(keyId, keySecret);
+            log.info("Razorpay client initialized successfully (keyId starts with: {})",
+                keyId.isEmpty() ? "BLANK" : keyId.substring(0, Math.min(10, keyId.length())));
         } catch (RazorpayException e) {
             throw new IllegalStateException("Failed to initialize Razorpay client", e);
         }
@@ -55,8 +61,14 @@ public class RazorpayPaymentGateway implements PaymentGateway {
             request.put("currency", "INR");
             request.put("receipt", bookingId.toString());
             Order order = client.orders.create(request);
-            return Result.success(new GatewayOrder(order.get("id")));
+            String orderId = order.get("id");
+            log.info("Razorpay order created successfully - bookingId: {}, orderId: {}, amount: {} paise", bookingId, orderId, amount);
+            return Result.success(new GatewayOrder(orderId));
         } catch (RazorpayException e) {
+            log.error("Razorpay order creation failed - bookingId: {}, amount: {}", bookingId, amount, e);
+            return Result.failure(PaymentError.GATEWAY_ERROR);
+        } catch (Exception e) {
+            log.error("Unexpected error creating Razorpay order - bookingId: {}, amount: {}", bookingId, amount, e);
             return Result.failure(PaymentError.GATEWAY_ERROR);
         }
     }
