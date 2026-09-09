@@ -25,12 +25,23 @@ public class OtpService {
     private final String devOtpCode;
     private final String devOtpPhone2;
     private final String devOtpCode2;
+    private final String devOtpPhone3;
+    private final String devOtpCode3;
 
     /**
-     * Two independent fixed-phone/fixed-code slots, not a general list -
-     * this is deliberately just enough for "one CUSTOMER demo number, one
-     * DRIVER demo number" (accounts are one-role-per-phone, so the same
-     * number can't demo both roles), not a speculative N-number mechanism.
+     * Three independent fixed-phone/fixed-code slots. This was originally
+     * "deliberately just 2, not a speculative N-number mechanism" (one
+     * CUSTOMER demo number, one DRIVER demo number - accounts are
+     * one-role-per-phone, so the same number can't demo both roles). That
+     * held until automated QA needed a third: exercising the new-account
+     * signup path requires a phone number with NO existing account, but
+     * both slot 1 and slot 2 are now permanently consumed (they each have
+     * a real account from actual use) - reusing either would only ever
+     * exercise the returning-user path. Slot 3 exists specifically so a
+     * "genuinely new" number is available on demand for that one test,
+     * without disturbing the other two demo numbers. Still three explicit
+     * fields, not a generalized list - the need is for a small, known,
+     * fixed set of purposes, not an open-ended one.
      */
     public OtpService(StringRedisTemplate redisTemplate,
                        OtpSender otpSender,
@@ -38,7 +49,9 @@ public class OtpService {
                        @Value("${sheout.auth.dev-otp-phone:}") String devOtpPhone,
                        @Value("${sheout.auth.dev-otp-code:}") String devOtpCode,
                        @Value("${sheout.auth.dev-otp-phone-2:}") String devOtpPhone2,
-                       @Value("${sheout.auth.dev-otp-code-2:}") String devOtpCode2) {
+                       @Value("${sheout.auth.dev-otp-code-2:}") String devOtpCode2,
+                       @Value("${sheout.auth.dev-otp-phone-3:}") String devOtpPhone3,
+                       @Value("${sheout.auth.dev-otp-code-3:}") String devOtpCode3) {
         this.redisTemplate = redisTemplate;
         this.otpSender = otpSender;
         this.ttl = Duration.ofSeconds(ttlSeconds);
@@ -46,6 +59,8 @@ public class OtpService {
         this.devOtpCode = devOtpCode;
         this.devOtpPhone2 = devOtpPhone2;
         this.devOtpCode2 = devOtpCode2;
+        this.devOtpPhone3 = devOtpPhone3;
+        this.devOtpCode3 = devOtpCode3;
     }
 
     /**
@@ -55,10 +70,11 @@ public class OtpService {
      * since a delivery-layer false negative (provider says failed but the
      * SMS actually arrives) shouldn't lock the user out of retrying.
      * <p>
-     * Exception: if this phone number matches sheout.auth.dev-otp-phone or
-     * dev-otp-phone-2 (both unset/blank by default), the corresponding
-     * fixed code is stored instead of a random one - lets a live deploy be
-     * demoed without a real SMS provider or watching logs for the code.
+     * Exception: if this phone number matches one of the three
+     * sheout.auth.dev-otp-phone[-N] slots (all unset/blank by default),
+     * the corresponding fixed code is stored instead of a random one -
+     * lets a live deploy be demoed, or QA-scripted, without a real SMS
+     * provider or watching logs for the code.
      */
     public boolean requestCode(String phoneNumber) {
         String code = resolveDevCode(phoneNumber);
@@ -108,6 +124,7 @@ public class OtpService {
     private String resolveDevCode(String phoneNumber) {
         if (!devOtpPhone.isBlank() && devOtpPhone.equals(phoneNumber)) return devOtpCode;
         if (!devOtpPhone2.isBlank() && devOtpPhone2.equals(phoneNumber)) return devOtpCode2;
+        if (!devOtpPhone3.isBlank() && devOtpPhone3.equals(phoneNumber)) return devOtpCode3;
         return null;
     }
 }

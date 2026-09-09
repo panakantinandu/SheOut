@@ -83,6 +83,14 @@ services:
         sync: false
       - key: DEV_OTP_CODE_2
         sync: false
+      # Third slot, dedicated to automated QA new-account testing - slots 1
+      # and 2 are now permanently consumed real accounts, so neither can
+      # exercise the new-signup path anymore. Set to any never-used number
+      # when a QA pass needs one.
+      - key: DEV_OTP_PHONE_3
+        sync: false
+      - key: DEV_OTP_CODE_3
+        sync: false
 
       # TESTING AID ONLY, NOT A PRODUCT FEATURE - see BookingService's
       # Javadoc on isVerifiedBypassAccount. Blank/unset here by default;

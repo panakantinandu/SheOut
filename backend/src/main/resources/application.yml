@@ -65,6 +65,14 @@ sheout:
     # demo a DRIVER login. Use this one for that.
     dev-otp-phone-2: ${DEV_OTP_PHONE_2:}
     dev-otp-code-2: ${DEV_OTP_CODE_2:}
+    # Third slot, dedicated to automated QA - slots 1 and 2 are now
+    # permanently consumed (each has a real account from actual use), so
+    # neither can exercise the new-account signup path anymore. Set this
+    # to any never-used-before number when a QA pass needs one; after
+    # that run it becomes a real account too, same as the other two, so a
+    # future new-account test needs a different number here.
+    dev-otp-phone-3: ${DEV_OTP_PHONE_3:}
+    dev-otp-code-3: ${DEV_OTP_CODE_3:}
     # Blank by default - opt-in, not fail-fast (see GoogleTokenVerifier's
     # Javadoc for why this doesn't block startup the way JWT_SECRET does).
     # No real Google Cloud OAuth Client ID exists yet for this build; set
