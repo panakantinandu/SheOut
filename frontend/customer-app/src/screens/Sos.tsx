@@ -1,7 +1,9 @@
 import { CheckCircle2, MapPin, Phone, ShieldAlert, Users } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Button, Card, IconCircle, ListRow, TopHeader } from '@sheout/design-system';
-import { mockAction } from '../lib/mockAction';
+import { ApiError, notificationsApi, usersApi } from '../api/client';
+import type { SosResponse } from '../api/types';
 
 const SAFETY_FEATURES = [
   'Live Location Sharing',
@@ -10,13 +12,89 @@ const SAFETY_FEATURES = [
   'Emergency Contacts',
 ];
 
+// India's unified emergency number - a real tel: dial, not a backend call
+// (there is no "call" concept on the backend, calling is inherently
+// device-native).
+const EMERGENCY_TEL = '112';
+
+function getCurrentPosition(): Promise<GeolocationPosition> {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error('Geolocation not supported by this browser'));
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(resolve, () => reject(new Error('Could not get your location - allow location access and retry')), {
+      timeout: 8000,
+    });
+  });
+}
+
+function reasonMessage(response: SosResponse): string {
+  if (response.reason === 'NO_EMERGENCY_CONTACTS') {
+    return 'You have no emergency contacts saved yet - add one in your profile, or call for help directly.';
+  }
+  if (response.reason === 'ALL_SENDS_FAILED') {
+    return `We recorded your alert but could not reach any of your ${response.contactsTotal} emergency contact(s). Please call for help directly.`;
+  }
+  return `Help is on the way - notified ${response.contactsNotified} of ${response.contactsTotal} emergency contact(s).`;
+}
+
 /**
- * Entirely mock/static - the notifications module (which would actually
- * deliver an SOS alert to emergency contacts/support) doesn't exist yet.
- * Every action here is a clearly-labeled TODO, not wired to anything real.
+ * REAL: "Send SOS Alert" and "Share Location" both call the real
+ * POST /api/v1/notifications/sos - sharing your location IS what the SOS
+ * alert does (it fans out your live location to your emergency contacts),
+ * so both actions are wired to the same endpoint rather than inventing a
+ * separate, lighter "just share, don't alert" backend capability that
+ * doesn't exist. "Contact" fetches real emergency contacts and dials the
+ * first one; "Call Emergency" dials India's real emergency number (112) -
+ * both are real device actions, not mock, even though neither one hits our
+ * backend (there's no "place a call" concept on the backend to wire to).
+ * <p>
+ * bookingId (if this screen was reached from Tracking's SOS button) comes
+ * through router state - see Tracking.tsx's onClick.
  */
 export function Sos() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const bookingId = (location.state as { bookingId?: string } | null)?.bookingId;
+
+  const [sending, setSending] = useState(false);
+  const [result, setResult] = useState<SosResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [contactLookupError, setContactLookupError] = useState<string | null>(null);
+
+  async function handleSendSos() {
+    setSending(true);
+    setError(null);
+    setResult(null);
+    try {
+      const position = await getCurrentPosition();
+      const response = await notificationsApi.triggerSos({
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+        bookingId,
+      });
+      setResult(response);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Could not send SOS alert - check your connection and try again, or call for help directly.');
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function handleContact() {
+    setContactLookupError(null);
+    try {
+      const contacts = await usersApi.getMyEmergencyContacts();
+      if (contacts.length === 0) {
+        setContactLookupError('No emergency contacts saved yet - add one in your profile first.');
+        return;
+      }
+      window.location.href = `tel:${contacts[0].phoneNumber}`;
+    } catch (err) {
+      setContactLookupError(err instanceof ApiError ? err.message : 'Could not load your emergency contacts.');
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -26,33 +104,41 @@ export function Sos() {
         <IconCircle size="lg" color="red" icon={<ShieldAlert />} />
         <p className="font-heading text-lg font-semibold text-text-primary">In Emergency?</p>
         <p className="text-sm text-text-secondary">Press SOS for immediate help</p>
-        <Button variant="danger" fullWidth onClick={() => mockAction('SOS alert', 'no notifications module on the backend yet')}>
-          Send SOS Alert
+        <Button variant="danger" fullWidth disabled={sending} onClick={handleSendSos}>
+          {sending ? 'Sending SOS Alert...' : 'Send SOS Alert'}
         </Button>
+
+        {result && (
+          <p className={`text-sm font-medium ${result.success ? 'text-success' : 'text-danger'}`}>{reasonMessage(result)}</p>
+        )}
+        {error && <p className="text-sm font-medium text-danger">{error}</p>}
       </Card>
 
       <Card className="divide-y divide-border p-0">
         <div className="p-4">
           <ListRow
             icon={<IconCircle tone="soft" icon={<MapPin />} />}
-            label="Share Location"
-            onClick={() => mockAction('Share Location')}
+            label={sending ? 'Sharing...' : 'Share Location'}
+            onClick={handleSendSos}
           />
         </div>
         <div className="p-4">
           <ListRow
             icon={<IconCircle tone="soft" color="orange" icon={<Phone />} />}
             label="Call Emergency"
-            onClick={() => mockAction('Call Emergency')}
+            onClick={() => {
+              window.location.href = `tel:${EMERGENCY_TEL}`;
+            }}
           />
         </div>
         <div className="p-4">
           <ListRow
             icon={<IconCircle tone="soft" color="green" icon={<Users />} />}
             label="Contact"
-            onClick={() => mockAction('Contact emergency contacts')}
+            onClick={handleContact}
           />
         </div>
+        {contactLookupError && <p className="px-4 pb-4 text-sm text-danger">{contactLookupError}</p>}
       </Card>
 
       <div>

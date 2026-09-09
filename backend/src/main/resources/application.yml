@@ -118,6 +118,16 @@ sheout:
     project-id: ${FIREBASE_PROJECT_ID:}
     credentials-json: ${FIREBASE_CREDENTIALS_JSON:}
 
+  notifications:
+    sms:
+      twilio:
+        # Blank by default, same treatment as Razorpay's key-id/key-secret -
+        # see TwilioSmsChannel's Javadoc for why there's no isConfigured()
+        # gate before attempting a send even while these are unset.
+        account-sid: ${TWILIO_ACCOUNT_SID:}
+        auth-token: ${TWILIO_AUTH_TOKEN:}
+        from-number: ${TWILIO_FROM_NUMBER:}
+
   testing:
     # TESTING AID ONLY, NOT A PRODUCT FEATURE - blank/unset by default,
     # same "opt-in via env var" treatment as auth's dev-otp-phone. When

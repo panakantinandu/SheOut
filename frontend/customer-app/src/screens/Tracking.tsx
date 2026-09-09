@@ -143,7 +143,7 @@ export function Tracking() {
         </button>
         <button
           className="flex flex-col items-center gap-1 text-xs text-danger"
-          onClick={() => navigate('/sos')}
+          onClick={() => navigate('/sos', { state: { bookingId } })}
         >
           <IconCircle color="red" tone="soft" icon={<ShieldAlert />} />
           SOS
