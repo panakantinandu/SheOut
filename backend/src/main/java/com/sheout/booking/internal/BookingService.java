@@ -8,6 +8,7 @@ import com.sheout.booking.BookingCategory;
 import com.sheout.booking.BookingCompleted;
 import com.sheout.booking.BookingError;
 import com.sheout.booking.BookingMatched;
+import com.sheout.booking.BookingParticipants;
 import com.sheout.booking.BookingRequested;
 import com.sheout.booking.BookingStarted;
 import com.sheout.booking.BookingStatus;
@@ -205,6 +206,14 @@ public class BookingService implements BookingApi {
 
     public Optional<BookingSummary> findById(UUID bookingId) {
         return bookingRepository.findById(bookingId).map(this::toSummary);
+    }
+
+    @Override
+    public Result<BookingParticipants, BookingError> getParticipants(UUID bookingId) {
+        return bookingRepository.findById(bookingId)
+                .<Result<BookingParticipants, BookingError>>map(
+                        b -> Result.success(new BookingParticipants(b.getCustomerId(), b.getDriverId())))
+                .orElseGet(() -> Result.failure(BookingError.BOOKING_NOT_FOUND));
     }
 
     public List<BookingSummary> listForCustomer(UUID customerId) {
