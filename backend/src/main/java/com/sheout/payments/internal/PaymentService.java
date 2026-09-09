@@ -8,7 +8,6 @@ import com.sheout.payments.PaymentSummary;
 import com.sheout.payments.internal.gateway.GatewayOrder;
 import com.sheout.payments.internal.gateway.PaymentGateway;
 import com.sheout.sharedkernel.Result;
-import jakarta.persistence.EntityManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -28,12 +27,10 @@ public class PaymentService implements PaymentApi {
 
     private final PaymentRepository paymentRepository;
     private final PaymentGateway paymentGateway;
-    private final EntityManager entityManager;
 
-    public PaymentService(PaymentRepository paymentRepository, PaymentGateway paymentGateway, EntityManager entityManager) {
+    public PaymentService(PaymentRepository paymentRepository, PaymentGateway paymentGateway) {
         this.paymentRepository = paymentRepository;
         this.paymentGateway = paymentGateway;
-        this.entityManager = entityManager;
     }
 
     @Override
@@ -87,20 +84,15 @@ public class PaymentService implements PaymentApi {
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public PaymentEntity createPendingPayment(UUID bookingId, BigDecimal finalFare) {
-        log.info("createPendingPayment called - bookingId: {}, finalFare: {}", bookingId, finalFare);
         if (paymentRepository.findByBookingId(bookingId).isPresent()) {
-            log.warn("Payment already exists for bookingId: {}", bookingId);
             return null;
         }
         PaymentEntity payment = new PaymentEntity(bookingId, finalFare, PaymentMethod.UPI, PaymentStatus.PENDING);
         try {
-            PaymentEntity saved = paymentRepository.save(payment);
-            log.info("Payment created and saved - id: {}, bookingId: {}, orderId: {}", saved.getId(), saved.getBookingId(), saved.getRazorpayOrderId());
-            return saved;
+            return paymentRepository.save(payment);
         } catch (DataIntegrityViolationException e) {
             // Two BookingCompleted deliveries raced past the findByBookingId check above -
             // the unique constraint on booking_id is the real guard; losing this race is fine.
-            log.warn("DataIntegrityViolationException - duplicate payment for bookingId: {}", bookingId);
             return null;
         }
     }
@@ -115,22 +107,15 @@ public class PaymentService implements PaymentApi {
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void applyGatewayResult(UUID paymentId, Result<GatewayOrder, PaymentError> orderResult) {
-        log.info("applyGatewayResult called - paymentId: {}, orderResult.success: {}", paymentId, orderResult.isSuccess());
         PaymentEntity payment = paymentRepository.findById(paymentId).orElseThrow();
         if (orderResult.isSuccess()) {
-            String orderId = orderResult.value().orderId();
-            log.info("Setting Razorpay order ID: {} on payment: {}", orderId, paymentId);
-            payment.setRazorpayOrderId(orderId);
+            payment.setRazorpayOrderId(orderResult.value().orderId());
         } else {
-            log.error("Gateway order creation failed: {}", orderResult.error());
+            log.error("Razorpay order creation failed for payment {} - {}", paymentId, orderResult.error());
             payment.setStatus(PaymentStatus.FAILED);
             payment.setFailureReason("Razorpay order creation failed");
         }
-        log.info("Saving payment with orderId: {}", payment.getRazorpayOrderId());
         paymentRepository.save(payment);
-        paymentRepository.flush();  // Force immediate database flush
-        entityManager.clear();      // Clear session cache to force fresh database reads
-        log.info("Payment saved, flushed, and session cleared - verifying: {}", paymentRepository.findById(paymentId).map(p -> p.getRazorpayOrderId()).orElse("NOT FOUND"));
     }
 
     /** Called by RazorpayWebhookController after signature verification. */
@@ -154,19 +139,6 @@ public class PaymentService implements PaymentApi {
             payment.setFailureReason(failureReason);
         }
         paymentRepository.save(payment);
-    }
-
-    /**
-     * Diagnostic probe: reads the row in a transaction of its own, so the
-     * caller can see what actually survived applyGatewayResult's commit
-     * rather than what was merely flushed inside it.
-     */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public String readPersistedOrderId(UUID paymentId) {
-        entityManager.clear();
-        return paymentRepository.findById(paymentId)
-                .map(p -> p.getRazorpayOrderId() == null ? "NULL" : p.getRazorpayOrderId())
-                .orElse("ROW NOT FOUND");
     }
 
     private PaymentSummary toSummary(PaymentEntity payment) {
