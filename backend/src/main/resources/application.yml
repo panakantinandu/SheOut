@@ -127,6 +127,12 @@ sheout:
     # without a real admin-verified account. Never set this in a real
     # production environment.
     verified-bypass-phone: ${VERIFIED_BYPASS_PHONE:}
+    # Same idea, driver side: lets one configured driver phone number go
+    # ONLINE (DriverProfileService.setOnlineStatus) without real admin
+    # verification - there's no self-service path to VERIFIED status at
+    # all (see AdminVerificationController's Javadoc), so this was
+    # otherwise a hard block on testing the online/dispatch flow live.
+    verified-driver-bypass-phone: ${VERIFIED_DRIVER_BYPASS_PHONE:}
 
 management:
   endpoints:

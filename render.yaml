@@ -99,6 +99,12 @@ services:
       # skip the real gender-verification check on booking creation.
       - key: VERIFIED_BYPASS_PHONE
         sync: false
+      # Same idea, driver side - see DriverProfileService's Javadoc on
+      # isVerifiedBypassAccount. Lets one configured driver phone number
+      # go ONLINE without real admin verification (no self-service path
+      # to VERIFIED status exists at all).
+      - key: VERIFIED_DRIVER_BYPASS_PHONE
+        sync: false
 
       # Google Sign-In - see GoogleTokenVerifier. Not set yet: no real
       # Google Cloud OAuth Client ID exists for this build. Until it's set,
