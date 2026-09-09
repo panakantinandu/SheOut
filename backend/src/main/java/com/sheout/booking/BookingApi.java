@@ -2,6 +2,7 @@ package com.sheout.booking;
 
 import com.sheout.sharedkernel.Result;
 
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -30,4 +31,16 @@ public interface BookingApi {
      * interface and on BookingRequested).
      */
     Result<BookingParticipants, BookingError> getParticipants(UUID bookingId);
+
+    /**
+     * Same read-only reasoning as getParticipants, different shape: this
+     * exposes the full BookingSummary (already public - see assignDriver's
+     * return type) for callers that need pickup/drop/fare, not just
+     * participant ids. Added for dispatch's own offer response - a driver
+     * who's only been OFFERED a booking (not yet accepted) is correctly
+     * NOT a participant per BookingController.requireParticipant, so
+     * GET /api/v1/bookings/{id} 403s for them; dispatch needs to show
+     * pickup/drop/fare on the offer itself before that acceptance happens.
+     */
+    Optional<BookingSummary> findById(UUID bookingId);
 }

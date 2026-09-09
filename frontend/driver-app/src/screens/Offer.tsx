@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AmountText, Button, Card, TopHeader } from '@sheout/design-system';
 import { ApiError, bookingApi, dispatchApi } from '../api/client';
-import type { BookingSummary } from '../api/types';
+import type { OfferSummary } from '../api/types';
 
 const POLL_INTERVAL_MS = 3000;
 // Matches sheout.dispatch.offer-window-seconds's default (see render.yaml /
@@ -28,13 +28,17 @@ function distanceKm(a: { lat: number; lng: number }, b: { lat: number; lng: numb
 }
 
 /**
- * REAL: booking details (pickup/drop/fare) fetched from GET /bookings/{id}
- * once we have the offered bookingId from GET /dispatch/offers/me. Accept
- * calls the real dispatch-accept + booking-accept pair (see Home.tsx's
- * previous comment on why two calls); Decline calls the real decline
- * endpoint. Distance is a real haversine calculation from the booking's
- * own real pickup/drop coordinates - straight-line, not routed, since no
- * routing API is configured anywhere in this project.
+ * REAL: pickup/drop/fare come straight from GET /dispatch/offers/me's own
+ * (enriched) response, NOT a separate GET /bookings/{id} call - that call
+ * doesn't work here: a driver who's only been OFFERED this booking, not
+ * yet accepted it, isn't a participant on it yet, so BookingController's
+ * requireParticipant correctly 403s them (found the hard way - this
+ * screen's original version called it and every real offer failed to
+ * load). Accept calls the real dispatch-accept + booking-accept pair (see
+ * Home.tsx's previous comment on why two calls); Decline calls the real
+ * decline endpoint. Distance is a real haversine calculation from the
+ * offer's own real pickup/drop coordinates - straight-line, not routed,
+ * since no routing API is configured anywhere in this project.
  * <p>
  * "No longer available": this screen keeps polling GET /dispatch/offers/me
  * while open - if this bookingId stops coming back (offer expired
@@ -46,33 +50,33 @@ function distanceKm(a: { lat: number; lng: number }, b: { lat: number; lng: numb
 export function Offer() {
   const { bookingId } = useParams<{ bookingId: string }>();
   const navigate = useNavigate();
-  const [booking, setBooking] = useState<BookingSummary | null>(null);
+  const [offer, setOffer] = useState<OfferSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [unavailable, setUnavailable] = useState(false);
   const [responding, setResponding] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(OFFER_WINDOW_SECONDS);
   const seenAtRef = useRef(Date.now());
 
-  useEffect(() => {
-    if (!bookingId) return;
-    bookingApi.getById(bookingId).then(setBooking).catch(() => setError('Could not load this request'));
-  }, [bookingId]);
-
-  // Keep confirming the offer is still actually ours to answer.
+  // Fetches the offer (with its enriched booking details) and keeps
+  // re-confirming it's still ours to answer, on the same poll.
   useEffect(() => {
     if (!bookingId || unavailable) return;
     let cancelled = false;
-    const interval = setInterval(async () => {
+    async function poll() {
       try {
         const current = await dispatchApi.getMyOffer();
         if (cancelled) return;
         if (!current || current.bookingId !== bookingId) {
           setUnavailable(true);
+          return;
         }
+        setOffer(current);
       } catch {
-        // Transient poll failure - next tick retries.
+        if (!cancelled) setError('Could not load this request');
       }
-    }, POLL_INTERVAL_MS);
+    }
+    poll();
+    const interval = setInterval(poll, POLL_INTERVAL_MS);
     return () => {
       cancelled = true;
       clearInterval(interval);
@@ -117,34 +121,38 @@ export function Offer() {
     }
   }
 
-  const distance = booking ? distanceKm(booking.pickup, booking.drop) : null;
+  const distance = offer?.pickup && offer?.drop ? distanceKm(offer.pickup, offer.drop) : null;
 
   return (
     <div className="space-y-6">
       <TopHeader variant="back" title="New Request" onBack={() => navigate('/home')} />
 
-      {!booking && !error && <p className="text-center text-sm text-text-secondary">Loading...</p>}
+      {!offer && !error && !unavailable && <p className="text-center text-sm text-text-secondary">Loading...</p>}
       {error && <p className="text-sm text-danger">{error}</p>}
 
-      {booking && !unavailable && (
+      {offer && !unavailable && (
         <>
           <Card className="flex items-center justify-between bg-primary-light">
             <div className="flex items-center gap-2 text-primary">
               <Clock className="h-4 w-4" />
               <span className="text-sm font-semibold">Respond within {secondsLeft}s</span>
             </div>
-            <AmountText amount={booking.finalFare ?? booking.fareEstimate} size="lg" />
+            {offer.fareEstimate != null && <AmountText amount={offer.fareEstimate} size="lg" />}
           </Card>
 
           <Card className="space-y-3">
-            <div className="flex items-start gap-2">
-              <Navigation className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-              <span className="text-sm text-text-primary">{booking.pickup.label}</span>
-            </div>
-            <div className="flex items-start gap-2">
-              <Navigation className="mt-0.5 h-4 w-4 shrink-0 text-accent-orange" />
-              <span className="text-sm text-text-primary">{booking.drop.label}</span>
-            </div>
+            {offer.pickup && (
+              <div className="flex items-start gap-2">
+                <Navigation className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                <span className="text-sm text-text-primary">{offer.pickup.label}</span>
+              </div>
+            )}
+            {offer.drop && (
+              <div className="flex items-start gap-2">
+                <Navigation className="mt-0.5 h-4 w-4 shrink-0 text-accent-orange" />
+                <span className="text-sm text-text-primary">{offer.drop.label}</span>
+              </div>
+            )}
             {distance != null && (
               <div className="flex justify-between border-t border-border pt-3 text-sm">
                 <span className="text-text-secondary">Distance</span>
