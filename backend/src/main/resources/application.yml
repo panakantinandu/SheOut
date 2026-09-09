@@ -109,6 +109,11 @@ sheout:
     razorpay:
       key-id: ${RAZORPAY_KEY_ID:}
       key-secret: ${RAZORPAY_KEY_SECRET:}
+      # Secret configured on the Razorpay dashboard's webhook settings for
+      # this endpoint - used to verify X-Razorpay-Signature on incoming
+      # webhook calls (see RazorpayPaymentGateway/RazorpayWebhookController).
+      # Same blank-by-default treatment as key-id/key-secret above.
+      webhook-secret: ${RAZORPAY_WEBHOOK_SECRET:}
   firebase:
     project-id: ${FIREBASE_PROJECT_ID:}
     credentials-json: ${FIREBASE_CREDENTIALS_JSON:}
