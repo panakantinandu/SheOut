@@ -1,6 +1,10 @@
 package com.sheout.payments.internal.web;
 
+import com.sheout.auth.CurrentAccount;
 import com.sheout.auth.CurrentAccountContext;
+import com.sheout.booking.BookingApi;
+import com.sheout.booking.BookingError;
+import com.sheout.booking.BookingParticipants;
 import com.sheout.payments.PaymentError;
 import com.sheout.payments.PaymentSummary;
 import com.sheout.payments.internal.PaymentService;
@@ -19,36 +23,37 @@ import java.util.UUID;
 /**
  * Self-service endpoints for a Wallet/payment-status screen.
  * <p>
- * ASSUMPTION FLAGGED / known gap: these only require the caller to be
- * authenticated, not that they're a participant on this specific booking
- * (contrast BookingController.requireParticipant) - there is no way to
- * check that here without a BookingApi read method, and BookingApi
- * doesn't have one (see its Javadoc; BookingRequested's Javadoc flags the
- * same gap for dispatch). Any authenticated account can currently query
- * or cash-settle any bookingId's payment. Closing this needs a minimal
- * BookingApi addition (e.g. a participant-check or read method) - out of
- * scope here per this session's instruction not to modify booking's
- * files.
+ * FIXED: these used to only require the caller to be authenticated, not
+ * that they're a participant on this specific booking (contrast
+ * BookingController.requireParticipant) - any authenticated account could
+ * query or cash-settle any bookingId's payment. Closed via BookingApi's
+ * new getParticipants read method (see its Javadoc) - same
+ * caller.accountId().equals(customerId/driverId) check
+ * BookingController already uses, just against the smaller
+ * BookingParticipants DTO instead of a full BookingSummary, since that's
+ * all an authorization check needs.
  */
 @RestController
 @RequestMapping("/api/v1/payments")
 public class PaymentController {
 
     private final PaymentService paymentService;
+    private final BookingApi bookingApi;
 
-    public PaymentController(PaymentService paymentService) {
+    public PaymentController(PaymentService paymentService, BookingApi bookingApi) {
         this.paymentService = paymentService;
+        this.bookingApi = bookingApi;
     }
 
     @GetMapping("/bookings/{bookingId}")
     public ResponseEntity<PaymentSummary> getStatus(@PathVariable UUID bookingId) {
-        requireAuthenticated();
+        requireParticipant(bookingId);
         return respond(paymentService.getPaymentStatus(bookingId));
     }
 
     @PostMapping("/bookings/{bookingId}/cash")
     public ResponseEntity<PaymentSummary> initiateCash(@PathVariable UUID bookingId) {
-        requireAuthenticated();
+        requireParticipant(bookingId);
         return respond(paymentService.initiateCashPayment(bookingId));
     }
 
@@ -59,8 +64,29 @@ public class PaymentController {
         return ResponseEntity.ok(result.value());
     }
 
-    private void requireAuthenticated() {
-        CurrentAccountContext.get().orElseThrow(() -> ApiException.unauthorized("Authentication required"));
+    /**
+     * Authenticated is not enough - the caller must actually be the
+     * customer or the assigned driver on this specific booking.
+     * BOOKING_NOT_FOUND (a bad/nonexistent bookingId) surfaces as 404, same
+     * as PaymentError.PAYMENT_NOT_FOUND does below - a caller shouldn't be
+     * able to tell "this booking doesn't exist" apart from "you're not
+     * allowed to see it" via the error shape, but a 404 here is also just
+     * correct on its own terms, not solely a confidentiality choice.
+     */
+    private void requireParticipant(UUID bookingId) {
+        CurrentAccount caller = CurrentAccountContext.get()
+                .orElseThrow(() -> ApiException.unauthorized("Authentication required"));
+
+        Result<BookingParticipants, BookingError> result = bookingApi.getParticipants(bookingId);
+        if (result.isFailure()) {
+            throw ApiException.notFound("No booking found for this id");
+        }
+        BookingParticipants participants = result.value();
+        boolean isParticipant = caller.accountId().equals(participants.customerId())
+                || caller.accountId().equals(participants.driverId());
+        if (!isParticipant) {
+            throw ApiException.forbidden("Not a participant on this booking");
+        }
     }
 
     private ApiException toApiException(PaymentError error) {

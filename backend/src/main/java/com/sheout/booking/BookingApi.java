@@ -5,17 +5,29 @@ import com.sheout.sharedkernel.Result;
 import java.util.UUID;
 
 /**
- * Deliberately minimal, exactly the two operations another module needs
- * right now: creating a booking, and dispatch assigning a driver to one.
- * Everything else a booking's own participants need (accepting, starting,
- * completing, cancelling, listing "my bookings") is self-service over
- * HTTP, internal to this module - see BookingController. This module does
- * not contain matching logic; assignDriver trusts its caller (dispatch,
- * once built) to have already picked an eligible driver.
+ * Deliberately minimal: creating a booking, dispatch assigning a driver to
+ * one, and a read-only participants lookup for other modules' own
+ * authorization checks (see getParticipants). Everything else a booking's
+ * own participants need (accepting, starting, completing, cancelling,
+ * listing "my bookings") is self-service over HTTP, internal to this
+ * module - see BookingController. This module does not contain matching
+ * logic; assignDriver trusts its caller (dispatch) to have already picked
+ * an eligible driver.
  */
 public interface BookingApi {
 
     Result<BookingSummary, BookingError> requestBooking(RequestBookingCommand command);
 
     Result<BookingSummary, BookingError> assignDriver(UUID bookingId, UUID driverId);
+
+    /**
+     * Just the two account ids a caller needs to check "is this account a
+     * participant on this booking" - not the full BookingSummary, which
+     * exposes far more than an authorization check needs (see
+     * BookingParticipants). Added for payments' PaymentController, which
+     * had no way to verify a caller before this (that gap was flagged in
+     * this method's absence - see the old Javadoc history on this
+     * interface and on BookingRequested).
+     */
+    Result<BookingParticipants, BookingError> getParticipants(UUID bookingId);
 }
