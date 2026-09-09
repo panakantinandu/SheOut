@@ -204,6 +204,7 @@ public class BookingService implements BookingApi {
         return Result.success(toSummary(booking));
     }
 
+    @Override
     public Optional<BookingSummary> findById(UUID bookingId) {
         return bookingRepository.findById(bookingId).map(this::toSummary);
     }

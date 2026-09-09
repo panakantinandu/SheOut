@@ -3,6 +3,10 @@ package com.sheout.dispatch.internal.web;
 import com.sheout.auth.AccountRole;
 import com.sheout.auth.CurrentAccount;
 import com.sheout.auth.CurrentAccountContext;
+import com.sheout.booking.BookingApi;
+import com.sheout.booking.BookingCategory;
+import com.sheout.booking.BookingSummary;
+import com.sheout.booking.GeoAddress;
 import com.sheout.dispatch.internal.DispatchError;
 import com.sheout.dispatch.internal.DispatchService;
 import com.sheout.sharedkernel.Result;
@@ -19,6 +23,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.math.BigDecimal;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -38,9 +44,11 @@ import java.util.UUID;
 public class DispatchController {
 
     private final DispatchService dispatchService;
+    private final BookingApi bookingApi;
 
-    public DispatchController(DispatchService dispatchService) {
+    public DispatchController(DispatchService dispatchService, BookingApi bookingApi) {
         this.dispatchService = dispatchService;
+        this.bookingApi = bookingApi;
     }
 
     @PostMapping("/api/v1/dispatch/location")
@@ -50,12 +58,29 @@ public class DispatchController {
         return ResponseEntity.accepted().build();
     }
 
+    /**
+     * Enriched with pickup/drop/fare/category from the booking itself
+     * (via BookingApi.findById - a driver who's only been offered this
+     * booking, not yet accepted it, isn't a participant yet, so
+     * GET /api/v1/bookings/{id} would 403 them - see BookingApi's
+     * Javadoc on findById). If the booking has since vanished somehow,
+     * falls back to the bare bookingId rather than hiding the offer
+     * entirely.
+     */
     @GetMapping("/api/v1/dispatch/offers/me")
     public ResponseEntity<OfferResponse> getMyOffer() {
         CurrentAccount caller = requireDriver();
         return dispatchService.findActiveOffer(caller.accountId())
-                .map(bookingId -> ResponseEntity.ok(new OfferResponse(bookingId)))
+                .map(this::toOfferResponse)
+                .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.noContent().build());
+    }
+
+    private OfferResponse toOfferResponse(UUID bookingId) {
+        Optional<BookingSummary> booking = bookingApi.findById(bookingId);
+        return booking
+                .map(b -> new OfferResponse(bookingId, b.pickup(), b.drop(), b.fareEstimate(), b.category()))
+                .orElseGet(() -> new OfferResponse(bookingId, null, null, null, null));
     }
 
     @PostMapping("/api/v1/dispatch/offers/{bookingId}/accept")
@@ -102,6 +127,7 @@ public class DispatchController {
     ) {
     }
 
-    public record OfferResponse(UUID bookingId) {
+    /** pickup/drop/fareEstimate/category are null only if the booking has vanished between the offer being made and this being read - see toOfferResponse. */
+    public record OfferResponse(UUID bookingId, GeoAddress pickup, GeoAddress drop, BigDecimal fareEstimate, BookingCategory category) {
     }
 }

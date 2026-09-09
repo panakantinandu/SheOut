@@ -65,9 +65,21 @@ export interface BookingSummary {
   cancelledAt: string | null;
 }
 
-/** null bookingId means GET /dispatch/offers/me returned 204 (no active offer). */
+/**
+ * Enriched with the booking's own pickup/drop/fare/category, since a
+ * driver who's only been offered this booking (not yet accepted it) isn't
+ * a participant on it yet - GET /bookings/{id} would 403 them (see the
+ * backend's BookingApi.findById Javadoc), so the offer response itself
+ * carries what the Offer screen needs. pickup/drop/fareEstimate/category
+ * are null only in the rare case the booking vanished between the offer
+ * being made and this being read.
+ */
 export interface OfferSummary {
   bookingId: string;
+  pickup: GeoAddress | null;
+  drop: GeoAddress | null;
+  fareEstimate: number | null;
+  category: BookingCategory | null;
 }
 
 /** The shape GlobalExceptionHandler / ApiException always return on failure. */
