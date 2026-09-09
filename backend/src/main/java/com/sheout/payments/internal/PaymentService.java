@@ -125,7 +125,8 @@ public class PaymentService implements PaymentApi {
         }
         log.info("Saving payment with orderId: {}", payment.getRazorpayOrderId());
         paymentRepository.save(payment);
-        log.info("Payment saved - verifying: {}", paymentRepository.findById(paymentId).map(p -> p.getRazorpayOrderId()).orElse("NOT FOUND"));
+        paymentRepository.flush();  // Force immediate database flush instead of relying on transaction commit
+        log.info("Payment saved and flushed - verifying: {}", paymentRepository.findById(paymentId).map(p -> p.getRazorpayOrderId()).orElse("NOT FOUND"));
     }
 
     /** Called by RazorpayWebhookController after signature verification. */
