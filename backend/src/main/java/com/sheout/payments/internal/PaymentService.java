@@ -107,14 +107,20 @@ public class PaymentService implements PaymentApi {
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void applyGatewayResult(UUID paymentId, Result<GatewayOrder, PaymentError> orderResult) {
+        log.info("applyGatewayResult called - paymentId: {}, orderResult.success: {}", paymentId, orderResult.isSuccess());
         PaymentEntity payment = paymentRepository.findById(paymentId).orElseThrow();
         if (orderResult.isSuccess()) {
-            payment.setRazorpayOrderId(orderResult.value().orderId());
+            String orderId = orderResult.value().orderId();
+            log.info("Setting Razorpay order ID: {} on payment: {}", orderId, paymentId);
+            payment.setRazorpayOrderId(orderId);
         } else {
+            log.error("Gateway order creation failed: {}", orderResult.error());
             payment.setStatus(PaymentStatus.FAILED);
             payment.setFailureReason("Razorpay order creation failed");
         }
+        log.info("Saving payment with orderId: {}", payment.getRazorpayOrderId());
         paymentRepository.save(payment);
+        log.info("Payment saved - verifying: {}", paymentRepository.findById(paymentId).map(p -> p.getRazorpayOrderId()).orElse("NOT FOUND"));
     }
 
     /** Called by RazorpayWebhookController after signature verification. */
