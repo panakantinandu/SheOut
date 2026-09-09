@@ -70,6 +70,29 @@ export interface BookingSummary {
   cancelledAt: string | null;
 }
 
+export interface SosContactOutcome {
+  contactName: string;
+  relationship: string;
+  delivered: boolean;
+}
+
+/**
+ * success is true iff at least one contact was actually notified - the
+ * field to check regardless of *why* nothing went out (reason is
+ * 'NO_EMERGENCY_CONTACTS' or 'ALL_SENDS_FAILED' when success is false).
+ * Always returned with a 200 - see the backend's SosController Javadoc for
+ * why this doesn't use a non-2xx status for a partial/total send failure.
+ */
+export interface SosResponse {
+  alertId: string;
+  contactsTotal: number;
+  contactsNotified: number;
+  contactsFailed: number;
+  contacts: SosContactOutcome[];
+  success: boolean;
+  reason: 'NO_EMERGENCY_CONTACTS' | 'ALL_SENDS_FAILED' | null;
+}
+
 /** The shape GlobalExceptionHandler / ApiException always return on failure. */
 export interface ApiErrorResponse {
   timestamp: string;

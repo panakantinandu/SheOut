@@ -7,6 +7,7 @@ import type {
   CustomerProfileSummary,
   EmergencyContact,
   GeoAddress,
+  SosResponse,
   VerificationSummary,
 } from './types';
 
@@ -132,6 +133,12 @@ export const usersApi = {
 
   getMyEmergencyContacts(): Promise<EmergencyContact[]> {
     return request('/api/v1/users/customer/me/emergency-contacts');
+  },
+};
+
+export const notificationsApi = {
+  triggerSos(input: { lat: number; lng: number; bookingId?: string }): Promise<SosResponse> {
+    return request('/api/v1/notifications/sos', { method: 'POST', body: input });
   },
 };
 
