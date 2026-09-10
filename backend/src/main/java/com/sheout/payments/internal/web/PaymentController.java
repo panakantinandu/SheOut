@@ -67,11 +67,16 @@ public class PaymentController {
     /**
      * Authenticated is not enough - the caller must actually be the
      * customer or the assigned driver on this specific booking.
-     * BOOKING_NOT_FOUND (a bad/nonexistent bookingId) surfaces as 404, same
-     * as PaymentError.PAYMENT_NOT_FOUND does below - a caller shouldn't be
+     * <p>
+     * A non-participant and a nonexistent bookingId deliberately produce
+     * the identical 404 and the identical message: a caller must not be
      * able to tell "this booking doesn't exist" apart from "you're not
-     * allowed to see it" via the error shape, but a 404 here is also just
-     * correct on its own terms, not solely a confidentiality choice.
+     * allowed to see it". Answering the authorization failure with 403
+     * would confirm that a given id names a real booking, making ids
+     * enumerable by anyone with an account, so the authorization failure
+     * is reported as not-found rather than forbidden. Keep the two
+     * messages below identical - letting them drift reopens the same gap
+     * the status codes close.
      */
     private void requireParticipant(UUID bookingId) {
         CurrentAccount caller = CurrentAccountContext.get()
@@ -85,7 +90,7 @@ public class PaymentController {
         boolean isParticipant = caller.accountId().equals(participants.customerId())
                 || caller.accountId().equals(participants.driverId());
         if (!isParticipant) {
-            throw ApiException.forbidden("Not a participant on this booking");
+            throw ApiException.notFound("No booking found for this id");
         }
     }
 
