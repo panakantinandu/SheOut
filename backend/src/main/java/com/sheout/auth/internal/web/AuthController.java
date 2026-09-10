@@ -36,7 +36,6 @@ public class AuthController {
 
     @PostMapping("/api/v1/auth/otp/request")
     public ResponseEntity<Void> requestOtp(@Valid @RequestBody RequestOtpRequest request) {
-        requireSelfServiceRole(request.role());
         Result<Void, AuthError> result = authService.requestOtp(request.phoneNumber(), request.role());
         if (result.isFailure()) {
             throw toApiException(result.error());
@@ -46,7 +45,6 @@ public class AuthController {
 
     @PostMapping("/api/v1/auth/otp/verify")
     public ResponseEntity<VerifyOtpResponse> verifyOtp(@Valid @RequestBody VerifyOtpRequest request) {
-        requireSelfServiceRole(request.role());
         Result<AuthenticatedSession, AuthError> result =
                 authService.verifyOtp(request.phoneNumber(), request.code(), request.role());
         if (result.isFailure()) {
@@ -66,7 +64,6 @@ public class AuthController {
      */
     @PostMapping("/api/v1/auth/google/verify")
     public ResponseEntity<VerifyOtpResponse> verifyGoogle(@Valid @RequestBody GoogleVerifyRequest request) {
-        requireSelfServiceRole(request.role());
         if (!googleTokenVerifier.isConfigured()) {
             throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "Service Unavailable", "Google sign-in is not configured on this server");
         }
@@ -81,21 +78,6 @@ public class AuthController {
         return ResponseEntity.ok(VerifyOtpResponse.from(result.value()));
     }
 
-    /**
-     * SECURITY FIX: role was previously a fully client-trusted field with no
-     * restriction, meaning any phone number could self-serve an ADMIN token
-     * by simply passing role=ADMIN to signup - confirmed live against a
-     * running instance, not just a theoretical gap. Self-service signup is
-     * for CUSTOMER/DRIVER only; ADMIN accounts must be provisioned
-     * out-of-band (see the auth README section) until the admin module
-     * exists to do this properly.
-     */
-    private void requireSelfServiceRole(AccountRole role) {
-        if (role == AccountRole.ADMIN) {
-            throw ApiException.forbidden("ADMIN accounts cannot be created via self-service signup");
-        }
-    }
-
     private ApiException toApiException(AuthError error) {
         return switch (error) {
             case OTP_DELIVERY_FAILED ->
@@ -108,6 +90,10 @@ public class AuthController {
                     // Shared between the phone and Google flows (see verifyGoogle) - kept
                     // provider-agnostic rather than saying "phone number" for both.
                     new ApiException(HttpStatus.CONFLICT, "Conflict", "This account is already registered under a different role");
+            case ADMIN_SELF_SIGNUP_FORBIDDEN ->
+                    // A pure role gate, not tied to a specific resource id, so 403
+                    // rather than the 404 used for per-resource authorization.
+                    ApiException.forbidden("ADMIN accounts cannot be created via self-service signup");
             case EMAIL_LINKED_TO_PHONE_ACCOUNT ->
                     new ApiException(HttpStatus.CONFLICT, "Conflict", "An account already exists with this email - sign in with your phone number instead");
         };

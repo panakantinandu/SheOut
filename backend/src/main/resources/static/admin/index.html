@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SheOut Ops</title>
+<!--
+  Deliberately one dependency-free static file served by the backend itself,
+  rather than a fourth React app. This is an internal ops console: it needs
+  no build step, no deploy of its own, and being same-origin it sidesteps
+  CORS entirely. If it ever grows past "answer what's happening right now",
+  that is the point to reconsider - not before.
+-->
+<style>
+  :root {
+    --bg: #f6f6f4; --panel: #fff; --line: #dcdcd6; --text: #23231f;
+    --muted: #6b6b63; --accent: #2f5d50; --danger: #a33a2c; --warn: #8a6d1f;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+  header { display: flex; align-items: baseline; gap: 16px; padding: 14px 20px;
+           background: var(--panel); border-bottom: 1px solid var(--line); }
+  header h1 { font-size: 15px; margin: 0; font-weight: 650; letter-spacing: .01em; }
+  header .who { color: var(--muted); font-size: 12px; margin-left: auto; }
+  nav { display: flex; gap: 2px; padding: 0 20px; background: var(--panel);
+        border-bottom: 1px solid var(--line); }
+  nav button { background: none; border: 0; border-bottom: 2px solid transparent;
+               padding: 9px 12px; font: inherit; color: var(--muted); cursor: pointer; }
+  nav button[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
+  main { padding: 20px; max-width: 1500px; }
+  .bar { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .bar h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em;
+            color: var(--muted); margin: 0; font-weight: 650; }
+  .scroll { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .05em;
+       color: var(--muted); padding: 9px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  td { padding: 9px 12px; border-bottom: 1px solid #efefea; vertical-align: top; }
+  tr:last-child td { border-bottom: 0; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: var(--muted); }
+  .tag { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 11px;
+         font-weight: 600; border: 1px solid var(--line); white-space: nowrap; }
+  .t-UNDER_REVIEW, .t-PENDING, .t-REQUESTED { color: var(--warn); border-color: #e2d3a0; background: #fbf6e6; }
+  .t-VERIFIED, .t-CAPTURED, .t-COMPLETED { color: var(--accent); border-color: #b9d4c9; background: #eaf3ef; }
+  .t-REJECTED, .t-FAILED, .t-CANCELLED { color: var(--danger); border-color: #e6bdb5; background: #fbeeeb; }
+  button.act { font: inherit; font-size: 12px; padding: 4px 9px; border: 1px solid var(--line);
+               background: #fff; border-radius: 5px; cursor: pointer; }
+  button.act:hover { border-color: var(--muted); }
+  button.ok { color: var(--accent); } button.no { color: var(--danger); }
+  .empty { padding: 22px; color: var(--muted); text-align: center; }
+  .err { background: #fbeeeb; border: 1px solid #e6bdb5; color: var(--danger);
+         padding: 9px 12px; border-radius: 6px; margin-bottom: 12px; }
+  form.login { max-width: 330px; margin: 60px auto; background: var(--panel);
+               border: 1px solid var(--line); border-radius: 8px; padding: 22px; }
+  form.login h2 { margin: 0 0 4px; font-size: 15px; }
+  form.login p { margin: 0 0 16px; color: var(--muted); font-size: 12px; }
+  label { display: block; font-size: 12px; color: var(--muted); margin: 10px 0 4px; }
+  input { width: 100%; padding: 8px 10px; border: 1px solid var(--line);
+          border-radius: 5px; font: inherit; background: #fff; color: var(--text); }
+  button.primary { width: 100%; margin-top: 14px; padding: 9px; background: var(--accent);
+                   color: #fff; border: 0; border-radius: 5px; font: inherit; font-weight: 600; cursor: pointer; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+
+<form class="login" id="login">
+  <h2>SheOut Ops</h2>
+  <p>Admin sign-in. This account must already have been granted ADMIN.</p>
+  <div class="err" id="loginErr" hidden></div>
+  <label for="phone">Phone number</label>
+  <input id="phone" placeholder="+919999999999" autocomplete="username">
+  <div id="codeRow" hidden>
+    <label for="code">OTP code</label>
+    <input id="code" inputmode="numeric" placeholder="123456" autocomplete="one-time-code">
+  </div>
+  <button class="primary" id="loginBtn" type="submit">Send code</button>
+</form>
+
+<div id="app" hidden>
+  <header>
+    <h1>SheOut Ops</h1>
+    <span class="who" id="who"></span>
+  </header>
+  <nav>
+    <button data-tab="queue" aria-selected="true">Verification queue</button>
+    <button data-tab="sos" aria-selected="false">SOS alerts</button>
+    <button data-tab="bookings" aria-selected="false">Recent bookings</button>
+  </nav>
+  <main>
+    <div class="err" id="err" hidden></div>
+    <div class="bar">
+      <h2 id="title"></h2>
+      <button class="act" id="refresh">Refresh</button>
+      <button class="act" id="logout" style="margin-left:auto">Sign out</button>
+    </div>
+    <div class="scroll"><table><thead id="head"></thead><tbody id="rows"></tbody></table></div>
+  </main>
+</div>
+
+<script>
+const API = '/api/v1';
+let token = localStorage.getItem('sheout.admin.token') || '';
+let tab = 'queue';
+
+const $ = id => document.getElementById(id);
+const esc = v => (v === null || v === undefined || v === '')
+  ? '<span class="mono">—</span>'
+  : String(v).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const tag = v => v ? `<span class="tag t-${esc(v)}">${esc(v)}</span>` : '<span class="mono">—</span>';
+const time = v => v ? new Date(v).toLocaleString() : '<span class="mono">—</span>';
+const short = v => v ? `<span class="mono">${String(v).slice(0, 8)}</span>` : '<span class="mono">—</span>';
+
+async function api(path, options = {}) {
+  const res = await fetch(API + path, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: 'Bearer ' + token } : {}),
+      ...(options.headers || {})
+    }
+  });
+  if (res.status === 401 || res.status === 403) {
+    // 403 here means "not an ADMIN" - a role gate, so it is genuinely
+    // distinct from the 404 the per-resource checks return.
+    signOut('Your session is not authorized as ADMIN. Sign in with an admin account.');
+    throw new Error('unauthorized');
+  }
+  const body = res.status === 204 ? null : await res.json().catch(() => null);
+  if (!res.ok) throw new Error(body?.message || `Request failed (${res.status})`);
+  return body;
+}
+
+// ---- login ----------------------------------------------------------------
+let awaitingCode = false;
+$('login').addEventListener('submit', async e => {
+  e.preventDefault();
+  $('loginErr').hidden = true;
+  const phoneNumber = $('phone').value.trim();
+  try {
+    if (!awaitingCode) {
+      await api('/auth/otp/request', { method: 'POST', body: JSON.stringify({ phoneNumber, role: 'ADMIN' }) });
+      awaitingCode = true;
+      $('codeRow').hidden = false;
+      $('loginBtn').textContent = 'Sign in';
+      $('code').focus();
+      return;
+    }
+    const out = await api('/auth/otp/verify', {
+      method: 'POST',
+      body: JSON.stringify({ phoneNumber, code: $('code').value.trim(), role: 'ADMIN' })
+    });
+    token = out.accessToken;
+    localStorage.setItem('sheout.admin.token', token);
+    localStorage.setItem('sheout.admin.phone', phoneNumber);
+    start();
+  } catch (err) {
+    if (err.message === 'unauthorized') return;
+    $('loginErr').textContent = err.message;
+    $('loginErr').hidden = false;
+  }
+});
+
+function signOut(message) {
+  token = '';
+  localStorage.removeItem('sheout.admin.token');
+  awaitingCode = false;
+  $('codeRow').hidden = true;
+  $('loginBtn').textContent = 'Send code';
+  $('app').hidden = true;
+  $('login').hidden = false;
+  if (message) { $('loginErr').textContent = message; $('loginErr').hidden = false; }
+}
+$('logout').addEventListener('click', () => signOut(null));
+
+// ---- views ----------------------------------------------------------------
+const VIEWS = {
+  queue: {
+    title: 'Drivers awaiting review',
+    head: ['Account', 'Name', 'Phone', 'Role', 'Gender', 'Police', 'Document', 'Updated', 'Actions'],
+    load: () => api('/admin/verification/review-queue'),
+    row: r => `<tr>
+      <td>${short(r.accountId)}</td><td>${esc(r.name)}</td><td>${esc(r.phoneNumber)}</td>
+      <td>${esc(r.role)}</td><td>${tag(r.genderVerificationStatus)}</td><td>${tag(r.policeVerificationStatus)}</td>
+      <td>${r.documentSubmitted ? `<button class="act" data-doc="${r.accountId}">View</button>` : '<span class="mono">none</span>'}</td>
+      <td>${time(r.updatedAt)}</td>
+      <td style="white-space:nowrap">
+        <button class="act ok" data-review="gender" data-id="${r.accountId}" data-decision="VERIFIED">Approve G</button>
+        <button class="act no" data-review="gender" data-id="${r.accountId}" data-decision="REJECTED">Reject G</button>
+        ${r.policeVerificationStatus ? `
+        <button class="act ok" data-review="police" data-id="${r.accountId}" data-decision="VERIFIED">Approve P</button>
+        <button class="act no" data-review="police" data-id="${r.accountId}" data-decision="REJECTED">Reject P</button>` : ''}
+      </td></tr>`
+  },
+  sos: {
+    title: 'Active SOS alerts',
+    head: ['Alert', 'Customer', 'Phone', 'Booking', 'Location', 'Notified', 'Failed', 'Raised', ''],
+    load: () => api('/admin/sos/active'),
+    row: r => `<tr>
+      <td>${short(r.id)}</td><td>${esc(r.customerName)}</td><td>${esc(r.customerPhone)}</td>
+      <td>${short(r.bookingId)}</td>
+      <td><a href="https://maps.google.com/?q=${r.lat},${r.lng}" target="_blank" rel="noreferrer">${r.lat.toFixed(5)}, ${r.lng.toFixed(5)}</a></td>
+      <td>${r.contactsNotified}</td><td>${r.contactsFailed}</td><td>${time(r.createdAt)}</td>
+      <td><button class="act ok" data-resolve="${r.id}">Resolve</button></td></tr>`
+  },
+  bookings: {
+    title: 'Recent bookings',
+    head: ['Booking', 'Status', 'Type', 'Category', 'Customer', 'Driver', 'Estimate', 'Final', 'Payment', 'Method', 'Requested'],
+    load: () => api('/admin/bookings/recent?limit=50'),
+    row: r => `<tr>
+      <td>${short(r.bookingId)}</td><td>${tag(r.status)}</td><td>${esc(r.type)}</td><td>${esc(r.category)}</td>
+      <td>${esc(r.customerName)}</td><td>${esc(r.driverName)}</td>
+      <td>${esc(r.fareEstimate)}</td><td>${esc(r.finalFare)}</td>
+      <td>${tag(r.paymentStatus)}</td><td>${esc(r.paymentMethod)}</td><td>${time(r.requestedAt)}</td></tr>`
+  }
+};
+
+async function render() {
+  const view = VIEWS[tab];
+  $('title').textContent = view.title;
+  $('head').innerHTML = '<tr>' + view.head.map(h => `<th>${h}</th>`).join('') + '</tr>';
+  $('rows').innerHTML = `<tr><td colspan="${view.head.length}" class="empty">Loading…</td></tr>`;
+  $('err').hidden = true;
+  try {
+    const data = await view.load();
+    $('rows').innerHTML = data.length
+      ? data.map(view.row).join('')
+      : `<tr><td colspan="${view.head.length}" class="empty">Nothing here right now.</td></tr>`;
+  } catch (err) {
+    if (err.message === 'unauthorized') return;
+    $('rows').innerHTML = `<tr><td colspan="${view.head.length}" class="empty">—</td></tr>`;
+    $('err').textContent = err.message;
+    $('err').hidden = false;
+  }
+}
+
+document.querySelectorAll('nav button').forEach(b => b.addEventListener('click', () => {
+  tab = b.dataset.tab;
+  document.querySelectorAll('nav button').forEach(x => x.setAttribute('aria-selected', String(x === b)));
+  render();
+}));
+$('refresh').addEventListener('click', render);
+
+// Delegated so freshly rendered rows need no re-binding.
+$('rows').addEventListener('click', async e => {
+  const el = e.target.closest('button');
+  if (!el) return;
+  try {
+    if (el.dataset.doc) {
+      const out = await api(`/admin/verification/${el.dataset.doc}/document`);
+      window.open(out.url, '_blank', 'noreferrer');
+      return;
+    }
+    if (el.dataset.review) {
+      const { review, id, decision } = el.dataset;
+      let reason = null;
+      if (decision === 'REJECTED') {
+        reason = prompt('Reason for rejection (optional):') ?? null;
+      }
+      // Calls driver-verification's own admin endpoints directly - the admin
+      // module deliberately does not proxy this transition.
+      const body = review === 'gender' ? { decision, reason } : { decision };
+      await api(`/admin/verification/${id}/${review}-review`, { method: 'POST', body: JSON.stringify(body) });
+      render();
+      return;
+    }
+    if (el.dataset.resolve) {
+      await api(`/admin/sos/${el.dataset.resolve}/resolve`, { method: 'POST' });
+      render();
+    }
+  } catch (err) {
+    if (err.message === 'unauthorized') return;
+    $('err').textContent = err.message;
+    $('err').hidden = false;
+  }
+});
+
+function start() {
+  $('login').hidden = true;
+  $('app').hidden = false;
+  $('who').textContent = localStorage.getItem('sheout.admin.phone') || '';
+  render();
+}
+
+if (token) start();
+</script>
+</body>
+</html>

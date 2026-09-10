@@ -21,6 +21,7 @@ import com.sheout.driververification.VerificationSummary;
 import com.sheout.sharedkernel.Result;
 import com.sheout.sharedkernel.event.DomainEventPublisher;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -207,6 +208,13 @@ public class BookingService implements BookingApi {
     @Override
     public Optional<BookingSummary> findById(UUID bookingId) {
         return bookingRepository.findById(bookingId).map(this::toSummary);
+    }
+
+    @Override
+    public List<BookingSummary> findRecent(int limit) {
+        return bookingRepository.findAllByOrderByCreatedAtDesc(PageRequest.of(0, limit)).stream()
+                .map(this::toSummary)
+                .toList();
     }
 
     @Override

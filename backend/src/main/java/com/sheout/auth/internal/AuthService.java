@@ -73,6 +73,9 @@ public class AuthService implements AuthApi {
 
         AccountEntity account;
         if (isNewAccount) {
+            if (role == AccountRole.ADMIN) {
+                return Result.failure(AuthError.ADMIN_SELF_SIGNUP_FORBIDDEN);
+            }
             account = accountRepository.save(new AccountEntity(phoneNumber, role));
             eventPublisher.publish(new AccountRegistered(account.getId(), role));
         } else {
@@ -119,6 +122,9 @@ public class AuthService implements AuthApi {
 
         AccountEntity account;
         if (isNewAccount) {
+            if (role == AccountRole.ADMIN) {
+                return Result.failure(AuthError.ADMIN_SELF_SIGNUP_FORBIDDEN);
+            }
             account = accountRepository.save(AccountEntity.forGoogleSignIn(email, role));
             eventPublisher.publish(new AccountRegistered(account.getId(), role, name));
         } else {
@@ -136,5 +142,19 @@ public class AuthService implements AuthApi {
     public Optional<AccountSummary> findAccount(UUID accountId) {
         return accountRepository.findById(accountId)
                 .map(a -> new AccountSummary(a.getId(), a.getPhoneNumber(), a.getEmail(), a.getRole(), a.getCreatedAt()));
+    }
+
+    @Override
+    @Transactional
+    public Optional<AccountSummary> grantAdminRole(String phoneNumber) {
+        return accountRepository.findByPhoneNumber(phoneNumber).map(account -> {
+            if (account.getRole() != AccountRole.ADMIN) {
+                account.promoteToAdmin();
+                accountRepository.save(account);
+            }
+            return new AccountSummary(
+                    account.getId(), account.getPhoneNumber(), account.getEmail(),
+                    account.getRole(), account.getCreatedAt());
+        });
     }
 }

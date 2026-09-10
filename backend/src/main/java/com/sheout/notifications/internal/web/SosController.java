@@ -3,7 +3,7 @@ package com.sheout.notifications.internal.web;
 import com.sheout.auth.AccountRole;
 import com.sheout.auth.CurrentAccount;
 import com.sheout.auth.CurrentAccountContext;
-import com.sheout.notifications.internal.sos.SosAlertEntity;
+import com.sheout.notifications.SosAlertSummary;
 import com.sheout.notifications.internal.sos.SosService;
 import com.sheout.sharedkernel.web.ApiException;
 import jakarta.validation.Valid;
@@ -59,8 +59,7 @@ public class SosController {
     @GetMapping("/active")
     public ResponseEntity<List<SosAlertSummary>> active() {
         requireAdmin();
-        List<SosAlertSummary> alerts = sosService.findActive().stream().map(SosAlertSummary::from).toList();
-        return ResponseEntity.ok(alerts);
+        return ResponseEntity.ok(sosService.findActiveAlerts());
     }
 
     private CurrentAccount requireCustomer() {
@@ -113,27 +112,4 @@ public class SosController {
         }
     }
 
-    public record SosAlertSummary(
-            UUID id,
-            UUID customerAccountId,
-            UUID bookingId,
-            double lat,
-            double lng,
-            int contactsNotified,
-            int contactsFailed,
-            Instant createdAt
-    ) {
-        static SosAlertSummary from(SosAlertEntity alert) {
-            return new SosAlertSummary(
-                    alert.getId(),
-                    alert.getCustomerAccountId(),
-                    alert.getBookingId(),
-                    alert.getLat(),
-                    alert.getLng(),
-                    alert.getContactsNotified(),
-                    alert.getContactsFailed(),
-                    alert.getCreatedAt()
-            );
-        }
-    }
 }

@@ -127,6 +127,23 @@ public class VerificationService implements VerificationApi {
         return repository.findByAccountId(accountId).map(this::toSummary);
     }
 
+    @Override
+    public List<VerificationSummary> findAwaitingReview() {
+        return repository
+                .findByGenderVerificationStatusOrPoliceVerificationStatusOrderByUpdatedAtDesc(
+                        VerificationStatus.UNDER_REVIEW, VerificationStatus.UNDER_REVIEW)
+                .stream()
+                .map(this::toSummary)
+                .toList();
+    }
+
+    @Override
+    public Optional<String> findDocumentUrl(UUID accountId) {
+        return repository.findByAccountId(accountId)
+                .map(VerificationRecordEntity::getAadhaarDocumentKey)
+                .map(documentStorage::resolveUrl);
+    }
+
     private void publishIfFullyVerified(VerificationRecordEntity record) {
         if (record.isFullyVerified()) {
             eventPublisher.publish(new AccountVerified(record.getAccountId(), record.getRole()));

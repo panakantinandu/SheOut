@@ -144,6 +144,16 @@ sheout:
     # otherwise a hard block on testing the online/dispatch flow live.
     verified-driver-bypass-phone: ${VERIFIED_DRIVER_BYPASS_PHONE:}
 
+  admin:
+    # Blank by default and a no-op when unset - an environment that never
+    # sets this never gains an admin. Signup refuses role=ADMIN (see
+    # AuthController.requireSelfServiceRole), so this is the only path to
+    # an ADMIN account. The account must ALREADY exist: sign in normally
+    # with this number first, then this promotes it on the next boot (see
+    # AdminBootstrap). Unlike the bypass switches above, this IS meant to
+    # be set in a real environment - it is how the operator gets access.
+    bootstrap-phone: ${ADMIN_BOOTSTRAP_PHONE:}
+
 management:
   endpoints:
     web:

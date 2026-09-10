@@ -6,6 +6,10 @@ import com.sheout.notifications.internal.NotificationLogEntity;
 import com.sheout.notifications.internal.NotificationLogRepository;
 import com.sheout.notifications.internal.NotificationStatus;
 import com.sheout.notifications.internal.NotificationType;
+import com.sheout.notifications.SosAlertSummary;
+import com.sheout.notifications.SosApi;
+import com.sheout.notifications.SosError;
+import com.sheout.notifications.SosStatus;
 import com.sheout.notifications.internal.channel.NotificationChannel;
 import com.sheout.sharedkernel.Result;
 import com.sheout.users.CustomerProfileApi;
@@ -14,9 +18,11 @@ import com.sheout.users.EmergencyContactsApi;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -48,7 +54,7 @@ import java.util.UUID;
  * bogus/foreign bookingId) is low.
  */
 @Service
-public class SosService {
+public class SosService implements SosApi {
 
     private static final Logger log = LoggerFactory.getLogger(SosService.class);
 
@@ -108,8 +114,48 @@ public class SosService {
         return new SosOutcome(alert.getId(), contacts.size(), notified, outcomes);
     }
 
-    public List<SosAlertEntity> findActive() {
-        return sosAlertRepository.findByStatusOrderByCreatedAtDesc(SosStatus.ACTIVE);
+    @Override
+    public List<SosAlertSummary> findActiveAlerts() {
+        return sosAlertRepository.findByStatusOrderByCreatedAtDesc(SosStatus.ACTIVE).stream()
+                .map(SosService::toSummary)
+                .toList();
+    }
+
+    /**
+     * Transactional, unlike trigger() above - this is a single short write
+     * with no external call in it, so the reasoning that kept trigger()
+     * out of one transaction (N sequential Twilio calls) does not apply.
+     */
+    @Override
+    @Transactional
+    public Result<SosAlertSummary, SosError> resolve(UUID alertId, UUID resolvedByAccountId) {
+        Optional<SosAlertEntity> found = sosAlertRepository.findById(alertId);
+        if (found.isEmpty()) {
+            return Result.failure(SosError.ALERT_NOT_FOUND);
+        }
+        SosAlertEntity alert = found.get();
+        if (alert.getStatus() == SosStatus.RESOLVED) {
+            return Result.failure(SosError.ALREADY_RESOLVED);
+        }
+        alert.resolve(resolvedByAccountId);
+        log.info("SOS alert {} resolved by admin {}", alertId, resolvedByAccountId);
+        return Result.success(toSummary(sosAlertRepository.save(alert)));
+    }
+
+    private static SosAlertSummary toSummary(SosAlertEntity alert) {
+        return new SosAlertSummary(
+                alert.getId(),
+                alert.getCustomerAccountId(),
+                alert.getBookingId(),
+                alert.getLat(),
+                alert.getLng(),
+                alert.getStatus(),
+                alert.getContactsNotified(),
+                alert.getContactsFailed(),
+                alert.getCreatedAt(),
+                alert.getResolvedAt(),
+                alert.getResolvedBy()
+        );
     }
 
     /**
