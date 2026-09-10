@@ -12,4 +12,12 @@ interface VerificationRecordRepository extends JpaRepository<VerificationRecordE
     Optional<VerificationRecordEntity> findByAccountId(UUID accountId);
 
     List<VerificationRecordEntity> findByGenderVerificationStatus(VerificationStatus status);
+
+    /**
+     * Awaiting review on either check. Both parameters are the same status
+     * in practice; they stay separate so the derived query name matches the
+     * two columns it spans.
+     */
+    List<VerificationRecordEntity> findByGenderVerificationStatusOrPoliceVerificationStatusOrderByUpdatedAtDesc(
+            VerificationStatus genderStatus, VerificationStatus policeStatus);
 }

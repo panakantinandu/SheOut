@@ -21,6 +21,15 @@ public enum AuthError {
     ROLE_MISMATCH,
 
     /**
+     * Signup tried to create a NEW account with role=ADMIN. Refused at
+     * account creation rather than on any request carrying role=ADMIN,
+     * because an existing ADMIN still has to be able to sign in - see
+     * AuthService.verifyOtp. ADMIN is granted only by
+     * AuthApi.grantAdminRole, driven by admin's deploy-time bootstrap.
+     */
+    ADMIN_SELF_SIGNUP_FORBIDDEN,
+
+    /**
      * A Google sign-in's email matches an account that also has a phone
      * number on file - deliberately refused rather than silently signing
      * into it, since that would combine two different auth methods into

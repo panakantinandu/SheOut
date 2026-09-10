@@ -1,5 +1,6 @@
 package com.sheout.notifications.internal.sos;
 
+import com.sheout.notifications.SosStatus;
 import com.sheout.sharedkernel.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -7,6 +8,7 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 
+import java.time.Instant;
 import java.util.UUID;
 
 @Entity
@@ -35,6 +37,13 @@ public class SosAlertEntity extends BaseEntity {
 
     @Column(name = "contacts_failed", nullable = false)
     private int contactsFailed;
+
+    /** Both null while ACTIVE; both set together by resolve(). */
+    @Column(name = "resolved_at")
+    private Instant resolvedAt;
+
+    @Column(name = "resolved_by")
+    private UUID resolvedBy;
 
     protected SosAlertEntity() {
         // JPA
@@ -84,5 +93,24 @@ public class SosAlertEntity extends BaseEntity {
 
     public void setContactsFailed(int contactsFailed) {
         this.contactsFailed = contactsFailed;
+    }
+
+    public Instant getResolvedAt() {
+        return resolvedAt;
+    }
+
+    public UUID getResolvedBy() {
+        return resolvedBy;
+    }
+
+    /**
+     * Status and audit fields move together, so there is no way to mark an
+     * alert resolved without recording who did it - hence no plain
+     * setStatus on this entity.
+     */
+    public void resolve(UUID resolvedByAccountId) {
+        this.status = SosStatus.RESOLVED;
+        this.resolvedAt = Instant.now();
+        this.resolvedBy = resolvedByAccountId;
     }
 }

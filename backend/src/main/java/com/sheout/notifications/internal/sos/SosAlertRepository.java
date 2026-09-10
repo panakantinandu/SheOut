@@ -1,5 +1,6 @@
 package com.sheout.notifications.internal.sos;
 
+import com.sheout.notifications.SosStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

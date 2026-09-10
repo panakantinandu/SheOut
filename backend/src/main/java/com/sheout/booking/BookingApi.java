@@ -2,6 +2,7 @@ package com.sheout.booking;
 
 import com.sheout.sharedkernel.Result;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -43,4 +44,18 @@ public interface BookingApi {
      * pickup/drop/fare on the offer itself before that acceptance happens.
      */
     Optional<BookingSummary> findById(UUID bookingId);
+
+    /**
+     * Most recently requested bookings across all customers, newest first,
+     * capped at {@code limit}. Added for admin's operational list view -
+     * before this, the only reads here were by-id or by-participant, so
+     * "what is happening right now" could not be answered without querying
+     * this module's tables directly.
+     * <p>
+     * Deliberately a simple capped list rather than a Pageable/filtered
+     * query: the caller is an ops screen answering "what's happening now",
+     * not a reporting surface, and a real pagination contract is worth
+     * adding only once something actually needs to page.
+     */
+    List<BookingSummary> findRecent(int limit);
 }
