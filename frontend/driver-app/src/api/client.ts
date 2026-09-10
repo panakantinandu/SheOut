@@ -14,7 +14,14 @@ import type {
 // env var for prod, .env.local for local dev override) - hardcoding
 // localhost:8080 here would make the deployed app unusable, since that
 // only resolves on the machine running the backend, not a visitor's browser.
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080';
+//
+// `||`, deliberately not `??`: this was set to an empty string in Vercel
+// once, and `??` only falls back on null/undefined, so "" passed straight
+// through. API_BASE became "", every call went to the app's own origin as
+// a relative path, and the whole app 404'd against itself with nothing in
+// the code looking wrong. An empty value means "not configured" here, so
+// it must fall back like a missing one.
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 const TOKEN_STORAGE_KEY = 'sheout_driver_access_token';
 
 export class ApiError extends Error {
