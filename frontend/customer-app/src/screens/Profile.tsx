@@ -5,7 +5,6 @@ import { Card, IconCircle, ListRow, TopHeader } from '@sheout/design-system';
 import { ApiError, usersApi } from '../api/client';
 import type { CustomerProfileSummary } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
-import { mockAction } from '../lib/mockAction';
 
 /**
  * REAL: name/phone fetched from GET /api/v1/users/customer/me. Log Out
@@ -50,19 +49,19 @@ export function Profile() {
 
       <Card className="divide-y divide-border p-0">
         <div className="p-4">
-          <ListRow icon={<IconCircle tone="soft" size="sm" icon={<User />} />} label="Personal Details" onClick={() => mockAction('Personal Details', 'no edit-profile screen built yet')} />
+          <ListRow icon={<IconCircle tone="soft" size="sm" icon={<User />} />} label="Personal Details" onClick={() => navigate('/profile/details')} />
         </div>
         <div className="p-4">
-          <ListRow icon={<IconCircle tone="soft" size="sm" icon={<MapPin />} />} label="Saved Addresses" onClick={() => mockAction('Saved Addresses', 'no saved-addresses screen built yet')} />
+          <ListRow icon={<IconCircle tone="soft" size="sm" icon={<MapPin />} />} label="Saved Addresses" onClick={() => navigate('/profile/addresses')} />
         </div>
         <div className="p-4">
-          <ListRow icon={<IconCircle tone="soft" size="sm" icon={<Shield />} />} label="Payment Methods" onClick={() => mockAction('Payment Methods', 'no payments module on the backend')} />
+          <ListRow icon={<IconCircle tone="soft" size="sm" icon={<Shield />} />} label="Payments" onClick={() => navigate('/profile/payments')} />
         </div>
         <div className="p-4">
-          <ListRow icon={<IconCircle tone="soft" size="sm" icon={<HelpCircle />} />} label="Help & Support" onClick={() => mockAction('Help & Support', 'no support screen built yet')} />
+          <ListRow icon={<IconCircle tone="soft" size="sm" icon={<HelpCircle />} />} label="Help & Support" onClick={() => navigate('/help')} />
         </div>
         <div className="p-4">
-          <ListRow icon={<IconCircle tone="soft" size="sm" icon={<Info />} />} label="About SheOut" onClick={() => mockAction('About SheOut', 'no about screen built yet')} />
+          <ListRow icon={<IconCircle tone="soft" size="sm" icon={<Info />} />} label="About SheOut" onClick={() => navigate('/about')} />
         </div>
       </Card>
 

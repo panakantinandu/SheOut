@@ -91,3 +91,19 @@ export interface ApiErrorResponse {
   path: string;
   details: string[];
 }
+
+/** One entry from the caller's own notification history (GET /notifications/me). */
+export interface NotificationView {
+  id: string;
+  type:
+    | 'BOOKING_REQUESTED'
+    | 'BOOKING_ACCEPTED'
+    | 'BOOKING_COMPLETED'
+    | 'BOOKING_CANCELLED'
+    | 'ACCOUNT_VERIFIED'
+    | 'SOS_ALERT';
+  channel: 'SMS' | 'PUSH' | 'EMAIL';
+  status: 'SENT' | 'FAILED';
+  failureReason: string | null;
+  createdAt: string;
+}

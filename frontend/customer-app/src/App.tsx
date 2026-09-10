@@ -3,7 +3,13 @@ import { ProtectedRoute } from './auth/ProtectedRoute'
 import { AppShell } from './layout/AppShell'
 import { DeliveryBooking } from './screens/DeliveryBooking'
 import { Home } from './screens/Home'
+import { About } from './screens/About'
+import { HelpSupport } from './screens/HelpSupport'
 import { Login } from './screens/Login'
+import { Notifications } from './screens/Notifications'
+import { PaymentMethods } from './screens/PaymentMethods'
+import { PersonalDetails } from './screens/PersonalDetails'
+import { SavedAddresses } from './screens/SavedAddresses'
 import { MyBookings } from './screens/MyBookings'
 import { Profile } from './screens/Profile'
 import { RideBooking } from './screens/RideBooking'
@@ -38,6 +44,15 @@ function App() {
       <Route path="/wallet" element={shell(<Wallet />)} />
       <Route path="/profile" element={shell(<Profile />)} />
       <Route path="/sos" element={shell(<Sos />)} />
+
+      {/* Pushed on top of Profile with a back arrow, like the booking flow -
+          they are drill-downs, not tab destinations, so no AppShell. */}
+      <Route path="/notifications" element={protectedOnly(<Notifications />)} />
+      <Route path="/profile/details" element={protectedOnly(<PersonalDetails />)} />
+      <Route path="/profile/addresses" element={protectedOnly(<SavedAddresses />)} />
+      <Route path="/profile/payments" element={protectedOnly(<PaymentMethods />)} />
+      <Route path="/help" element={protectedOnly(<HelpSupport />)} />
+      <Route path="/about" element={protectedOnly(<About />)} />
 
       <Route path="/book/ride" element={protectedOnly(<RideBooking />)} />
       <Route path="/book/:kind" element={protectedOnly(<DeliveryBooking />)} />

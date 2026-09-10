@@ -37,7 +37,7 @@ export function Home() {
         // closest thing that already serves that purpose (account/settings).
         onMenuClick={() => navigate('/profile')}
         // No notifications module/screen exists - mock, not silently inert.
-        onBellClick={() => mockAction('Notifications', 'no notifications module on the backend yet')}
+        onBellClick={() => navigate('/notifications')}
       />
 
       <Card variant="primary">
