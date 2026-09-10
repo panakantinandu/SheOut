@@ -130,8 +130,7 @@ public class VerificationService implements VerificationApi {
     @Override
     public List<VerificationSummary> findAwaitingReview() {
         return repository
-                .findByGenderVerificationStatusOrPoliceVerificationStatusOrderByUpdatedAtDesc(
-                        VerificationStatus.UNDER_REVIEW, VerificationStatus.UNDER_REVIEW)
+                .findAwaitingReview(VerificationStatus.UNDER_REVIEW, VerificationStatus.PENDING)
                 .stream()
                 .map(this::toSummary)
                 .toList();

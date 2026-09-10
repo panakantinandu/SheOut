@@ -23,15 +23,30 @@ public interface VerificationApi {
     Optional<VerificationSummary> findByAccountId(UUID accountId);
 
     /**
-     * Every account awaiting review on EITHER status, newest-updated first.
-     * One method rather than two (gender/police) because the queue is one
-     * list to an operator - a driver blocking on either check is one row of
+     * Every account with outstanding review work, newest-updated first. One
+     * method rather than two (gender/police) because the queue is one list
+     * to an operator - a driver blocking on either check is one row of
      * work, and returning them separately would make callers merge and
      * de-duplicate.
      * <p>
-     * Note there is no SUBMITTED status to match: VerificationStatus
-     * collapses submission into UNDER_REVIEW (see its Javadoc), so
-     * "SUBMITTED or UNDER_REVIEW" is exactly UNDER_REVIEW.
+     * The two checks are matched on different statuses, which looks
+     * inconsistent but is not. Gender review is driver-initiated:
+     * submitDocument moves it PENDING -&gt; UNDER_REVIEW, so PENDING there
+     * means "nothing submitted yet" and there is genuinely nothing to
+     * review. Police review has no submission step at all - nothing ever
+     * sets it to UNDER_REVIEW (see VerificationService.reviewPoliceVerification,
+     * which only accepts VERIFIED/REJECTED), so a driver sits at PENDING
+     * from signup until an admin decides. Matching police on UNDER_REVIEW
+     * would therefore match nothing, and let every driver awaiting a police
+     * check fall out of the queue unseen.
+     * <p>
+     * Police PENDING alone would swing the other way and list every account
+     * that ever signed up, burying real work under dormant ones, so it
+     * counts only once a document has actually been submitted. The effect
+     * is that a driver enters the queue when they submit and leaves it when
+     * BOTH checks are decided - including the window after gender is
+     * approved but police is still outstanding, which is precisely where
+     * they used to disappear.
      */
     List<VerificationSummary> findAwaitingReview();
 
