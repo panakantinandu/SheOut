@@ -556,33 +556,38 @@ to fetch the design-system package. That means each project's install/
 build/output settings need to point at the root install + the right
 per-app build script and output folder.
 
-The catch: since both Vercel projects watch the *same* repo, a single
-committed `vercel.json` would apply to **both** projects' git-triggered
-builds - correct for one app, wrong for the other. So:
+The catch used to be that both Vercel projects watch the *same* repo, so a
+single committed `vercel.json` **at the repo root** would apply to both
+projects' builds - correct for one app, wrong for the other. A root
+`vercel.json` is therefore still gitignored.
 
-- **Local CLI deploys** (what was used to stand these up) use a
-  gitignored `vercel.json` at the repo root, swapped between two local
-  configs (`installCommand: npm install`, `buildCommand: npm run build
-  --workspace=<app>`, `outputDirectory: frontend/<app>/dist`) depending
-  on which project is linked via `vercel link` at the time.
-- **Git-push auto-deploy** (not set up yet) needs each project's own
-  **Root Directory** set in its Vercel dashboard (Project Settings >
-  General > Root Directory: `frontend/customer-app` or
-  `frontend/driver-app`) instead - Vercel's own monorepo detection then
-  handles the root-level install automatically, no vercel.json needed.
-  Do this per project in the dashboard if you want pushes to `main` to
-  redeploy automatically; until then, redeploy manually with the CLI
-  commands above.
+That is resolved now: each project has its **Root Directory** set to its
+own app folder (Project Settings > General > Root Directory:
+`frontend/customer-app` or `frontend/driver-app`). Vercel's monorepo
+detection handles the root-level install from there, and a `vercel.json`
+placed *inside each app folder* applies to exactly one project. Those two
+per-app files **are committed** and must stay that way.
+
+**They are not optional.** Vercel's Vite preset does not add an SPA
+catch-all rewrite, so without `frontend/<app>/vercel.json` every deep link
+- `/login`, `/home`, a shared tracking URL - returns a hard 404 to anyone
+visiting it directly. This is easy to miss, because the PWA service worker
+serves `index.html` from cache for anyone who has already opened the app
+once; only first-time visitors and `curl` see the 404.
 
 ### VITE_API_BASE_URL
 
-The deployed apps don't know where the backend is yet - `client.ts` reads
-`VITE_API_BASE_URL` (falls back to `http://localhost:8080` for local dev),
-but no value is set on either Vercel project, so **the deployed apps
-can't reach a backend until this is set**. Once the backend has a real
-Render URL (see below), set it as an environment variable on the
-`sheout-customer-app` Vercel project (Project Settings > Environment
-Variables, all environments) and redeploy. The backend's
+`client.ts` reads `VITE_API_BASE_URL`, falling back to
+`http://localhost:8080` for local dev. It is now set to
+`https://sheout-backend.onrender.com` on **both** Vercel projects.
+
+The fallback uses `||`, not `??`, on purpose. This variable was once
+stored as an empty string, and `??` only falls back on null/undefined - so
+`""` passed straight through, `API_BASE` became `""`, and every request
+resolved against the app's own origin instead of the backend. An empty
+value means "not configured" here and must fall back like a missing one.
+
+The backend's
 `CORS_ALLOWED_ORIGINS` also needs the deployed frontend origin
 (`https://sheout-customer-app.vercel.app`) added, or every request will
 fail CORS the same way local dev did before `WebConfig` was added.

@@ -30,12 +30,20 @@ Thumbs.db
 # Claude Code harness state - not project source
 .claude/
 
-# Vercel CLI link state, and the per-app build-config files used only for
-# local CLI deploys (vercel.json). Deliberately NOT committed: this repo
-# has two Vercel projects (customer-app, driver-app) watching the same
-# GitHub repo, so a single committed vercel.json would apply to whichever
-# project's git-triggered build runs next - wrong for one of the two.
-# Each project's git-push auto-deploy instead needs its own "Root
-# Directory" set in that project's Vercel dashboard settings (see README).
+# Vercel CLI link state, and any root-level vercel.json used for local CLI
+# deploys. A ROOT vercel.json still must not be committed: both Vercel
+# projects watch this one repo, so a single root config would apply to
+# whichever project's build runs next - wrong for one of the two.
 .vercel
-vercel*.json
+/vercel*.json
+frontend/*/.vercel
+
+# The PER-APP vercel.json files ARE committed, and must be. Each project's
+# Root Directory now points at its own app folder, so these apply to one
+# project each - the ambiguity that kept them out of the repo is gone.
+# They carry the SPA rewrite: Vercel's Vite preset does NOT add a catch-all
+# to index.html, so without this every deep link (/login, /home, a shared
+# booking URL) returns a hard 404 on first visit. It only looked fine
+# because the service worker served index.html for repeat visitors.
+!frontend/customer-app/vercel.json
+!frontend/driver-app/vercel.json
