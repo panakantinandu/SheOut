@@ -1,10 +1,9 @@
-import { Bike, Clock, MapPinned, Package, ShieldAlert, UtensilsCrossed, Wallet as WalletIcon } from 'lucide-react';
+import { Bike, Clock, MapPinned, Package, ShieldAlert, Wallet as WalletIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, IconCircle, ListRow, TopHeader } from '@sheout/design-system';
 import { usersApi } from '../api/client';
 import type { CustomerProfileSummary } from '../api/types';
-import { mockAction } from '../lib/mockAction';
 
 /** Real data: the greeting name comes from users' live GET /me. Everything else on this screen (banner copy, category icons, quick access) is static UI, same as the mockup - there's no "featured banner" or "quick access config" backend endpoint to fetch. */
 export function Home() {
@@ -36,7 +35,7 @@ export function Home() {
         // No side-drawer/menu screen exists - "Open menu" goes to the
         // closest thing that already serves that purpose (account/settings).
         onMenuClick={() => navigate('/profile')}
-        // No notifications module/screen exists - mock, not silently inert.
+        // Real notification history - see the Notifications screen.
         onBellClick={() => navigate('/notifications')}
       />
 
@@ -60,12 +59,10 @@ export function Home() {
             label="Parcel Delivery"
             onClick={() => navigate('/book/parcel')}
           />
-          <ListRow
-            layout="stacked"
-            icon={<IconCircle color="green" icon={<UtensilsCrossed />} />}
-            label="Lunch Box"
-            onClick={() => navigate('/book/lunchbox')}
-          />
+          {/* Lunch Box is deferred for launch - UI entry point only. The
+              backend still accepts the LUNCHBOX category and this tile can
+              come straight back with no server-side work. See
+              DeliveryBooking for the matching route guard. */}
         </div>
       </div>
 

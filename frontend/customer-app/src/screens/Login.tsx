@@ -11,6 +11,28 @@ const PHONE_REGEX = /^\+[1-9]\d{7,14}$/;
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
 /**
+ * Login and Sign Up are the same mechanism here - phone + OTP, with the
+ * account created on first successful verification. The toggle exists
+ * because "Sign Up" is what a new user looks for, and a screen headed
+ * "Welcome Back!" reads as the wrong place to be. So the tabs change only
+ * the copy below; there is deliberately one OTP code path, not two.
+ */
+type AuthMode = 'login' | 'signup';
+
+const AUTH_MODE_COPY: Record<AuthMode, { tab: string; heading: string; subtitle: string }> = {
+  login: {
+    tab: 'Login',
+    heading: 'Welcome Back!',
+    subtitle: 'Sign in to continue',
+  },
+  signup: {
+    tab: 'Sign Up',
+    heading: 'Get Started',
+    subtitle: 'Create your account to book safe rides',
+  },
+};
+
+/**
  * Official Google "G" logomark (4-color, standard OAuth-button asset) -
  * inlined rather than pulled from an icon font, since lucide-react has no
  * real multi-color Google glyph. Local to this file - nothing else needs it.
@@ -29,10 +51,13 @@ function GoogleIcon({ className }: { className?: string }) {
 /**
  * FLAGGED DEVIATION FROM THE MOCKUP: the mockup shows phone number +
  * password fields. The backend (auth module) has no password/credential
- * concept at all - only phone + OTP, or Google Sign-In. There's still no
- * separate up-front Sign Up form - verifying an OTP (or a Google token)
- * for an identity with no account creates one; "Sign Up" below describes
- * that flow rather than linking to a separate form.
+ * concept at all - only phone + OTP, or Google Sign-In. Confirmed against
+ * Rapido's own customer app, which is also phone + OTP with no password.
+ * <p>
+ * The Login / Sign Up toggle is presentation only - see AUTH_MODE_COPY.
+ * Verifying an OTP for an identity with no account creates one, so both
+ * tabs run the identical single code path; the tab never reaches the
+ * backend and never decides where the user lands afterwards.
  * <p>
  * NEW ACCOUNT vs RETURNING USER: after either sign-in method succeeds,
  * this fetches the just-created/found profile and checks whether it has a
@@ -71,6 +96,15 @@ export function Login() {
   const { login } = useAuth();
 
   const [step, setStep] = useState<'phone' | 'otp' | 'complete-profile'>('phone');
+  /**
+   * Purely a copy switch for the headings below - see AUTH_MODE_COPY. It is
+   * never sent anywhere and never decides what happens after verification:
+   * whether an account is new is the backend's answer, read from the
+   * profile in afterSignIn. A returning user who taps "Sign Up" still goes
+   * straight to Home, and a new user who taps "Login" still gets the
+   * name-capture step.
+   */
+  const [mode, setMode] = useState<AuthMode>('login');
   const [phoneDigits, setPhoneDigits] = useState('');
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
@@ -195,8 +229,32 @@ export function Login() {
         </>
       ) : (
         <>
-          <h1 className="font-heading text-2xl font-bold text-text-primary">Welcome Back!</h1>
-          <p className="mb-6 text-sm text-text-secondary">Sign in to continue</p>
+          {/* Only on phone entry: once an OTP is out, the choice is made and
+              a live toggle would just invite a mid-flow tab switch that
+              changes nothing. Same pill vocabulary as MyBookings' tabs. */}
+          {step === 'phone' && (
+            <div className="mb-5 flex gap-2" role="tablist" aria-label="Login or sign up">
+              {(Object.keys(AUTH_MODE_COPY) as AuthMode[]).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  role="tab"
+                  aria-selected={mode === m}
+                  onClick={() => setMode(m)}
+                  className={
+                    mode === m
+                      ? 'flex-1 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-text-inverse'
+                      : 'flex-1 rounded-full border border-border px-4 py-2 text-sm font-medium text-text-secondary'
+                  }
+                >
+                  {AUTH_MODE_COPY[m].tab}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <h1 className="font-heading text-2xl font-bold text-text-primary">{AUTH_MODE_COPY[mode].heading}</h1>
+          <p className="mb-6 text-sm text-text-secondary">{AUTH_MODE_COPY[mode].subtitle}</p>
 
           {step === 'phone' ? (
             <form onSubmit={handleSendOtp} className="space-y-4">
@@ -231,7 +289,10 @@ export function Login() {
                 error={error ?? undefined}
               />
               <Button type="submit" fullWidth disabled={submitting}>
-                {submitting ? 'Verifying...' : 'Login'}
+                {/* "Verify", not "Login"/"Create Account": which of those it
+                    turns out to be is decided by the account's real state
+                    after verification, not by the tab the user picked. */}
+                {submitting ? 'Verifying...' : 'Verify'}
               </Button>
               <button
                 type="button"
@@ -258,9 +319,18 @@ export function Login() {
                 {googleLoading ? 'Signing in...' : 'Continue with Google'}
               </Button>
 
+              {/* Points at the real toggle above rather than styling the
+                  words "Sign Up" like a link that does nothing. */}
               <p className="mt-6 text-center text-sm text-text-secondary">
-                Don't have an account? <span className="font-semibold text-primary">Sign Up</span> - enter a new
-                number above, verify the OTP, then add your name to finish.
+                {mode === 'login' ? (
+                  <>
+                    New to SheOut? Tap <button type="button" onClick={() => setMode('signup')} className="font-semibold text-primary underline">Sign Up</button> above - we'll set up your account after the OTP.
+                  </>
+                ) : (
+                  <>
+                    Already have an account? Tap <button type="button" onClick={() => setMode('login')} className="font-semibold text-primary underline">Login</button> above - same number, same OTP.
+                  </>
+                )}
               </p>
             </>
           )}
