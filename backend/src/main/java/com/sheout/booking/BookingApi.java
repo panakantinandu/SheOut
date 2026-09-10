@@ -39,7 +39,7 @@ public interface BookingApi {
      * participant ids. Added for dispatch's own offer response - a driver
      * who's only been OFFERED a booking (not yet accepted) is correctly
      * NOT a participant per BookingController.requireParticipant, so
-     * GET /api/v1/bookings/{id} 403s for them; dispatch needs to show
+     * GET /api/v1/bookings/{id} 404s for them; dispatch needs to show
      * pickup/drop/fare on the offer itself before that acceptance happens.
      */
     Optional<BookingSummary> findById(UUID bookingId);

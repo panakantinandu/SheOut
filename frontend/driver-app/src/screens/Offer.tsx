@@ -32,7 +32,7 @@ function distanceKm(a: { lat: number; lng: number }, b: { lat: number; lng: numb
  * (enriched) response, NOT a separate GET /bookings/{id} call - that call
  * doesn't work here: a driver who's only been OFFERED this booking, not
  * yet accepted it, isn't a participant on it yet, so BookingController's
- * requireParticipant correctly 403s them (found the hard way - this
+ * requireParticipant correctly 404s them (found the hard way - this
  * screen's original version called it and every real offer failed to
  * load). Accept calls the real dispatch-accept + booking-accept pair (see
  * Home.tsx's previous comment on why two calls); Decline calls the real

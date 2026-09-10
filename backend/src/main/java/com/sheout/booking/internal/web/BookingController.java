@@ -126,19 +126,30 @@ public class BookingController {
         return caller;
     }
 
+    /**
+     * Not-found rather than forbidden, and deliberately the same message
+     * the missing-booking lookups above use: a 403 here would confirm that
+     * an id names a real booking, letting any authenticated caller probe
+     * ids and learn which exist. The caller cannot distinguish "no such
+     * booking" from "not yours". Keep these messages identical - letting
+     * them drift reopens the gap the status code closes. Contrast
+     * requireRole's 403, which is about the caller's own role and reveals
+     * nothing about any particular booking.
+     */
     private void requireParticipant(CurrentAccount caller, BookingSummary booking) {
         boolean isParticipant = caller.accountId().equals(booking.customerId())
                 || caller.accountId().equals(booking.driverId());
         if (!isParticipant) {
-            throw ApiException.forbidden("Not a participant on this booking");
+            throw ApiException.notFound("No such booking");
         }
     }
 
+    /** Same not-found-rather-than-forbidden reasoning as requireParticipant. */
     private void requireAssignedDriver(CurrentAccount caller, UUID bookingId) {
         BookingSummary booking = bookingService.findById(bookingId)
                 .orElseThrow(() -> ApiException.notFound("No such booking"));
         if (!caller.accountId().equals(booking.driverId())) {
-            throw ApiException.forbidden("Not the driver assigned to this booking");
+            throw ApiException.notFound("No such booking");
         }
     }
 
