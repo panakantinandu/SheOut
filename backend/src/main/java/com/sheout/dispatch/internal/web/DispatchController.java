@@ -5,6 +5,8 @@ import com.sheout.auth.CurrentAccount;
 import com.sheout.auth.CurrentAccountContext;
 import com.sheout.booking.BookingApi;
 import com.sheout.booking.BookingCategory;
+import com.sheout.booking.BookingError;
+import com.sheout.booking.BookingParticipants;
 import com.sheout.booking.BookingSummary;
 import com.sheout.booking.GeoAddress;
 import com.sheout.dispatch.internal.DispatchError;
@@ -24,6 +26,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -129,5 +132,48 @@ public class DispatchController {
 
     /** pickup/drop/fareEstimate/category are null only if the booking has vanished between the offer being made and this being read - see toOfferResponse. */
     public record OfferResponse(UUID bookingId, GeoAddress pickup, GeoAddress drop, BigDecimal fareEstimate, BookingCategory category) {
+    }
+
+    /**
+     * The assigned driver's last known position for this booking, polled by
+     * the customer's tracking map. Read-only and deliberately dumb: it
+     * returns the last position dispatch actually received, with the moment
+     * it arrived, and never interpolates or extrapolates - the marker must
+     * only ever sit where the driver really reported being.
+     * <p>
+     * Authorization follows this codebase's per-resource rule: anyone who
+     * is not this booking's customer gets the same 404, with the same
+     * message, as a bookingId that does not exist, so the two cannot be
+     * told apart. Only the customer is allowed - a driver watching their
+     * own position uses the browser's geolocation instead, and nobody else
+     * has any business reading where a driver is.
+     * <p>
+     * 404 also covers "no driver assigned yet" and "driver has not reported
+     * a position yet". Those are normal states while a customer waits, not
+     * errors - the tracking screen polls until one arrives. They carry
+     * distinct messages, which leaks nothing: only the booking's own
+     * customer can ever reach them.
+     */
+    @GetMapping("/api/v1/dispatch/bookings/{bookingId}/driver-location")
+    public ResponseEntity<DriverLocationResponse> driverLocation(@PathVariable UUID bookingId) {
+        CurrentAccount caller = CurrentAccountContext.get()
+                .orElseThrow(() -> ApiException.unauthorized("Authentication required"));
+
+        Result<BookingParticipants, BookingError> participants = bookingApi.getParticipants(bookingId);
+        if (participants.isFailure() || !caller.accountId().equals(participants.value().customerId())) {
+            throw ApiException.notFound("No such booking");
+        }
+        UUID driverId = participants.value().driverId();
+        if (driverId == null) {
+            throw ApiException.notFound("No driver assigned to this booking yet");
+        }
+        return dispatchService.findDriverLocation(driverId)
+                .map(location -> ResponseEntity.ok(new DriverLocationResponse(
+                        location.lat(), location.lng(), location.recordedAt())))
+                .orElseThrow(() -> ApiException.notFound("No location reported for this driver yet"));
+    }
+
+    /** recordedAt lets the client show staleness instead of implying a stale point is live. */
+    public record DriverLocationResponse(double lat, double lng, Instant recordedAt) {
     }
 }

@@ -1,6 +1,7 @@
 package com.sheout.dispatch.internal.redis;
 
 import com.sheout.dispatch.internal.CandidateDriver;
+import com.sheout.dispatch.internal.DriverLocation;
 import org.springframework.data.geo.Distance;
 import org.springframework.data.geo.Metrics;
 import org.springframework.data.geo.Point;
@@ -12,7 +13,10 @@ import org.springframework.data.redis.domain.geo.GeoReference;
 import org.springframework.data.redis.domain.geo.GeoShape;
 import org.springframework.stereotype.Component;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -34,6 +38,13 @@ import java.util.UUID;
 public class DriverLocationStore {
 
     private static final String GEO_KEY = "dispatch:driver-geo";
+    private static final String TS_KEY_PREFIX = "dispatch:driver-loc-ts:";
+
+    /**
+     * Long enough to outlive any sane polling gap, short enough that a
+     * driver who stopped reporting eventually stops looking live.
+     */
+    private static final Duration TS_TTL = Duration.ofHours(6);
 
     private final StringRedisTemplate redisTemplate;
 
@@ -45,10 +56,34 @@ public class DriverLocationStore {
         GeoOperations<String, String> geoOps = redisTemplate.opsForGeo();
         // Point(x, y) = Point(longitude, latitude).
         geoOps.add(GEO_KEY, new Point(lng, lat), driverId.toString());
+        // Redis GEO stores a position and nothing else, so freshness is kept
+        // in its own key - see DriverLocation.recordedAt for why that matters.
+        redisTemplate.opsForValue().set(TS_KEY_PREFIX + driverId, Long.toString(System.currentTimeMillis()), TS_TTL);
     }
 
     public void remove(UUID driverId) {
         redisTemplate.opsForGeo().remove(GEO_KEY, driverId.toString());
+        redisTemplate.delete(TS_KEY_PREFIX + driverId);
+    }
+
+    /**
+     * This driver's last known position, or empty if they have never
+     * reported one (or were removed on going offline). GEOPOS reads the
+     * stored point for one member, rather than searching an area the way
+     * findNearby does.
+     */
+    public Optional<DriverLocation> findLocation(UUID driverId) {
+        List<Point> points = redisTemplate.opsForGeo().position(GEO_KEY, driverId.toString());
+        if (points == null || points.isEmpty() || points.get(0) == null) {
+            return Optional.empty();
+        }
+        Point point = points.get(0);
+        String timestamp = redisTemplate.opsForValue().get(TS_KEY_PREFIX + driverId);
+        // EPOCH marks "position exists but predates timestamp tracking" - callers
+        // render that as unknown freshness rather than as 1970.
+        Instant recordedAt = timestamp == null ? Instant.EPOCH : Instant.ofEpochMilli(Long.parseLong(timestamp));
+        // Point(x, y) = Point(longitude, latitude) - unwound back to (lat, lng) here.
+        return Optional.of(new DriverLocation(point.getY(), point.getX(), recordedAt));
     }
 
     /**
