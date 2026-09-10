@@ -75,6 +75,11 @@ public class DispatchService {
         locationStore.recordLocation(driverId, lat, lng);
     }
 
+    /** Last reported position for a driver, or empty if they have never reported one. */
+    public Optional<DriverLocation> findDriverLocation(UUID driverId) {
+        return locationStore.findLocation(driverId);
+    }
+
     /**
      * Reacts to a new booking rather than booking calling into dispatch
      * directly - booking has no idea dispatch exists, matching this
