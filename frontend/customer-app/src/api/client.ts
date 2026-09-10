@@ -5,8 +5,11 @@ import type {
   BookingSummary,
   BookingType,
   CustomerProfileSummary,
+  DriverLocation,
   EmergencyContact,
   GeoAddress,
+  NotificationView,
+  PaymentSummary,
   SosResponse,
   VerificationSummary,
 } from './types';
@@ -137,8 +140,29 @@ export const usersApi = {
 };
 
 export const notificationsApi = {
+  listMine(): Promise<NotificationView[]> {
+    return request('/api/v1/notifications/me');
+  },
+
   triggerSos(input: { lat: number; lng: number; bookingId?: string }): Promise<SosResponse> {
     return request('/api/v1/notifications/sos', { method: 'POST', body: input });
+  },
+};
+
+export const paymentsApi = {
+  /** 404s until a payment row exists, which only happens once a trip completes. */
+  getForBooking(bookingId: string): Promise<PaymentSummary> {
+    return request(`/api/v1/payments/bookings/`);
+  },
+};
+
+export const dispatchApi = {
+  /**
+   * 404s while no driver is assigned or none has reported a position yet -
+   * both normal states the tracking screen polls through, not errors.
+   */
+  getDriverLocation(bookingId: string): Promise<DriverLocation> {
+    return request(`/api/v1/dispatch/bookings//driver-location`);
   },
 };
 

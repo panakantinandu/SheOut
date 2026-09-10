@@ -7,6 +7,7 @@ import type {
   OfferSummary,
   VehicleType,
   VerificationSummary,
+  NotificationView,
 } from './types';
 
 // VITE_API_BASE_URL lets each deployment point at its own backend (Vercel
@@ -126,6 +127,12 @@ export const usersApi = {
 
   setOnlineStatus(status: DriverOnlineStatus): Promise<DriverProfileSummary> {
     return request('/api/v1/users/driver/me/status', { method: 'POST', body: { status } });
+  },
+};
+
+export const notificationsApi = {
+  listMine(): Promise<NotificationView[]> {
+    return request('/api/v1/notifications/me');
   },
 };
 

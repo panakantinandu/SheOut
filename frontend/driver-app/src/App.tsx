@@ -3,8 +3,10 @@ import { ProtectedRoute } from './auth/ProtectedRoute'
 import { AppShell } from './layout/AppShell'
 import { Bookings } from './screens/Bookings'
 import { Earnings } from './screens/Earnings'
+import { HelpSupport } from './screens/HelpSupport'
 import { Home } from './screens/Home'
 import { Login } from './screens/Login'
+import { Notifications } from './screens/Notifications'
 import { Offer } from './screens/Offer'
 import { Profile } from './screens/Profile'
 import { Splash } from './screens/Splash'
@@ -39,6 +41,10 @@ function App() {
       <Route path="/bookings" element={shell(<Bookings />)} />
       <Route path="/profile" element={shell(<Profile />)} />
 
+      {/* Drill-downs pushed over the tabs with a back arrow, not tab
+          destinations - so protectedOnly, no AppShell. */}
+      <Route path="/notifications" element={protectedOnly(<Notifications />)} />
+      <Route path="/help" element={protectedOnly(<HelpSupport />)} />
       <Route path="/verification" element={protectedOnly(<Verification />)} />
       <Route path="/offer/:bookingId" element={protectedOnly(<Offer />)} />
       <Route path="/trip/:bookingId" element={protectedOnly(<Trip />)} />

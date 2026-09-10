@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { AmountText, Button, Card, IconCircle, TopHeader } from '@sheout/design-system';
 import { ApiError, bookingApi, dispatchApi, usersApi, verificationApi } from '../api/client';
 import type { BookingSummary, DriverProfileSummary, VerificationSummary } from '../api/types';
-import { mockAction } from '../lib/mockAction';
 
 const BOOKINGS_POLL_MS = 5000;
 const OFFER_POLL_MS = 4000;
@@ -182,7 +181,7 @@ export function Home() {
         title={`Hi, ${profile?.name?.split(' ')[0] || 'there'} 👋`}
         subtitle={isOnline ? "You're online" : "You're offline"}
         onMenuClick={() => navigate('/profile')}
-        onBellClick={() => mockAction('Notifications', 'no notifications module on the backend yet')}
+        onBellClick={() => navigate('/notifications')}
       />
 
       {error && <p className="text-sm text-danger">{error}</p>}

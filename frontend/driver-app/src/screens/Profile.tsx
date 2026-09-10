@@ -5,7 +5,6 @@ import { Button, Card, IconCircle, ListRow, StatusBadge, TextField, TopHeader } 
 import { ApiError, usersApi } from '../api/client';
 import type { DriverProfileSummary, VehicleType } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
-import { mockAction } from '../lib/mockAction';
 
 const VEHICLE_OPTIONS: { key: VehicleType; label: string; icon: JSX.Element }[] = [
   { key: 'BIKE', label: 'Bike', icon: <Bike className="h-4 w-4" /> },
@@ -15,9 +14,9 @@ const VEHICLE_OPTIONS: { key: VehicleType; label: string; icon: JSX.Element }[] 
 
 /**
  * REAL: profile fetched from GET /api/v1/users/driver/me, edits saved via
- * PUT (same endpoint). Log Out clears the real session. Help & Support has
- * no backend/screen behind it, same "mock, not silently inert" treatment
- * as customer-app's Profile.
+ * PUT (same endpoint). Log Out clears the real session. Help & Support and
+ * the notification bell are real screens now - the placeholders they used
+ * to show are gone.
  */
 export function Profile() {
   const navigate = useNavigate();
@@ -147,7 +146,7 @@ export function Profile() {
           <ListRow
             icon={<IconCircle tone="soft" size="sm" icon={<HelpCircle />} />}
             label="Help & Support"
-            onClick={() => mockAction('Help & Support', 'no support screen built yet')}
+            onClick={() => navigate('/help')}
           />
         </div>
       </Card>

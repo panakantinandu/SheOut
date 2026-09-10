@@ -31,7 +31,7 @@ export function Wallet() {
           </div>
           <button
             className="rounded-full bg-surface px-4 py-2 text-sm font-semibold text-primary"
-            onClick={() => mockAction('Add Money', 'no payments module on the backend')}
+            onClick={() => mockAction('Add Money', 'there is no wallet balance to top up - trips are paid per ride by UPI or cash')}
           >
             Add Money
           </button>
@@ -39,9 +39,9 @@ export function Wallet() {
       </Card>
 
       <div className="flex justify-around">
-        <ListRow layout="stacked" icon={<IconCircle tone="soft" icon={<PlusCircle />} />} label="Add Money" onClick={() => mockAction('Add Money', 'no payments module on the backend')} />
-        <ListRow layout="stacked" icon={<IconCircle tone="soft" icon={<Send />} />} label="Send Money" onClick={() => mockAction('Send Money', 'no payments module on the backend')} />
-        <ListRow layout="stacked" icon={<IconCircle tone="soft" icon={<Receipt />} />} label="Transactions" onClick={() => mockAction('Transaction history', 'shown below is mock data already')} />
+        <ListRow layout="stacked" icon={<IconCircle tone="soft" icon={<PlusCircle />} />} label="Add Money" onClick={() => mockAction('Add Money', 'there is no wallet balance to top up - trips are paid per ride by UPI or cash')} />
+        <ListRow layout="stacked" icon={<IconCircle tone="soft" icon={<Send />} />} label="Send Money" onClick={() => mockAction('Send Money', 'no wallet-to-wallet transfers exist - payments are per trip only')} />
+        <ListRow layout="stacked" icon={<IconCircle tone="soft" icon={<Receipt />} />} label="Transactions" onClick={() => navigate('/profile/payments')} />
       </div>
 
       <div>

@@ -102,3 +102,45 @@ export interface ApiErrorResponse {
   path: string;
   details: string[];
 }
+
+/** One entry from the caller's own notification history (GET /notifications/me). */
+export interface NotificationView {
+  id: string;
+  type:
+    | 'BOOKING_REQUESTED'
+    | 'BOOKING_ACCEPTED'
+    | 'BOOKING_COMPLETED'
+    | 'BOOKING_CANCELLED'
+    | 'ACCOUNT_VERIFIED'
+    | 'SOS_ALERT';
+  channel: 'SMS' | 'PUSH' | 'EMAIL';
+  status: 'SENT' | 'FAILED';
+  failureReason: string | null;
+  createdAt: string;
+}
+
+/** A booking's payment. razorpayOrderId/paymentId are null for a CASH payment. */
+export interface PaymentSummary {
+  id: string;
+  bookingId: string;
+  amount: number;
+  method: 'UPI' | 'CASH';
+  status: 'PENDING' | 'CAPTURED' | 'FAILED' | 'REFUNDED';
+  razorpayOrderId: string | null;
+  razorpayPaymentId: string | null;
+  failureReason: string | null;
+  createdAt: string;
+  updatedAt: string;
+  capturedAt: string | null;
+}
+
+/**
+ * The driver's last REPORTED position - not an interpolated or predicted
+ * one. recordedAt is when dispatch actually received it, so the UI can show
+ * how stale the marker is instead of implying it is live.
+ */
+export interface DriverLocation {
+  lat: number;
+  lng: number;
+  recordedAt: string;
+}

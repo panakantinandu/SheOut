@@ -1,26 +1,38 @@
 import { MessageCircle, Phone, Radio, ShieldAlert, Star } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { AmountText, Button, Card, IconCircle, StatusBadge, TopHeader } from '@sheout/design-system';
-import { ApiError, bookingApi } from '../api/client';
-import type { BookingSummary } from '../api/types';
-import { MapPlaceholder } from '../components/MapPlaceholder';
+import { AmountText, Button, Card, IconCircle, LiveMap, StatusBadge, TopHeader } from '@sheout/design-system';
+import type { MapMarker } from '@sheout/design-system';
+import { ApiError, bookingApi, dispatchApi } from '../api/client';
+import type { BookingSummary, DriverLocation } from '../api/types';
 import { mockAction } from '../lib/mockAction';
 
 const POLL_INTERVAL_MS = 3000;
+// Matches driver-app's LOCATION_SEND_MS exactly - polling faster than the
+// driver broadcasts just re-fetches a position we already have.
+const DRIVER_LOCATION_POLL_MS = 7000;
 
 /**
  * REAL: booking status/driverId/fare, fetched by polling
  * GET /api/v1/bookings/{id} (no push/websocket exists, same poll-based
  * pattern dispatch itself uses for driver offers). Cancel is real too.
  * <p>
- * MOCK: driver name/photo/rating/vehicle, ETA, and live distance. There is
- * no customer-facing endpoint to look up another account's driver profile
- * (users only exposes self-service GET /users/driver/me - nothing lets a
- * customer read someone else's DriverProfileSummary by id), and dispatch
- * doesn't stream live position at all. So once a driverId is present, this
- * screen shows clearly-labeled placeholder driver details rather than
- * pretending driverId alone is enough to build the mockup's driver card.
+ * REAL: the map. Pickup/drop come from the booking; the driver marker is
+ * the last position dispatch actually received, polled from
+ * GET /api/v1/dispatch/bookings/{id}/driver-location.
+ * <p>
+ * This is NEAR-real-time, not real-time. The driver app broadcasts on an
+ * interval and this polls on the same one, so the marker is up to ~7s
+ * behind and moves in steps rather than gliding. Nothing here interpolates
+ * between fixes: a smooth marker would be drawing the driver where they
+ * have not actually been. Genuine real-time needs a WebSocket/SSE push
+ * channel, which does not exist in this backend.
+ * <p>
+ * MOCK: driver name/photo/rating/vehicle and ETA. There is no
+ * customer-facing endpoint to look up another account's driver profile
+ * (users only exposes self-service GET /users/driver/me), so once a
+ * driverId is present this screen shows clearly-labeled placeholder driver
+ * details rather than pretending driverId alone is enough.
  */
 export function Tracking() {
   const { bookingId } = useParams<{ bookingId: string }>();
@@ -28,6 +40,7 @@ export function Tracking() {
   const [booking, setBooking] = useState<BookingSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
+  const [driverLocation, setDriverLocation] = useState<DriverLocation | null>(null);
 
   useEffect(() => {
     if (!bookingId) return;
@@ -50,6 +63,30 @@ export function Tracking() {
     };
   }, [bookingId]);
 
+  // Driver position, polled only once a driver is actually assigned - before
+  // that the endpoint has nothing to return and would 404 on every tick.
+  useEffect(() => {
+    if (!bookingId || !booking?.driverId) return;
+    let cancelled = false;
+
+    async function pollLocation() {
+      try {
+        const location = await dispatchApi.getDriverLocation(bookingId!);
+        if (!cancelled) setDriverLocation(location);
+      } catch {
+        // 404 while the driver has not reported yet is normal, not an error
+        // worth surfacing - the marker simply stays absent until one arrives.
+      }
+    }
+
+    pollLocation();
+    const interval = setInterval(pollLocation, DRIVER_LOCATION_POLL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [bookingId, booking?.driverId]);
+
   async function handleCancel() {
     if (!bookingId) return;
     setCancelling(true);
@@ -64,13 +101,30 @@ export function Tracking() {
   }
 
   const hasDriver = Boolean(booking?.driverId);
+  const markers: MapMarker[] = [];
+  if (booking) {
+    markers.push({ key: 'pickup', lat: booking.pickup.lat, lng: booking.pickup.lng, label: 'Pickup', kind: 'pickup' });
+    markers.push({ key: 'drop', lat: booking.drop.lat, lng: booking.drop.lng, label: 'Drop', kind: 'drop' });
+  }
+  if (driverLocation) {
+    markers.push({ key: 'driver', lat: driverLocation.lat, lng: driverLocation.lng, label: 'Driver', kind: 'driver' });
+  }
   const canCancel = booking && ['REQUESTED', 'MATCHED', 'ACCEPTED'].includes(booking.status);
 
   return (
     <div className="space-y-6">
       <TopHeader variant="back" title={hasDriver ? 'On the Way' : 'Finding a Driver'} onBack={() => navigate('/home')} />
 
-      <MapPlaceholder label="Live location tracking" />
+      <div className="space-y-1">
+        <LiveMap markers={markers} />
+        <p className="text-xs text-text-secondary">
+          {driverLocation
+            ? `Driver position updated ${secondsAgo(driverLocation.recordedAt)}s ago - refreshes every ${DRIVER_LOCATION_POLL_MS / 1000}s`
+            : hasDriver
+              ? 'Waiting for the driver to report a position...'
+              : 'Showing your pickup and drop. The driver appears once one is assigned.'}
+        </p>
+      </div>
 
       {error && <p className="text-sm text-danger">{error}</p>}
 
@@ -136,7 +190,7 @@ export function Tracking() {
       <div className="flex justify-around">
         <button
           className="flex flex-col items-center gap-1 text-xs text-text-secondary"
-          onClick={() => mockAction('Share Live location', 'no live-location-sharing backend yet')}
+          onClick={() => mockAction('Share Live location', 'the map above is live for you, but there is no endpoint to share a trip link with someone else')}
         >
           <IconCircle tone="soft" icon={<Radio />} />
           Share Live
@@ -164,4 +218,9 @@ export function Tracking() {
       )}
     </div>
   );
+}
+
+/** Whole seconds since an ISO timestamp, floored at 0 for clock skew. */
+function secondsAgo(iso: string): number {
+  return Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
 }
