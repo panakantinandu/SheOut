@@ -152,7 +152,7 @@ export const notificationsApi = {
 export const paymentsApi = {
   /** 404s until a payment row exists, which only happens once a trip completes. */
   getForBooking(bookingId: string): Promise<PaymentSummary> {
-    return request(`/api/v1/payments/bookings/`);
+    return request(`/api/v1/payments/bookings/${bookingId}`);
   },
 };
 
@@ -162,7 +162,7 @@ export const dispatchApi = {
    * both normal states the tracking screen polls through, not errors.
    */
   getDriverLocation(bookingId: string): Promise<DriverLocation> {
-    return request(`/api/v1/dispatch/bookings//driver-location`);
+    return request(`/api/v1/dispatch/bookings/${bookingId}/driver-location`);
   },
 };
 
