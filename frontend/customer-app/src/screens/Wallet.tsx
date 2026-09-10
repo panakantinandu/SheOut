@@ -13,7 +13,7 @@ const MOCK_BALANCE = 1250;
 const MOCK_TRANSACTIONS = [
   { id: '1', label: 'Ride Payment', date: '12 Apr 2026 · 10:24 AM', amount: 56, sign: 'negative' as const },
   { id: '2', label: 'Parcel Delivery', date: '11 Apr 2026 · 04:15 PM', amount: 120, sign: 'positive' as const },
-  { id: '3', label: 'Lunch Box Order', date: '10 Apr 2026 · 12:36 PM', amount: 240, sign: 'negative' as const },
+  { id: '3', label: 'Ride Payment', date: '10 Apr 2026 · 12:36 PM', amount: 240, sign: 'negative' as const },
 ];
 
 export function Wallet() {

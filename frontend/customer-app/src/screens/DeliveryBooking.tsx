@@ -51,6 +51,16 @@ export function DeliveryBooking() {
   const config = CONFIG[kind === 'lunchbox' ? 'lunchbox' : 'parcel'];
   const navigate = useNavigate();
 
+  // Lunch Box is deferred for launch. Its Home tile is gone, but /book/:kind
+  // is a URL anyone can still type, so the route is closed here too -
+  // otherwise the one remaining path to creating a LUNCHBOX booking would
+  // be a hand-typed address. Deliberately a redirect rather than deleting
+  // the config below: the backend still accepts the category, so re-enabling
+  // the feature is removing this guard and restoring the tile, nothing more.
+  useEffect(() => {
+    if (kind === 'lunchbox') navigate('/home', { replace: true });
+  }, [kind, navigate]);
+
   const [pickup, setPickup] = useState<GeoAddress | null>(null);
   const [pickupError, setPickupError] = useState<string | null>(null);
   const [drop, setDrop] = useState<GeoAddress | null>(null);

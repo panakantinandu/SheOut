@@ -1,16 +1,30 @@
-import { Bike, Package, UtensilsCrossed } from 'lucide-react';
+import { Bike, Package } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { IconCircle } from '@sheout/design-system';
 import { useAuth } from '../auth/AuthContext';
 
-const FADE_START_MS = 1700;
-const NAVIGATE_MS = 2000;
+/**
+ * How long the splash is shown before it navigates on. Named so it can be
+ * tuned here rather than hunted for as a bare number in the effect below.
+ */
+const SPLASH_DISPLAY_MS = 3500;
 
+/**
+ * Matches the CSS transition duration below, and is derived from
+ * SPLASH_DISPLAY_MS rather than hardcoded so the fade always lands exactly
+ * as the screen navigates. Hardcoding it once meant raising the display
+ * time left the splash sitting fully transparent for the difference.
+ */
+const FADE_DURATION_MS = 300;
+const FADE_START_MS = SPLASH_DISPLAY_MS - FADE_DURATION_MS;
+
+// Lunch Box Delivery is deferred for launch, so the splash no longer
+// advertises it - the backend still supports the category, and this entry
+// comes back alongside the Home tile whenever the feature is re-enabled.
 const SERVICES = [
   { key: 'bike', label: 'Bike Taxi', icon: <Bike /> },
   { key: 'parcel', label: 'Parcel Delivery', icon: <Package /> },
-  { key: 'lunch', label: 'Lunch Box Delivery', icon: <UtensilsCrossed /> },
 ];
 
 /**
@@ -21,8 +35,8 @@ const SERVICES = [
  * footer icons - close enough to blend into the background that it read
  * as "missing" rather than as its own distinct screen.
  * <p>
- * Auto-navigates with a brief fade (2s total: content sits still, then
- * fades over the last ~300ms) rather than a tap-to-continue "Get
+ * Auto-navigates with a brief fade (see SPLASH_DISPLAY_MS: content sits
+ * still, then fades over the last 300ms) rather than a tap-to-continue "Get
  * Started" button - flagged per your ask: a manual button reads as more
  * intentional/brand-forward (SheOUT trial prototype used one), but
  * auto-advance is the more common pattern for a splash whose only job is
@@ -44,7 +58,7 @@ export function Splash() {
     const fadeTimer = setTimeout(() => setFading(true), FADE_START_MS);
     const navTimer = setTimeout(() => {
       navigate(isAuthenticated ? '/home' : '/login', { replace: true });
-    }, NAVIGATE_MS);
+    }, SPLASH_DISPLAY_MS);
     return () => {
       clearTimeout(fadeTimer);
       clearTimeout(navTimer);
