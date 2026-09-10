@@ -4,18 +4,10 @@ import { useNavigate } from 'react-router-dom';
 import { AmountText, Button, Card, IconCircle, TopHeader } from '@sheout/design-system';
 import { ApiError, bookingApi, dispatchApi, usersApi, verificationApi } from '../api/client';
 import type { BookingSummary, DriverProfileSummary, VerificationSummary } from '../api/types';
+import { useLocationBroadcast } from '../lib/useLocationBroadcast';
 
 const BOOKINGS_POLL_MS = 5000;
 const OFFER_POLL_MS = 4000;
-// A real GPS subscription (watchPosition) rather than repeated one-off
-// getCurrentPosition calls - fires on every OS/browser-reported movement,
-// not on a timer. This interval instead controls how often we actually
-// SEND the latest watched position to the backend, so we don't spam
-// dispatch on every tiny GPS jitter.
-const LOCATION_SEND_MS = 7000;
-// Fallback only if the browser denies/lacks geolocation - central Hyderabad,
-// not this driver's real position. Flagged rather than silently sent as real.
-const FALLBACK_COORDS = { lat: 17.385, lng: 78.4867 };
 
 function startOfDay(): Date {
   const d = new Date();
@@ -129,36 +121,9 @@ export function Home() {
     };
   }, [isOnline, activeTrip, navigate]);
 
-  // Real live location while online - watchPosition (continuous GPS
-  // subscription) feeds a ref with the latest fix; a separate interval
-  // sends whatever's latest to dispatch every ~7s. Falls back to a fixed
-  // Hyderabad coordinate if the browser denies/lacks geolocation, so
-  // dispatch's geo-matching still has something to match against in a demo.
-  useEffect(() => {
-    if (!isOnline) return;
-    const latest = { lat: FALLBACK_COORDS.lat, lng: FALLBACK_COORDS.lng };
-    let watchId: number | null = null;
-    if (navigator.geolocation) {
-      watchId = navigator.geolocation.watchPosition(
-        (pos) => {
-          latest.lat = pos.coords.latitude;
-          latest.lng = pos.coords.longitude;
-        },
-        () => {
-          // Leave `latest` at its last-known (or fallback) value - a transient watch error shouldn't stop broadcasting entirely.
-        },
-        { enableHighAccuracy: true, maximumAge: 10000, timeout: 8000 }
-      );
-    }
-    const interval = setInterval(() => {
-      dispatchApi.recordLocation(latest.lat, latest.lng).catch(() => {});
-    }, LOCATION_SEND_MS);
-    dispatchApi.recordLocation(latest.lat, latest.lng).catch(() => {});
-    return () => {
-      if (watchId !== null) navigator.geolocation.clearWatch(watchId);
-      clearInterval(interval);
-    };
-  }, [isOnline]);
+  // Broadcast position while online. Shared with Trip via the hook so it
+  // survives the navigation into a trip - see useLocationBroadcast.
+  useLocationBroadcast(isOnline);
 
   async function handleToggleOnline() {
     if (!profile) return;

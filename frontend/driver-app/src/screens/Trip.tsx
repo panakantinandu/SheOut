@@ -6,6 +6,7 @@ import type { MapMarker } from '@sheout/design-system';
 import { ApiError, bookingApi } from '../api/client';
 import type { BookingSummary } from '../api/types';
 import { mockAction } from '../lib/mockAction';
+import { useLocationBroadcast } from '../lib/useLocationBroadcast';
 
 const POLL_INTERVAL_MS = 4000;
 
@@ -35,22 +36,12 @@ export function Trip() {
   const [booking, setBooking] = useState<BookingSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [myPosition, setMyPosition] = useState<{ lat: number; lng: number } | null>(null);
-
-  // Own position straight from the device. watchPosition (a real GPS
-  // subscription) rather than polling, matching Home.tsx - it fires on
-  // actual movement instead of re-asking on a timer.
-  useEffect(() => {
-    if (!navigator.geolocation) return;
-    const watchId = navigator.geolocation.watchPosition(
-      (pos) => setMyPosition({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => {
-        // Denied or unavailable - the map still shows pickup/drop, just no "You".
-      },
-      { enableHighAccuracy: true, maximumAge: 10000, timeout: 8000 }
-    );
-    return () => navigator.geolocation.clearWatch(watchId);
-  }, []);
+  // Keep broadcasting for the whole live trip, not just while on Home -
+  // this is exactly when the customer's tracking map is watching. The hook
+  // both sends the position and hands it back for the marker below, so
+  // there is only one GPS subscription.
+  const tripIsLive = booking ? ['ACCEPTED', 'IN_PROGRESS'].includes(booking.status) : false;
+  const myPosition = useLocationBroadcast(tripIsLive);
 
   useEffect(() => {
     if (!bookingId) return;
