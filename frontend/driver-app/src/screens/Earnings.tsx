@@ -123,7 +123,7 @@ export function Earnings() {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-sm opacity-90">Total Earnings</p>
-                <AmountText amount={periodTotal} size="lg" className="!text-text-inverse" />
+                <AmountText amount={periodTotal} size="lg" tone="inverse" />
               </div>
               <button
                 type="button"
@@ -223,7 +223,7 @@ export function Earnings() {
           )}
 
           <p className="text-center text-xs text-text-secondary">
-            Totals are calculated from your completed trips - no separate payments/earnings module exists on the backend yet.
+            Totals are worked out from the trips you have completed.
           </p>
         </>
       )}

@@ -1,7 +1,7 @@
 import { Bell, CheckCircle2, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, IconCircle, StatusBadge, TopHeader } from '@sheout/design-system';
+import { Card, IconCircle, StatusBadge, TopHeader, humanizeEnum } from '@sheout/design-system';
 import { ApiError, notificationsApi } from '../api/client';
 import type { NotificationView } from '../api/types';
 
@@ -59,7 +59,7 @@ export function Notifications() {
                   <p className="mt-1 text-xs text-danger">Delivery failed{n.failureReason ? `: ${n.failureReason}` : ''}</p>
                 )}
               </div>
-              <StatusBadge tone={n.status === 'SENT' ? 'success' : 'danger'}>{n.status}</StatusBadge>
+              <StatusBadge tone={n.status === 'SENT' ? 'success' : 'danger'}>{humanizeEnum(n.status)}</StatusBadge>
             </Card>
           ))}
         </div>

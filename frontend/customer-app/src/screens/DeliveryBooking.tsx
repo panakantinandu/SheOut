@@ -104,7 +104,7 @@ export function DeliveryBooking() {
       const booking = await bookingApi.create({ type: 'DELIVERY', category: config.category, pickup, drop });
       navigate(`/tracking/${booking.id}`);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not create booking - is the backend running?');
+      setError(err instanceof ApiError ? err.message : 'Could not create your booking. Please check your connection and try again.');
     } finally {
       setSubmitting(false);
     }

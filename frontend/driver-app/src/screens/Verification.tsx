@@ -1,7 +1,7 @@
 import { CheckCircle2, Clock, FileWarning, ShieldCheck, Upload } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Card, IconCircle, StatusBadge, TopHeader } from '@sheout/design-system';
+import { Button, Card, IconCircle, StatusBadge, TopHeader, verificationStatusLabel } from '@sheout/design-system';
 import type { StatusTone } from '@sheout/design-system';
 import { ApiError, verificationApi } from '../api/client';
 import type { VerificationStatus, VerificationSummary } from '../api/types';
@@ -21,7 +21,7 @@ function statusTone(status: VerificationStatus | null): StatusTone {
 }
 
 function statusLabel(status: VerificationStatus | null): string {
-  return status ?? 'NOT APPLICABLE';
+  return verificationStatusLabel(status);
 }
 
 /**
@@ -91,8 +91,11 @@ export function Verification() {
             </div>
           </Card>
 
-          <Card className="space-y-4">
-            <div className="flex items-center justify-between">
+          {/* Two separate checks, so two separate rows with a rule between
+              them - they used to run together in one undivided block, which
+              read as a single item with two badges. */}
+          <Card className="divide-y divide-border p-0">
+            <div className="flex items-center justify-between p-4">
               <div className="flex items-center gap-2">
                 <IconCircle size="sm" tone="soft" icon={<CheckCircle2 />} />
                 <span className="text-sm font-medium text-text-primary">Gender Verification</span>
@@ -100,7 +103,7 @@ export function Verification() {
               <StatusBadge tone={statusTone(summary.genderVerificationStatus)}>{statusLabel(summary.genderVerificationStatus)}</StatusBadge>
             </div>
 
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between p-4">
               <div className="flex items-center gap-2">
                 <IconCircle size="sm" tone="soft" icon={<ShieldCheck />} />
                 <span className="text-sm font-medium text-text-primary">Police Verification</span>
@@ -112,8 +115,8 @@ export function Verification() {
                 backend at all - it's admin-only, so there's nothing real this button can do. */}
             <button
               type="button"
-              onClick={() => mockAction('Submit police verification', 'admin-only on the backend - no driver submission endpoint exists')}
-              className="flex items-center gap-2 text-xs text-text-secondary underline"
+              onClick={() => mockAction('Submit police verification', 'our team runs this check for you - there is nothing to submit')}
+              className="flex w-full items-center gap-2 p-4 text-xs text-text-secondary underline"
             >
               <FileWarning className="h-3.5 w-3.5" /> How is this verified?
             </button>
@@ -123,8 +126,14 @@ export function Verification() {
             <p className="text-sm font-medium text-text-primary">
               {summary.documentSubmitted ? 'Document submitted' : 'Upload your ID document'}
             </p>
+            {/* This used to explain the backend's single document slot to
+                the driver, in those words. A partner does not have a
+                backend; they have an ID and a phone. Same fact, said as a
+                person would say it - the constraint is still described in
+                this file's header comment, where it belongs. */}
             <p className="text-xs text-text-secondary">
-              Used for gender verification. One document only (Aadhaar) - the backend has a single document slot, not separate uploads per document type.
+              One government ID, used to confirm your identity. Aadhaar, passport, driving licence or voter ID. Make sure
+              your name and photo are readable.
             </p>
             <input ref={fileInputRef} type="file" accept="image/*,.pdf" className="hidden" onChange={handleFileSelected} />
             <Button

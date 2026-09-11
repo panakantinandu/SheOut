@@ -1,7 +1,7 @@
 import { Navigation, Phone } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Button, Card, LiveMap, StatusBadge, TopHeader } from '@sheout/design-system';
+import { Button, Card, LiveMap, StatusBadge, TopHeader, bookingStatusLabel } from '@sheout/design-system';
 import type { MapMarker } from '@sheout/design-system';
 import { ApiError, bookingApi } from '../api/client';
 import type { BookingSummary } from '../api/types';
@@ -112,7 +112,7 @@ export function Trip() {
           <Card className="space-y-3">
             <div className="flex items-center justify-between">
               <p className="font-heading font-semibold text-text-primary">{booking.type === 'RIDE' ? 'Ride' : 'Delivery'}</p>
-              <StatusBadge tone="primary">{booking.status.replace('_', ' ')}</StatusBadge>
+              <StatusBadge tone="primary">{bookingStatusLabel(booking.status)}</StatusBadge>
             </div>
             <div className="space-y-2 text-sm">
               <div className="flex items-start gap-2">
@@ -134,11 +134,11 @@ export function Trip() {
             {/* MOCK: no endpoint exists for a driver to look up the customer's profile by id. */}
             <div>
               <p className="font-heading font-semibold text-text-primary">Customer details unavailable (mock)</p>
-              <p className="text-xs text-text-secondary">No customer lookup endpoint on the backend</p>
+              <p className="text-xs text-text-secondary">Contact details are not shared before pickup</p>
             </div>
             <button
               className="rounded-full p-2 text-primary hover:bg-background"
-              onClick={() => mockAction('Call customer', 'no customer phone lookup available for drivers')}
+              onClick={() => mockAction('Call customer', "the rider's number is not shared here yet")}
             >
               <Phone className="h-5 w-5" />
             </button>

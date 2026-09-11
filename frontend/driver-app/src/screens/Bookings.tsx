@@ -1,7 +1,7 @@
 import { Bike, Package, UtensilsCrossed } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AmountText, Card, IconCircle, StatusBadge, TopHeader } from '@sheout/design-system';
+import { AmountText, Card, IconCircle, StatusBadge, TopHeader, bookingCategoryLabel, bookingStatusLabel } from '@sheout/design-system';
 import type { StatusTone } from '@sheout/design-system';
 import { ApiError, bookingApi } from '../api/client';
 import type { BookingCategory, BookingStatus, BookingSummary } from '../api/types';
@@ -60,10 +60,17 @@ export function Bookings() {
           >
             {categoryIcon(booking.category)}
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-text-primary">{booking.drop.label}</p>
-              <p className="text-xs text-text-secondary">{new Date(booking.requestedAt).toLocaleString()}</p>
+              {/* Same row shape the rider's own booking list uses: the
+                  service first, then where it went. This showed only the
+                  drop label, so every trip in a partner's history read as a
+                  bare place name with no way to tell a bike ride from a
+                  parcel run except by the icon's colour. */}
+              <p className="truncate text-sm font-medium text-text-primary">{bookingCategoryLabel(booking.category)}</p>
+              <p className="truncate text-xs text-text-secondary">
+                {booking.pickup.label} to {booking.drop.label} &middot; {new Date(booking.requestedAt).toLocaleString()}
+              </p>
               <StatusBadge tone={statusTone(booking.status)} className="mt-1">
-                {booking.status}
+                {bookingStatusLabel(booking.status)}
               </StatusBadge>
             </div>
             <AmountText amount={booking.finalFare ?? booking.fareEstimate} />

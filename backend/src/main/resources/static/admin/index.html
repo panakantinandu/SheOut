@@ -240,6 +240,19 @@
   .login input { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; font: inherit; }
   .login .btn { width: 100%; margin-top: 16px; padding: 11px; }
 
+  /* Phone entry, mirroring the apps' PhoneField: a fixed +91 chip outside
+     the input, and ten digits inside it. */
+  .phone-field { display: flex; align-items: stretch; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: #fff; }
+  .phone-field:focus-within { border-color: var(--brand); }
+  .phone-field .cc {
+    display: flex; align-items: center; padding: 0 11px; font-size: 13px; font-weight: 650;
+    color: var(--text); background: var(--bg); border-right: 1px solid var(--line);
+  }
+  .phone-field input { border: 0; border-radius: 0; letter-spacing: .5px; }
+  .phone-field input:focus { outline: none; }
+  .phone-field.bad { border-color: var(--red); }
+  .field-err { margin: 6px 0 0; font-size: 12px; color: var(--red); }
+
   /* ---------- responsive: tablet and below ---------- */
   @media (max-width: 900px) {
     .shell { grid-template-columns: 1fr; }
@@ -274,7 +287,19 @@
       <div class="banner banner-err" id="loginErr" hidden></div>
       <form id="login">
         <label for="phone">Mobile number</label>
-        <input id="phone" inputmode="tel" placeholder="+919000000042" autocomplete="tel" required>
+        <!-- Same rules as PhoneField in the shared design system, which this
+             page cannot import: it is a dependency-free static file with no
+             build step and no React. A fixed +91 chip outside the field,
+             ten digits inside it, non-digits rejected as they are typed.
+             Before this it was one free-text box that took a country code,
+             a name, any length of anything - so the same operator saw three
+             different phone fields across the product. -->
+        <div class="phone-field" id="phoneWrap">
+          <span class="cc">+91</span>
+          <input id="phone" inputmode="numeric" placeholder="9000000042"
+                 autocomplete="tel-national" aria-describedby="phoneErr" required>
+        </div>
+        <p class="field-err" id="phoneErr" hidden>Enter the 10 digits of your mobile number.</p>
         <div id="codeRow" hidden>
           <label for="code">One-time code</label>
           <input id="code" inputmode="numeric" placeholder="6-digit code" autocomplete="one-time-code">
@@ -383,6 +408,30 @@ const STATUS_TONE = {
   REJECTED: 'red', FAILED: 'red', CANCELLED: 'red', REFUNDED: 'red',
 };
 /**
+ * The same treatment for the other enums the API returns. Status had this
+ * already, but the Bookings table printed the service as "PARCEL" over
+ * "DELIVERY" and the payment method as "CASH", which is the API's
+ * vocabulary rather than an operator's - and it sat one column away from a
+ * status that was written out properly, so the row read as half-finished.
+ */
+const SERVICE_TEXT = {
+  BIKE: 'Bike Taxi', AUTO: 'Auto Ride', CAB: 'Cab Ride',
+  PARCEL: 'Parcel Delivery', LUNCHBOX: 'Lunch Box Delivery',
+};
+const TRIP_TYPE_TEXT = { RIDE: 'Ride', DELIVERY: 'Delivery' };
+const PAY_METHOD_TEXT = { UPI: 'UPI', CASH: 'Cash' };
+
+/** Any unmapped value degrades to sentence case rather than shouting. */
+function humanize(v) {
+  if (!v) return '';
+  const s = String(v).replace(/_/g, ' ').toLowerCase();
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+const serviceText = v => SERVICE_TEXT[v] || humanize(v);
+const tripTypeText = v => TRIP_TYPE_TEXT[v] || humanize(v);
+const payMethodText = v => PAY_METHOD_TEXT[v] || humanize(v);
+
+/**
  * A customer only ever needs the ID/gender check - the police column is
  * null for every CUSTOMER record, so showing it as a status would invent a
  * check that does not apply to them.
@@ -480,10 +529,41 @@ function confirmAction({ title, message, confirmLabel, tone = 'primary', withRea
 
 // ---- login ----------------------------------------------------------------
 let awaitingCode = false;
+
+// Mirrors normalizeDigits/isCompletePhone in the design system's PhoneField.
+const PHONE_DIGITS = 10;
+const cleanPhone = raw => String(raw).replace(/\D/g, '').replace(/^91(?=\d{10}$)/, '').slice(0, PHONE_DIGITS);
+
+// Rejected as typed, not only on submit - a field that silently accepts a
+// letter and then complains later reads as broken.
+$('phone').addEventListener('input', e => {
+  const cleaned = cleanPhone(e.target.value);
+  if (e.target.value !== cleaned) e.target.value = cleaned;
+  if (cleaned.length === PHONE_DIGITS) showPhoneError(false);
+});
+
+function showPhoneError(show) {
+  $('phoneWrap').classList.toggle('bad', show);
+  $('phoneErr').hidden = !show;
+}
+
+// Same six-digit numeric-only treatment the two apps give their OTP box.
+$('code').addEventListener('input', e => {
+  const cleaned = String(e.target.value).replace(/\D/g, '').slice(0, 6);
+  if (e.target.value !== cleaned) e.target.value = cleaned;
+});
+
 $('login').addEventListener('submit', async e => {
   e.preventDefault();
   $('loginErr').hidden = true;
-  const phoneNumber = $('phone').value.trim();
+  const digits = cleanPhone($('phone').value);
+  if (digits.length !== PHONE_DIGITS) {
+    showPhoneError(true);
+    $('phone').focus();
+    return;
+  }
+  showPhoneError(false);
+  const phoneNumber = '+91' + digits;
   try {
     if (!awaitingCode) {
       await api('/auth/otp/request', { method: 'POST', body: JSON.stringify({ phoneNumber, role: 'ADMIN' }) });
@@ -513,6 +593,8 @@ function signOut(message) {
   localStorage.removeItem('sheout.admin.token');
   awaitingCode = false;
   $('codeRow').hidden = true;
+  $('code').value = '';
+  showPhoneError(false);
   $('loginBtn').textContent = 'Send code';
   $('app').hidden = true;
   $('loginWrap').hidden = false;
@@ -621,7 +703,7 @@ const VIEWS = {
     load: () => api('/admin/bookings/recent?limit=50'),
     cell: (r, key) => {
       if (key === 'status') return badge(r.status);
-      if (key === 'service') return `${esc(r.category)}<div class="subtle">${esc(r.type)}</div>`;
+      if (key === 'service') return `${esc(serviceText(r.category))}<div class="subtle">${esc(tripTypeText(r.type))}</div>`;
       if (key === 'customerName') return esc(r.customerName);
       if (key === 'driverName') return r.driverName ? esc(r.driverName) : '<span class="subtle">Not assigned</span>';
       if (key === 'fare') {
@@ -630,7 +712,7 @@ const VIEWS = {
           ? `<span class="num strong">₹${esc(final)}</span>`
           : `<span class="num subtle">₹${esc(est)} est.</span>`;
       }
-      if (key === 'payment') return badge(r.paymentStatus) + (r.paymentMethod ? `<div class="subtle">${esc(r.paymentMethod)}</div>` : '');
+      if (key === 'payment') return badge(r.paymentStatus) + (r.paymentMethod ? `<div class="subtle">${esc(payMethodText(r.paymentMethod))}</div>` : '');
       if (key === 'requestedAt') return `<span class="subtle">${time(r.requestedAt)}</span>`;
       return '—';
     },

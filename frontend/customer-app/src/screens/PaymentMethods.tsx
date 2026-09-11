@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AmountText, Card, StatusBadge, TopHeader } from '@sheout/design-system';
+import { AmountText, Card, StatusBadge, TopHeader, paymentMethodLabel, paymentStatusLabel } from '@sheout/design-system';
 import { ApiError, bookingApi, paymentsApi } from '../api/client';
 import type { BookingSummary, PaymentSummary } from '../api/types';
 
@@ -49,7 +49,7 @@ export function PaymentMethods() {
 
   return (
     <div className="space-y-6">
-      <TopHeader variant="back" title="Payments" onBack={() => navigate('/profile')} />
+      <TopHeader variant="back" title="Payment History" onBack={() => navigate('/profile')} />
       {error && <p className="text-sm text-danger">{error}</p>}
 
       <Card>
@@ -73,13 +73,13 @@ export function PaymentMethods() {
             <Card key={booking.id} className="flex items-center justify-between">
               <div>
                 <p className="font-medium text-text-primary">
-                  {booking.type === 'RIDE' ? 'Ride' : 'Delivery'} &middot; {payment!.method}
+                  {booking.type === 'RIDE' ? 'Ride' : 'Delivery'} &middot; {paymentMethodLabel(payment!.method)}
                 </p>
                 <p className="text-xs text-text-secondary">{new Date(payment!.createdAt).toLocaleString()}</p>
               </div>
               <div className="flex items-center gap-3">
                 <AmountText amount={payment!.amount} />
-                <StatusBadge tone={TONES[payment!.status]}>{payment!.status}</StatusBadge>
+                <StatusBadge tone={TONES[payment!.status]}>{paymentStatusLabel(payment!.status)}</StatusBadge>
               </div>
             </Card>
           ))}

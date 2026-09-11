@@ -1,7 +1,7 @@
-import { Bell, Bike, CheckCircle2, ClipboardList, MapPinOff, Navigation2, Power, ShieldCheck, Star } from 'lucide-react';
+import { Bell, Bike, CheckCircle2, ClipboardList, IndianRupee, MapPinOff, Navigation2, Power, ShieldCheck, User } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AmountText, Button, Card, IconCircle, LiveMap, TopHeader } from '@sheout/design-system';
+import { AmountText, Button, Card, IconCircle, LiveMap, TopHeader, bookingStatusLabel, vehicleLabel } from '@sheout/design-system';
 import { ApiError, bookingApi, dispatchApi, usersApi, verificationApi } from '../api/client';
 import type { BookingSummary, DriverProfileSummary, VerificationSummary } from '../api/types';
 import { useLocationBroadcast } from '../lib/useLocationBroadcast';
@@ -154,13 +154,18 @@ export function Home() {
     <div className="space-y-6">
       {/* Centred "Partner Dashboard" title, per the mockup. The bell moves
           into the right slot rather than disappearing with the greeting
-          header - it is this app's only route to the notifications
-          screen. */}
+          header - it is this app's only route to the notifications screen.
+          <p>
+          No back arrow: this is the app's top-level destination, reached
+          from the tab bar, and there is nothing behind it. It used to carry
+          one wired to navigate(-1), which either did nothing on a fresh
+          launch or threw the driver back to whatever screen they had just
+          deliberately left - a back arrow that implies a hierarchy this
+          screen does not sit in. */}
       <TopHeader
-        variant="back"
+        variant="plain"
         centerTitle
         title="Partner Dashboard"
-        onBack={() => navigate(-1)}
         rightSlot={
           <button
             type="button"
@@ -191,7 +196,7 @@ export function Home() {
       )}
 
       <Card className="flex items-center gap-3">
-        <IconCircle size="lg" tone="soft" icon={<Star />} />
+        <IconCircle size="lg" tone="soft" icon={<User />} />
         <div className="flex-1">
           <p className="font-heading font-semibold text-text-primary">{profile?.name || 'Loading...'}</p>
           <div className="flex items-center gap-2">
@@ -205,7 +210,7 @@ export function Home() {
               {isOnline ? 'Online' : 'Offline'}
             </span>
             {/* MOCK: no ratings/reviews system exists on the backend - fixed placeholder, clearly labeled, not fabricated as real. */}
-            <span className="text-xs text-text-secondary">&middot; ★ 4.8 (mock) &middot; {profile?.vehicleType ?? '--'}</span>
+            <span className="text-xs text-text-secondary">&middot; ★ 4.8 (mock) &middot; {vehicleLabel(profile?.vehicleType)}</span>
           </div>
         </div>
       </Card>
@@ -213,9 +218,14 @@ export function Home() {
       {/* One card split by dividers, matching the mockup, rather than three
           separate cards with gaps between them. */}
       <Card className="flex items-stretch p-0">
-        <div className="flex-1 space-y-1 p-3 text-center">
-          <p className="text-xs text-text-secondary">Today's Earnings</p>
+        {/* Icon, then figure, then label - the same order as the two
+            columns beside it. This one used to run label-then-figure with
+            no icon, so its number sat a line lower than its neighbours and
+            the row read as misaligned. */}
+        <div className="flex flex-1 flex-col items-center gap-1 p-3 text-center">
+          <IndianRupee className="h-4 w-4 text-primary" />
           <AmountText amount={todayEarnings} size="sm" />
+          <p className="text-xs text-text-secondary">Earned Today</p>
         </div>
         <div className="w-px self-stretch bg-border" aria-hidden="true" />
         <div className="flex flex-1 flex-col items-center gap-1 p-3 text-center">
@@ -266,7 +276,7 @@ export function Home() {
         <Card className="flex items-center gap-3" onClick={() => navigate(`/trip/${activeTrip.id}`)}>
           <IconCircle tone="soft" icon={activeTrip.type === 'RIDE' ? <Bike className="h-5 w-5" /> : <Navigation2 className="h-5 w-5" />} />
           <div className="flex-1">
-            <p className="font-heading font-semibold text-text-primary">Active Trip - {activeTrip.status.replace('_', ' ')}</p>
+            <p className="font-heading font-semibold text-text-primary">Active Trip - {bookingStatusLabel(activeTrip.status)}</p>
             <p className="truncate text-xs text-text-secondary">{activeTrip.drop.label}</p>
           </div>
         </Card>
