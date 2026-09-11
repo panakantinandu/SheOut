@@ -3,114 +3,396 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SheOut Ops</title>
+<title>SheOut Ops Console</title>
 <!--
   Deliberately one dependency-free static file served by the backend itself,
-  rather than a fourth React app. This is an internal ops console: it needs
-  no build step, no deploy of its own, and being same-origin it sidesteps
-  CORS entirely. If it ever grows past "answer what's happening right now",
-  that is the point to reconsider - not before.
+  rather than a fourth React app. No build step, no deploy of its own, and
+  being same-origin it sidesteps CORS entirely.
+
+  This is now a real product surface: non-technical operations staff approve
+  drivers and answer safety alerts from it daily. So it reads as an admin
+  tool - neutral, dense, legible - rather than borrowing the consumer app's
+  illustrated style. SheOut's purple and orange appear only on the header,
+  the active nav item and primary buttons, which is enough to place it as
+  the same product without making an operational console feel playful.
+
+  Every API call, the ADMIN role gate and the auth flow are unchanged from
+  the previous version: this was a presentation and structure rebuild.
 -->
 <style>
   :root {
-    --bg: #f6f6f4; --panel: #fff; --line: #dcdcd6; --text: #23231f;
-    --muted: #6b6b63; --accent: #2f5d50; --danger: #a33a2c; --warn: #8a6d1f;
+    /* Brand, used sparingly - header, active nav, primary actions only. */
+    --brand: #4A1A9E;
+    --brand-dark: #36116F;
+    --brand-tint: #F1ECFA;
+    --accent: #FCA325;
+
+    /* Everything else is a neutral admin palette. */
+    --bg: #F4F5F7;
+    --panel: #FFFFFF;
+    --line: #E3E5EA;
+    --line-soft: #EFF1F4;
+    --text: #1B1D21;
+    --muted: #6B7280;
+    --muted-soft: #9AA1AC;
+
+    --amber: #92610A;   --amber-bg: #FDF4E3;  --amber-line: #F2DCAE;
+    --green: #12734A;   --green-bg: #E9F6EF;  --green-line: #B6DFC9;
+    --red:   #B3251C;   --red-bg:   #FCEDEB;  --red-line:   #F0C2BC;
+
+    --radius: 10px;
+    --shadow: 0 1px 2px rgba(27,29,33,.06), 0 4px 12px rgba(27,29,33,.05);
   }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--text);
-         font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
-  header { display: flex; align-items: baseline; gap: 16px; padding: 14px 20px;
-           background: var(--panel); border-bottom: 1px solid var(--line); }
-  header h1 { font-size: 15px; margin: 0; font-weight: 650; letter-spacing: .01em; }
-  header .who { color: var(--muted); font-size: 12px; margin-left: auto; }
-  nav { display: flex; gap: 2px; padding: 0 20px; background: var(--panel);
-        border-bottom: 1px solid var(--line); }
-  nav button { background: none; border: 0; border-bottom: 2px solid transparent;
-               padding: 9px 12px; font: inherit; color: var(--muted); cursor: pointer; }
-  nav button[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
-  main { padding: 20px; max-width: 1500px; }
-  .bar { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-  .bar h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em;
-            color: var(--muted); margin: 0; font-weight: 650; }
-  .scroll { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; }
-  table { border-collapse: collapse; width: 100%; font-size: 13px; }
-  th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .05em;
-       color: var(--muted); padding: 9px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
-  td { padding: 9px 12px; border-bottom: 1px solid #efefea; vertical-align: top; }
-  tr:last-child td { border-bottom: 0; }
-  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: var(--muted); }
-  .tag { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 11px;
-         font-weight: 600; border: 1px solid var(--line); white-space: nowrap; }
-  .t-UNDER_REVIEW, .t-PENDING, .t-REQUESTED { color: var(--warn); border-color: #e2d3a0; background: #fbf6e6; }
-  .t-VERIFIED, .t-CAPTURED, .t-COMPLETED { color: var(--accent); border-color: #b9d4c9; background: #eaf3ef; }
-  .t-REJECTED, .t-FAILED, .t-CANCELLED { color: var(--danger); border-color: #e6bdb5; background: #fbeeeb; }
-  button.act { font: inherit; font-size: 12px; padding: 4px 9px; border: 1px solid var(--line);
-               background: #fff; border-radius: 5px; cursor: pointer; }
-  button.act:hover { border-color: var(--muted); }
-  button.ok { color: var(--accent); } button.no { color: var(--danger); }
-  .empty { padding: 22px; color: var(--muted); text-align: center; }
-  .err { background: #fbeeeb; border: 1px solid #e6bdb5; color: var(--danger);
-         padding: 9px 12px; border-radius: 6px; margin-bottom: 12px; }
-  form.login { max-width: 330px; margin: 60px auto; background: var(--panel);
-               border: 1px solid var(--line); border-radius: 8px; padding: 22px; }
-  form.login h2 { margin: 0 0 4px; font-size: 15px; }
-  form.login p { margin: 0 0 16px; color: var(--muted); font-size: 12px; }
-  label { display: block; font-size: 12px; color: var(--muted); margin: 10px 0 4px; }
-  input { width: 100%; padding: 8px 10px; border: 1px solid var(--line);
-          border-radius: 5px; font: inherit; background: #fff; color: var(--text); }
-  button.primary { width: 100%; margin-top: 14px; padding: 9px; background: var(--accent);
-                   color: #fff; border: 0; border-radius: 5px; font: inherit; font-weight: 600; cursor: pointer; }
+  /* Must beat the class rules below: .login-wrap and .shell both set
+     display, which otherwise wins over the browser's [hidden] rule and
+     leaves the sign-in pane rendered underneath the signed-in app. */
   [hidden] { display: none !important; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3 { margin: 0; }
+  button { font: inherit; }
+
+  /* ---------- shell ---------- */
+  .shell { display: grid; grid-template-columns: 248px 1fr; min-height: 100vh; }
+  .side {
+    background: var(--panel); border-right: 1px solid var(--line);
+    display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh;
+  }
+  .brand {
+    display: flex; align-items: center; gap: 10px;
+    padding: 18px 18px 16px; border-bottom: 1px solid var(--line-soft);
+  }
+  .brand .mark {
+    width: 30px; height: 30px; border-radius: 8px; flex: none;
+    background: var(--brand); color: #fff; display: grid; place-items: center;
+    font-weight: 800; font-size: 13px; letter-spacing: .02em;
+  }
+  .brand .mark span { color: var(--accent); }
+  .brand .name { font-weight: 700; font-size: 14px; letter-spacing: .01em; }
+  .brand .sub { font-size: 11px; color: var(--muted); }
+
+  .nav { padding: 12px 10px; display: flex; flex-direction: column; gap: 2px; flex: 1; }
+  .nav .label {
+    font-size: 11px; text-transform: uppercase; letter-spacing: .07em;
+    color: var(--muted-soft); font-weight: 700; padding: 10px 10px 6px;
+  }
+  .nav button {
+    display: flex; align-items: center; gap: 10px; width: 100%;
+    padding: 9px 10px; border: 0; background: none; border-radius: 8px;
+    color: var(--muted); cursor: pointer; text-align: left; font-weight: 550;
+  }
+  .nav button:hover { background: var(--bg); color: var(--text); }
+  .nav button[aria-current="page"] { background: var(--brand-tint); color: var(--brand); font-weight: 650; }
+  .nav button svg { width: 17px; height: 17px; flex: none; }
+  .nav .count {
+    margin-left: auto; font-size: 11px; font-weight: 700; min-width: 20px; text-align: center;
+    padding: 1px 6px; border-radius: 999px; background: var(--line); color: var(--muted);
+  }
+  .nav button[aria-current="page"] .count { background: var(--brand); color: #fff; }
+
+  .me { border-top: 1px solid var(--line-soft); padding: 12px 14px 14px; }
+  .me .who { font-size: 12px; color: var(--muted); }
+  .me .phone { font-weight: 650; font-size: 13px; word-break: break-all; }
+  .me button {
+    margin-top: 10px; width: 100%; padding: 7px 10px; border-radius: 8px;
+    border: 1px solid var(--line); background: #fff; color: var(--text); cursor: pointer;
+  }
+  .me button:hover { border-color: var(--muted-soft); }
+
+  /* ---------- content ---------- */
+  .content { padding: 26px 28px 60px; max-width: 1400px; }
+  .page-head { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+  .page-head h1 { font-size: 21px; font-weight: 700; letter-spacing: -.01em; }
+  .page-head p { margin: 4px 0 0; color: var(--muted); font-size: 13px; max-width: 62ch; }
+  .page-head .actions { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+
+  .btn {
+    padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line);
+    background: #fff; color: var(--text); cursor: pointer; font-weight: 550;
+  }
+  .btn:hover { border-color: var(--muted-soft); }
+  .btn-primary { background: var(--brand); border-color: var(--brand); color: #fff; }
+  .btn-primary:hover { background: var(--brand-dark); border-color: var(--brand-dark); }
+  .btn-approve { background: var(--green); border-color: var(--green); color: #fff; }
+  .btn-approve:hover { filter: brightness(.94); }
+  .btn-reject { background: #fff; border-color: var(--red-line); color: var(--red); }
+  .btn-reject:hover { background: var(--red-bg); }
+  .btn[disabled] { opacity: .55; cursor: not-allowed; }
+
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+  .card-head {
+    padding: 13px 16px; border-bottom: 1px solid var(--line-soft);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .card-head h2 { font-size: 13px; font-weight: 700; }
+  .card-head .hint { font-size: 12px; color: var(--muted); }
+  .scroll { overflow-x: auto; }
+
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th {
+    text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); font-weight: 700; padding: 10px 14px;
+    border-bottom: 1px solid var(--line); white-space: nowrap; background: #FAFBFC;
+  }
+  th.sortable { cursor: pointer; user-select: none; }
+  th.sortable:hover { color: var(--text); }
+  th .arrow { opacity: .35; font-size: 10px; }
+  th[aria-sort] .arrow { opacity: 1; color: var(--brand); }
+  td { padding: 11px 14px; border-bottom: 1px solid var(--line-soft); vertical-align: middle; }
+  tr:last-child td { border-bottom: 0; }
+  tbody tr.clickable { cursor: pointer; }
+  tbody tr.clickable:hover { background: #FAFAFD; }
+  .num { font-variant-numeric: tabular-nums; }
+  .subtle { color: var(--muted); font-size: 12px; }
+  .strong { font-weight: 600; }
+
+  .badge {
+    display: inline-block; padding: 2px 9px; border-radius: 999px;
+    font-size: 11.5px; font-weight: 650; white-space: nowrap; border: 1px solid;
+  }
+  .b-amber { color: var(--amber); background: var(--amber-bg); border-color: var(--amber-line); }
+  .b-green { color: var(--green); background: var(--green-bg); border-color: var(--green-line); }
+  .b-red   { color: var(--red);   background: var(--red-bg);   border-color: var(--red-line); }
+  .b-grey  { color: var(--muted); background: var(--bg);       border-color: var(--line); }
+
+  .wait { font-weight: 650; }
+  .wait.warn { color: var(--amber); }
+  .wait.bad { color: var(--red); }
+
+  /* ---------- states ---------- */
+  .state { padding: 44px 20px; text-align: center; color: var(--muted); }
+  .state svg { width: 40px; height: 40px; color: var(--muted-soft); margin-bottom: 10px; }
+  .state h3 { font-size: 14px; color: var(--text); font-weight: 650; margin-bottom: 3px; }
+  .state p { margin: 0; font-size: 13px; }
+  .skel { height: 11px; border-radius: 6px; background: linear-gradient(90deg,#EDEFF3 25%,#F6F7F9 37%,#EDEFF3 63%);
+          background-size: 400% 100%; animation: sh 1.3s ease infinite; }
+  @keyframes sh { 0% { background-position: 100% 50% } 100% { background-position: 0 50% } }
+
+  .banner { padding: 11px 14px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; border: 1px solid; }
+  .banner-err { background: var(--red-bg); border-color: var(--red-line); color: var(--red); }
+
+  /* ---------- modal ---------- */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(27,29,33,.46); z-index: 50;
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .modal { background: #fff; border-radius: 12px; width: 100%; max-width: 460px; box-shadow: 0 18px 48px rgba(0,0,0,.22); }
+  .modal.wide { max-width: 680px; }
+  .modal-head { padding: 18px 20px 0; }
+  .modal-head h3 { font-size: 16px; font-weight: 700; }
+  .modal-head p { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
+  .modal-body { padding: 16px 20px; max-height: 62vh; overflow-y: auto; }
+  .modal-foot { padding: 14px 20px 18px; display: flex; gap: 10px; justify-content: flex-end; border-top: 1px solid var(--line-soft); }
+  .modal label { display: block; font-size: 12px; color: var(--muted); margin: 12px 0 5px; font-weight: 600; }
+  .modal textarea, .modal input {
+    width: 100%; padding: 9px 11px; border: 1px solid var(--line); border-radius: 8px;
+    font: inherit; background: #fff; color: var(--text);
+  }
+  .modal textarea { min-height: 74px; resize: vertical; }
+
+  .kv { display: grid; grid-template-columns: 132px 1fr; gap: 7px 14px; font-size: 13px; }
+  .kv dt { color: var(--muted); }
+  .kv dd { margin: 0; font-weight: 550; }
+
+  .check {
+    border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-top: 12px;
+  }
+  .check .top { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+  .check .top h4 { margin: 0; font-size: 13.5px; font-weight: 700; }
+  .check p { margin: 0 0 12px; font-size: 12.5px; color: var(--muted); }
+  .check .row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .doc { margin-top: 4px; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--bg); }
+  .doc img { display: block; width: 100%; max-height: 330px; object-fit: contain; background: #fff; }
+  .doc .fallback { padding: 16px; font-size: 12.5px; color: var(--muted); }
+  .doc .fallback code { word-break: break-all; background: #fff; padding: 2px 5px; border-radius: 4px; border: 1px solid var(--line); }
+
+  /* ---------- toasts ---------- */
+  .toasts { position: fixed; right: 18px; bottom: 18px; z-index: 60; display: flex; flex-direction: column; gap: 9px; max-width: 380px; }
+  .toast {
+    padding: 12px 14px; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.16);
+    font-size: 13px; display: flex; gap: 10px; align-items: flex-start; background: #fff; border-left: 4px solid var(--muted);
+    animation: rise .18s ease;
+  }
+  @keyframes rise { from { opacity: 0; transform: translateY(6px) } }
+  .toast.ok { border-left-color: var(--green); }
+  .toast.bad { border-left-color: var(--red); }
+  .toast strong { display: block; font-size: 13px; }
+  .toast span { color: var(--muted); font-size: 12.5px; }
+
+  /* ---------- login ---------- */
+  .login-wrap { min-height: 100vh; display: grid; place-items: center; padding: 22px; }
+  .login { width: 100%; max-width: 380px; }
+  .login .card { padding: 26px; }
+  .login .brand { border: 0; padding: 0 0 18px; }
+  .login h2 { font-size: 17px; font-weight: 700; }
+  .login p.lead { margin: 5px 0 18px; color: var(--muted); font-size: 13px; }
+  .login label { display: block; font-size: 12px; color: var(--muted); margin: 12px 0 5px; font-weight: 600; }
+  .login input { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; font: inherit; }
+  .login .btn { width: 100%; margin-top: 16px; padding: 11px; }
+
+  /* ---------- responsive: tablet and below ---------- */
+  @media (max-width: 900px) {
+    .shell { grid-template-columns: 1fr; }
+    .side { position: static; height: auto; flex-direction: column; border-right: 0; border-bottom: 1px solid var(--line); }
+    .nav { flex-direction: row; overflow-x: auto; padding: 8px 10px; gap: 6px; }
+    .nav .label { display: none; }
+    .nav button { width: auto; white-space: nowrap; }
+    .me { display: flex; align-items: center; gap: 12px; border-top: 1px solid var(--line-soft); }
+    .me .who-wrap { flex: 1; min-width: 0; }
+    .me button { width: auto; margin-top: 0; flex: none; }
+    .content { padding: 20px 16px 48px; }
+    .kv { grid-template-columns: 1fr; gap: 2px 0; }
+    .kv dt { margin-top: 8px; }
+  }
 </style>
 </head>
 <body>
 
-<form class="login" id="login">
-  <h2>SheOut Ops</h2>
-  <p>Admin sign-in. This account must already have been granted ADMIN.</p>
-  <div class="err" id="loginErr" hidden></div>
-  <label for="phone">Phone number</label>
-  <input id="phone" placeholder="+919999999999" autocomplete="username">
-  <div id="codeRow" hidden>
-    <label for="code">OTP code</label>
-    <input id="code" inputmode="numeric" placeholder="123456" autocomplete="one-time-code">
-  </div>
-  <button class="primary" id="loginBtn" type="submit">Send code</button>
-</form>
-
-<div id="app" hidden>
-  <header>
-    <h1>SheOut Ops</h1>
-    <span class="who" id="who"></span>
-  </header>
-  <nav>
-    <button data-tab="queue" aria-selected="true">Verification queue</button>
-    <button data-tab="sos" aria-selected="false">SOS alerts</button>
-    <button data-tab="bookings" aria-selected="false">Recent bookings</button>
-  </nav>
-  <main>
-    <div class="err" id="err" hidden></div>
-    <div class="bar">
-      <h2 id="title"></h2>
-      <button class="act" id="refresh">Refresh</button>
-      <button class="act" id="logout" style="margin-left:auto">Sign out</button>
+<!-- ============================== LOGIN ============================== -->
+<div class="login-wrap" id="loginWrap">
+  <div class="login">
+    <div class="card">
+      <div class="brand">
+        <div class="mark">S<span>O</span></div>
+        <div>
+          <div class="name">SheOut Ops Console</div>
+          <div class="sub">Operations team access</div>
+        </div>
+      </div>
+      <h2>Sign in</h2>
+      <p class="lead">Use the mobile number registered to your operations account. We'll send a one-time code.</p>
+      <div class="banner banner-err" id="loginErr" hidden></div>
+      <form id="login">
+        <label for="phone">Mobile number</label>
+        <input id="phone" inputmode="tel" placeholder="+919000000042" autocomplete="tel" required>
+        <div id="codeRow" hidden>
+          <label for="code">One-time code</label>
+          <input id="code" inputmode="numeric" placeholder="6-digit code" autocomplete="one-time-code">
+        </div>
+        <button class="btn btn-primary" id="loginBtn" type="submit">Send code</button>
+      </form>
     </div>
-    <div class="scroll"><table><thead id="head"></thead><tbody id="rows"></tbody></table></div>
+  </div>
+</div>
+
+<!-- ============================== APP ============================== -->
+<div class="shell" id="app" hidden>
+  <aside class="side">
+    <div class="brand">
+      <div class="mark">S<span>O</span></div>
+      <div>
+        <div class="name">SheOut Ops</div>
+        <div class="sub">Console</div>
+      </div>
+    </div>
+
+    <nav class="nav" id="nav">
+      <div class="label">Operations</div>
+      <button data-tab="queue" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 12l2 2 4-4"/><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        Verification Queue <span class="count" id="cQueue">–</span>
+      </button>
+      <button data-tab="sos" aria-current="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L14.7 3.9a2 2 0 00-3.4 0z"/></svg>
+        SOS Alerts <span class="count" id="cSos">–</span>
+      </button>
+      <button data-tab="bookings" aria-current="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7h18M3 12h18M3 17h18"/></svg>
+        Bookings <span class="count" id="cBookings">–</span>
+      </button>
+    </nav>
+
+    <div class="me">
+      <div class="who-wrap">
+        <div class="who">Logged in as</div>
+        <div class="phone" id="who">—</div>
+      </div>
+      <button id="logout" type="button">Log out</button>
+    </div>
+  </aside>
+
+  <main class="content">
+    <div class="page-head">
+      <div>
+        <h1 id="pageTitle">Verification Queue</h1>
+        <p id="pageDesc"></p>
+      </div>
+      <div class="actions">
+        <button class="btn" id="refresh" type="button">Refresh</button>
+      </div>
+    </div>
+
+    <div class="banner banner-err" id="err" hidden></div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2 id="cardTitle"></h2>
+        <span class="hint" id="cardHint"></span>
+      </div>
+      <div class="scroll">
+        <table>
+          <thead id="head"></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+    </div>
   </main>
 </div>
+
+<div class="toasts" id="toasts"></div>
+<div id="modalRoot"></div>
 
 <script>
 const API = '/api/v1';
 let token = localStorage.getItem('sheout.admin.token') || '';
 let tab = 'queue';
+let sort = { key: null, dir: 'asc' };
+let lastRows = [];
 
 const $ = id => document.getElementById(id);
 const esc = v => (v === null || v === undefined || v === '')
-  ? '<span class="mono">—</span>'
+  ? '—'
   : String(v).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const tag = v => v ? `<span class="tag t-${esc(v)}">${esc(v)}</span>` : '<span class="mono">—</span>';
-const time = v => v ? new Date(v).toLocaleString() : '<span class="mono">—</span>';
-const short = v => v ? `<span class="mono">${String(v).slice(0, 8)}</span>` : '<span class="mono">—</span>';
+const time = v => v ? new Date(v).toLocaleString() : '—';
+
+/**
+ * Plain language for the raw enum values. Operations staff should never
+ * have to learn that UNDER_REVIEW means "someone needs to look at this".
+ */
+const STATUS_TEXT = {
+  UNDER_REVIEW: 'Awaiting review', PENDING: 'Not yet submitted',
+  VERIFIED: 'Approved', REJECTED: 'Rejected',
+  REQUESTED: 'Requested', MATCHED: 'Driver matched', ACCEPTED: 'Accepted',
+  IN_PROGRESS: 'In progress', COMPLETED: 'Completed', CANCELLED: 'Cancelled',
+  CAPTURED: 'Paid', FAILED: 'Failed', REFUNDED: 'Refunded', RESOLVED: 'Resolved',
+};
+const STATUS_TONE = {
+  UNDER_REVIEW: 'amber', PENDING: 'amber', REQUESTED: 'amber', MATCHED: 'amber',
+  ACCEPTED: 'amber', IN_PROGRESS: 'amber',
+  VERIFIED: 'green', COMPLETED: 'green', CAPTURED: 'green', RESOLVED: 'green',
+  REJECTED: 'red', FAILED: 'red', CANCELLED: 'red', REFUNDED: 'red',
+};
+function badge(v) {
+  if (!v) return '<span class="badge b-grey">—</span>';
+  return `<span class="badge b-${STATUS_TONE[v] || 'grey'}">${esc(STATUS_TEXT[v] || v)}</span>`;
+}
+
+/** "3 days" / "4 hours" / "12 minutes", plus a tone once it has been too long. */
+function waited(iso) {
+  if (!iso) return { text: '—', cls: '' };
+  const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+  const text = mins < 60 ? `${mins} min`
+    : mins < 1440 ? `${Math.round(mins / 60)} hr`
+    : `${Math.round(mins / 1440)} d`;
+  const cls = mins >= 2880 ? 'bad' : mins >= 1440 ? 'warn' : '';
+  return { text, cls, mins };
+}
 
 async function api(path, options = {}) {
   const res = await fetch(API + path, {
@@ -122,14 +404,61 @@ async function api(path, options = {}) {
     }
   });
   if (res.status === 401 || res.status === 403) {
-    // 403 here means "not an ADMIN" - a role gate, so it is genuinely
-    // distinct from the 404 the per-resource checks return.
-    signOut('Your session is not authorized as ADMIN. Sign in with an admin account.');
+    // 403 here means "not an ADMIN" - a role gate, genuinely distinct from
+    // the 404 the per-resource checks return.
+    signOut('Your session is not authorised as an operations account. Sign in with an admin account.');
     throw new Error('unauthorized');
   }
   const body = res.status === 204 ? null : await res.json().catch(() => null);
-  if (!res.ok) throw new Error(body?.message || `Request failed (${res.status})`);
+  if (!res.ok) throw new Error((body && body.message) || `Request failed (${res.status})`);
   return body;
+}
+
+// ---- toasts ---------------------------------------------------------------
+function toast(kind, title, detail) {
+  const el = document.createElement('div');
+  el.className = 'toast ' + (kind === 'ok' ? 'ok' : 'bad');
+  el.innerHTML = `<div><strong>${esc(title)}</strong>${detail ? `<span>${esc(detail)}</span>` : ''}</div>`;
+  $('toasts').appendChild(el);
+  setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .2s'; setTimeout(() => el.remove(), 220); }, 4200);
+}
+
+// ---- modal ----------------------------------------------------------------
+function closeModal() { $('modalRoot').innerHTML = ''; document.body.style.overflow = ''; }
+function openModal(html, opts = {}) {
+  document.body.style.overflow = 'hidden';
+  $('modalRoot').innerHTML = `<div class="overlay" data-overlay><div class="modal ${opts.wide ? 'wide' : ''}">${html}</div></div>`;
+  $('modalRoot').querySelector('[data-overlay]').addEventListener('click', e => {
+    if (e.target.hasAttribute('data-overlay')) closeModal();
+  });
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+/**
+ * Every irreversible action goes through this. Approving or rejecting a
+ * driver, or resolving a safety alert, has real consequences and an ops
+ * person who clicked the wrong row deserves the chance to catch it.
+ */
+function confirmAction({ title, message, confirmLabel, tone = 'primary', withReason = false }) {
+  return new Promise(resolve => {
+    openModal(`
+      <div class="modal-head"><h3>${esc(title)}</h3><p>${esc(message)}</p></div>
+      <div class="modal-body">
+        ${withReason ? `<label for="reasonInput">Reason (optional, shared with the driver)</label>
+        <textarea id="reasonInput" placeholder="e.g. Document is blurred and the name cannot be read"></textarea>` : ''}
+      </div>
+      <div class="modal-foot">
+        <button class="btn" data-cancel type="button">Cancel</button>
+        <button class="btn ${tone === 'approve' ? 'btn-approve' : tone === 'reject' ? 'btn-reject' : 'btn-primary'}" data-go type="button">${esc(confirmLabel)}</button>
+      </div>`);
+    const root = $('modalRoot');
+    root.querySelector('[data-cancel]').addEventListener('click', () => { closeModal(); resolve(null); });
+    root.querySelector('[data-go]').addEventListener('click', () => {
+      const reason = withReason ? (root.querySelector('#reasonInput').value.trim() || null) : null;
+      closeModal();
+      resolve({ reason });
+    });
+  });
 }
 
 // ---- login ----------------------------------------------------------------
@@ -169,117 +498,345 @@ function signOut(message) {
   $('codeRow').hidden = true;
   $('loginBtn').textContent = 'Send code';
   $('app').hidden = true;
-  $('login').hidden = false;
+  $('loginWrap').hidden = false;
+  closeModal();
   if (message) { $('loginErr').textContent = message; $('loginErr').hidden = false; }
 }
-$('logout').addEventListener('click', () => signOut(null));
+$('logout').addEventListener('click', async () => {
+  const ok = await confirmAction({
+    title: 'Log out of the ops console?',
+    message: 'You will need your mobile number and a one-time code to sign back in.',
+    confirmLabel: 'Log out',
+  });
+  if (ok) signOut(null);
+});
 
 // ---- views ----------------------------------------------------------------
+const ICON_EMPTY_QUEUE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>';
+const ICON_EMPTY_SOS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6L9 17l-5-5"/></svg>';
+const ICON_EMPTY_LIST = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 6h16M4 12h16M4 18h10"/></svg>';
+
 const VIEWS = {
   queue: {
-    title: 'Drivers awaiting review',
-    head: ['Account', 'Name', 'Phone', 'Role', 'Gender', 'Police', 'Document', 'Updated', 'Actions'],
+    title: 'Verification Queue',
+    desc: 'Drivers who have submitted documents and are waiting for a decision. Every approval here is a human decision — nothing is checked automatically.',
+    cardTitle: 'Awaiting review',
+    hint: 'Select a driver to see their document and decide',
+    empty: { icon: ICON_EMPTY_QUEUE, title: 'No drivers awaiting review', text: 'When a driver submits their documents they will appear here.' },
+    columns: [
+      { key: 'name', label: 'Driver', sort: r => (r.name || '').toLowerCase() },
+      { key: 'phoneNumber', label: 'Phone', sort: r => r.phoneNumber || '' },
+      { key: 'gender', label: 'ID & gender check', sort: r => r.genderVerificationStatus || '' },
+      { key: 'police', label: 'Police check', sort: r => r.policeVerificationStatus || '' },
+      { key: 'submitted', label: 'Submitted', sort: r => new Date(r.updatedAt || 0).getTime() },
+      { key: 'waiting', label: 'Waiting', sort: r => -new Date(r.updatedAt || 0).getTime() },
+      { key: 'doc', label: 'Document', sort: r => (r.documentSubmitted ? 0 : 1) },
+    ],
     load: () => api('/admin/verification/review-queue'),
-    row: r => `<tr>
-      <td>${short(r.accountId)}</td><td>${esc(r.name)}</td><td>${esc(r.phoneNumber)}</td>
-      <td>${esc(r.role)}</td><td>${tag(r.genderVerificationStatus)}</td><td>${tag(r.policeVerificationStatus)}</td>
-      <td>${r.documentSubmitted ? `<button class="act" data-doc="${r.accountId}">View</button>` : '<span class="mono">none</span>'}</td>
-      <td>${time(r.updatedAt)}</td>
-      <td style="white-space:nowrap">
-        <button class="act ok" data-review="gender" data-id="${r.accountId}" data-decision="VERIFIED">Approve G</button>
-        <button class="act no" data-review="gender" data-id="${r.accountId}" data-decision="REJECTED">Reject G</button>
-        ${r.policeVerificationStatus ? `
-        <button class="act ok" data-review="police" data-id="${r.accountId}" data-decision="VERIFIED">Approve P</button>
-        <button class="act no" data-review="police" data-id="${r.accountId}" data-decision="REJECTED">Reject P</button>` : ''}
-      </td></tr>`
+    cell: (r, key) => {
+      if (key === 'name') return `<span class="strong">${esc(r.name || 'Name not set')}</span>`;
+      if (key === 'phoneNumber') return `<span class="num">${esc(r.phoneNumber)}</span>`;
+      if (key === 'gender') return badge(r.genderVerificationStatus);
+      if (key === 'police') return badge(r.policeVerificationStatus);
+      if (key === 'submitted') return `<span class="subtle">${time(r.updatedAt)}</span>`;
+      if (key === 'waiting') { const w = waited(r.updatedAt); return `<span class="wait ${w.cls}">${w.text}</span>`; }
+      if (key === 'doc') return r.documentSubmitted
+        ? '<span class="badge b-green">Submitted</span>'
+        : '<span class="badge b-grey">None</span>';
+      return '—';
+    },
+    onRowClick: r => openDriver(r),
   },
+
   sos: {
-    title: 'Active SOS alerts',
-    head: ['Alert', 'Customer', 'Phone', 'Booking', 'Location', 'Notified', 'Failed', 'Raised', ''],
+    title: 'SOS Alerts',
+    desc: 'Live safety alerts raised by customers. "Reached" counts the emergency contacts an SMS actually got through to — if it reads 0, nobody was told.',
+    cardTitle: 'Active alerts',
+    hint: 'Open the location link to see exactly where the alert came from',
+    empty: { icon: ICON_EMPTY_SOS, title: 'No active SOS alerts', text: 'Alerts raised from the customer app appear here until they are resolved.' },
+    columns: [
+      { key: 'customer', label: 'Customer', sort: r => (r.customerName || '').toLowerCase() },
+      { key: 'phone', label: 'Phone', sort: r => r.customerPhone || '' },
+      { key: 'location', label: 'Location', sort: r => r.lat },
+      { key: 'contacts', label: 'Contacts reached', sort: r => r.contactsNotified },
+      { key: 'raised', label: 'Raised', sort: r => new Date(r.createdAt || 0).getTime() },
+      { key: 'waiting', label: 'Open for', sort: r => -new Date(r.createdAt || 0).getTime() },
+      { key: 'act', label: '', sort: null },
+    ],
     load: () => api('/admin/sos/active'),
-    row: r => `<tr>
-      <td>${short(r.id)}</td><td>${esc(r.customerName)}</td><td>${esc(r.customerPhone)}</td>
-      <td>${short(r.bookingId)}</td>
-      <td><a href="https://maps.google.com/?q=${r.lat},${r.lng}" target="_blank" rel="noreferrer">${r.lat.toFixed(5)}, ${r.lng.toFixed(5)}</a></td>
-      <td>${r.contactsNotified}</td><td>${r.contactsFailed}</td><td>${time(r.createdAt)}</td>
-      <td><button class="act ok" data-resolve="${r.id}">Resolve</button></td></tr>`
+    cell: (r, key) => {
+      if (key === 'customer') return `<span class="strong">${esc(r.customerName || 'Unknown')}</span>`;
+      if (key === 'phone') return `<span class="num">${esc(r.customerPhone)}</span>`;
+      if (key === 'location') return `<a href="https://maps.google.com/?q=${r.lat},${r.lng}" target="_blank" rel="noreferrer">Open map</a>
+        <div class="subtle num">${r.lat.toFixed(4)}, ${r.lng.toFixed(4)}</div>`;
+      if (key === 'contacts') {
+        const ok = r.contactsNotified, bad = r.contactsFailed;
+        const tone = ok > 0 ? 'b-green' : 'b-red';
+        return `<span class="badge ${tone}">${ok} reached</span>` +
+          (bad > 0 ? ` <span class="badge b-red">${bad} failed</span>` : '');
+      }
+      if (key === 'raised') return `<span class="subtle">${time(r.createdAt)}</span>`;
+      if (key === 'waiting') { const w = waited(r.createdAt); return `<span class="wait ${w.cls}">${w.text}</span>`; }
+      if (key === 'act') return `<button class="btn btn-primary" data-resolve="${r.id}" type="button">Mark resolved</button>`;
+      return '—';
+    },
   },
+
   bookings: {
-    title: 'Recent bookings',
-    head: ['Booking', 'Status', 'Type', 'Category', 'Customer', 'Driver', 'Estimate', 'Final', 'Payment', 'Method', 'Requested'],
+    title: 'Bookings',
+    desc: 'A read-only view of recent bookings for monitoring. There are no actions to take from this page.',
+    cardTitle: 'Recent bookings',
+    hint: 'Read-only — monitoring view',
+    empty: { icon: ICON_EMPTY_LIST, title: 'No bookings yet', text: 'Bookings made in the customer app will be listed here.' },
+    columns: [
+      { key: 'status', label: 'Status', sort: r => r.status || '' },
+      { key: 'service', label: 'Service', sort: r => r.category || '' },
+      { key: 'customerName', label: 'Customer', sort: r => (r.customerName || '').toLowerCase() },
+      { key: 'driverName', label: 'Driver', sort: r => (r.driverName || '').toLowerCase() },
+      { key: 'fare', label: 'Fare', sort: r => Number(r.finalFare ?? r.fareEstimate ?? 0) },
+      { key: 'payment', label: 'Payment', sort: r => r.paymentStatus || '' },
+      { key: 'requestedAt', label: 'Requested', sort: r => new Date(r.requestedAt || 0).getTime() },
+    ],
     load: () => api('/admin/bookings/recent?limit=50'),
-    row: r => `<tr>
-      <td>${short(r.bookingId)}</td><td>${tag(r.status)}</td><td>${esc(r.type)}</td><td>${esc(r.category)}</td>
-      <td>${esc(r.customerName)}</td><td>${esc(r.driverName)}</td>
-      <td>${esc(r.fareEstimate)}</td><td>${esc(r.finalFare)}</td>
-      <td>${tag(r.paymentStatus)}</td><td>${esc(r.paymentMethod)}</td><td>${time(r.requestedAt)}</td></tr>`
-  }
+    cell: (r, key) => {
+      if (key === 'status') return badge(r.status);
+      if (key === 'service') return `${esc(r.category)}<div class="subtle">${esc(r.type)}</div>`;
+      if (key === 'customerName') return esc(r.customerName);
+      if (key === 'driverName') return r.driverName ? esc(r.driverName) : '<span class="subtle">Not assigned</span>';
+      if (key === 'fare') {
+        const final = r.finalFare, est = r.fareEstimate;
+        return final != null
+          ? `<span class="num strong">₹${esc(final)}</span>`
+          : `<span class="num subtle">₹${esc(est)} est.</span>`;
+      }
+      if (key === 'payment') return badge(r.paymentStatus) + (r.paymentMethod ? `<div class="subtle">${esc(r.paymentMethod)}</div>` : '');
+      if (key === 'requestedAt') return `<span class="subtle">${time(r.requestedAt)}</span>`;
+      return '—';
+    },
+  },
 };
+
+// ---- driver detail + decisions -------------------------------------------
+/**
+ * The two checks are approved or rejected separately because the backend
+ * exposes them as two endpoints and they are genuinely two decisions - an ID
+ * can be fine while a police record is still outstanding.
+ */
+function openDriver(r) {
+  const w = waited(r.updatedAt);
+  openModal(`
+    <div class="modal-head">
+      <h3>${esc(r.name || 'Name not set')}</h3>
+      <p>${esc(r.phoneNumber || '')} &middot; waiting ${esc(w.text)}</p>
+    </div>
+    <div class="modal-body">
+      <dl class="kv">
+        <dt>Submitted</dt><dd>${time(r.updatedAt)}</dd>
+        <dt>ID &amp; gender check</dt><dd>${badge(r.genderVerificationStatus)}</dd>
+        <dt>Police check</dt><dd>${badge(r.policeVerificationStatus)}</dd>
+      </dl>
+
+      <label>Submitted document</label>
+      <div class="doc" id="docBox">
+        ${r.documentSubmitted
+          ? '<div class="fallback">Loading document…</div>'
+          : '<div class="fallback">This driver has not uploaded a document yet.</div>'}
+      </div>
+
+      <div class="check">
+        <div class="top"><h4>ID &amp; gender check</h4>${badge(r.genderVerificationStatus)}</div>
+        <p>Confirm the document is readable and matches the driver's name.</p>
+        <div class="row">
+          <button class="btn btn-approve" data-decide="gender" data-decision="VERIFIED" type="button">Approve</button>
+          <button class="btn btn-reject" data-decide="gender" data-decision="REJECTED" type="button">Reject</button>
+        </div>
+      </div>
+
+      <div class="check">
+        <div class="top"><h4>Police check</h4>${badge(r.policeVerificationStatus)}</div>
+        <p>Record the outcome of the police verification for this driver.</p>
+        <div class="row">
+          <button class="btn btn-approve" data-decide="police" data-decision="VERIFIED" type="button">Approve</button>
+          <button class="btn btn-reject" data-decide="police" data-decision="REJECTED" type="button">Reject</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot"><button class="btn" data-cancel type="button">Close</button></div>
+  `, { wide: true });
+
+  const root = $('modalRoot');
+  root.querySelector('[data-cancel]').addEventListener('click', closeModal);
+
+  if (r.documentSubmitted) {
+    api(`/admin/verification/${r.accountId}/document`)
+      .then(out => {
+        const box = root.querySelector('#docBox');
+        if (!box) return;
+        // Local deployments store documents on disk and hand back a file://
+        // URL, which a browser will not render from a page. Show the image
+        // when it can be shown, and the path when it cannot, rather than an
+        // empty frame that looks broken.
+        const isFile = String(out.url || '').startsWith('file:');
+        box.innerHTML = isFile
+          ? `<div class="fallback">This document is stored on the server's local disk, which a browser cannot display directly.<br><code>${esc(out.url)}</code></div>`
+          : `<img src="${esc(out.url)}" alt="Submitted identity document"
+                  onerror="this.parentElement.innerHTML='<div class=&quot;fallback&quot;>Could not load the document image. <a href=&quot;${esc(out.url)}&quot; target=&quot;_blank&quot; rel=&quot;noreferrer&quot;>Open it directly</a>.</div>'">`;
+      })
+      .catch(err => {
+        if (err.message === 'unauthorized') return;
+        const box = root.querySelector('#docBox');
+        if (box) box.innerHTML = `<div class="fallback">Could not load the document: ${esc(err.message)}</div>`;
+      });
+  }
+
+  root.querySelectorAll('[data-decide]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const which = btn.dataset.decide;
+      const decision = btn.dataset.decision;
+      const label = which === 'gender' ? 'ID & gender check' : 'police check';
+      const approving = decision === 'VERIFIED';
+      const ok = await confirmAction({
+        title: approving ? `Approve the ${label}?` : `Reject the ${label}?`,
+        message: approving
+          ? `${r.name || r.phoneNumber} will pass this check. A driver passes both checks before they can go online.`
+          : `${r.name || r.phoneNumber} will not pass this check and cannot go online until it is approved.`,
+        confirmLabel: approving ? 'Approve' : 'Reject',
+        tone: approving ? 'approve' : 'reject',
+        withReason: !approving && which === 'gender',
+      });
+      if (!ok) return;
+      try {
+        // Unchanged from the previous console: driver-verification's own two
+        // admin endpoints, called directly.
+        const body = which === 'gender' ? { decision, reason: ok.reason } : { decision };
+        await api(`/admin/verification/${r.accountId}/${which}-review`, { method: 'POST', body: JSON.stringify(body) });
+        closeModal();
+        toast('ok', approving ? 'Check approved' : 'Check rejected',
+          `${r.name || r.phoneNumber} — ${label}.`);
+        render();
+      } catch (err) {
+        if (err.message === 'unauthorized') return;
+        toast('bad', 'Could not save that decision', err.message);
+      }
+    });
+  });
+}
+
+// ---- rendering ------------------------------------------------------------
+function skeletonRows(cols) {
+  return Array.from({ length: 4 }, () =>
+    `<tr>${Array.from({ length: cols }, () => '<td><div class="skel"></div></td>').join('')}</tr>`
+  ).join('');
+}
+
+function paintRows(view, data) {
+  const cols = view.columns;
+  if (!data.length) {
+    $('rows').innerHTML = `<tr><td colspan="${cols.length}">
+      <div class="state">${view.empty.icon}<h3>${esc(view.empty.title)}</h3><p>${esc(view.empty.text)}</p></div>
+    </td></tr>`;
+    return;
+  }
+  const sorted = data.slice();
+  if (sort.key) {
+    const col = cols.find(c => c.key === sort.key);
+    if (col && col.sort) {
+      sorted.sort((a, b) => {
+        const va = col.sort(a), vb = col.sort(b);
+        const cmp = va < vb ? -1 : va > vb ? 1 : 0;
+        return sort.dir === 'asc' ? cmp : -cmp;
+      });
+    }
+  }
+  $('rows').innerHTML = sorted.map((r, i) =>
+    `<tr class="${view.onRowClick ? 'clickable' : ''}" data-i="${i}">` +
+    cols.map(c => `<td>${view.cell(r, c.key)}</td>`).join('') + '</tr>'
+  ).join('');
+  lastRows = sorted;
+}
+
+function paintHead(view) {
+  $('head').innerHTML = '<tr>' + view.columns.map(c => {
+    if (!c.sort) return `<th></th>`;
+    const active = sort.key === c.key;
+    const arrow = active ? (sort.dir === 'asc' ? '▲' : '▼') : '↕';
+    return `<th class="sortable" data-sort="${c.key}" ${active ? `aria-sort="${sort.dir === 'asc' ? 'ascending' : 'descending'}"` : ''}>
+      ${esc(c.label)} <span class="arrow">${arrow}</span></th>`;
+  }).join('') + '</tr>';
+
+  $('head').querySelectorAll('[data-sort]').forEach(th => th.addEventListener('click', () => {
+    const key = th.dataset.sort;
+    sort = sort.key === key ? { key, dir: sort.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' };
+    paintHead(view);
+    paintRows(view, lastRows);
+  }));
+}
 
 async function render() {
   const view = VIEWS[tab];
-  $('title').textContent = view.title;
-  $('head').innerHTML = '<tr>' + view.head.map(h => `<th>${h}</th>`).join('') + '</tr>';
-  $('rows').innerHTML = `<tr><td colspan="${view.head.length}" class="empty">Loading…</td></tr>`;
+  $('pageTitle').textContent = view.title;
+  $('pageDesc').textContent = view.desc;
+  $('cardTitle').textContent = view.cardTitle;
+  $('cardHint').textContent = view.hint;
   $('err').hidden = true;
+  paintHead(view);
+  $('rows').innerHTML = skeletonRows(view.columns.length);
   try {
     const data = await view.load();
-    $('rows').innerHTML = data.length
-      ? data.map(view.row).join('')
-      : `<tr><td colspan="${view.head.length}" class="empty">Nothing here right now.</td></tr>`;
+    paintRows(view, data);
+    const counts = { queue: 'cQueue', sos: 'cSos', bookings: 'cBookings' };
+    $(counts[tab]).textContent = data.length;
   } catch (err) {
     if (err.message === 'unauthorized') return;
-    $('rows').innerHTML = `<tr><td colspan="${view.head.length}" class="empty">—</td></tr>`;
+    $('rows').innerHTML = `<tr><td colspan="${view.columns.length}">
+      <div class="state"><h3>Could not load this section</h3><p>${esc(err.message)}</p></div></td></tr>`;
     $('err').textContent = err.message;
     $('err').hidden = false;
   }
 }
 
-document.querySelectorAll('nav button').forEach(b => b.addEventListener('click', () => {
+$('nav').addEventListener('click', e => {
+  const b = e.target.closest('button[data-tab]');
+  if (!b) return;
   tab = b.dataset.tab;
-  document.querySelectorAll('nav button').forEach(x => x.setAttribute('aria-selected', String(x === b)));
+  sort = { key: null, dir: 'asc' };
+  $('nav').querySelectorAll('button[data-tab]').forEach(x =>
+    x.setAttribute('aria-current', x === b ? 'page' : 'false'));
   render();
-}));
+});
 $('refresh').addEventListener('click', render);
 
 // Delegated so freshly rendered rows need no re-binding.
 $('rows').addEventListener('click', async e => {
-  const el = e.target.closest('button');
-  if (!el) return;
-  try {
-    if (el.dataset.doc) {
-      const out = await api(`/admin/verification/${el.dataset.doc}/document`);
-      window.open(out.url, '_blank', 'noreferrer');
-      return;
-    }
-    if (el.dataset.review) {
-      const { review, id, decision } = el.dataset;
-      let reason = null;
-      if (decision === 'REJECTED') {
-        reason = prompt('Reason for rejection (optional):') ?? null;
-      }
-      // Calls driver-verification's own admin endpoints directly - the admin
-      // module deliberately does not proxy this transition.
-      const body = review === 'gender' ? { decision, reason } : { decision };
-      await api(`/admin/verification/${id}/${review}-review`, { method: 'POST', body: JSON.stringify(body) });
+  const resolveBtn = e.target.closest('[data-resolve]');
+  if (resolveBtn) {
+    const ok = await confirmAction({
+      title: 'Mark this SOS alert as resolved?',
+      message: 'Only do this once the situation has actually been dealt with. The alert will leave the active list.',
+      confirmLabel: 'Mark resolved',
+    });
+    if (!ok) return;
+    try {
+      await api(`/admin/sos/${resolveBtn.dataset.resolve}/resolve`, { method: 'POST' });
+      toast('ok', 'Alert resolved', 'It has been removed from the active list.');
       render();
-      return;
+    } catch (err) {
+      if (err.message === 'unauthorized') return;
+      toast('bad', 'Could not resolve that alert', err.message);
     }
-    if (el.dataset.resolve) {
-      await api(`/admin/sos/${el.dataset.resolve}/resolve`, { method: 'POST' });
-      render();
-    }
-  } catch (err) {
-    if (err.message === 'unauthorized') return;
-    $('err').textContent = err.message;
-    $('err').hidden = false;
+    return;
   }
+  const view = VIEWS[tab];
+  if (!view.onRowClick) return;
+  const tr = e.target.closest('tr[data-i]');
+  if (!tr) return;
+  view.onRowClick(lastRows[Number(tr.dataset.i)]);
 });
 
 function start() {
-  $('login').hidden = true;
+  $('loginWrap').hidden = true;
   $('app').hidden = false;
-  $('who').textContent = localStorage.getItem('sheout.admin.phone') || '';
+  $('who').textContent = localStorage.getItem('sheout.admin.phone') || '—';
   render();
 }
 
