@@ -35,6 +35,15 @@ function statusTone(status: BookingStatus): StatusTone {
   }
 }
 
+/** The mockup's row titles: the service, not the raw category enum. */
+function categoryLabel(category: BookingCategory): string {
+  if (category === 'PARCEL') return 'Parcel Delivery';
+  if (category === 'LUNCHBOX') return 'Lunch Box Delivery';
+  if (category === 'AUTO') return 'Auto Ride';
+  if (category === 'CAB') return 'Cab Ride';
+  return 'Bike Taxi';
+}
+
 function categoryIcon(category: BookingCategory) {
   if (category === 'PARCEL') return <IconCircle color="orange" tone="soft" size="sm" icon={<Package />} />;
   if (category === 'LUNCHBOX') return <IconCircle color="green" tone="soft" size="sm" icon={<UtensilsCrossed />} />;
@@ -91,8 +100,14 @@ export function MyBookings() {
           <Card key={booking.id} className="flex items-center gap-3" onClick={() => navigate(`/tracking/${booking.id}`)}>
             {categoryIcon(booking.category)}
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-text-primary">{booking.drop.label}</p>
-              <p className="text-xs text-text-secondary">{new Date(booking.requestedAt).toLocaleString()}</p>
+              {/* Service name as the title, with the destination beneath it -
+                  the mockup's shape. This used to title each row with the
+                  drop label, so a list of trips read as a list of places and
+                  gave no clue which were rides and which were parcels. */}
+              <p className="truncate text-sm font-medium text-text-primary">{categoryLabel(booking.category)}</p>
+              <p className="truncate text-xs text-text-secondary">
+                To {booking.drop.label} &middot; {new Date(booking.requestedAt).toLocaleString()}
+              </p>
               <StatusBadge tone={statusTone(booking.status)} className="mt-1">
                 {booking.status}
               </StatusBadge>

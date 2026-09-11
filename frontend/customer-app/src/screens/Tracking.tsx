@@ -115,29 +115,7 @@ export function Tracking() {
     <div className="space-y-6">
       <TopHeader variant="back" title={hasDriver ? 'On the Way' : 'Finding a Driver'} onBack={() => navigate('/home')} />
 
-      <div className="space-y-1">
-        <LiveMap markers={markers} />
-        <p className="text-xs text-text-secondary">
-          {driverLocation
-            ? `Driver position updated ${secondsAgo(driverLocation.recordedAt)}s ago - refreshes every ${DRIVER_LOCATION_POLL_MS / 1000}s`
-            : hasDriver
-              ? 'Waiting for the driver to report a position...'
-              : 'Showing your pickup and drop. The driver appears once one is assigned.'}
-        </p>
-      </div>
-
       {error && <p className="text-sm text-danger">{error}</p>}
-
-      {/* REAL: fareEstimate comes back from bookingApi.create() at RideBooking/
-          DeliveryBooking time (RequestBookingCommand runs FareCalculator
-          immediately, there's no separate quote step - see those screens'
-          file comments) - this is the first place it's actually shown. */}
-      {booking && (
-        <Card className="flex items-center justify-between">
-          <span className="text-sm text-text-secondary">{booking.status === 'COMPLETED' ? 'Final Fare' : 'Estimated Fare'}</span>
-          <AmountText amount={booking.finalFare ?? booking.fareEstimate} size="lg" />
-        </Card>
-      )}
 
       {!booking ? (
         <p className="text-center text-sm text-text-secondary">Loading...</p>
@@ -169,6 +147,32 @@ export function Tracking() {
           >
             <MessageCircle className="h-5 w-5" />
           </button>
+        </Card>
+      )}
+
+      <div className="space-y-1">
+        <LiveMap markers={markers} />
+        <p className="text-xs text-text-secondary">
+          {driverLocation
+            ? `Driver position updated ${secondsAgo(driverLocation.recordedAt)}s ago - refreshes every ${DRIVER_LOCATION_POLL_MS / 1000}s`
+            : hasDriver
+              ? 'Waiting for the driver to report a position...'
+              : 'Showing your pickup and drop. The driver appears once one is assigned.'}
+        </p>
+      </div>
+
+      {error && <p className="text-sm text-danger">{error}</p>}
+
+      {/* REAL: fareEstimate comes back from bookingApi.create() at RideBooking/
+          DeliveryBooking time (RequestBookingCommand runs FareCalculator
+          immediately, there's no separate quote step - see those screens'
+          file comments) - this is the first place it's actually shown.
+          Sits under the map, where the mockup puts its arriving/distance
+          strip - this app has no ETA to show there. */}
+      {booking && (
+        <Card className="flex items-center justify-between">
+          <span className="text-sm text-text-secondary">{booking.status === 'COMPLETED' ? 'Final Fare' : 'Estimated Fare'}</span>
+          <AmountText amount={booking.finalFare ?? booking.fareEstimate} size="lg" />
         </Card>
       )}
 
