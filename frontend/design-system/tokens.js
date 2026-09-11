@@ -4,24 +4,30 @@
 // page, mostly - components should reach for a Tailwind class, e.g.
 // `bg-primary`, not one of these values directly).
 //
-// ESTIMATED FROM THE MOCKUP IMAGE, NOT READ FROM a source of truth (no
-// Figma/spec was provided) - every color, radius, and shadow value below
-// is an eyeballed approximation. Treat this whole file as the thing to
-// double-check pixel-for-pixel against the original design.
+// SAMPLED FROM THE APPROVED MOCKUP (public/preview.webp), not eyeballed.
+// Each value below is the dominant colour of the region of that sheet where
+// it appears - see scratchpad sample-colors.js for the extraction. The
+// previous values were guesses and were visibly off: primary was #7B3FE4, a
+// light violet, where the mockup is a much deeper #4A1A9E, which is why the
+// built apps did not read as the same design.
 
 export const colors = {
-  primary: '#7B3FE4',
-  primaryDark: '#5A2DA0',
-  primaryLight: '#EFE6FC',
-  accentOrange: '#F5A623',
-  accentGreen: '#27AE60',
-  accentRed: '#E5484D',
-  background: '#F8F6FC',
+  primary: '#4A1A9E',
+  primaryDark: '#36116F',
+  primaryLight: '#EDE5FA',
+  accentOrange: '#FCA325',
+  accentGreen: '#1AB65A',
+  accentRed: '#FA2A36',
+  background: '#FBFAFD',
   surface: '#FFFFFF',
   border: '#E8E3F1',
   textPrimary: '#241A33',
   textSecondary: '#7C7690',
   textInverse: '#FFFFFF',
+  // The wordmark's 'OUT' only. A hotter orange than accentOrange, which is
+  // the amber used for UI surfaces like the Parcel tile - they are two
+  // different colours in the mockup and must not be collapsed into one.
+  brandOrange: '#F96717',
 };
 
 export const radii = {

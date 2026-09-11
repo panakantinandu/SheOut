@@ -110,7 +110,7 @@ export function Login() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col justify-center bg-background px-screen py-10">
+    <div className="flex min-h-screen flex-col justify-center bg-gradient-to-br from-[#FEF8F8] via-[#FBF1F6] to-[#E9DEF5] px-screen py-10">
       {/* Same lockup customer-app's Login uses, from the shared package -
           this screen used to show a 64px Logo.jpeg tile and a plain text
           heading, which read as a different product to the rider app. */}

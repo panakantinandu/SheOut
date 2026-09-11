@@ -23,6 +23,7 @@ export default {
         },
         accent: {
           orange: colors.accentOrange,
+          'brand-orange': colors.brandOrange,
           green: colors.accentGreen,
           red: colors.accentRed,
         },
