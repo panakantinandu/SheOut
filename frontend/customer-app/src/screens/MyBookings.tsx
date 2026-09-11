@@ -1,18 +1,22 @@
 import { Bike, Package, UtensilsCrossed } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AmountText, Card, IconCircle, ListRow, StatusBadge, TopHeader } from '@sheout/design-system';
+import { AmountText, Card, IconCircle, ListRow, StatusBadge, TopHeader, bookingStatusLabel } from '@sheout/design-system';
 import type { StatusTone } from '@sheout/design-system';
 import { ApiError, bookingApi } from '../api/client';
 import type { BookingCategory, BookingStatus, BookingSummary } from '../api/types';
 
 type Tab = 'ALL' | 'RIDES' | 'PARCELS' | 'FOOD';
 
+// Food is left out for launch, alongside Home's Lunch Box tile: nothing can
+// create a LUNCHBOX booking from this app, so the filter could only ever
+// come back empty, and a permanently-empty filter reads as a broken one.
+// The FOOD case stays in the type and in matchesTab so the tab returns by
+// adding one line here when Lunch Box does.
 const TABS: { key: Tab; label: string }[] = [
   { key: 'ALL', label: 'All' },
   { key: 'RIDES', label: 'Rides' },
   { key: 'PARCELS', label: 'Parcels' },
-  { key: 'FOOD', label: 'Food' },
 ];
 
 function matchesTab(category: BookingCategory, tab: Tab): boolean {
@@ -109,7 +113,7 @@ export function MyBookings() {
                 To {booking.drop.label} &middot; {new Date(booking.requestedAt).toLocaleString()}
               </p>
               <StatusBadge tone={statusTone(booking.status)} className="mt-1">
-                {booking.status}
+                {bookingStatusLabel(booking.status)}
               </StatusBadge>
             </div>
             <AmountText amount={booking.finalFare ?? booking.fareEstimate} />

@@ -9,4 +9,5 @@ export * from './ListRow';
 export * from './StatusBadge';
 export * from './AmountText';
 export * from './TextField';
+export * from './PhoneField';
 export * from './LiveMap';

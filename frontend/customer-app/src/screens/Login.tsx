@@ -1,13 +1,12 @@
-import { Phone, User } from 'lucide-react';
+import { User } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BrandHeader, Button, TextField } from '@sheout/design-system';
+import { BrandHeader, Button, PhoneField, TextField, isCompletePhone, toE164 } from '@sheout/design-system';
 import { ApiError, authApi, usersApi } from '../api/client';
 import type { AuthSession } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { signInWithGoogle } from '../lib/googleAuth';
 
-const PHONE_REGEX = /^\+[1-9]\d{7,14}$/;
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
 /**
@@ -114,7 +113,7 @@ export function Login() {
   /** Non-error feedback, e.g. 'that number is already registered'. */
   const [notice, setNotice] = useState<string | null>(null);
 
-  const phoneNumber = `+91${phoneDigits}`;
+  const phoneNumber = toE164(phoneDigits);
 
   /**
    * Shared by both sign-in methods - see the file header comment.
@@ -161,7 +160,7 @@ export function Login() {
     e.preventDefault();
     setError(null);
     setNotice(null);
-    if (!PHONE_REGEX.test(phoneNumber)) {
+    if (!isCompletePhone(phoneDigits)) {
       setError('Enter a valid 10-digit mobile number');
       return;
     }
@@ -170,7 +169,7 @@ export function Login() {
       await authApi.requestOtp(phoneNumber);
       setStep('otp');
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not send OTP - is the backend running?');
+      setError(err instanceof ApiError ? err.message : 'Could not send the code. Please check your connection and try again.');
     } finally {
       setSubmitting(false);
     }
@@ -283,21 +282,7 @@ export function Login() {
 
           {step === 'phone' ? (
             <form onSubmit={handleSendOtp} className="space-y-4">
-              <TextField
-                icon={
-                  <span className="flex items-center gap-2 text-text-secondary">
-                    <Phone className="h-4 w-4" />
-                    <span className="h-4 w-px bg-border" />
-                    <span className="text-sm font-medium text-text-primary">+91</span>
-                  </span>
-                }
-                type="tel"
-                inputMode="numeric"
-                placeholder="Mobile Number"
-                value={phoneDigits}
-                onChange={(e) => setPhoneDigits(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                error={error ?? undefined}
-              />
+              <PhoneField value={phoneDigits} onChange={setPhoneDigits} error={error ?? undefined} />
               <Button type="submit" fullWidth disabled={submitting}>
                 {submitting ? 'Sending...' : 'Send OTP'}
               </Button>

@@ -1,7 +1,7 @@
 import { MessageCircle, Phone, Radio, ShieldAlert, Star } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { AmountText, Button, Card, IconCircle, LiveMap, StatusBadge, TopHeader } from '@sheout/design-system';
+import { AmountText, Button, Card, IconCircle, LiveMap, StatusBadge, TopHeader, bookingStatusLabel } from '@sheout/design-system';
 import type { MapMarker } from '@sheout/design-system';
 import { ApiError, bookingApi, dispatchApi } from '../api/client';
 import type { BookingSummary, DriverLocation } from '../api/types';
@@ -124,7 +124,7 @@ export function Tracking() {
           <p className="font-heading font-semibold text-text-primary">Searching for a nearby driver...</p>
           <p className="mt-1 text-sm text-text-secondary">This usually takes under a minute.</p>
           <StatusBadge tone="warning" className="mt-3">
-            {booking.status}
+            {bookingStatusLabel(booking.status)}
           </StatusBadge>
         </Card>
       ) : (
@@ -137,13 +137,13 @@ export function Tracking() {
           </div>
           <button
             className="rounded-full p-2 text-primary hover:bg-background"
-            onClick={() => mockAction('Call driver', 'no real driver phone number available - see file header comment')}
+            onClick={() => mockAction('Call driver', "your partner's number is not shared here yet")}
           >
             <Phone className="h-5 w-5" />
           </button>
           <button
             className="rounded-full p-2 text-primary hover:bg-background"
-            onClick={() => mockAction('Message driver', 'no real driver phone number available - see file header comment')}
+            onClick={() => mockAction('Message driver', "your partner's number is not shared here yet")}
           >
             <MessageCircle className="h-5 w-5" />
           </button>
@@ -194,7 +194,7 @@ export function Tracking() {
       <div className="flex justify-around">
         <button
           className="flex flex-col items-center gap-1 text-xs text-text-secondary"
-          onClick={() => mockAction('Share Live location', 'the map above is live for you, but there is no endpoint to share a trip link with someone else')}
+          onClick={() => mockAction('Share Live location', 'the map above is live for you, but a shareable trip link is not available yet')}
         >
           <IconCircle tone="soft" icon={<Radio />} />
           Share Live
@@ -208,7 +208,7 @@ export function Tracking() {
         </button>
         <button
           className="flex flex-col items-center gap-1 text-xs text-text-secondary"
-          onClick={() => mockAction('Call driver', 'no real driver phone number available')}
+          onClick={() => mockAction('Call driver', "your partner's number is not shared here yet")}
         >
           <IconCircle tone="soft" icon={<Phone />} />
           Call

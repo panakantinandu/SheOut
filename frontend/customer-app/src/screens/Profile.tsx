@@ -1,4 +1,4 @@
-import { BadgeCheck, HelpCircle, Info, LogOut, MapPin, Shield, User } from 'lucide-react';
+import { BadgeCheck, HelpCircle, Info, LogOut, MapPin, Receipt, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, ConfirmDialog, IconCircle, ListRow, TopHeader } from '@sheout/design-system';
@@ -9,7 +9,7 @@ import { useAuth } from '../auth/AuthContext';
 /**
  * REAL: name/phone fetched from GET /api/v1/users/customer/me. Log Out
  * clears the real session. The menu items below (Personal Details, Saved
- * Addresses, Payment Methods, Help & Support, About SheOut) have no
+ * Addresses, Payment History, Help & Support, About SheOut) have no
  * sub-screens - none were asked for in this pass - so they show a mock
  * "not implemented yet" instead of silently doing nothing. (Previously
  * these had a chevron implying they were tappable but no onClick at all -
@@ -48,24 +48,53 @@ export function Profile() {
         </div>
       </Card>
 
-      <Card className="divide-y divide-border p-0">
-        <div className="p-4">
-          <ListRow icon={<IconCircle tone="soft" size="sm" icon={<User />} />} label="Personal Details" onClick={() => navigate('/profile/details')} />
-        </div>
-        <div className="p-4">
-          <ListRow icon={<IconCircle tone="soft" size="sm" icon={<MapPin />} />} label="Saved Addresses" onClick={() => navigate('/profile/addresses')} />
-        </div>
-        <div className="p-4">
-          <ListRow icon={<IconCircle tone="soft" size="sm" icon={<BadgeCheck />} />} label="Identity Verification" onClick={() => navigate('/verification')} />
-          <ListRow icon={<IconCircle tone="soft" size="sm" icon={<Shield />} />} label="Payments" onClick={() => navigate('/profile/payments')} />
-        </div>
-        <div className="p-4">
-          <ListRow icon={<IconCircle tone="soft" size="sm" icon={<HelpCircle />} />} label="Help & Support" onClick={() => navigate('/help')} />
-        </div>
-        <div className="p-4">
-          <ListRow icon={<IconCircle tone="soft" size="sm" icon={<Info />} />} label="About SheOut" onClick={() => navigate('/about')} />
-        </div>
-      </Card>
+      {/* Every row used to sit in one undifferentiated card, and Identity
+          Verification and Payments shared a single cell with no rule
+          between them - so two unrelated things read as one control, and
+          nothing on the screen said what any group was for. Grouped into
+          named sections instead, the same heading-over-card shape Home and
+          Wallet already use. */}
+      <section>
+        <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">Account</h2>
+        <Card className="divide-y divide-border p-0">
+          <div className="p-4">
+            <ListRow icon={<IconCircle tone="soft" size="sm" icon={<User />} />} label="Personal Details" onClick={() => navigate('/profile/details')} />
+          </div>
+          <div className="p-4">
+            <ListRow icon={<IconCircle tone="soft" size="sm" icon={<MapPin />} />} label="Saved Addresses" onClick={() => navigate('/profile/addresses')} />
+          </div>
+        </Card>
+      </section>
+
+      <section>
+        <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">Verification</h2>
+        <Card className="p-0">
+          <div className="p-4">
+            <ListRow icon={<IconCircle tone="soft" size="sm" icon={<BadgeCheck />} />} label="Identity Verification" onClick={() => navigate('/verification')} />
+          </div>
+        </Card>
+      </section>
+
+      <section>
+        <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">Payments</h2>
+        <Card className="p-0">
+          <div className="p-4">
+            <ListRow icon={<IconCircle tone="soft" size="sm" icon={<Receipt />} />} label="Payment History" onClick={() => navigate('/profile/payments')} />
+          </div>
+        </Card>
+      </section>
+
+      <section>
+        <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">Support</h2>
+        <Card className="divide-y divide-border p-0">
+          <div className="p-4">
+            <ListRow icon={<IconCircle tone="soft" size="sm" icon={<HelpCircle />} />} label="Help & Support" onClick={() => navigate('/help')} />
+          </div>
+          <div className="p-4">
+            <ListRow icon={<IconCircle tone="soft" size="sm" icon={<Info />} />} label="About SheOut" onClick={() => navigate('/about')} />
+          </div>
+        </Card>
+      </section>
 
       <Card className="p-0">
         <div className="p-4">

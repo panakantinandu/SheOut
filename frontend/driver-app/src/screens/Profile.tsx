@@ -1,7 +1,7 @@
 import { Bike, Car, HelpCircle, LogOut, ShieldCheck, Truck, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Card, ConfirmDialog, IconCircle, ListRow, StatusBadge, TextField, TopHeader } from '@sheout/design-system';
+import { Button, Card, ConfirmDialog, IconCircle, ListRow, StatusBadge, TextField, TopHeader, vehicleLabel } from '@sheout/design-system';
 import { ApiError, usersApi } from '../api/client';
 import type { DriverProfileSummary, VehicleType } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
@@ -86,7 +86,7 @@ export function Profile() {
         <Card className="space-y-3">
           <div className="flex items-center justify-between text-sm">
             <span className="text-text-secondary">Vehicle</span>
-            <span className="font-medium text-text-primary">{profile.vehicleType ?? 'Not set'}</span>
+            <span className="font-medium text-text-primary">{vehicleLabel(profile.vehicleType)}</span>
           </div>
           <div className="flex items-center justify-between text-sm">
             <span className="text-text-secondary">Registration No.</span>

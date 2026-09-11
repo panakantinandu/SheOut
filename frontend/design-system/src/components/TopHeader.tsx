@@ -3,7 +3,12 @@ import type { ReactNode } from 'react';
 import { cn } from '../lib/cn';
 
 interface BackHeaderProps {
-  variant: 'back';
+  /**
+   * 'back' for a screen you arrived at from somewhere; 'plain' for a
+   * top-level destination reached from the tab bar, which has nothing
+   * behind it and so must not show an arrow.
+   */
+  variant: 'back' | 'plain';
   title: string;
   onBack?: () => void;
   rightSlot?: ReactNode;
@@ -33,17 +38,24 @@ export type TopHeaderProps = BackHeaderProps | GreetingHeaderProps;
  * notification bell.
  */
 export function TopHeader(props: TopHeaderProps) {
-  if (props.variant === 'back') {
+  if (props.variant !== 'greeting') {
     return (
       <header className={cn('flex items-center gap-3', props.className)}>
-        <button
-          type="button"
-          onClick={props.onBack}
-          aria-label="Go back"
-          className="flex h-9 w-9 items-center justify-center rounded-full text-text-primary hover:bg-background"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </button>
+        {props.variant === 'back' ? (
+          <button
+            type="button"
+            onClick={props.onBack}
+            aria-label="Go back"
+            className="flex h-9 w-9 items-center justify-center rounded-full text-text-primary hover:bg-background"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+        ) : (
+          props.centerTitle && (
+            // Holds the arrow's width so the title stays optically centred.
+            <span className="h-9 w-9" aria-hidden="true" />
+          )
+        )}
         <h1
           className={cn(
             'font-heading text-lg font-semibold text-text-primary',

@@ -27,7 +27,7 @@ export function Wallet() {
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm opacity-90">Available Balance (mock)</p>
-            <AmountText amount={MOCK_BALANCE} size="lg" className="text-text-inverse" />
+            <AmountText amount={MOCK_BALANCE} size="lg" tone="inverse" />
           </div>
           <button
             className="rounded-full bg-surface px-4 py-2 text-sm font-semibold text-primary"
