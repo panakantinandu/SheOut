@@ -48,11 +48,26 @@ export function BrandHeader({ size = 'md', footer, className }: BrandHeaderProps
         <img src={illustration} alt="SheOut" className="h-28 w-28 object-contain" />
       )}
 
-      <p className="font-heading text-3xl font-extrabold tracking-tight text-text-primary">
-        SHE<span className="text-accent-orange">O</span>UT
+      {/* "SHE" purple, "OUT" orange - both sampled from the mockup. The
+          previous version coloured only the O and left the rest near-black,
+          which is not the wordmark. */}
+      <p
+        className={`font-heading font-extrabold tracking-tight text-primary ${
+          large ? 'text-5xl' : 'text-4xl'
+        }`}
+      >
+        SHE<span className="text-accent-brand-orange">OUT</span>
       </p>
 
-      <p className="text-sm italic text-text-secondary">&mdash; Your Delivery, Our Priority &mdash;</p>
+      {/* Orange rules either side, as the mockup draws them - not em-dashes
+          in italic grey, which is what this used to be. */}
+      <div className="flex items-center gap-2">
+        <span className="h-0.5 w-5 rounded-full bg-accent-orange" aria-hidden="true" />
+        <p className={`font-heading font-bold text-primary-dark ${large ? 'text-sm' : 'text-xs'}`}>
+          Your Delivery, Our Priority
+        </p>
+        <span className="h-0.5 w-5 rounded-full bg-accent-orange" aria-hidden="true" />
+      </div>
 
       {footer && <p className="text-xs font-medium text-text-secondary">{footer}</p>}
     </div>

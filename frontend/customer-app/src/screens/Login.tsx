@@ -200,7 +200,7 @@ export function Login() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col justify-center bg-background px-screen py-10">
+    <div className="flex min-h-screen flex-col justify-center bg-gradient-to-br from-[#FEF8F8] via-[#FBF1F6] to-[#E9DEF5] px-screen py-10">
       <BrandHeader size="md" className="mb-6" />
 
       {step === 'complete-profile' ? (
@@ -300,7 +300,12 @@ export function Login() {
 
           {step === 'phone' && (
             <>
-              <div className="my-6 text-center text-xs font-medium text-text-secondary">or</div>
+              {/* Rules either side of "or", as the mockup draws it. */}
+              <div className="my-6 flex items-center gap-3">
+                <span className="h-px flex-1 bg-border" aria-hidden="true" />
+                <span className="text-xs font-medium text-text-secondary">or</span>
+                <span className="h-px flex-1 bg-border" aria-hidden="true" />
+              </div>
 
               <Button
                 type="button"

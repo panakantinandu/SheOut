@@ -1,7 +1,7 @@
 import { Bike, Package } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BrandHeader, IconCircle } from '@sheout/design-system';
+import { BrandHeader } from '@sheout/design-system';
 import { useAuth } from '../auth/AuthContext';
 
 /**
@@ -67,7 +67,9 @@ export function Splash() {
 
   return (
     <div
-      className={`relative min-h-screen overflow-hidden bg-background transition-opacity duration-300 ${
+      // Warm pink-to-lavender wash, sampled from the mockup's splash tile -
+      // it is not the app's flat page background.
+      className={`relative min-h-screen overflow-hidden bg-gradient-to-br from-[#FEF8F8] via-[#FBF1F6] to-[#E9DEF5] transition-opacity duration-300 ${
         fading ? 'opacity-0' : 'opacity-100'
       }`}
     >
@@ -75,7 +77,7 @@ export function Splash() {
       <svg
         viewBox="0 0 400 100"
         preserveAspectRatio="none"
-        className="absolute inset-x-0 bottom-[34%] h-24 w-full text-primary/10"
+        className="absolute inset-x-0 bottom-[30%] h-24 w-full text-primary/10"
         aria-hidden="true"
       >
         <rect x="-10" y="45" width="34" height="55" fill="currentColor" />
@@ -98,15 +100,21 @@ export function Splash() {
       <svg
         viewBox="0 0 400 300"
         preserveAspectRatio="none"
-        className="absolute inset-x-0 bottom-0 h-[46%] w-full"
+        className="absolute inset-x-0 bottom-0 h-[38%] w-full"
         aria-hidden="true"
       >
         <defs>
           <linearGradient id="splashWave" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#7B3FE4" />
-            <stop offset="100%" stopColor="#5A2DA0" />
+            <stop offset="0%" stopColor="#4A1A9E" />
+            <stop offset="100%" stopColor="#36116F" />
           </linearGradient>
         </defs>
+        {/* Orange crest sitting just above the purple, as the mockup has it -
+            the same curve offset upward, so the two read as one band. */}
+        <path
+          d="M0,52 C70,-3 150,82 230,37 C300,0 350,57 400,27 L400,300 L0,300 Z"
+          fill="#FBA226"
+        />
         <path
           d="M0,70 C70,15 150,100 230,55 C300,18 350,75 400,45 L400,300 L0,300 Z"
           fill="url(#splashWave)"
@@ -114,14 +122,21 @@ export function Splash() {
       </svg>
 
       <div className="relative z-10 flex min-h-screen flex-col items-center px-screen py-10">
-        <BrandHeader size="lg" className="flex-1 justify-center" />
+        <BrandHeader size="lg" className="flex-1 justify-center pb-12" />
 
-        <div className="flex w-full flex-col items-center gap-5 pb-4">
-          <div className="flex w-full justify-around">
-            {SERVICES.map((service) => (
-              <div key={service.key} className="flex flex-col items-center gap-2">
-                <IconCircle icon={service.icon} />
-                <span className="text-xs font-medium text-text-inverse">{service.label}</span>
+        <div className="flex w-full flex-col items-center gap-4 pb-2">
+          {/* Bare white glyphs separated by hairline rules, per the mockup -
+              not filled IconCircles, which read as buttons on the wave. */}
+          <div className="flex w-full items-stretch justify-center">
+            {SERVICES.map((service, i) => (
+              <div
+                key={service.key}
+                className={`flex flex-1 flex-col items-center gap-2 px-2 ${
+                  i > 0 ? 'border-l border-text-inverse/25' : ''
+                }`}
+              >
+                <span className="text-text-inverse [&>svg]:h-7 [&>svg]:w-7">{service.icon}</span>
+                <span className="text-xs font-semibold text-text-inverse">{service.label}</span>
               </div>
             ))}
           </div>
