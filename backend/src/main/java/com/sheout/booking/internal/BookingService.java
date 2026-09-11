@@ -5,6 +5,7 @@ import com.sheout.booking.BookingApi;
 import com.sheout.booking.BookingAccepted;
 import com.sheout.booking.BookingCancelled;
 import com.sheout.booking.BookingCategory;
+import com.sheout.booking.GeoAddress;
 import com.sheout.booking.BookingCompleted;
 import com.sheout.booking.BookingError;
 import com.sheout.booking.BookingMatched;
@@ -15,6 +16,7 @@ import com.sheout.booking.BookingStatus;
 import com.sheout.booking.BookingSummary;
 import com.sheout.booking.RequestBookingCommand;
 import com.sheout.booking.internal.fare.FareCalculator;
+import com.sheout.booking.internal.fare.FareQuote;
 import com.sheout.driververification.VerificationApi;
 import com.sheout.driververification.VerificationStatus;
 import com.sheout.driververification.VerificationSummary;
@@ -53,6 +55,23 @@ public class BookingService implements BookingApi {
         this.eventPublisher = eventPublisher;
         this.authApi = authApi;
         this.verifiedBypassPhone = verifiedBypassPhone;
+    }
+
+    /**
+     * A fare quote and nothing else: no entity, no event, no side effect of
+     * any kind. It runs the same FareCalculator requestBooking runs, with
+     * the same inputs, so the number a customer is shown before booking is
+     * the number the booking is then created with.
+     * <p>
+     * Deliberately not transactional and deliberately not persisted - it
+     * reads nothing and writes nothing. It also does not check customer
+     * verification: pricing is public information, and refusing to price a
+     * trip would leak whether an account is verified to anyone who asks.
+     * The verification gate stays where it belongs, on actually creating
+     * the booking.
+     */
+    public FareQuote quoteFare(BookingCategory category, GeoAddress pickup, GeoAddress drop) {
+        return fareCalculator.quote(category, pickup, drop);
     }
 
     @Override

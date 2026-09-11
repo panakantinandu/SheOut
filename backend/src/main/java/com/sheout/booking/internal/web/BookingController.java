@@ -5,6 +5,7 @@ import com.sheout.auth.CurrentAccount;
 import com.sheout.auth.CurrentAccountContext;
 import com.sheout.booking.BookingCategory;
 import com.sheout.booking.BookingError;
+import com.sheout.booking.internal.fare.FareQuote;
 import com.sheout.booking.BookingSummary;
 import com.sheout.booking.BookingType;
 import com.sheout.booking.GeoAddress;
@@ -25,6 +26,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 import java.util.UUID;
 
@@ -57,6 +60,39 @@ public class BookingController {
             throw toApiException(result.error());
         }
         return ResponseEntity.status(HttpStatus.CREATED).body(result.value());
+    }
+
+    /**
+     * Prices a trip without creating one. Pure calculation: no booking row,
+     * no event, nothing persisted, so it is safe to call repeatedly as a
+     * customer changes their destination.
+     * <p>
+     * It runs the same FareCalculator that requestBooking runs, so the
+     * quoted amount is the amount the resulting booking is created with,
+     * not an approximation of it.
+     * <p>
+     * Kept off BookingApi on purpose. This codebase's rule is that the
+     * public interface carries cross-module Java callers, and nothing
+     * outside booking needs to price a trip - the caller is the customer
+     * app over HTTP. Same reasoning NotificationLogController's Javadoc
+     * records for its own self-service endpoint.
+     * <p>
+     * Authenticated, but with no role check beyond that: a driver or admin
+     * asking what a trip costs is harmless, and pricing is not
+     * customer-private data.
+     */
+    @PostMapping("/api/v1/bookings/quote")
+    public ResponseEntity<FareQuoteResponse> quote(@Valid @RequestBody QuoteRequest request) {
+        requireAuthenticated();
+        if (request.category().expectedType() != request.type()) {
+            throw toApiException(BookingError.CATEGORY_TYPE_MISMATCH);
+        }
+        FareQuote quote = bookingService.quoteFare(
+                request.category(), request.pickup().toGeoAddress(), request.drop().toGeoAddress());
+        return ResponseEntity.ok(new FareQuoteResponse(
+                quote.amount(),
+                BigDecimal.valueOf(quote.distanceKm()).setScale(1, RoundingMode.HALF_UP),
+                request.category()));
     }
 
     @GetMapping("/api/v1/bookings/me")
@@ -180,6 +216,32 @@ public class BookingController {
             @NotNull BookingCategory category,
             @Valid @NotNull GeoAddressRequest pickup,
             @Valid @NotNull GeoAddressRequest drop
+    ) {
+    }
+
+    /** Same shape as CreateBookingRequest - quoting and booking take the same inputs by definition. */
+    public record QuoteRequest(
+            @NotNull BookingType type,
+            @NotNull BookingCategory category,
+            @Valid @NotNull GeoAddressRequest pickup,
+            @Valid @NotNull GeoAddressRequest drop
+    ) {
+    }
+
+    /**
+     * distanceKm is the straight-line distance the fare was derived from,
+     * rounded to one decimal for display. It is not a routed distance - see
+     * DistanceBasedFareCalculator.
+     * <p>
+     * A single amount, not a range. The mockup shows "₹42 - 58", but this
+     * calculator is deterministic: there is no spread to report, and
+     * inventing one would imply a variability the pricing does not have and
+     * would not match the fare the booking is then created with.
+     */
+    public record FareQuoteResponse(
+            BigDecimal fareEstimate,
+            BigDecimal distanceKm,
+            BookingCategory category
     ) {
     }
 }

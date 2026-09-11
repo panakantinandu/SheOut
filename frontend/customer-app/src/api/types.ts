@@ -144,3 +144,15 @@ export interface DriverLocation {
   lng: number;
   recordedAt: string;
 }
+
+/**
+ * A price for a trip that has not been created. fareEstimate is the exact
+ * amount the booking will be created with, not an approximation of it.
+ * distanceKm is straight-line, the distance the fare was derived from,
+ * rounded to one decimal by the backend.
+ */
+export interface FareQuote {
+  fareEstimate: number;
+  distanceKm: number;
+  category: BookingCategory;
+}

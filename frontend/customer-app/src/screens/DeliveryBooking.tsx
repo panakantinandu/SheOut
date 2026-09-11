@@ -4,6 +4,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Button, Card, IconCircle, ListRow, TextField, LiveMap, TopHeader } from '@sheout/design-system';
 import type { MapMarker } from '@sheout/design-system';
 import { ApiError, bookingApi } from '../api/client';
+import { FareEstimateCard } from '../components/FareEstimateCard';
+import { useFareQuote } from '../lib/useFareQuote';
 import type { BookingCategory, GeoAddress } from '../api/types';
 
 const DROP_PRESETS: GeoAddress[] = [
@@ -69,6 +71,7 @@ export function DeliveryBooking() {
   const [mealType, setMealType] = useState<MealType>('VEG');
   const [plan, setPlan] = useState<Plan>('DAILY');
   const [submitting, setSubmitting] = useState(false);
+  const fare = useFareQuote({ type: 'DELIVERY', category: config.category, pickup, drop });
   const [error, setError] = useState<string | null>(null);
   const isLunchbox = kind === 'lunchbox';
 
@@ -209,6 +212,8 @@ export function DeliveryBooking() {
       />
 
       {error && <p className="text-sm text-danger">{error}</p>}
+
+      <FareEstimateCard state={fare} />
 
       <Button fullWidth disabled={!pickup || !drop || submitting} onClick={handleContinue}>
         {submitting ? 'Booking...' : config.cta}

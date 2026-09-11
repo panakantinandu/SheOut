@@ -36,12 +36,13 @@ public class DistanceBasedFareCalculator implements FareCalculator {
     );
 
     @Override
-    public BigDecimal estimate(BookingCategory category, GeoAddress pickup, GeoAddress drop) {
+    public FareQuote quote(BookingCategory category, GeoAddress pickup, GeoAddress drop) {
         double distanceKm = haversineKm(pickup, drop);
         Rate rate = RATES.get(category);
-        return rate.base()
+        BigDecimal amount = rate.base()
                 .add(rate.perKm().multiply(BigDecimal.valueOf(distanceKm)))
                 .setScale(2, RoundingMode.HALF_UP);
+        return new FareQuote(amount, distanceKm);
     }
 
     private double haversineKm(GeoAddress from, GeoAddress to) {
