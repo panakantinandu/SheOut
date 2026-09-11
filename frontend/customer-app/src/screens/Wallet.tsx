@@ -1,4 +1,4 @@
-import { PlusCircle, Receipt, Send } from 'lucide-react';
+import { Bike, Package, PlusCircle, Receipt, Send } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AmountText, Card, IconCircle, ListRow, TopHeader } from '@sheout/design-system';
 import { mockAction } from '../lib/mockAction';
@@ -11,9 +11,9 @@ import { mockAction } from '../lib/mockAction';
  */
 const MOCK_BALANCE = 1250;
 const MOCK_TRANSACTIONS = [
-  { id: '1', label: 'Ride Payment', date: '12 Apr 2026 · 10:24 AM', amount: 56, sign: 'negative' as const },
-  { id: '2', label: 'Parcel Delivery', date: '11 Apr 2026 · 04:15 PM', amount: 120, sign: 'positive' as const },
-  { id: '3', label: 'Ride Payment', date: '10 Apr 2026 · 12:36 PM', amount: 240, sign: 'negative' as const },
+  { id: '1', label: 'Ride Payment', date: '12 Apr 2026 · 10:24 AM', amount: 56, sign: 'negative' as const, kind: 'ride' as const },
+  { id: '2', label: 'Parcel Delivery', date: '11 Apr 2026 · 04:15 PM', amount: 120, sign: 'positive' as const, kind: 'parcel' as const },
+  { id: '3', label: 'Ride Payment', date: '10 Apr 2026 · 12:36 PM', amount: 240, sign: 'negative' as const, kind: 'ride' as const },
 ];
 
 export function Wallet() {
@@ -48,9 +48,17 @@ export function Wallet() {
         <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">Recent Transactions (mock)</h2>
         <Card className="divide-y divide-border p-0">
           {MOCK_TRANSACTIONS.map((tx) => (
-            <div key={tx.id} className="flex items-center justify-between p-4">
-              <div>
-                <p className="text-sm font-medium text-text-primary">{tx.label}</p>
+            <div key={tx.id} className="flex items-center gap-3 p-4">
+              {/* Category icon per row, as the mockup has - a bare label and
+                  amount gave no way to scan the list by service. */}
+              <IconCircle
+                tone="soft"
+                size="sm"
+                color={tx.kind === 'parcel' ? 'orange' : undefined}
+                icon={tx.kind === 'parcel' ? <Package /> : <Bike />}
+              />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-text-primary">{tx.label}</p>
                 <p className="text-xs text-text-secondary">{tx.date}</p>
               </div>
               <AmountText amount={tx.amount} sign={tx.sign} />
