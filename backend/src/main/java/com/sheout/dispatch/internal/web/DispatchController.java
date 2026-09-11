@@ -116,7 +116,11 @@ public class DispatchController {
         return switch (error) {
             case OFFER_NOT_FOUND -> ApiException.notFound("No pending offer for this booking");
             case DRIVER_NO_LONGER_ELIGIBLE -> new ApiException(
-                    HttpStatus.CONFLICT, "Conflict", "You're no longer eligible for this offer (are you still online?)");
+                    // Covers both reasons this can now fail - going offline, and
+                    // verification no longer being current - without saying which,
+                    // since the driver's own screens already show both states.
+                    HttpStatus.CONFLICT, "Conflict",
+                    "You're no longer eligible for this offer - check you're online and your verification is up to date");
             case BOOKING_ALREADY_ASSIGNED -> new ApiException(
                     HttpStatus.CONFLICT, "Conflict", "Another driver already accepted this booking");
             case ASSIGNMENT_FAILED -> new ApiException(

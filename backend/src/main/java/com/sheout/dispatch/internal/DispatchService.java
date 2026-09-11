@@ -99,13 +99,16 @@ public class DispatchService {
     /**
      * The accept flow, including the explicitly-required race check: a
      * driver's eligibility is re-verified here, live, not trusted from
-     * whatever it was at candidate-selection time.
+     * whatever it was at candidate-selection time. That claim used to be
+     * only half true - it re-read online status but not verification, so a
+     * driver could be offered a booking and still accept it after their
+     * verification was revoked. Both are re-read now, via isAvailableNow.
      */
     public Result<Void, DispatchError> acceptOffer(UUID bookingId, UUID driverId) {
         if (!offerStore.hasOffer(bookingId, driverId)) {
             return Result.failure(DispatchError.OFFER_NOT_FOUND);
         }
-        if (!isOnline(driverId)) {
+        if (!isAvailableNow(driverId)) {
             offerStore.removeOffer(bookingId, driverId);
             return Result.failure(DispatchError.DRIVER_NO_LONGER_ELIGIBLE);
         }
@@ -201,18 +204,39 @@ public class DispatchService {
         offerStore.recordRound(bookingId, state, expiresAt);
     }
 
-    private boolean isOnline(UUID driverId) {
-        return driverProfileApi.findByAccountId(driverId)
-                .map(profile -> profile.onlineStatus() == OnlineStatus.ONLINE)
-                .orElse(false);
-    }
-
-    private boolean isEligible(UUID driverId, BookingCategory category) {
+    /**
+     * The one place that answers "may this driver be given work right now?"
+     * - both the candidate filter and the accept race check go through it,
+     * so the two cannot drift apart again.
+     * <p>
+     * ONLINE alone is not enough, and this is the bug that made it matter:
+     * going ONLINE is gated on verification, but that gate runs once, at
+     * the moment of the toggle. A driver who was never really verified
+     * (the testing bypass lets one account toggle itself online), or whose
+     * verification is later revoked or reset, kept an ONLINE flag that
+     * nothing re-examined - and kept being offered real bookings. So
+     * verification is re-read live here, on every offer and every accept,
+     * exactly as DriverProfileService re-reads it on the toggle.
+     * <p>
+     * Deliberately NOT DriverProfileSummary.verified: that field is a
+     * cached projection of an AccountVerified event and can be stale,
+     * which would reintroduce the same class of bug one layer down.
+     */
+    private boolean isAvailableNow(UUID driverId) {
         Optional<DriverProfileSummary> profile = driverProfileApi.findByAccountId(driverId);
         if (profile.isEmpty() || profile.get().onlineStatus() != OnlineStatus.ONLINE) {
             return false;
         }
-        return vehicleMatches(profile.get().vehicleType(), category);
+        return driverProfileApi.isCurrentlyVerified(driverId);
+    }
+
+    private boolean isEligible(UUID driverId, BookingCategory category) {
+        if (!isAvailableNow(driverId)) {
+            return false;
+        }
+        return driverProfileApi.findByAccountId(driverId)
+                .map(profile -> vehicleMatches(profile.vehicleType(), category))
+                .orElse(false);
     }
 
     /**
