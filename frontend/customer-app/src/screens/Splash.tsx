@@ -1,7 +1,7 @@
 import { Bike, Package } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { IconCircle } from '@sheout/design-system';
+import { BrandHeader, IconCircle } from '@sheout/design-system';
 import { useAuth } from '../auth/AuthContext';
 
 /**
@@ -114,25 +114,7 @@ export function Splash() {
       </svg>
 
       <div className="relative z-10 flex min-h-screen flex-col items-center px-screen py-10">
-        <div className="flex flex-1 flex-col items-center justify-center gap-3">
-          <div className="relative flex w-full items-center justify-center">
-            <span
-              className="absolute h-56 w-56 max-h-[70vw] max-w-[70vw] rounded-full bg-accent-orange/20 blur-3xl"
-              aria-hidden="true"
-            />
-            <img
-              src="/sheout-illustration.png"
-              alt="SheOut"
-              className="relative w-[58%] max-w-xs object-contain"
-            />
-          </div>
-
-          <p className="font-heading text-3xl font-extrabold tracking-tight text-text-primary">
-            SHE<span className="text-accent-orange">O</span>UT
-          </p>
-
-          <p className="text-sm italic text-text-secondary">&mdash; Your Delivery, Our Priority &mdash;</p>
-        </div>
+        <BrandHeader size="lg" className="flex-1 justify-center" />
 
         <div className="flex w-full flex-col items-center gap-5 pb-4">
           <div className="flex w-full justify-around">

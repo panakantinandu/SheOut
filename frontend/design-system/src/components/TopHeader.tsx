@@ -7,6 +7,12 @@ interface BackHeaderProps {
   title: string;
   onBack?: () => void;
   rightSlot?: ReactNode;
+  /**
+   * Centres the title between the back button and the right slot, as the
+   * mockup's Partner Dashboard does. Off by default, since every other
+   * back-header screen sits the title next to the arrow.
+   */
+  centerTitle?: boolean;
   className?: string;
 }
 
@@ -38,8 +44,21 @@ export function TopHeader(props: TopHeaderProps) {
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <h1 className="font-heading text-lg font-semibold text-text-primary">{props.title}</h1>
-        {props.rightSlot && <div className="ml-auto">{props.rightSlot}</div>}
+        <h1
+          className={cn(
+            'font-heading text-lg font-semibold text-text-primary',
+            props.centerTitle && 'flex-1 text-center'
+          )}
+        >
+          {props.title}
+        </h1>
+        {props.rightSlot ? (
+          <div className={cn(!props.centerTitle && 'ml-auto')}>{props.rightSlot}</div>
+        ) : (
+          // Keeps a centred title optically centred by balancing the back
+          // button's width on the right.
+          props.centerTitle && <span className="h-9 w-9" aria-hidden="true" />
+        )}
       </header>
     );
   }

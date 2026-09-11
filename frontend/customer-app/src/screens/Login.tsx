@@ -1,7 +1,7 @@
 import { Phone, User } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, TextField } from '@sheout/design-system';
+import { BrandHeader, Button, TextField } from '@sheout/design-system';
 import { ApiError, authApi, usersApi } from '../api/client';
 import type { AuthSession } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
@@ -201,13 +201,7 @@ export function Login() {
 
   return (
     <div className="flex min-h-screen flex-col justify-center bg-background px-screen py-10">
-      <div className="mx-auto mb-6 flex flex-col items-center gap-2">
-        <img src="/sheout-illustration.png" alt="SheOut" className="h-28 w-28 object-contain" />
-        <p className="font-heading text-3xl font-extrabold tracking-tight text-text-primary">
-          SHE<span className="text-accent-orange">O</span>UT
-        </p>
-        <p className="text-sm italic text-text-secondary">&mdash; Your Delivery, Our Priority &mdash;</p>
-      </div>
+      <BrandHeader size="md" className="mb-6" />
 
       {step === 'complete-profile' ? (
         <>
