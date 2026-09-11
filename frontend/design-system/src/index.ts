@@ -1,3 +1,4 @@
+export * from './lib/toast';
 export * from './components';
 export * from './tokens';
 

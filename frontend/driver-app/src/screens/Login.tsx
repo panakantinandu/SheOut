@@ -8,6 +8,33 @@ import { useAuth } from '../auth/AuthContext';
 
 const PHONE_REGEX = /^\+[1-9]\d{7,14}$/;
 
+/**
+ * Login and Register are the same mechanism - phone + OTP, with the account
+ * created on first successful verification. The toggle exists because a new
+ * partner looks for a way to register, and a screen headed "Partner Login"
+ * reads as the wrong place to be; the mockup's tile carries a Register link
+ * for the same reason.
+ * <p>
+ * The tabs change copy only. There is one OTP code path, the tab never
+ * reaches the backend, and where a partner lands after verifying is decided
+ * by whether their profile already has a name - not by which tab they
+ * picked. See afterSignIn.
+ */
+type AuthMode = 'login' | 'register';
+
+const AUTH_MODE_COPY: Record<AuthMode, { tab: string; heading: string; subtitle: string }> = {
+  login: {
+    tab: 'Login',
+    heading: 'Partner Login',
+    subtitle: 'Sign in to start driving',
+  },
+  register: {
+    tab: 'Register',
+    heading: 'Become a Partner',
+    subtitle: 'Register to start earning with SheOut',
+  },
+};
+
 const VEHICLE_OPTIONS: { key: VehicleType; label: string; icon: JSX.Element }[] = [
   { key: 'BIKE', label: 'Bike', icon: <Bike className="h-4 w-4" /> },
   { key: 'AUTO', label: 'Auto', icon: <Truck className="h-4 w-4" /> },
@@ -33,6 +60,7 @@ export function Login() {
   const { login } = useAuth();
 
   const [step, setStep] = useState<'phone' | 'otp' | 'complete-profile'>('phone');
+  const [mode, setMode] = useState<AuthMode>('login');
   const [phoneDigits, setPhoneDigits] = useState('');
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
@@ -161,8 +189,29 @@ export function Login() {
         </>
       ) : (
         <>
-          <h1 className="text-center font-heading text-2xl font-bold text-text-primary">Partner Login</h1>
-          <p className="mb-8 text-center text-sm text-text-secondary">Sign in to start driving</p>
+          {step === 'phone' && (
+            <div className="mb-5 flex gap-2" role="tablist" aria-label="Login or register">
+              {(Object.keys(AUTH_MODE_COPY) as AuthMode[]).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  role="tab"
+                  aria-selected={mode === m}
+                  onClick={() => setMode(m)}
+                  className={
+                    mode === m
+                      ? 'flex-1 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-text-inverse'
+                      : 'flex-1 rounded-full border border-border px-4 py-2 text-sm font-medium text-text-secondary'
+                  }
+                >
+                  {AUTH_MODE_COPY[m].tab}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <h1 className="text-center font-heading text-2xl font-bold text-text-primary">{AUTH_MODE_COPY[mode].heading}</h1>
+          <p className="mb-8 text-center text-sm text-text-secondary">{AUTH_MODE_COPY[mode].subtitle}</p>
 
           {step === 'phone' ? (
             <>

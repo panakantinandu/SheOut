@@ -1,7 +1,7 @@
 import { HelpCircle, Info, LogOut, MapPin, Shield, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, IconCircle, ListRow, TopHeader } from '@sheout/design-system';
+import { Card, ConfirmDialog, IconCircle, ListRow, TopHeader } from '@sheout/design-system';
 import { ApiError, usersApi } from '../api/client';
 import type { CustomerProfileSummary } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
@@ -18,6 +18,7 @@ import { useAuth } from '../auth/AuthContext';
 export function Profile() {
   const navigate = useNavigate();
   const { logout } = useAuth();
+  const [confirmingLogout, setConfirmingLogout] = useState(false);
   const [profile, setProfile] = useState<CustomerProfileSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -71,10 +72,22 @@ export function Profile() {
             icon={<IconCircle color="red" tone="soft" size="sm" icon={<LogOut />} />}
             label="Log Out"
             chevron={false}
-            onClick={handleLogout}
+            onClick={() => setConfirmingLogout(true)}
           />
         </div>
       </Card>
+
+      {/* Logging out used to fire on a single tap of the row above, with
+          no way back. */}
+      <ConfirmDialog
+        open={confirmingLogout}
+        title="Log out?"
+        message="You will need your mobile number and an OTP to sign back in."
+        confirmLabel="Log Out"
+        destructive
+        onConfirm={handleLogout}
+        onCancel={() => setConfirmingLogout(false)}
+      />
     </div>
   );
 }

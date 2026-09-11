@@ -1,7 +1,7 @@
 import { Bike, Car, HelpCircle, LogOut, ShieldCheck, Truck, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Card, IconCircle, ListRow, StatusBadge, TextField, TopHeader } from '@sheout/design-system';
+import { Button, Card, ConfirmDialog, IconCircle, ListRow, StatusBadge, TextField, TopHeader } from '@sheout/design-system';
 import { ApiError, usersApi } from '../api/client';
 import type { DriverProfileSummary, VehicleType } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
@@ -21,6 +21,7 @@ const VEHICLE_OPTIONS: { key: VehicleType; label: string; icon: JSX.Element }[] 
 export function Profile() {
   const navigate = useNavigate();
   const { logout } = useAuth();
+  const [confirmingLogout, setConfirmingLogout] = useState(false);
   const [profile, setProfile] = useState<DriverProfileSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
@@ -157,10 +158,22 @@ export function Profile() {
             icon={<IconCircle color="red" tone="soft" size="sm" icon={<LogOut />} />}
             label="Log Out"
             chevron={false}
-            onClick={handleLogout}
+            onClick={() => setConfirmingLogout(true)}
           />
         </div>
       </Card>
+
+      {/* Logging out used to fire on a single tap of the row above, with
+          no way back. */}
+      <ConfirmDialog
+        open={confirmingLogout}
+        title="Log out?"
+        message="You will be taken offline and will need your mobile number and an OTP to sign back in."
+        confirmLabel="Log Out"
+        destructive
+        onConfirm={handleLogout}
+        onCancel={() => setConfirmingLogout(false)}
+      />
     </div>
   );
 }

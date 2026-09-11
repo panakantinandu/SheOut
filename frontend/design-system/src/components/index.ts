@@ -1,4 +1,5 @@
 export * from './BrandHeader';
+export * from './ConfirmDialog';
 export * from './Button';
 export * from './Card';
 export * from './IconCircle';
