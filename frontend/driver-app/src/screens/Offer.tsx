@@ -1,7 +1,8 @@
 import { Clock, Navigation } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { AmountText, Button, Card, TopHeader } from '@sheout/design-system';
+import { AmountText, Button, Card, LiveMap, TopHeader } from '@sheout/design-system';
+import type { MapMarker } from '@sheout/design-system';
 import { ApiError, bookingApi, dispatchApi } from '../api/client';
 import type { OfferSummary } from '../api/types';
 
@@ -123,6 +124,13 @@ export function Offer() {
 
   const distance = offer?.pickup && offer?.drop ? distanceKm(offer.pickup, offer.drop) : null;
 
+  // Where the job actually is. A fare and two place names are not enough to
+  // judge an offer in fifteen seconds - every real driver app shows the
+  // pickup on a map, and the mockup's New Request tile does too.
+  const markers: MapMarker[] = [];
+  if (offer?.pickup) markers.push({ key: 'pickup', lat: offer.pickup.lat, lng: offer.pickup.lng, label: 'Pickup', kind: 'pickup' });
+  if (offer?.drop) markers.push({ key: 'drop', lat: offer.drop.lat, lng: offer.drop.lng, label: 'Drop', kind: 'drop' });
+
   return (
     <div className="space-y-6">
       <TopHeader variant="back" title="New Request" onBack={() => navigate('/home')} />
@@ -132,6 +140,8 @@ export function Offer() {
 
       {offer && !unavailable && (
         <>
+          {markers.length > 0 && <LiveMap markers={markers} className="h-52" />}
+
           <Card className="flex items-center justify-between bg-primary-light">
             <div className="flex items-center gap-2 text-primary">
               <Clock className="h-4 w-4" />
@@ -144,13 +154,19 @@ export function Offer() {
             {offer.pickup && (
               <div className="flex items-start gap-2">
                 <Navigation className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                <span className="text-sm text-text-primary">{offer.pickup.label}</span>
+                <span className="min-w-0">
+                  <span className="block text-xs text-text-secondary">Pickup</span>
+                  <span className="block text-sm text-text-primary">{offer.pickup.label}</span>
+                </span>
               </div>
             )}
             {offer.drop && (
               <div className="flex items-start gap-2">
                 <Navigation className="mt-0.5 h-4 w-4 shrink-0 text-accent-orange" />
-                <span className="text-sm text-text-primary">{offer.drop.label}</span>
+                <span className="min-w-0">
+                  <span className="block text-xs text-text-secondary">Drop</span>
+                  <span className="block text-sm text-text-primary">{offer.drop.label}</span>
+                </span>
               </div>
             )}
             {distance != null && (

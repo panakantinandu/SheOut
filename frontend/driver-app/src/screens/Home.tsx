@@ -1,7 +1,7 @@
 import { Bell, Bike, CheckCircle2, ClipboardList, MapPinOff, Navigation2, Power, ShieldCheck, Star } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AmountText, Button, Card, IconCircle, TopHeader } from '@sheout/design-system';
+import { AmountText, Button, Card, IconCircle, LiveMap, TopHeader } from '@sheout/design-system';
 import { ApiError, bookingApi, dispatchApi, usersApi, verificationApi } from '../api/client';
 import type { BookingSummary, DriverProfileSummary, VerificationSummary } from '../api/types';
 import { useLocationBroadcast } from '../lib/useLocationBroadcast';
@@ -81,14 +81,25 @@ export function Home() {
     [bookings]
   );
 
-  const { todayEarnings, completedRides, activeTripsCount } = useMemo(() => {
+  const { todayEarnings, completedRides, activeTripsCount, recentTrips } = useMemo(() => {
     const today = startOfDay();
     const completed = bookings.filter((b) => b.status === 'COMPLETED' && b.completedAt);
-    const todaySum = completed
-      .filter((b) => new Date(b.completedAt!) >= today)
-      .reduce((sum, b) => sum + (b.finalFare ?? b.fareEstimate), 0);
+    const completedToday = completed.filter((b) => new Date(b.completedAt!) >= today);
+    const todaySum = completedToday.reduce((sum, b) => sum + (b.finalFare ?? b.fareEstimate), 0);
     const active = bookings.filter((b) => b.status === 'MATCHED' || b.status === 'ACCEPTED' || b.status === 'IN_PROGRESS').length;
-    return { todayEarnings: todaySum, completedRides: completed.length, activeTripsCount: active };
+    return {
+      todayEarnings: todaySum,
+      // Today's count, not all-time. Sitting an all-time total beside
+      // "Today's Earnings" in one card read as though both covered the same
+      // period, so a driver with 2 lifetime trips and nothing today saw
+      // "₹0" next to "2" and had no way to tell which was which.
+      completedRides: completedToday.length,
+      activeTripsCount: active,
+      recentTrips: completed
+        .slice()
+        .sort((a, b2) => new Date(b2.completedAt!).getTime() - new Date(a.completedAt!).getTime())
+        .slice(0, 3),
+    };
   }, [bookings]);
 
   // Offer polling - only while online and with no active trip already in
@@ -210,7 +221,7 @@ export function Home() {
         <div className="flex flex-1 flex-col items-center gap-1 p-3 text-center">
           <CheckCircle2 className="h-4 w-4 text-accent-green" />
           <p className="font-heading text-sm font-semibold text-text-primary">{completedRides}</p>
-          <p className="text-xs text-text-secondary">Completed Rides</p>
+          <p className="text-xs text-text-secondary">Rides Today</p>
         </div>
         <div className="w-px self-stretch bg-border" aria-hidden="true" />
         <div className="flex flex-1 flex-col items-center gap-1 p-3 text-center">
@@ -259,6 +270,39 @@ export function Home() {
             <p className="truncate text-xs text-text-secondary">{activeTrip.drop.label}</p>
           </div>
         </Card>
+      )}
+
+      {/* Where the driver actually is, while online. A dashboard that is
+          mostly empty space tells a partner nothing; every real driver app
+          puts them on a map. Real position from the same broadcast the
+          customer's tracking map consumes - no marker at all until the
+          device gives a genuine fix. */}
+      {isOnline && location.position && (
+        <div className="space-y-1">
+          <LiveMap
+            markers={[{ key: 'me', lat: location.position.lat, lng: location.position.lng, label: 'You', kind: 'driver' }]}
+            className="h-52"
+          />
+          <p className="text-xs text-text-secondary">Your position updates as your device reports movement.</p>
+        </div>
+      )}
+
+      {recentTrips.length > 0 && (
+        <div>
+          <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">Recent trips</h2>
+          <Card className="divide-y divide-border p-0">
+            {recentTrips.map((trip) => (
+              <div key={trip.id} className="flex items-center gap-3 p-4">
+                <IconCircle tone="soft" size="sm" icon={<Bike />} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-text-primary">{trip.drop.label}</p>
+                  <p className="text-xs text-text-secondary">{new Date(trip.completedAt!).toLocaleString()}</p>
+                </div>
+                <AmountText amount={trip.finalFare ?? trip.fareEstimate} />
+              </div>
+            ))}
+          </Card>
+        </div>
       )}
     </div>
   );
