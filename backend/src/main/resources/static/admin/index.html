@@ -159,6 +159,10 @@
   .b-green { color: var(--green); background: var(--green-bg); border-color: var(--green-line); }
   .b-red   { color: var(--red);   background: var(--red-bg);   border-color: var(--red-line); }
   .b-grey  { color: var(--muted); background: var(--bg);       border-color: var(--line); }
+  /* Account type, deliberately not in the amber/green/red status palette -
+     a role is not a status and must not read like one. */
+  .b-role-driver   { color: #1D4ED8; background: #EAF0FE; border-color: #C5D6FB; }
+  .b-role-customer { color: var(--brand); background: var(--brand-tint); border-color: #D9CCF3; }
 
   .wait { font-weight: 650; }
   .wait.warn { color: var(--amber); }
@@ -378,6 +382,19 @@ const STATUS_TONE = {
   VERIFIED: 'green', COMPLETED: 'green', CAPTURED: 'green', RESOLVED: 'green',
   REJECTED: 'red', FAILED: 'red', CANCELLED: 'red', REFUNDED: 'red',
 };
+/**
+ * A customer only ever needs the ID/gender check - the police column is
+ * null for every CUSTOMER record, so showing it as a status would invent a
+ * check that does not apply to them.
+ */
+function isCustomer(r) { return r && r.role === 'CUSTOMER'; }
+
+function roleBadge(role) {
+  if (role === 'CUSTOMER') return '<span class="badge b-role-customer">Customer</span>';
+  if (role === 'DRIVER') return '<span class="badge b-role-driver">Driver</span>';
+  return `<span class="badge b-grey">${esc(role || 'Unknown')}</span>`;
+}
+
 function badge(v) {
   if (!v) return '<span class="badge b-grey">—</span>';
   return `<span class="badge b-${STATUS_TONE[v] || 'grey'}">${esc(STATUS_TEXT[v] || v)}</span>`;
@@ -519,12 +536,13 @@ const ICON_EMPTY_LIST = '<svg viewBox="0 0 24 24" fill="none" stroke="currentCol
 const VIEWS = {
   queue: {
     title: 'Verification Queue',
-    desc: 'Drivers who have submitted documents and are waiting for a decision. Every approval here is a human decision — nothing is checked automatically.',
+    desc: 'Everyone who has submitted a document and is waiting for a decision - drivers and customers both. Every approval here is a human decision; nothing is checked automatically.',
     cardTitle: 'Awaiting review',
-    hint: 'Select a driver to see their document and decide',
-    empty: { icon: ICON_EMPTY_QUEUE, title: 'No drivers awaiting review', text: 'When a driver submits their documents they will appear here.' },
+    hint: 'Select a row to see the document and decide',
+    empty: { icon: ICON_EMPTY_QUEUE, title: 'Nobody awaiting review', text: 'When a driver or customer submits a document they will appear here.' },
     columns: [
-      { key: 'name', label: 'Driver', sort: r => (r.name || '').toLowerCase() },
+      { key: 'role', label: 'Account type', sort: r => r.role || '' },
+      { key: 'name', label: 'Name', sort: r => (r.name || '').toLowerCase() },
       { key: 'phoneNumber', label: 'Phone', sort: r => r.phoneNumber || '' },
       { key: 'gender', label: 'ID & gender check', sort: r => r.genderVerificationStatus || '' },
       { key: 'police', label: 'Police check', sort: r => r.policeVerificationStatus || '' },
@@ -534,10 +552,13 @@ const VIEWS = {
     ],
     load: () => api('/admin/verification/review-queue'),
     cell: (r, key) => {
+      if (key === 'role') return roleBadge(r.role);
       if (key === 'name') return `<span class="strong">${esc(r.name || 'Name not set')}</span>`;
       if (key === 'phoneNumber') return `<span class="num">${esc(r.phoneNumber)}</span>`;
       if (key === 'gender') return badge(r.genderVerificationStatus);
-      if (key === 'police') return badge(r.policeVerificationStatus);
+      if (key === 'police') return isCustomer(r)
+        ? '<span class="subtle">Not required</span>'
+        : badge(r.policeVerificationStatus);
       if (key === 'submitted') return `<span class="subtle">${time(r.updatedAt)}</span>`;
       if (key === 'waiting') { const w = waited(r.updatedAt); return `<span class="wait ${w.cls}">${w.text}</span>`; }
       if (key === 'doc') return r.documentSubmitted
@@ -626,14 +647,15 @@ function openDriver(r) {
   const w = waited(r.updatedAt);
   openModal(`
     <div class="modal-head">
-      <h3>${esc(r.name || 'Name not set')}</h3>
+      <h3>${esc(r.name || 'Name not set')} ${roleBadge(r.role)}</h3>
       <p>${esc(r.phoneNumber || '')} &middot; waiting ${esc(w.text)}</p>
     </div>
     <div class="modal-body">
       <dl class="kv">
+        <dt>Account type</dt><dd>${roleBadge(r.role)}</dd>
         <dt>Submitted</dt><dd>${time(r.updatedAt)}</dd>
         <dt>ID &amp; gender check</dt><dd>${badge(r.genderVerificationStatus)}</dd>
-        <dt>Police check</dt><dd>${badge(r.policeVerificationStatus)}</dd>
+        ${isCustomer(r) ? '' : `<dt>Police check</dt><dd>${badge(r.policeVerificationStatus)}</dd>`}
       </dl>
 
       <label>Submitted document</label>
@@ -645,13 +667,18 @@ function openDriver(r) {
 
       <div class="check">
         <div class="top"><h4>ID &amp; gender check</h4>${badge(r.genderVerificationStatus)}</div>
-        <p>Confirm the document is readable and matches the driver's name.</p>
+        <p>Confirm the document is readable and matches the ${isCustomer(r) ? "customer's" : "driver's"} name.</p>
         <div class="row">
           <button class="btn btn-approve" data-decide="gender" data-decision="VERIFIED" type="button">Approve</button>
           <button class="btn btn-reject" data-decide="gender" data-decision="REJECTED" type="button">Reject</button>
         </div>
       </div>
 
+      ${isCustomer(r) ? `
+      <div class="check">
+        <div class="top"><h4>Police check</h4><span class="badge b-grey">Not required</span></div>
+        <p>Customers are not police-verified — only their ID is checked. Approving the ID check above is all this account needs.</p>
+      </div>` : `
       <div class="check">
         <div class="top"><h4>Police check</h4>${badge(r.policeVerificationStatus)}</div>
         <p>Record the outcome of the police verification for this driver.</p>
@@ -659,7 +686,7 @@ function openDriver(r) {
           <button class="btn btn-approve" data-decide="police" data-decision="VERIFIED" type="button">Approve</button>
           <button class="btn btn-reject" data-decide="police" data-decision="REJECTED" type="button">Reject</button>
         </div>
-      </div>
+      </div>`}
     </div>
     <div class="modal-foot"><button class="btn" data-cancel type="button">Close</button></div>
   `, { wide: true });
@@ -698,8 +725,12 @@ function openDriver(r) {
       const ok = await confirmAction({
         title: approving ? `Approve the ${label}?` : `Reject the ${label}?`,
         message: approving
-          ? `${r.name || r.phoneNumber} will pass this check. A driver passes both checks before they can go online.`
-          : `${r.name || r.phoneNumber} will not pass this check and cannot go online until it is approved.`,
+          ? (isCustomer(r)
+              ? `${r.name || r.phoneNumber} will be verified and can start booking. Customers need only this one check.`
+              : `${r.name || r.phoneNumber} will pass this check. A driver passes both checks before they can go online.`)
+          : (isCustomer(r)
+              ? `${r.name || r.phoneNumber} will not be verified and cannot book until it is approved.`
+              : `${r.name || r.phoneNumber} will not pass this check and cannot go online until it is approved.`),
         confirmLabel: approving ? 'Approve' : 'Reject',
         tone: approving ? 'approve' : 'reject',
         withReason: !approving && which === 'gender',

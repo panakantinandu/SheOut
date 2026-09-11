@@ -178,6 +178,38 @@ export const verificationApi = {
   getMyStatus(): Promise<VerificationSummary> {
     return request('/api/v1/driver-verification/me');
   },
+
+  /**
+   * Submits an ID document for review.
+   * <p>
+   * The path says driver-verification, but the endpoint is not
+   * driver-specific: it authenticates the caller and works purely from
+   * their account id and verification record, with no reference to a
+   * vehicle or driver profile. Customers need gender verification before
+   * they can book, so they submit through the same endpoint rather than a
+   * parallel one built to do the same thing.
+   * <p>
+   * Sent as multipart, so this bypasses request(): that helper always sets
+   * a JSON content type, and a multipart body needs the browser to set its
+   * own boundary.
+   */
+  async submitDocument(file: File): Promise<VerificationSummary> {
+    const form = new FormData();
+    form.append('file', file);
+    const token = getStoredToken();
+    const response = await fetch(`${API_BASE}/api/v1/driver-verification/documents`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: form,
+    });
+    const text = await response.text();
+    const data = text ? JSON.parse(text) : undefined;
+    if (!response.ok) {
+      const errorBody = data as ApiErrorResponse | undefined;
+      throw new ApiError(errorBody?.message ?? `Upload failed (${response.status})`, response.status, errorBody ?? null);
+    }
+    return data as VerificationSummary;
+  },
 };
 
 export const bookingApi = {
