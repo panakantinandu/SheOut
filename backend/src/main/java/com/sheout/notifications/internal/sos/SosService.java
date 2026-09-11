@@ -2,6 +2,7 @@ package com.sheout.notifications.internal.sos;
 
 import com.sheout.notifications.internal.NotificationChannelType;
 import com.sheout.notifications.internal.NotificationError;
+import com.sheout.notifications.internal.SendFailure;
 import com.sheout.notifications.internal.NotificationLogEntity;
 import com.sheout.notifications.internal.NotificationLogRepository;
 import com.sheout.notifications.internal.NotificationStatus;
@@ -91,7 +92,7 @@ public class SosService implements SosApi {
         String message = "SOS from SheOut user " + customerName + ". Location: maps.google.com/?q=" + lat + "," + lng;
 
         for (EmergencyContact contact : contacts) {
-            Result<Void, NotificationError> result = smsChannel.send(contact.phoneNumber(), message);
+            Result<Void, SendFailure> result = smsChannel.send(contact.phoneNumber(), message);
             boolean delivered = result.isSuccess();
             if (delivered) {
                 notified++;
