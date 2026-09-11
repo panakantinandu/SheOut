@@ -13,5 +13,15 @@ import java.math.BigDecimal;
  */
 public interface FareCalculator {
 
-    BigDecimal estimate(BookingCategory category, GeoAddress pickup, GeoAddress drop);
+    /**
+     * The fare and the distance it was derived from. The quote endpoint
+     * needs both; booking creation needs only the amount, which is why
+     * estimate() below delegates here rather than the two being separate
+     * calculations that could disagree.
+     */
+    FareQuote quote(BookingCategory category, GeoAddress pickup, GeoAddress drop);
+
+    default BigDecimal estimate(BookingCategory category, GeoAddress pickup, GeoAddress drop) {
+        return quote(category, pickup, drop).amount();
+    }
 }

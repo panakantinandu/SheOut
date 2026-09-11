@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { Button, Card, IconCircle, ListRow, LiveMap, TopHeader } from '@sheout/design-system';
 import type { MapMarker } from '@sheout/design-system';
 import { ApiError, bookingApi } from '../api/client';
+import { FareEstimateCard } from '../components/FareEstimateCard';
+import { useFareQuote } from '../lib/useFareQuote';
 import type { GeoAddress } from '../api/types';
 
 /**
@@ -21,14 +23,11 @@ const DROP_PRESETS: GeoAddress[] = [
 ];
 
 /**
- * FLAGGED: the backend has no fare-quote/preview endpoint - FareCalculator
- * only ever runs inside BookingApi.requestBooking, which immediately
- * creates the booking (REQUESTED state, BookingRequested event fires,
- * dispatch starts matching). So unlike the mockup (which shows an
- * estimated fare *before* confirming), there's no way to preview a real
- * fare without actually creating the booking. "Book Now" here creates the
- * real booking and the real fare comes back as part of that response -
- * shown on the next (tracking) screen, not this one.
+ * The estimated fare is real and arrives before booking: POST
+ * /api/v1/bookings/quote runs the same FareCalculator that booking
+ * creation runs, so the number shown here is the number the booking is
+ * created with, not an approximation. The call is debounced and creates
+ * nothing server-side - see useFareQuote.
  */
 export function RideBooking() {
   const navigate = useNavigate();
@@ -37,6 +36,7 @@ export function RideBooking() {
   const [drop, setDrop] = useState<GeoAddress | null>(null);
   const [pickingDrop, setPickingDrop] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const fare = useFareQuote({ type: 'RIDE', category: 'BIKE', pickup, drop });
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -120,6 +120,8 @@ export function RideBooking() {
       )}
 
       {error && <p className="text-sm text-danger">{error}</p>}
+
+      <FareEstimateCard state={fare} />
 
       <Button fullWidth disabled={!pickup || !drop || submitting} onClick={handleBookNow}>
         {submitting ? 'Booking...' : 'Book Now'}

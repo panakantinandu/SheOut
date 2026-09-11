@@ -7,6 +7,7 @@ import type {
   CustomerProfileSummary,
   DriverLocation,
   EmergencyContact,
+  FareQuote,
   GeoAddress,
   NotificationView,
   PaymentSummary,
@@ -182,6 +183,11 @@ export const verificationApi = {
 export const bookingApi = {
   create(input: { type: BookingType; category: BookingCategory; pickup: GeoAddress; drop: GeoAddress }): Promise<BookingSummary> {
     return request('/api/v1/bookings', { method: 'POST', body: input });
+  },
+
+  /** Prices a trip without creating one - see the backend's quote endpoint. */
+  quote(input: { type: BookingType; category: BookingCategory; pickup: GeoAddress; drop: GeoAddress }): Promise<FareQuote> {
+    return request('/api/v1/bookings/quote', { method: 'POST', body: input });
   },
 
   getById(bookingId: string): Promise<BookingSummary> {
