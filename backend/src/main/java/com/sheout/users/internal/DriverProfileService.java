@@ -91,6 +91,17 @@ public class DriverProfileService implements DriverProfileApi {
         return Result.success(toSummary(profile));
     }
 
+    /**
+     * See DriverProfileApi.isCurrentlyVerified. Intentionally the real
+     * check with no bypass: the testing bypass may let a QA account go
+     * ONLINE, but it must not make that account eligible to be offered a
+     * real customer's booking.
+     */
+    @Override
+    public boolean isCurrentlyVerified(UUID accountId) {
+        return isFullyVerified(accountId);
+    }
+
     private boolean isFullyVerified(UUID accountId) {
         Optional<VerificationSummary> verification = verificationApi.findByAccountId(accountId);
         if (verification.isEmpty()) {
