@@ -5,6 +5,8 @@ import { Button, Card, IconCircle, ListRow, TextField, LiveMap, TopHeader } from
 import type { MapMarker } from '@sheout/design-system';
 import { ApiError, bookingApi } from '../api/client';
 import { FareEstimateCard } from '../components/FareEstimateCard';
+import { LocationPicker } from '../components/LocationPicker';
+import { currentPosition, describePoint } from '../lib/geocode';
 import { useFareQuote } from '../lib/useFareQuote';
 import type { BookingCategory, GeoAddress } from '../api/types';
 
@@ -66,7 +68,7 @@ export function DeliveryBooking() {
   const [pickup, setPickup] = useState<GeoAddress | null>(null);
   const [pickupError, setPickupError] = useState<string | null>(null);
   const [drop, setDrop] = useState<GeoAddress | null>(null);
-  const [pickingDrop, setPickingDrop] = useState(false);
+  const [picking, setPicking] = useState<'pickup' | 'drop' | null>(null);
   const [details, setDetails] = useState('');
   const [mealType, setMealType] = useState<MealType>('VEG');
   const [plan, setPlan] = useState<Plan>('DAILY');
@@ -75,16 +77,23 @@ export function DeliveryBooking() {
   const [error, setError] = useState<string | null>(null);
   const isLunchbox = kind === 'lunchbox';
 
+  // Try the device once on arrival as a convenience, and reverse-geocode it
+  // so the row reads as a place rather than "Your Current Location". A
+  // failure here is no longer terminal: pickup is a picker like the drop,
+  // so a blocked or unavailable location just means choosing it by hand.
   useEffect(() => {
-    if (!navigator.geolocation) {
-      setPickupError('Geolocation not supported by this browser');
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => setPickup({ label: 'Your Current Location', lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => setPickupError('Could not get your location - allow location access and retry'),
-      { timeout: 8000 }
-    );
+    let cancelled = false;
+    currentPosition()
+      .then(async ({ lat, lng }) => {
+        const address = await describePoint(lat, lng, 'Your Current Location');
+        if (!cancelled) setPickup(address);
+      })
+      .catch((err: Error) => {
+        if (!cancelled) setPickupError(err.message);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   async function handleContinue() {
@@ -125,8 +134,8 @@ export function DeliveryBooking() {
           <ListRow
             icon={<IconCircle icon={<MapPin />} size="sm" />}
             label="Pickup Location"
-            sublabel={pickup?.label ?? pickupError ?? 'Fetching your location...'}
-            chevron={false}
+            sublabel={pickup?.label ?? (pickupError ? 'Tap to choose your pickup point' : 'Finding your location...')}
+            onClick={() => setPicking('pickup')}
           />
         </div>
         <div className="p-4">
@@ -134,26 +143,11 @@ export function DeliveryBooking() {
             icon={<IconCircle color="orange" icon={<MapPin />} size="sm" />}
             label="Drop Location"
             sublabel={drop?.label ?? 'Select Destination'}
-            onClick={() => setPickingDrop((v) => !v)}
+            onClick={() => setPicking('drop')}
           />
         </div>
       </Card>
 
-      {pickingDrop && (
-        <Card className="divide-y divide-border p-0">
-          {DROP_PRESETS.map((preset) => (
-            <div className="p-4" key={preset.label}>
-              <ListRow
-                label={preset.label}
-                onClick={() => {
-                  setDrop(preset);
-                  setPickingDrop(false);
-                }}
-              />
-            </div>
-          ))}
-        </Card>
-      )}
 
       {/* Local-only, matching the mockup's layout - not sent to the backend, see file-level comment. */}
       {isLunchbox && (
@@ -211,6 +205,7 @@ export function DeliveryBooking() {
         onChange={(e) => setDetails(e.target.value)}
       />
 
+      {pickupError && !pickup && <p className="text-xs text-text-secondary">{pickupError}</p>}
       {error && <p className="text-sm text-danger">{error}</p>}
 
       <FareEstimateCard state={fare} />
@@ -218,6 +213,15 @@ export function DeliveryBooking() {
       <Button fullWidth disabled={!pickup || !drop || submitting} onClick={handleContinue}>
         {submitting ? 'Booking...' : config.cta}
       </Button>
+
+      <LocationPicker
+        open={picking !== null}
+        title={picking === 'pickup' ? 'Set pickup location' : 'Where to?'}
+        presets={DROP_PRESETS}
+        allowCurrentLocation={picking === 'pickup'}
+        onSelect={(address) => (picking === 'pickup' ? setPickup(address) : setDrop(address))}
+        onClose={() => setPicking(null)}
+      />
     </div>
   );
 }

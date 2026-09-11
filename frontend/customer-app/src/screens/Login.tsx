@@ -111,12 +111,35 @@ export function Login() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  /** Non-error feedback, e.g. 'that number is already registered'. */
+  const [notice, setNotice] = useState<string | null>(null);
 
   const phoneNumber = `+91${phoneDigits}`;
 
-  /** Shared by both sign-in methods - see the file header comment. */
+  /**
+   * Shared by both sign-in methods - see the file header comment.
+   * <p>
+   * Tapping "Sign Up" with a number that already has an account used to
+   * drop straight into Home with no acknowledgement, which reads as though
+   * the app ignored what you asked for. It now says so before continuing.
+   * <p>
+   * The check happens HERE, after the OTP is verified, and deliberately not
+   * before sending it. Telling someone whether a number is registered
+   * before they prove they control it would turn this screen into an
+   * account-enumeration oracle: anyone could type numbers and learn which
+   * belong to users of a women's safety app. After verification the caller
+   * has already proved the number is theirs, so there is nothing left to
+   * disclose.
+   */
   async function afterSignIn(session: AuthSession) {
     login(session);
+
+    if (mode === 'signup' && !session.newAccount) {
+      setNotice('That number is already registered - signing you in instead.');
+    } else if (mode === 'login' && session.newAccount) {
+      setNotice("We didn't find an account for that number, so we've created one.");
+    }
+
     let needsProfile = session.newAccount;
     try {
       const profile = await usersApi.getMyProfile();
@@ -127,13 +150,17 @@ export function Login() {
     if (needsProfile) {
       setStep('complete-profile');
     } else {
-      navigate('/home', { replace: true });
+      // Long enough to read the notice before the screen changes; skipped
+      // entirely when there is nothing to say.
+      const delay = mode === 'signup' && !session.newAccount ? 1400 : 0;
+      setTimeout(() => navigate('/home', { replace: true }), delay);
     }
   }
 
   async function handleSendOtp(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    setNotice(null);
     if (!PHONE_REGEX.test(phoneNumber)) {
       setError('Enter a valid 10-digit mobile number');
       return;
@@ -249,6 +276,10 @@ export function Login() {
 
           <h1 className="font-heading text-2xl font-bold text-text-primary">{AUTH_MODE_COPY[mode].heading}</h1>
           <p className="mb-6 text-sm text-text-secondary">{AUTH_MODE_COPY[mode].subtitle}</p>
+
+          {notice && (
+            <p className="mb-4 rounded-input bg-primary-light px-4 py-3 text-sm font-medium text-primary">{notice}</p>
+          )}
 
           {step === 'phone' ? (
             <form onSubmit={handleSendOtp} className="space-y-4">
