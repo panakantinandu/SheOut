@@ -1,4 +1,4 @@
-import { Bell, Bike, CheckCircle2, ClipboardList, Navigation2, Power, ShieldCheck, Star } from 'lucide-react';
+import { Bell, Bike, CheckCircle2, ClipboardList, MapPinOff, Navigation2, Power, ShieldCheck, Star } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AmountText, Button, Card, IconCircle, TopHeader } from '@sheout/design-system';
@@ -123,7 +123,7 @@ export function Home() {
 
   // Broadcast position while online. Shared with Trip via the hook so it
   // survives the navigation into a trip - see useLocationBroadcast.
-  useLocationBroadcast(isOnline);
+  const location = useLocationBroadcast(isOnline);
 
   async function handleToggleOnline() {
     if (!profile) return;
@@ -163,6 +163,21 @@ export function Home() {
       />
 
       {error && <p className="text-sm text-danger">{error}</p>}
+
+      {/* A driver who is online but not actually sharing a position is in no
+          dispatch search results at all. That used to be invisible: the app
+          broadcast a fixed city-centre coordinate instead, so everything
+          looked normal while requests went to drivers who were really
+          there. Say it plainly instead. */}
+      {isOnline && location.status === 'blocked' && (
+        <Card className="flex items-start gap-3 bg-danger/10">
+          <IconCircle color="red" tone="soft" icon={<MapPinOff />} />
+          <div className="flex-1">
+            <p className="font-heading font-semibold text-text-primary">Location not shared</p>
+            <p className="text-xs text-text-secondary">{location.error}</p>
+          </div>
+        </Card>
+      )}
 
       <Card className="flex items-center gap-3">
         <IconCircle size="lg" tone="soft" icon={<Star />} />

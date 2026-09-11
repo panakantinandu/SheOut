@@ -41,7 +41,8 @@ export function Trip() {
   // both sends the position and hands it back for the marker below, so
   // there is only one GPS subscription.
   const tripIsLive = booking ? ['ACCEPTED', 'IN_PROGRESS'].includes(booking.status) : false;
-  const myPosition = useLocationBroadcast(tripIsLive);
+  const location = useLocationBroadcast(tripIsLive);
+  const myPosition = location.position;
 
   useEffect(() => {
     if (!bookingId) return;
@@ -97,7 +98,9 @@ export function Trip() {
       <div className="space-y-1">
         <LiveMap markers={markers} />
         <p className="text-xs text-text-secondary">
-          {myPosition ? 'Your position updates as your device reports movement.' : 'Enable location to show your position on the map.'}
+          {myPosition
+            ? 'Your position updates as your device reports movement.'
+            : location.error ?? 'Finding your location...'}
         </p>
       </div>
 

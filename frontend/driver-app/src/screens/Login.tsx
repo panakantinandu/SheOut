@@ -61,6 +61,8 @@ export function Login() {
 
   const [step, setStep] = useState<'phone' | 'otp' | 'complete-profile'>('phone');
   const [mode, setMode] = useState<AuthMode>('login');
+  /** Non-error feedback, e.g. 'that number is already registered'. */
+  const [notice, setNotice] = useState<string | null>(null);
   const [phoneDigits, setPhoneDigits] = useState('');
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
@@ -71,8 +73,25 @@ export function Login() {
 
   const phoneNumber = `+91${phoneDigits}`;
 
+  /**
+   * Tapping Register with a number that already has an account used to drop
+   * straight into the dashboard with no acknowledgement, as though the app
+   * had ignored what was asked. It says so now.
+   * <p>
+   * The check runs AFTER the OTP is verified, deliberately not before
+   * sending it: reporting whether a number is registered before the caller
+   * proves they control it would let anyone probe numbers to learn which
+   * belong to SheOut partners. Once verified there is nothing left to
+   * disclose.
+   */
   async function afterSignIn(session: AuthSession) {
     login(session);
+
+    if (mode === 'register' && !session.newAccount) {
+      setNotice('That number is already registered - signing you in instead.');
+    } else if (mode === 'login' && session.newAccount) {
+      setNotice("We didn't find a partner account for that number, so we've created one.");
+    }
     let needsProfile = session.newAccount;
     try {
       const profile = await usersApi.getMyProfile();
@@ -83,13 +102,17 @@ export function Login() {
     if (needsProfile) {
       setStep('complete-profile');
     } else {
-      navigate('/home', { replace: true });
+      // Long enough to read the notice before the screen changes; skipped
+      // entirely when there is nothing to say.
+      const delay = mode === 'register' && !session.newAccount ? 1400 : 0;
+      setTimeout(() => navigate('/home', { replace: true }), delay);
     }
   }
 
   async function handleSendOtp(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    setNotice(null);
     if (!PHONE_REGEX.test(phoneNumber)) {
       setError('Enter a valid 10-digit mobile number');
       return;
@@ -212,6 +235,10 @@ export function Login() {
 
           <h1 className="text-center font-heading text-2xl font-bold text-text-primary">{AUTH_MODE_COPY[mode].heading}</h1>
           <p className="mb-8 text-center text-sm text-text-secondary">{AUTH_MODE_COPY[mode].subtitle}</p>
+
+          {notice && (
+            <p className="mb-4 rounded-input bg-primary-light px-4 py-3 text-center text-sm font-medium text-primary">{notice}</p>
+          )}
 
           {step === 'phone' ? (
             <>
