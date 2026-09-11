@@ -1,7 +1,7 @@
-import { CheckCircle2, MapPin, Phone, ShieldAlert, Users } from 'lucide-react';
+import { Bell, CheckCircle2, ChevronRight, MapPin, Phone, Users } from 'lucide-react';
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Button, Card, IconCircle, ListRow, TopHeader } from '@sheout/design-system';
+import { Card, IconCircle, ListRow, TopHeader } from '@sheout/design-system';
 import { ApiError, notificationsApi, usersApi } from '../api/client';
 import type { SosResponse } from '../api/types';
 
@@ -16,6 +16,17 @@ const SAFETY_FEATURES = [
 // (there is no "call" concept on the backend, calling is inherently
 // device-native).
 const EMERGENCY_TEL = '112';
+
+/**
+ * The mockup's three circular actions, in its order and colours. Filled
+ * circles with white glyphs rather than the tinted IconCircle used in
+ * lists, since here the circle is the button itself.
+ */
+const ACTIONS = [
+  { key: 'share', label: 'Share Location', bg: 'bg-primary', icon: <MapPin className="h-6 w-6" /> },
+  { key: 'call', label: 'Call Emergency', bg: 'bg-danger', icon: <Phone className="h-6 w-6" /> },
+  { key: 'contact', label: 'Contact', bg: 'bg-accent-orange', icon: <Users className="h-6 w-6" /> },
+] as const;
 
 function getCurrentPosition(): Promise<GeolocationPosition> {
   return new Promise((resolve, reject) => {
@@ -100,49 +111,76 @@ export function Sos() {
     <div className="space-y-6">
       <TopHeader variant="back" title="SOS" onBack={() => navigate('/home')} />
 
-      <Card className="flex flex-col items-center gap-3 text-center">
-        <IconCircle size="lg" color="red" icon={<ShieldAlert />} />
+      {/* The circle IS the trigger, as in the mockup - there is no separate
+          button beneath it. Same handleSendSos, same disabled-while-sending
+          behaviour and same result/error copy as before; only the tap
+          target's shape changed. */}
+      <div className="flex flex-col items-center gap-3 text-center">
+        <button
+          type="button"
+          onClick={handleSendSos}
+          disabled={sending}
+          aria-label={sending ? 'Sending SOS alert' : 'Send SOS alert'}
+          className="relative flex h-44 w-44 items-center justify-center rounded-full transition-transform active:scale-95 disabled:opacity-70"
+        >
+          {/* Two soft rings, not a shadow - the mockup's glow reads as a
+              lighter halo of the same red rather than a drop shadow. */}
+          <span className="absolute inset-0 rounded-full bg-danger/15" aria-hidden="true" />
+          <span className="absolute inset-3 rounded-full bg-danger/25" aria-hidden="true" />
+          <span className="relative flex h-32 w-32 flex-col items-center justify-center gap-0.5 rounded-full bg-danger text-text-inverse shadow-card">
+            <Bell className="h-9 w-9" />
+            <span className="font-heading text-2xl font-extrabold tracking-wide">SOS</span>
+          </span>
+        </button>
+
         <p className="font-heading text-lg font-semibold text-text-primary">In Emergency?</p>
-        <p className="text-sm text-text-secondary">Press SOS for immediate help</p>
-        <Button variant="danger" fullWidth disabled={sending} onClick={handleSendSos}>
-          {sending ? 'Sending SOS Alert...' : 'Send SOS Alert'}
-        </Button>
+        <p className="text-sm text-text-secondary">
+          {sending ? 'Sending SOS alert...' : 'Press SOS for immediate help'}
+        </p>
 
         {result && (
           <p className={`text-sm font-medium ${result.success ? 'text-success' : 'text-danger'}`}>{reasonMessage(result)}</p>
         )}
         {error && <p className="text-sm font-medium text-danger">{error}</p>}
-      </Card>
+      </div>
 
-      <Card className="divide-y divide-border p-0">
-        <div className="p-4">
-          <ListRow
-            icon={<IconCircle tone="soft" icon={<MapPin />} />}
-            label={sending ? 'Sharing...' : 'Share Location'}
-            onClick={handleSendSos}
-          />
+      {/* A row of circular icon buttons with labels beneath, per the mockup,
+          instead of a vertical chevron list. Each one keeps the handler it
+          already had. */}
+      <div>
+        <div className="flex items-start justify-around">
+          {ACTIONS.map((action) => (
+            <button
+              key={action.key}
+              type="button"
+              onClick={
+                action.key === 'share' ? handleSendSos
+                  : action.key === 'call' ? () => { window.location.href = `tel:${EMERGENCY_TEL}`; }
+                    : handleContact
+              }
+              disabled={action.key === 'share' && sending}
+              className="flex w-24 flex-col items-center gap-2 disabled:opacity-70"
+            >
+              <span className={`flex h-14 w-14 items-center justify-center rounded-full text-text-inverse ${action.bg}`}>
+                {action.icon}
+              </span>
+              <span className="text-center text-xs font-semibold leading-tight text-text-primary">
+                {action.key === 'share' && sending ? 'Sharing...' : action.label}
+              </span>
+            </button>
+          ))}
         </div>
-        <div className="p-4">
-          <ListRow
-            icon={<IconCircle tone="soft" color="orange" icon={<Phone />} />}
-            label="Call Emergency"
-            onClick={() => {
-              window.location.href = `tel:${EMERGENCY_TEL}`;
-            }}
-          />
-        </div>
-        <div className="p-4">
-          <ListRow
-            icon={<IconCircle tone="soft" color="green" icon={<Users />} />}
-            label="Contact"
-            onClick={handleContact}
-          />
-        </div>
-        {contactLookupError && <p className="px-4 pb-4 text-sm text-danger">{contactLookupError}</p>}
-      </Card>
+        {contactLookupError && <p className="mt-3 text-center text-sm text-danger">{contactLookupError}</p>}
+      </div>
 
       <div>
-        <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">Safety Features</h2>
+        {/* Chevron per the mockup. There is no deeper safety-settings screen
+            to open, so it is decorative and the heading is not a button -
+            a chevron that navigated nowhere would be worse than none. */}
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="font-heading text-base font-semibold text-text-primary">Safety Features</h2>
+          <ChevronRight className="h-5 w-5 text-text-secondary" aria-hidden="true" />
+        </div>
         <Card className="space-y-3">
           {SAFETY_FEATURES.map((feature) => (
             <ListRow key={feature} icon={<IconCircle tone="soft" color="green" size="sm" icon={<CheckCircle2 />} />} label={feature} chevron={false} />
