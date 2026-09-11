@@ -1,4 +1,4 @@
-import { Bike, CheckCircle2, ClipboardList, Navigation2, Power, ShieldCheck, Star } from 'lucide-react';
+import { Bell, Bike, CheckCircle2, ClipboardList, Navigation2, Power, ShieldCheck, Star } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AmountText, Button, Card, IconCircle, TopHeader } from '@sheout/design-system';
@@ -141,12 +141,25 @@ export function Home() {
 
   return (
     <div className="space-y-6">
+      {/* Centred "Partner Dashboard" title, per the mockup. The bell moves
+          into the right slot rather than disappearing with the greeting
+          header - it is this app's only route to the notifications
+          screen. */}
       <TopHeader
-        variant="greeting"
-        title={`Hi, ${profile?.name?.split(' ')[0] || 'there'} 👋`}
-        subtitle={isOnline ? "You're online" : "You're offline"}
-        onMenuClick={() => navigate('/profile')}
-        onBellClick={() => navigate('/notifications')}
+        variant="back"
+        centerTitle
+        title="Partner Dashboard"
+        onBack={() => navigate(-1)}
+        rightSlot={
+          <button
+            type="button"
+            aria-label="Notifications"
+            onClick={() => navigate('/notifications')}
+            className="flex h-9 w-9 items-center justify-center rounded-full text-text-primary hover:bg-background"
+          >
+            <Bell className="h-5 w-5" />
+          </button>
+        }
       />
 
       {error && <p className="text-sm text-danger">{error}</p>}
@@ -155,27 +168,42 @@ export function Home() {
         <IconCircle size="lg" tone="soft" icon={<Star />} />
         <div className="flex-1">
           <p className="font-heading font-semibold text-text-primary">{profile?.name || 'Loading...'}</p>
-          {/* MOCK: no ratings/reviews system exists on the backend - fixed placeholder, clearly labeled, not fabricated as real. */}
-          <p className="text-xs text-text-secondary">★ 4.8 (mock) &middot; {profile?.vehicleType ?? '--'}</p>
+          <div className="flex items-center gap-2">
+            {/* Online/offline dot, as the mockup shows beside the name. Real
+                state from the profile, not decoration. */}
+            <span className="flex items-center gap-1.5 text-xs text-text-secondary">
+              <span
+                className={`h-2 w-2 rounded-full ${isOnline ? 'bg-accent-green' : 'bg-text-secondary/40'}`}
+                aria-hidden="true"
+              />
+              {isOnline ? 'Online' : 'Offline'}
+            </span>
+            {/* MOCK: no ratings/reviews system exists on the backend - fixed placeholder, clearly labeled, not fabricated as real. */}
+            <span className="text-xs text-text-secondary">&middot; ★ 4.8 (mock) &middot; {profile?.vehicleType ?? '--'}</span>
+          </div>
         </div>
       </Card>
 
-      <div className="grid grid-cols-3 gap-3">
-        <Card className="space-y-1 p-3 text-center">
-          <p className="text-xs text-text-secondary">Today</p>
+      {/* One card split by dividers, matching the mockup, rather than three
+          separate cards with gaps between them. */}
+      <Card className="flex items-stretch p-0">
+        <div className="flex-1 space-y-1 p-3 text-center">
+          <p className="text-xs text-text-secondary">Today's Earnings</p>
           <AmountText amount={todayEarnings} size="sm" />
-        </Card>
-        <Card className="flex flex-col items-center gap-1 p-3 text-center">
+        </div>
+        <div className="w-px self-stretch bg-border" aria-hidden="true" />
+        <div className="flex flex-1 flex-col items-center gap-1 p-3 text-center">
           <CheckCircle2 className="h-4 w-4 text-accent-green" />
           <p className="font-heading text-sm font-semibold text-text-primary">{completedRides}</p>
-          <p className="text-xs text-text-secondary">Completed</p>
-        </Card>
-        <Card className="flex flex-col items-center gap-1 p-3 text-center">
+          <p className="text-xs text-text-secondary">Completed Rides</p>
+        </div>
+        <div className="w-px self-stretch bg-border" aria-hidden="true" />
+        <div className="flex flex-1 flex-col items-center gap-1 p-3 text-center">
           <ClipboardList className="h-4 w-4 text-primary" />
           <p className="font-heading text-sm font-semibold text-text-primary">{activeTripsCount}</p>
-          <p className="text-xs text-text-secondary">Active</p>
-        </Card>
-      </div>
+          <p className="text-xs text-text-secondary">Active Trips</p>
+        </div>
+      </Card>
 
       {!verification ? (
         <p className="text-center text-sm text-text-secondary">Loading...</p>

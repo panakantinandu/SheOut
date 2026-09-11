@@ -1,3 +1,4 @@
+export * from './BrandHeader';
 export * from './Button';
 export * from './Card';
 export * from './IconCircle';

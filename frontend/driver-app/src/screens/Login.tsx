@@ -1,7 +1,7 @@
 import { Bike, Car, Phone, Truck, User } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, TextField } from '@sheout/design-system';
+import { BrandHeader, Button, TextField } from '@sheout/design-system';
 import { ApiError, authApi, usersApi } from '../api/client';
 import type { AuthSession, VehicleType } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
@@ -111,7 +111,10 @@ export function Login() {
 
   return (
     <div className="flex min-h-screen flex-col justify-center bg-background px-screen py-10">
-      <img src="/Logo.jpeg" alt="SheOut" className="mx-auto mb-6 h-16 w-16 rounded-card object-cover shadow-card" />
+      {/* Same lockup customer-app's Login uses, from the shared package -
+          this screen used to show a 64px Logo.jpeg tile and a plain text
+          heading, which read as a different product to the rider app. */}
+      <BrandHeader size="md" className="mb-6" />
 
       {step === 'complete-profile' ? (
         <>
@@ -158,24 +161,42 @@ export function Login() {
         </>
       ) : (
         <>
-          <h1 className="text-center font-heading text-2xl font-bold text-text-primary">Driver Login</h1>
+          <h1 className="text-center font-heading text-2xl font-bold text-text-primary">Partner Login</h1>
           <p className="mb-8 text-center text-sm text-text-secondary">Sign in to start driving</p>
 
           {step === 'phone' ? (
-            <form onSubmit={handleSendOtp} className="space-y-4">
-              <TextField
-                icon={<Phone className="h-4 w-4 text-text-secondary" />}
-                type="tel"
-                inputMode="numeric"
-                placeholder="Mobile Number"
-                value={phoneDigits}
-                onChange={(e) => setPhoneDigits(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                error={error ?? undefined}
-              />
-              <Button type="submit" fullWidth disabled={submitting}>
-                {submitting ? 'Sending...' : 'Send OTP'}
-              </Button>
-            </form>
+            <>
+              <form onSubmit={handleSendOtp} className="space-y-4">
+                <TextField
+                  // Identical prefix treatment to customer-app's Login: the
+                  // country code is fixed, so it is shown rather than typed.
+                  icon={
+                    <span className="flex items-center gap-2 text-text-secondary">
+                      <Phone className="h-4 w-4" />
+                      <span className="h-4 w-px bg-border" />
+                      <span className="text-sm font-medium text-text-primary">+91</span>
+                    </span>
+                  }
+                  type="tel"
+                  inputMode="numeric"
+                  placeholder="Mobile Number"
+                  value={phoneDigits}
+                  onChange={(e) => setPhoneDigits(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                  error={error ?? undefined}
+                />
+                <Button type="submit" fullWidth disabled={submitting}>
+                  {submitting ? 'Sending...' : 'Send OTP'}
+                </Button>
+              </form>
+
+              {/* The mockup's Partner Login tile carries this line under the
+                  form. No password field and no "Register" link: sign-in is
+                  OTP-only, and a first-time number is routed to the profile
+                  step after verification, not before it. */}
+              <p className="mt-8 text-center text-xs font-medium text-text-secondary">
+                Empowering Women Partners
+              </p>
+            </>
           ) : (
             <form onSubmit={handleVerifyOtp} className="space-y-4">
               <p className="text-center text-sm text-text-secondary">Enter the code sent to {phoneNumber}</p>
