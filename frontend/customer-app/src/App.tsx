@@ -10,6 +10,7 @@ import { Notifications } from './screens/Notifications'
 import { PaymentMethods } from './screens/PaymentMethods'
 import { PersonalDetails } from './screens/PersonalDetails'
 import { SavedAddresses } from './screens/SavedAddresses'
+import { Verification } from './screens/Verification'
 import { MyBookings } from './screens/MyBookings'
 import { Profile } from './screens/Profile'
 import { RideBooking } from './screens/RideBooking'
@@ -51,6 +52,7 @@ function App() {
       <Route path="/profile/details" element={protectedOnly(<PersonalDetails />)} />
       <Route path="/profile/addresses" element={protectedOnly(<SavedAddresses />)} />
       <Route path="/profile/payments" element={protectedOnly(<PaymentMethods />)} />
+      <Route path="/verification" element={protectedOnly(<Verification />)} />
       <Route path="/help" element={protectedOnly(<HelpSupport />)} />
       <Route path="/about" element={protectedOnly(<About />)} />
 
