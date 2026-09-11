@@ -38,7 +38,7 @@ public class NotificationLogService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void recordLog(UUID recipientAccountId, String recipientAddress, NotificationType type,
-                           NotificationChannelType channel, Result<Void, NotificationError> outcome) {
+                           NotificationChannelType channel, Result<Void, SendFailure> outcome) {
         NotificationStatus status = outcome.isSuccess() ? NotificationStatus.SENT : NotificationStatus.FAILED;
         String failureReason = outcome.isFailure() ? outcome.error().toString() : null;
         notificationLogRepository.save(

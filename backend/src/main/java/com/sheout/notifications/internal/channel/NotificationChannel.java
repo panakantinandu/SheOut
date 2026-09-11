@@ -1,6 +1,6 @@
 package com.sheout.notifications.internal.channel;
 
-import com.sheout.notifications.internal.NotificationError;
+import com.sheout.notifications.internal.SendFailure;
 import com.sheout.sharedkernel.Result;
 
 /**
@@ -21,5 +21,5 @@ import com.sheout.sharedkernel.Result;
  */
 public interface NotificationChannel {
 
-    Result<Void, NotificationError> send(String recipient, String message);
+    Result<Void, SendFailure> send(String recipient, String message);
 }

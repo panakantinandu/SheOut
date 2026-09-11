@@ -96,10 +96,10 @@ class NotificationEventListeners {
         String phone = authApi.findAccount(accountId).map(account -> account.phoneNumber()).orElse(null);
         if (phone == null) {
             notificationLogService.recordLog(accountId, null, type, NotificationChannelType.SMS,
-                    Result.failure(NotificationError.NO_RECIPIENT_ADDRESS));
+                    Result.failure(SendFailure.of(NotificationError.NO_RECIPIENT_ADDRESS)));
             return;
         }
-        Result<Void, NotificationError> outcome = smsChannel.send(phone, message);
+        Result<Void, SendFailure> outcome = smsChannel.send(phone, message);
         notificationLogService.recordLog(accountId, phone, type, NotificationChannelType.SMS, outcome);
     }
 }
