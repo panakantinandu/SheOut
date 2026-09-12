@@ -8,7 +8,8 @@ import { FareEstimateCard } from '../components/FareEstimateCard';
 import { LocationPicker } from '../components/LocationPicker';
 import type { PickerMode } from '../components/LocationPicker';
 import { LocationRow } from '../components/LocationRow';
-import { currentPosition, describePoint } from '../lib/geocode';
+import { ServiceAreaNotice } from '../components/ServiceAreaNotice';
+import { currentPosition, describePoint, isInServiceArea } from '../lib/geocode';
 import { useFareQuote } from '../lib/useFareQuote';
 import type { GeoAddress } from '../api/types';
 
@@ -82,6 +83,11 @@ export function RideBooking() {
     }
   }
 
+  // Both ends inside the boundary. Drives the fare card and the CTA: an
+  // estimate for a trip that cannot be booked is misleading on its own,
+  // regardless of what the eventual booking call would say.
+  const servableTrip = isInServiceArea(pickup) && isInServiceArea(drop);
+
   const markers: MapMarker[] = [];
   if (pickup) markers.push({ key: 'pickup', lat: pickup.lat, lng: pickup.lng, label: 'Pickup', kind: 'pickup' });
   if (drop) markers.push({ key: 'drop', lat: drop.lat, lng: drop.lng, label: 'Drop', kind: 'drop' });
@@ -122,9 +128,11 @@ export function RideBooking() {
       {pickupError && !pickup && <p className="text-xs text-text-secondary">{pickupError}</p>}
       {error && <p className="text-sm text-danger">{error}</p>}
 
-      <FareEstimateCard state={fare} />
+      <ServiceAreaNotice pickup={pickup} drop={drop} />
 
-      <Button fullWidth disabled={!pickup || !drop || submitting} onClick={handleBookNow}>
+      {servableTrip && <FareEstimateCard state={fare} />}
+
+      <Button fullWidth disabled={!pickup || !drop || !servableTrip || submitting} onClick={handleBookNow}>
         {submitting ? 'Booking...' : 'Book Now'}
       </Button>
 

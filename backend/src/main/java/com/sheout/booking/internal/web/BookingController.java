@@ -5,6 +5,7 @@ import com.sheout.auth.CurrentAccount;
 import com.sheout.auth.CurrentAccountContext;
 import com.sheout.booking.BookingCategory;
 import com.sheout.booking.BookingError;
+import com.sheout.booking.internal.ServiceArea;
 import com.sheout.booking.internal.fare.FareQuote;
 import com.sheout.booking.BookingSummary;
 import com.sheout.booking.BookingType;
@@ -40,9 +41,11 @@ import java.util.UUID;
 public class BookingController {
 
     private final BookingService bookingService;
+    private final ServiceArea serviceArea;
 
-    public BookingController(BookingService bookingService) {
+    public BookingController(BookingService bookingService, ServiceArea serviceArea) {
         this.bookingService = bookingService;
+        this.serviceArea = serviceArea;
     }
 
     @PostMapping("/api/v1/bookings")
@@ -87,8 +90,16 @@ public class BookingController {
         if (request.category().expectedType() != request.type()) {
             throw toApiException(BookingError.CATEGORY_TYPE_MISMATCH);
         }
-        FareQuote quote = bookingService.quoteFare(
+        // Quoting refuses an out-of-area trip too, not only booking. A price
+        // for a trip that can never be booked is worse than no price: it
+        // reads as a promise, and the customer finds out it was not one only
+        // after filling in both ends.
+        Result<FareQuote, BookingError> result = bookingService.quoteFare(
                 request.category(), request.pickup().toGeoAddress(), request.drop().toGeoAddress());
+        if (result.isFailure()) {
+            throw toApiException(result.error());
+        }
+        FareQuote quote = result.value();
         return ResponseEntity.ok(new FareQuoteResponse(
                 quote.amount(),
                 BigDecimal.valueOf(quote.distanceKm()).setScale(1, RoundingMode.HALF_UP),
@@ -193,6 +204,18 @@ public class BookingController {
         return switch (error) {
             case CUSTOMER_NOT_VERIFIED -> new ApiException(
                     HttpStatus.CONFLICT, "Conflict", "Customer must be gender-verified before booking");
+            // The one case where `error` carries a machine-readable code
+            // rather than the HTTP reason phrase. The apps need to tell this
+            // refusal apart from every other 409 so they can name the real
+            // reason instead of showing a generic failure, and this field is
+            // the one the standard error shape already has for the kind of
+            // error. The message carries the configured radius so it stays
+            // true when the boundary is widened.
+            case OUTSIDE_SERVICE_AREA -> new ApiException(
+                    HttpStatus.CONFLICT, "OUTSIDE_SERVICE_AREA",
+                    "SheOut currently operates only in and around " + serviceArea.centreName()
+                            + ". Pickup and drop must both be within "
+                            + Math.round(serviceArea.radiusKm()) + "km of the city.");
             case CATEGORY_TYPE_MISMATCH -> new ApiException(
                     HttpStatus.BAD_REQUEST, "Bad Request", "category does not match the requested type");
             case BOOKING_NOT_FOUND -> ApiException.notFound("No such booking");

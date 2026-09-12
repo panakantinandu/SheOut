@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ApiError, bookingApi } from '../api/client';
+import { isInServiceArea } from './geocode';
 import type { BookingCategory, BookingType, FareQuote, GeoAddress } from '../api/types';
 
 /** Long enough to swallow a burst of taps, short enough that the card feels immediate. */
@@ -44,6 +45,14 @@ export function useFareQuote({ type, category, pickup, drop }: FareQuoteInput): 
 
   useEffect(() => {
     if (!pickup || !drop) {
+      setState({ quote: null, loading: false, error: null });
+      return;
+    }
+    // A price for a trip that can never be booked reads as a promise. The
+    // backend refuses to quote one too, so this only avoids a request that
+    // would come back a 409 - the screen says why separately, right next to
+    // the field that is out of range.
+    if (!isInServiceArea(pickup) || !isInServiceArea(drop)) {
       setState({ quote: null, loading: false, error: null });
       return;
     }

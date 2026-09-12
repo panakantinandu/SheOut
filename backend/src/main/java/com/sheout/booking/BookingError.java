@@ -9,6 +9,8 @@ package com.sheout.booking;
  */
 public enum BookingError {
     CUSTOMER_NOT_VERIFIED,
+    /** Pickup or drop is outside the radius SheOut operates in - see ServiceArea. */
+    OUTSIDE_SERVICE_AREA,
     CATEGORY_TYPE_MISMATCH,
     BOOKING_NOT_FOUND,
     INVALID_STATE_TRANSITION

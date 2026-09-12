@@ -18,9 +18,6 @@ import type { GeoAddress } from '../api/types';
  */
 const NOMINATIM = 'https://nominatim.openstreetmap.org';
 
-/** Biases results towards India, which is where this app operates. */
-const COUNTRY_CODES = 'in';
-
 /**
  * Hyderabad, the only city SheOut launches in. Passed as a viewbox so
  * matching places here float to the top, without `bounded=1` - a customer
@@ -33,6 +30,45 @@ const HYDERABAD_VIEWBOX = '78.24,17.20,78.62,17.60';
  * Hyderabad's centre. Where the map picker opens before a pin exists.
  */
 export const CITY_CENTRE = { lat: 17.4483, lng: 78.3915 };
+
+/**
+ * The service boundary, mirrored from the backend's
+ * sheout.booking.service-area config so a customer is told immediately
+ * rather than after filling in both ends.
+ * <p>
+ * This is a convenience, NOT the rule. The backend checks the same boundary
+ * on both the quote and the booking, because anything decided in a browser
+ * can be edited in a browser. If the two ever disagree the backend wins and
+ * the customer sees its refusal; keeping these numbers in step is a
+ * deployment concern, not a correctness one.
+ */
+export const SERVICE_CENTRE = { lat: 17.385, lng: 78.4867 };
+export const SERVICE_RADIUS_KM = 150;
+export const SERVICE_CENTRE_NAME = 'Hyderabad';
+
+/** Same haversine the backend prices and gates on, in kilometres. */
+export function distanceKm(
+  from: { lat: number; lng: number },
+  to: { lat: number; lng: number }
+): number {
+  const R = 6371;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(to.lat - from.lat);
+  const dLng = toRad(to.lng - from.lng);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(from.lat)) * Math.cos(toRad(to.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+export function isInServiceArea(point: { lat: number; lng: number } | null | undefined): boolean {
+  if (!point) return true; // nothing chosen yet is not an error
+  return distanceKm(SERVICE_CENTRE, point) <= SERVICE_RADIUS_KM;
+}
+
+/** What a customer is told when a place is out of range. */
+export const OUT_OF_AREA_MESSAGE =
+  `SheOut currently operates only in and around ${SERVICE_CENTRE_NAME} - this location is outside our service area right now.`;
 
 /**
  * Nominatim's policy caps absolute traffic at one request per second, so
@@ -87,9 +123,16 @@ export async function searchPlaces(query: string, signal?: AbortSignal): Promise
   const trimmed = query.trim();
   if (trimmed.length < 3) return [];
 
+  // No countrycodes filter any more. It used to hide everything outside
+  // India, which meant a customer searching somewhere we do not serve got an
+  // empty list and no explanation - indistinguishable from a typo or a
+  // broken search. Now that the service boundary is enforced properly, real
+  // matches are shown and the ones out of range are labelled. The viewbox
+  // still floats Hyderabad results to the top, which is what actually
+  // matters for the common case.
   const url =
     `${NOMINATIM}/search?format=jsonv2&limit=6&addressdetails=0` +
-    `&countrycodes=${COUNTRY_CODES}&viewbox=${HYDERABAD_VIEWBOX}` +
+    `&viewbox=${HYDERABAD_VIEWBOX}` +
     `&q=${encodeURIComponent(trimmed)}${contactParam()}`;
 
   const res = await throttled(() => fetch(url, { signal, headers: { Accept: 'application/json' } }));
