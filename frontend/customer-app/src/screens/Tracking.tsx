@@ -1,4 +1,4 @@
-import { MessageCircle, Phone, Radio, ShieldAlert, Star } from 'lucide-react';
+import { CheckCircle2, MessageCircle, Phone, Radio, ShieldAlert, Star, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AmountText, Button, Card, IconCircle, LiveMap, StatusBadge, TopHeader, bookingStatusLabel } from '@sheout/design-system';
@@ -42,8 +42,11 @@ export function Tracking() {
   const [cancelling, setCancelling] = useState(false);
   const [driverLocation, setDriverLocation] = useState<DriverLocation | null>(null);
 
+  /** Set once the trip reaches a status that can never change again. */
+  const terminalStatus = booking?.status === 'CANCELLED' || booking?.status === 'COMPLETED';
+
   useEffect(() => {
-    if (!bookingId) return;
+    if (!bookingId || terminalStatus) return;
     let cancelled = false;
 
     async function poll() {
@@ -61,12 +64,15 @@ export function Tracking() {
       cancelled = true;
       clearInterval(interval);
     };
-  }, [bookingId]);
+    // terminalStatus in the deps, not the whole booking: re-subscribing on
+    // every poll would defeat the interval. Once the trip is finished the
+    // effect tears its timer down and never sets another.
+  }, [bookingId, terminalStatus]);
 
   // Driver position, polled only once a driver is actually assigned - before
   // that the endpoint has nothing to return and would 404 on every tick.
   useEffect(() => {
-    if (!bookingId || !booking?.driverId) return;
+    if (!bookingId || !booking?.driverId || terminalStatus) return;
     let cancelled = false;
 
     async function pollLocation() {
@@ -85,7 +91,7 @@ export function Tracking() {
       cancelled = true;
       clearInterval(interval);
     };
-  }, [bookingId, booking?.driverId]);
+  }, [bookingId, booking?.driverId, terminalStatus]);
 
   async function handleCancel() {
     if (!bookingId) return;
@@ -100,7 +106,19 @@ export function Tracking() {
     }
   }
 
-  const hasDriver = Boolean(booking?.driverId);
+  /**
+   * A booking that has finished, one way or the other. Nothing about it is
+   * going to change again.
+   * <p>
+   * This screen used to branch on one thing only - whether a driver was
+   * assigned - so a cancelled trip fell into the same arm as a brand new
+   * one and sat there saying "Searching for a nearby driver... this usually
+   * takes under a minute", under a badge that said Cancelled. It also kept
+   * polling the booking every 3 seconds and the driver's position every 7,
+   * forever, for a trip that no longer existed.
+   */
+  const isFinished = terminalStatus;
+  const hasDriver = Boolean(booking?.driverId) && !isFinished;
   const markers: MapMarker[] = [];
   if (booking) {
     markers.push({ key: 'pickup', lat: booking.pickup.lat, lng: booking.pickup.lng, label: 'Pickup', kind: 'pickup' });
@@ -113,12 +131,37 @@ export function Tracking() {
 
   return (
     <div className="space-y-6">
-      <TopHeader variant="back" title={hasDriver ? 'On the Way' : 'Finding a Driver'} onBack={() => navigate('/home')} />
+      <TopHeader variant="back" title={isFinished ? (booking?.status === 'CANCELLED' ? 'Trip Cancelled' : 'Trip Completed') : hasDriver ? 'On the Way' : 'Finding a Driver'} onBack={() => navigate('/home')} />
 
       {error && <p className="text-sm text-danger">{error}</p>}
 
       {!booking ? (
         <p className="text-center text-sm text-text-secondary">Loading...</p>
+      ) : isFinished ? (
+        <Card
+          tone={booking.status === 'CANCELLED' ? 'danger' : 'success'}
+          className="flex items-start gap-3"
+        >
+          <IconCircle
+            size="lg"
+            tone="soft"
+            color={booking.status === 'CANCELLED' ? 'red' : 'green'}
+            icon={booking.status === 'CANCELLED' ? <XCircle /> : <CheckCircle2 />}
+          />
+          <div className="flex-1">
+            <p className="font-heading font-semibold text-text-primary">
+              {booking.status === 'CANCELLED' ? 'This trip was cancelled' : 'Trip completed'}
+            </p>
+            <p className="mt-1 text-sm text-text-secondary">
+              {booking.status === 'CANCELLED'
+                ? 'No driver is on the way. Book again whenever you are ready.'
+                : 'Thanks for riding with SheOut.'}
+            </p>
+            <Button size="md" variant="secondary" className="mt-3" onClick={() => navigate('/home')}>
+              {booking.status === 'CANCELLED' ? 'Book another ride' : 'Back to home'}
+            </Button>
+          </div>
+        </Card>
       ) : !hasDriver ? (
         <Card className="text-center">
           <p className="font-heading font-semibold text-text-primary">Searching for a nearby driver...</p>
@@ -153,11 +196,13 @@ export function Tracking() {
       <div className="space-y-1">
         <LiveMap markers={markers} />
         <p className="text-xs text-text-secondary">
-          {driverLocation
-            ? `Driver position updated ${secondsAgo(driverLocation.recordedAt)}s ago - refreshes every ${DRIVER_LOCATION_POLL_MS / 1000}s`
-            : hasDriver
-              ? 'Waiting for the driver to report a position...'
-              : 'Showing your pickup and drop. The driver appears once one is assigned.'}
+          {isFinished
+            ? 'Where this trip would have started and ended.'
+            : driverLocation
+              ? `Driver position updated ${secondsAgo(driverLocation.recordedAt)}s ago - refreshes every ${DRIVER_LOCATION_POLL_MS / 1000}s`
+              : hasDriver
+                ? 'Waiting for the driver to report a position...'
+                : 'Showing your pickup and drop. The driver appears once one is assigned.'}
         </p>
       </div>
 
@@ -171,7 +216,15 @@ export function Tracking() {
           strip - this app has no ETA to show there. */}
       {booking && (
         <Card className="flex items-center justify-between">
-          <span className="text-sm text-text-secondary">{booking.status === 'COMPLETED' ? 'Final Fare' : 'Estimated Fare'}</span>
+          {/* A cancelled trip was never charged. Showing a rupee figure
+              with no qualifier reads as a bill. */}
+          <span className="text-sm text-text-secondary">
+            {booking.status === 'COMPLETED'
+              ? 'Final Fare'
+              : booking.status === 'CANCELLED'
+                ? 'Estimated fare - not charged'
+                : 'Estimated Fare'}
+          </span>
           <AmountText amount={booking.finalFare ?? booking.fareEstimate} size="lg" />
         </Card>
       )}
@@ -191,6 +244,11 @@ export function Tracking() {
         </Card>
       )}
 
+      {/* Hidden once the trip is over. Sharing a live location for a
+          cancelled trip, or offering to call a driver who was never coming,
+          are both offers of something that does not exist. SOS stays
+          reachable from the tab bar and Home regardless. */}
+      {!isFinished && (
       <div className="flex justify-around">
         <button
           className="flex flex-col items-center gap-1 text-xs text-text-secondary"
@@ -214,6 +272,7 @@ export function Tracking() {
           Call
         </button>
       </div>
+      )}
 
       {canCancel && (
         <Button variant="danger" fullWidth disabled={cancelling} onClick={handleCancel}>

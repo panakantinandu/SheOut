@@ -1,7 +1,7 @@
 import { User } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BrandHeader, Button, PhoneField, TextField, isCompletePhone, toE164 } from '@sheout/design-system';
+import { BrandHeader, Button, LegalConsentNotice, PhoneField, TextField, isCompletePhone, toE164 } from '@sheout/design-system';
 import { ApiError, authApi, usersApi } from '../api/client';
 import type { AuthSession } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
@@ -283,6 +283,13 @@ export function Login() {
           {step === 'phone' ? (
             <form onSubmit={handleSendOtp} className="space-y-4">
               <PhoneField value={phoneDigits} onChange={setPhoneDigits} error={error ?? undefined} />
+              {/* Above the button, so it is read before the decision rather
+                  than after it - see LegalConsentNotice. */}
+              <LegalConsentNotice
+                actionLabel="Send OTP"
+                onOpenTerms={() => navigate('/terms')}
+                onOpenPrivacy={() => navigate('/privacy')}
+              />
               <Button type="submit" fullWidth disabled={submitting}>
                 {submitting ? 'Sending...' : 'Send OTP'}
               </Button>

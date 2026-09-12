@@ -82,6 +82,9 @@ public class AuthController {
         return switch (error) {
             case OTP_DELIVERY_FAILED ->
                     new ApiException(HttpStatus.BAD_GATEWAY, "Bad Gateway", "Failed to deliver OTP code");
+            case OTP_TOO_MANY_REQUESTS ->
+                    new ApiException(HttpStatus.TOO_MANY_REQUESTS, "Too Many Requests",
+                            "Too many codes requested for this number. Please wait a minute and try again.");
             case OTP_NOT_FOUND_OR_EXPIRED ->
                     new ApiException(HttpStatus.BAD_REQUEST, "Bad Request", "No OTP requested for this number, or it has expired");
             case OTP_CODE_MISMATCH ->

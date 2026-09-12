@@ -385,9 +385,20 @@ let sort = { key: null, dir: 'asc' };
 let lastRows = [];
 
 const $ = id => document.getElementById(id);
+/**
+ * Escapes for HTML. Single quotes and backticks are in the set on purpose:
+ * without them a value placed inside a single-quoted attribute, or inside a
+ * JS string built into markup, can close its own delimiter and run. There
+ * was exactly one such site here (the document image's onerror handler),
+ * and it was safe only because an upload filename is sanitised to
+ * [A-Za-z0-9._-] two modules away - a guarantee this file cannot see and
+ * should not be relying on.
+ */
 const esc = v => (v === null || v === undefined || v === '')
   ? '—'
-  : String(v).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  : String(v).replace(/[&<>"'`]/g, c => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '`': '&#96;',
+    }[c]));
 const time = v => v ? new Date(v).toLocaleString() : '—';
 
 /**
@@ -786,10 +797,34 @@ function openDriver(r) {
         // when it can be shown, and the path when it cannot, rather than an
         // empty frame that looks broken.
         const isFile = String(out.url || '').startsWith('file:');
-        box.innerHTML = isFile
-          ? `<div class="fallback">This document is stored on the server's local disk, which a browser cannot display directly.<br><code>${esc(out.url)}</code></div>`
-          : `<img src="${esc(out.url)}" alt="Submitted identity document"
-                  onerror="this.parentElement.innerHTML='<div class=&quot;fallback&quot;>Could not load the document image. <a href=&quot;${esc(out.url)}&quot; target=&quot;_blank&quot; rel=&quot;noreferrer&quot;>Open it directly</a>.</div>'">`;
+        if (isFile) {
+          box.innerHTML = `<div class="fallback">This document is stored on the server's local disk, which a browser cannot display directly.<br><code>${esc(out.url)}</code></div>`;
+          return;
+        }
+        // Built with DOM calls and a real listener rather than an onerror
+        // attribute containing a JS string containing more markup. That
+        // nesting meant the document URL had to survive three escaping
+        // contexts at once, and any one of them getting it wrong would run
+        // whatever the URL said inside a signed-in admin's session. Nothing
+        // is interpolated into markup here at all.
+        box.textContent = '';
+        const img = document.createElement('img');
+        img.alt = 'Submitted identity document';
+        img.addEventListener('error', () => {
+          const fallback = document.createElement('div');
+          fallback.className = 'fallback';
+          fallback.append('Could not load the document image. ');
+          const link = document.createElement('a');
+          link.href = out.url;
+          link.target = '_blank';
+          link.rel = 'noreferrer';
+          link.textContent = 'Open it directly';
+          fallback.append(link, '.');
+          box.textContent = '';
+          box.append(fallback);
+        });
+        img.src = out.url;
+        box.append(img);
       })
       .catch(err => {
         if (err.message === 'unauthorized') return;

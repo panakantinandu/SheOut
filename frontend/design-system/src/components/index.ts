@@ -11,3 +11,5 @@ export * from './AmountText';
 export * from './TextField';
 export * from './PhoneField';
 export * from './LiveMap';
+export * from './LegalDocumentView';
+export * from './LegalConsentNotice';

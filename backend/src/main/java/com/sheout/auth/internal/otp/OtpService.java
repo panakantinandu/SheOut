@@ -1,5 +1,7 @@
 package com.sheout.auth.internal.otp;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
@@ -15,7 +17,11 @@ import java.time.Duration;
 @Component
 public class OtpService {
 
+    private static final Logger log = LoggerFactory.getLogger(OtpService.class);
     private static final String KEY_PREFIX = "otp:";
+    private static final String ATTEMPT_PREFIX = "otp:attempts:";
+    /** Wrong guesses allowed before the code is destroyed. */
+    private static final int MAX_ATTEMPTS = 5;
     private static final SecureRandom RANDOM = new SecureRandom();
 
     private final StringRedisTemplate redisTemplate;
@@ -80,6 +86,12 @@ public class OtpService {
         String code = resolveDevCode(phoneNumber);
         if (code == null) code = generateCode();
         redisTemplate.opsForValue().set(key(phoneNumber), code, ttl);
+        // The guess budget belongs to a code, not to a number. Without this
+        // reset, someone who mistyped their last code five times would be
+        // locked out of the fresh one on their first attempt. How many codes
+        // can be asked for at all is bounded separately - see
+        // OtpRateLimiter - so the total guesses per hour stay small.
+        redisTemplate.delete(attemptKey(phoneNumber));
         try {
             otpSender.send(phoneNumber, code);
             return true;
@@ -89,10 +101,10 @@ public class OtpService {
     }
 
     /**
-     * Verifies a code and, if correct, deletes it so it can't be reused.
-     * An incorrect code is left in place so the user can retry until it
-     * expires - no attempt-count lockout is implemented (not specified;
-     * flagged as a follow-up in the README).
+     * Verifies a code and, if correct, deletes it so it cannot be reused.
+     * A wrong code is left in place so the user can retry - but only
+     * MAX_ATTEMPTS times, after which the code is destroyed. See the
+     * comment in the mismatch branch.
      */
     public VerificationOutcome verifyCode(String phoneNumber, String code) {
         String stored = redisTemplate.opsForValue().get(key(phoneNumber));
@@ -100,10 +112,44 @@ public class OtpService {
             return VerificationOutcome.NOT_FOUND_OR_EXPIRED;
         }
         if (!stored.equals(code)) {
+            // The lockout the Javadoc above used to record as a follow-up.
+            // It mattered more than it looked: a six-digit code with
+            // unlimited guesses is not a secret, it is a formality. Fifteen
+            // wrong codes in a row were all accepted as retries in testing,
+            // and nothing stopped the sixteenth through the millionth inside
+            // the code's lifetime. The code is now destroyed after
+            // MAX_ATTEMPTS wrong guesses, so an attacker gets a handful of
+            // tries out of a million rather than all of them.
+            if (registerFailedAttempt(phoneNumber)) {
+                redisTemplate.delete(key(phoneNumber));
+                redisTemplate.delete(attemptKey(phoneNumber));
+                log.warn("OTP invalidated after {} incorrect attempts", MAX_ATTEMPTS);
+                return VerificationOutcome.NOT_FOUND_OR_EXPIRED;
+            }
             return VerificationOutcome.MISMATCH;
         }
         redisTemplate.delete(key(phoneNumber));
+        redisTemplate.delete(attemptKey(phoneNumber));
         return VerificationOutcome.MATCHED;
+    }
+
+    /** True once this number has used up its allowance of wrong guesses. */
+    private boolean registerFailedAttempt(String phoneNumber) {
+        try {
+            Long attempts = redisTemplate.opsForValue().increment(attemptKey(phoneNumber));
+            if (attempts != null && attempts == 1L) {
+                // Outlives the code itself, so the counter cannot be reset
+                // by simply waiting for it to lapse.
+                redisTemplate.expire(attemptKey(phoneNumber), ttl.plusMinutes(5));
+            }
+            return attempts != null && attempts >= MAX_ATTEMPTS;
+        } catch (RuntimeException ex) {
+            // Fail closed here, unlike the request limiter: if we cannot
+            // count attempts we cannot bound them, and an unbounded guess
+            // budget on a login code is the worse risk.
+            log.error("Could not record a failed OTP attempt, invalidating the code: {}", ex.getMessage());
+            return true;
+        }
     }
 
     public enum VerificationOutcome {
@@ -115,6 +161,10 @@ public class OtpService {
     private String generateCode() {
         int code = RANDOM.nextInt(1_000_000);
         return String.format("%06d", code);
+    }
+
+    private String attemptKey(String phoneNumber) {
+        return ATTEMPT_PREFIX + phoneNumber;
     }
 
     private String key(String phoneNumber) {
