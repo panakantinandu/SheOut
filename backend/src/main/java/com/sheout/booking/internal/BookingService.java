@@ -41,6 +41,7 @@ public class BookingService implements BookingApi {
     private final FareCalculator fareCalculator;
     private final DomainEventPublisher eventPublisher;
     private final AuthApi authApi;
+    private final ServiceArea serviceArea;
     private final String verifiedBypassPhone;
 
     public BookingService(BookingRepository bookingRepository,
@@ -48,12 +49,14 @@ public class BookingService implements BookingApi {
                            FareCalculator fareCalculator,
                            DomainEventPublisher eventPublisher,
                            AuthApi authApi,
+                           ServiceArea serviceArea,
                            @Value("${sheout.testing.verified-bypass-phone:}") String verifiedBypassPhone) {
         this.bookingRepository = bookingRepository;
         this.verificationApi = verificationApi;
         this.fareCalculator = fareCalculator;
         this.eventPublisher = eventPublisher;
         this.authApi = authApi;
+        this.serviceArea = serviceArea;
         this.verifiedBypassPhone = verifiedBypassPhone;
     }
 
@@ -70,8 +73,20 @@ public class BookingService implements BookingApi {
      * The verification gate stays where it belongs, on actually creating
      * the booking.
      */
-    public FareQuote quoteFare(BookingCategory category, GeoAddress pickup, GeoAddress drop) {
-        return fareCalculator.quote(category, pickup, drop);
+    public Result<FareQuote, BookingError> quoteFare(BookingCategory category, GeoAddress pickup, GeoAddress drop) {
+        if (!withinServiceArea(pickup, drop)) {
+            return Result.failure(BookingError.OUTSIDE_SERVICE_AREA);
+        }
+        return Result.success(fareCalculator.quote(category, pickup, drop));
+    }
+
+    /**
+     * Both ends must be somewhere we operate. Checked here rather than in
+     * the controller so the booking path and the quote path cannot drift
+     * apart, and so no caller can reach a booking without passing it.
+     */
+    private boolean withinServiceArea(GeoAddress pickup, GeoAddress drop) {
+        return serviceArea.covers(pickup) && serviceArea.covers(drop);
     }
 
     @Override
@@ -79,6 +94,13 @@ public class BookingService implements BookingApi {
     public Result<BookingSummary, BookingError> requestBooking(RequestBookingCommand command) {
         if (command.category().expectedType() != command.type()) {
             return Result.failure(BookingError.CATEGORY_TYPE_MISMATCH);
+        }
+        // Before the verification gate on purpose: whether we serve an area
+        // is public information, so answering it first tells an unverified
+        // customer the useful thing rather than the gate they would have
+        // hit anyway.
+        if (!withinServiceArea(command.pickup(), command.drop())) {
+            return Result.failure(BookingError.OUTSIDE_SERVICE_AREA);
         }
         if (!isCustomerVerified(command.customerId())) {
             return Result.failure(BookingError.CUSTOMER_NOT_VERIFIED);

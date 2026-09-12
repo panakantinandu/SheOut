@@ -2,6 +2,7 @@ package com.sheout.booking.internal.fare;
 
 import com.sheout.booking.BookingCategory;
 import com.sheout.booking.GeoAddress;
+import com.sheout.booking.internal.GeoDistance;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -22,8 +23,6 @@ import java.math.RoundingMode;
 @Component
 public class DistanceBasedFareCalculator implements FareCalculator {
 
-    private static final double EARTH_RADIUS_KM = 6371.0;
-
     private record Rate(BigDecimal base, BigDecimal perKm) {
     }
 
@@ -37,7 +36,7 @@ public class DistanceBasedFareCalculator implements FareCalculator {
 
     @Override
     public FareQuote quote(BookingCategory category, GeoAddress pickup, GeoAddress drop) {
-        double distanceKm = haversineKm(pickup, drop);
+        double distanceKm = GeoDistance.haversineKm(pickup, drop);
         Rate rate = RATES.get(category);
         BigDecimal amount = rate.base()
                 .add(rate.perKm().multiply(BigDecimal.valueOf(distanceKm)))
@@ -45,15 +44,4 @@ public class DistanceBasedFareCalculator implements FareCalculator {
         return new FareQuote(amount, distanceKm);
     }
 
-    private double haversineKm(GeoAddress from, GeoAddress to) {
-        double lat1 = Math.toRadians(from.lat());
-        double lat2 = Math.toRadians(to.lat());
-        double deltaLat = Math.toRadians(to.lat() - from.lat());
-        double deltaLng = Math.toRadians(to.lng() - from.lng());
-
-        double a = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2)
-                + Math.cos(lat1) * Math.cos(lat2) * Math.sin(deltaLng / 2) * Math.sin(deltaLng / 2);
-        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return EARTH_RADIUS_KM * c;
-    }
 }

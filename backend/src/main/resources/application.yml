@@ -46,6 +46,23 @@ sheout:
     # Add the deployed frontend's real origin here once one exists.
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:5174,http://localhost:5175}
 
+  booking:
+    service-area:
+      # Where SheOut operates. Both pickup and drop must fall within
+      # radius-km of this centre, checked server-side on booking AND on
+      # fare quotes - see ServiceArea.
+      #
+      # These are env-var driven on purpose: launching a second city, or
+      # widening the radius as coverage grows, should be a config change
+      # and a restart, not a code change. Radius is straight-line
+      # kilometres from the centre, not driving distance.
+      centre-lat: ${SERVICE_CENTRE_LAT:17.3850}
+      centre-lng: ${SERVICE_CENTRE_LNG:78.4867}
+      radius-km: ${SERVICE_RADIUS_KM:150}
+      # Used in the refusal message a customer reads, so it should be the
+      # city's name as a person would say it.
+      centre-name: ${SERVICE_CENTRE_NAME:Hyderabad}
+
   auth:
     # No default - see JwtService Javadoc for why a missing/weak secret
     # should fail startup rather than silently signing with something

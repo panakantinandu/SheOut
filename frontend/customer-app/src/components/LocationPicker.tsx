@@ -3,7 +3,15 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button, Card, IconCircle, LiveMap, TextField } from '@sheout/design-system';
 import type { MapMarker } from '@sheout/design-system';
 import type { GeoAddress } from '../api/types';
-import { CITY_CENTRE, currentPosition, describePoint, reverseGeocode, searchPlaces } from '../lib/geocode';
+import {
+  CITY_CENTRE,
+  OUT_OF_AREA_MESSAGE,
+  currentPosition,
+  describePoint,
+  isInServiceArea,
+  reverseGeocode,
+  searchPlaces,
+} from '../lib/geocode';
 
 /** Nominatim asks for roughly one request a second; this stays well inside that. */
 const SEARCH_DEBOUNCE_MS = 500;
@@ -152,6 +160,12 @@ export function LocationPicker({
     setError(null);
     try {
       const { lat, lng } = await currentPosition();
+      // The device can be anywhere. Someone opening the app from another
+      // city should be told so here, not after filling in both ends.
+      if (!isInServiceArea({ lat, lng })) {
+        setError(`You appear to be outside our service area. ${OUT_OF_AREA_MESSAGE}`);
+        return;
+      }
       onSelect(await describePoint(lat, lng, 'Your Current Location'));
       onClose();
     } catch (err) {
@@ -237,21 +251,40 @@ export function LocationPicker({
         {searching && <p className="text-sm text-text-secondary">Searching...</p>}
 
         {results.length > 0 && (
+          // Out-of-area matches are shown, not hidden. Hiding a real address
+          // would read as "we could not find it", which is a different and
+          // untrue thing - the place exists, we just do not go there yet.
+          // They are dimmed, labelled and not selectable.
           <Card className="divide-y divide-border p-0">
-            {results.map((place) => (
-              <button
-                key={`${place.lat},${place.lng}`}
-                type="button"
-                onClick={() => {
-                  onSelect(place);
-                  onClose();
-                }}
-                className="flex w-full items-center gap-3 p-4 text-left"
-              >
-                <IconCircle tone="soft" size="sm" icon={<MapPin />} />
-                <span className="min-w-0 flex-1 truncate text-sm text-text-primary">{place.label}</span>
-              </button>
-            ))}
+            {results.map((place) => {
+              const servable = isInServiceArea(place);
+              return (
+                <button
+                  key={`${place.lat},${place.lng}`}
+                  type="button"
+                  disabled={!servable}
+                  aria-disabled={!servable}
+                  onClick={() => {
+                    if (!servable) return;
+                    onSelect(place);
+                    onClose();
+                  }}
+                  className={
+                    servable
+                      ? 'flex w-full items-center gap-3 p-4 text-left'
+                      : 'flex w-full cursor-not-allowed items-center gap-3 p-4 text-left opacity-50'
+                  }
+                >
+                  <IconCircle tone="soft" size="sm" color={servable ? undefined : 'red'} icon={<MapPin />} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm text-text-primary">{place.label}</span>
+                    {!servable && (
+                      <span className="block text-xs font-medium text-danger">Outside service area</span>
+                    )}
+                  </span>
+                </button>
+              );
+            })}
           </Card>
         )}
 
@@ -350,17 +383,29 @@ function MapPane({
           </Button>
         </Card>
       ) : address ? (
-        <Card className="space-y-3">
+        // The address still gets shown for an out-of-area pin. Refusing to
+        // name the place the customer just tapped would leave them guessing
+        // whether the pin or the boundary was the problem.
+        <Card tone={isInServiceArea(address) ? 'default' : 'danger'} className="space-y-3">
           <div className="flex items-start gap-3">
-            <IconCircle tone="soft" size="sm" color={markerKind === 'pickup' ? undefined : 'orange'} icon={<MapPin />} />
+            <IconCircle
+              tone="soft"
+              size="sm"
+              color={!isInServiceArea(address) ? 'red' : markerKind === 'pickup' ? undefined : 'orange'}
+              icon={<MapPin />}
+            />
             <div className="min-w-0 flex-1">
               <p className="text-xs text-text-secondary">Pin dropped at</p>
               <p className="text-sm font-medium text-text-primary">{address.label}</p>
             </div>
           </div>
-          <Button fullWidth onClick={() => onConfirm(address)}>
-            Use this location
-          </Button>
+          {isInServiceArea(address) ? (
+            <Button fullWidth onClick={() => onConfirm(address)}>
+              Use this location
+            </Button>
+          ) : (
+            <p className="text-xs font-medium text-danger">{OUT_OF_AREA_MESSAGE}</p>
+          )}
         </Card>
       ) : null}
     </div>
