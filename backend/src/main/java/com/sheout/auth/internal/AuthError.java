@@ -11,6 +11,13 @@ public enum AuthError {
     /** OTP delivery failed (provider error) - see {@link OtpSender}. */
     OTP_DELIVERY_FAILED,
 
+    /**
+     * Too many codes asked for, for one number, too quickly. See
+     * OtpRateLimiter: unmetered, this endpoint texts any number on demand
+     * at our expense.
+     */
+    OTP_TOO_MANY_REQUESTS,
+
     /** No OTP was requested for this phone number, or it already expired. */
     OTP_NOT_FOUND_OR_EXPIRED,
 

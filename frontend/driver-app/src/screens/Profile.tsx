@@ -1,4 +1,4 @@
-import { Bike, Car, HelpCircle, LogOut, ShieldCheck, Truck, User } from 'lucide-react';
+import { Bike, Car, FileText, HelpCircle, Lock, LogOut, ShieldCheck, Truck, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Card, ConfirmDialog, IconCircle, ListRow, StatusBadge, TextField, TopHeader, vehicleLabel } from '@sheout/design-system';
@@ -148,6 +148,20 @@ export function Profile() {
             icon={<IconCircle tone="soft" size="sm" icon={<HelpCircle />} />}
             label="Help & Support"
             onClick={() => navigate('/help')}
+          />
+        </div>
+        <div className="p-4">
+          <ListRow
+            icon={<IconCircle tone="soft" size="sm" icon={<Lock />} />}
+            label="Privacy Policy"
+            onClick={() => navigate('/privacy')}
+          />
+        </div>
+        <div className="p-4">
+          <ListRow
+            icon={<IconCircle tone="soft" size="sm" icon={<FileText />} />}
+            label="Terms of Service"
+            onClick={() => navigate('/terms')}
           />
         </div>
       </Card>

@@ -5,6 +5,7 @@ import com.sheout.auth.AccountRole;
 import com.sheout.auth.AccountSummary;
 import com.sheout.auth.AuthApi;
 import com.sheout.auth.AuthenticatedSession;
+import com.sheout.auth.internal.otp.OtpRateLimiter;
 import com.sheout.auth.internal.otp.OtpService;
 import com.sheout.auth.internal.security.JwtService;
 import com.sheout.sharedkernel.Result;
@@ -20,28 +21,44 @@ public class AuthService implements AuthApi {
 
     private final AccountRepository accountRepository;
     private final OtpService otpService;
+    private final OtpRateLimiter otpRateLimiter;
     private final JwtService jwtService;
     private final DomainEventPublisher eventPublisher;
 
     public AuthService(AccountRepository accountRepository,
                         OtpService otpService,
+                        OtpRateLimiter otpRateLimiter,
                         JwtService jwtService,
                         DomainEventPublisher eventPublisher) {
         this.accountRepository = accountRepository;
         this.otpService = otpService;
+        this.otpRateLimiter = otpRateLimiter;
         this.jwtService = jwtService;
         this.eventPublisher = eventPublisher;
     }
 
     /**
-     * Requests a code for phoneNumber. If an account already exists for
-     * this phone number under a different role, refuses up front rather
-     * than issuing a code that can never successfully verify.
+     * Requests a code for phoneNumber. Answers the same way for every
+     * number, registered or not - see the comment inside.
      */
     public Result<Void, AuthError> requestOtp(String phoneNumber, AccountRole role) {
-        Optional<AccountEntity> existing = accountRepository.findByPhoneNumber(phoneNumber);
-        if (existing.isPresent() && existing.get().getRole() != role) {
-            return Result.failure(AuthError.ROLE_MISMATCH);
+        // Deliberately NO account lookup here any more.
+        //
+        // This used to return ROLE_MISMATCH when the number already belonged
+        // to a different role, which made this endpoint an account-
+        // enumeration oracle: an unregistered number answered 202 and a
+        // registered one answered 409 naming its role, to anyone, for any
+        // number, without ever proving they owned it. On a women's safety
+        // app that is not a small leak - it tells a stranger whether a
+        // particular woman has an account and whether she drives for us.
+        //
+        // The same reasoning is already written down on the customer app's
+        // Login screen for the "already registered" notice. It belonged here
+        // too and was missed. verifyOtp still refuses the role mismatch,
+        // which is the right place: by then the caller has proved the number
+        // is theirs, so there is nothing left to disclose.
+        if (!otpRateLimiter.allow(phoneNumber)) {
+            return Result.failure(AuthError.OTP_TOO_MANY_REQUESTS);
         }
         boolean delivered = otpService.requestCode(phoneNumber);
         if (!delivered) {

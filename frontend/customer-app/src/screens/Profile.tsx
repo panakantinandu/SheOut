@@ -1,4 +1,4 @@
-import { BadgeCheck, HelpCircle, Info, LogOut, MapPin, Receipt, User } from 'lucide-react';
+import { BadgeCheck, FileText, HelpCircle, Info, Lock, LogOut, MapPin, Receipt, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, ConfirmDialog, IconCircle, ListRow, TopHeader } from '@sheout/design-system';
@@ -92,6 +92,12 @@ export function Profile() {
           </div>
           <div className="p-4">
             <ListRow icon={<IconCircle tone="soft" size="sm" icon={<Info />} />} label="About SheOut" onClick={() => navigate('/about')} />
+          </div>
+          <div className="p-4">
+            <ListRow icon={<IconCircle tone="soft" size="sm" icon={<Lock />} />} label="Privacy Policy" onClick={() => navigate('/privacy')} />
+          </div>
+          <div className="p-4">
+            <ListRow icon={<IconCircle tone="soft" size="sm" icon={<FileText />} />} label="Terms of Service" onClick={() => navigate('/terms')} />
           </div>
         </Card>
       </section>

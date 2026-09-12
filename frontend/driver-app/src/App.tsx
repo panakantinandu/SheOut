@@ -1,11 +1,14 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { ProtectedRoute } from './auth/ProtectedRoute'
 import { AppShell } from './layout/AppShell'
+import { PageShell } from './layout/PageShell'
 import { Bookings } from './screens/Bookings'
 import { Earnings } from './screens/Earnings'
 import { HelpSupport } from './screens/HelpSupport'
 import { Home } from './screens/Home'
 import { Login } from './screens/Login'
+import { Privacy } from './screens/Privacy'
+import { Terms } from './screens/Terms'
 import { Notifications } from './screens/Notifications'
 import { Offer } from './screens/Offer'
 import { Profile } from './screens/Profile'
@@ -27,7 +30,16 @@ function shell(element: JSX.Element) {
 }
 
 function protectedOnly(element: JSX.Element) {
-  return <ProtectedRoute>{element}</ProtectedRoute>
+  return (
+    <ProtectedRoute>
+      <PageShell>{element}</PageShell>
+    </ProtectedRoute>
+  )
+}
+
+/** Readable without an account - the legal documents are linked from sign-in. */
+function publicPage(element: JSX.Element) {
+  return <PageShell>{element}</PageShell>
 }
 
 function App() {
@@ -35,6 +47,8 @@ function App() {
     <Routes>
       <Route path="/" element={<Splash />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/privacy" element={publicPage(<Privacy />)} />
+      <Route path="/terms" element={publicPage(<Terms />)} />
 
       <Route path="/home" element={shell(<Home />)} />
       <Route path="/earnings" element={shell(<Earnings />)} />
