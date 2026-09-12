@@ -79,7 +79,7 @@ export function Bookings() {
     (page: number) =>
       bookingApi.search({
         page,
-        status: status || undefined,
+        status: status ? [status] : undefined,
         from: startOfDayIso(dates.from),
         to: endOfDayIso(dates.to),
         category: categories,

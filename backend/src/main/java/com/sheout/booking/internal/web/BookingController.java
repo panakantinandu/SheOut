@@ -144,7 +144,7 @@ public class BookingController {
     public ResponseEntity<PageResponse<BookingSummary>> searchMyBookings(
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer pageSize,
-            @RequestParam(required = false) BookingStatus status,
+            @RequestParam(required = false) Set<BookingStatus> status,
             @RequestParam(required = false) Instant from,
             @RequestParam(required = false) Instant to,
             @RequestParam(required = false) Set<BookingCategory> category,
