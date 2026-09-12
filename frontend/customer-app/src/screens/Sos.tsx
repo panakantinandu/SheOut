@@ -42,7 +42,7 @@ function getCurrentPosition(): Promise<GeolocationPosition> {
 
 function reasonMessage(response: SosResponse): string {
   if (response.reason === 'NO_EMERGENCY_CONTACTS') {
-    return 'You have no emergency contacts saved yet - add one in your profile, or call for help directly.';
+    return 'You have no emergency contacts saved yet, so nobody was told. Add one under Profile, Emergency Contacts, or call for help directly.';
   }
   if (response.reason === 'ALL_SENDS_FAILED') {
     return `We recorded your alert but could not reach any of your ${response.contactsTotal} emergency contact(s). Please call for help directly.`;
@@ -98,7 +98,7 @@ export function Sos() {
     try {
       const contacts = await usersApi.getMyEmergencyContacts();
       if (contacts.length === 0) {
-        setContactLookupError('No emergency contacts saved yet - add one in your profile first.');
+        setContactLookupError('No emergency contacts saved yet. Tap Safety Features below to add one.');
         return;
       }
       window.location.href = `tel:${contacts[0].phoneNumber}`;
@@ -174,13 +174,18 @@ export function Sos() {
       </div>
 
       <div>
-        {/* Chevron per the mockup. There is no deeper safety-settings screen
-            to open, so it is decorative and the heading is not a button -
-            a chevron that navigated nowhere would be worse than none. */}
-        <div className="mb-3 flex items-center justify-between">
+        {/* The chevron used to be decorative, because there was nowhere to
+            go. There is now: managing who an SOS reaches is the one safety
+            setting a customer actually has, so the heading is a real
+            control that opens it. */}
+        <button
+          type="button"
+          onClick={() => navigate('/profile/emergency-contacts')}
+          className="mb-3 flex w-full items-center justify-between text-left"
+        >
           <h2 className="font-heading text-base font-semibold text-text-primary">Safety Features</h2>
           <ChevronRight className="h-5 w-5 text-text-secondary" aria-hidden="true" />
-        </div>
+        </button>
         <Card className="space-y-3">
           {SAFETY_FEATURES.map((feature) => (
             <ListRow key={feature} icon={<IconCircle tone="soft" color="green" size="sm" icon={<CheckCircle2 />} />} label={feature} chevron={false} />

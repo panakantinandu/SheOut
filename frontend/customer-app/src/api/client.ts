@@ -145,6 +145,14 @@ export const usersApi = {
   getMyEmergencyContacts(): Promise<EmergencyContact[]> {
     return request('/api/v1/users/customer/me/emergency-contacts');
   },
+
+  addEmergencyContact(contact: { name: string; phoneNumber: string; relationship: string }): Promise<EmergencyContact> {
+    return request('/api/v1/users/customer/me/emergency-contacts', { method: 'POST', body: contact });
+  },
+
+  removeEmergencyContact(contactId: string): Promise<void> {
+    return request(`/api/v1/users/customer/me/emergency-contacts/${contactId}`, { method: 'DELETE' });
+  },
 };
 
 export const notificationsApi = {
