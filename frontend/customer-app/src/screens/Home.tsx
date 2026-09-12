@@ -108,12 +108,18 @@ export function Home() {
       </Card>
 
       <div>
+        {/* Four tiles, four destinations. Live Track and History used to
+            both open /bookings, which is where the Bookings tab goes too -
+            so three of the app's entry points showed one identical list and
+            two of them earned their place on the screen by doing nothing.
+            They now open the same screen scoped to genuinely different
+            questions: what is happening now, and what already happened. */}
         <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">Quick Access</h2>
         <div className="flex justify-around">
           <ListRow layout="stacked" icon={<IconCircle color="red" tone="soft" icon={<ShieldAlert />} />} label="SOS" onClick={() => navigate('/sos')} />
-          <ListRow layout="stacked" icon={<IconCircle tone="soft" icon={<MapPinned />} />} label="Live Track" onClick={() => navigate('/bookings')} />
+          <ListRow layout="stacked" icon={<IconCircle tone="soft" icon={<MapPinned />} />} label="Live Track" onClick={() => navigate('/bookings?view=live')} />
           <ListRow layout="stacked" icon={<IconCircle tone="soft" icon={<WalletIcon />} />} label="Wallet" onClick={() => navigate('/wallet')} />
-          <ListRow layout="stacked" icon={<IconCircle tone="soft" icon={<Clock />} />} label="History" onClick={() => navigate('/bookings')} />
+          <ListRow layout="stacked" icon={<IconCircle tone="soft" icon={<Clock />} />} label="History" onClick={() => navigate('/bookings?view=history')} />
         </div>
       </div>
     </div>

@@ -208,7 +208,7 @@ export const bookingApi = {
   search(params: {
     page?: number;
     pageSize?: number;
-    status?: BookingStatus;
+    status?: BookingStatus[];
     from?: string;
     to?: string;
     category?: BookingCategory[];

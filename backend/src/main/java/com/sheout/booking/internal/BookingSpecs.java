@@ -41,7 +41,12 @@ final class BookingSpecs {
             if (customerId != null) predicates.add(cb.equal(root.get("customerId"), customerId));
             if (driverId != null) predicates.add(cb.equal(root.get("driverId"), driverId));
 
-            if (q.status() != null) predicates.add(cb.equal(root.get("status"), q.status()));
+            // Same reasoning as categories below: a set covering every
+            // status narrows nothing, so skip it rather than emit an IN
+            // over all six.
+            if (q.statuses().size() < BookingQuery.allStatuses().size()) {
+                predicates.add(root.get("status").in(q.statuses()));
+            }
             if (q.from() != null) predicates.add(cb.greaterThanOrEqualTo(root.get("createdAt"), q.from()));
             if (q.to() != null) predicates.add(cb.lessThanOrEqualTo(root.get("createdAt"), q.to()));
 
