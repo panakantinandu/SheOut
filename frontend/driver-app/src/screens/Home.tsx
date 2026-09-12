@@ -1,4 +1,4 @@
-import { Bell, Bike, CheckCircle2, ClipboardList, IndianRupee, MapPinOff, Navigation2, Power, ShieldCheck, User } from 'lucide-react';
+import { Bell, Bike, CheckCircle2, ClipboardList, CloudOff, IndianRupee, MapPinOff, Navigation2, Power, RefreshCw, ShieldCheck, User } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AmountText, Button, Card, IconCircle, LiveMap, TopHeader, bookingStatusLabel, vehicleLabel } from '@sheout/design-system';
@@ -13,6 +13,27 @@ function startOfDay(): Date {
   const d = new Date();
   d.setHours(0, 0, 0, 0);
   return d;
+}
+
+/**
+ * What a section shows when its request failed: what did not load, what the
+ * server said, and a way to ask again. A screen that can only ever say
+ * "Loading..." is a dead end - the partner cannot tell a slow network from a
+ * broken one, and has nothing to do about either.
+ */
+function LoadError({ title, detail, onRetry }: { title: string; detail: string; onRetry: () => void }) {
+  return (
+    <Card className="flex items-start gap-3 bg-danger/10">
+      <IconCircle color="red" tone="soft" icon={<CloudOff />} />
+      <div className="min-w-0 flex-1">
+        <p className="font-heading font-semibold text-text-primary">{title}</p>
+        <p className="mt-0.5 text-xs text-text-secondary">{detail}</p>
+      </div>
+      <Button variant="secondary" size="md" icon={<RefreshCw className="h-4 w-4" />} onClick={onRetry}>
+        Try again
+      </Button>
+    </Card>
+  );
 }
 
 /**
@@ -37,20 +58,44 @@ export function Home() {
   const [verification, setVerification] = useState<VerificationSummary | null>(null);
   const [bookings, setBookings] = useState<BookingSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [verificationError, setVerificationError] = useState<string | null>(null);
   const [togglingOnline, setTogglingOnline] = useState(false);
   const navigatedToOfferRef = useRef<string | null>(null);
 
+  /**
+   * Load failures are held separately from `error`, which belongs to the
+   * online toggle. They used to share one banner while the card below went
+   * on saying "Loading...", so a failed fetch left a partner looking at a
+   * word that would never change, with nothing to press.
+   */
   const loadProfile = useCallback(() => {
+    setProfileError(null);
     usersApi
       .getMyProfile()
       .then(setProfile)
-      .catch((err) => setError(err instanceof ApiError ? err.message : 'Could not load profile'));
+      .catch((err) => setProfileError(err instanceof ApiError ? err.message : 'Could not load your profile'));
+  }, []);
+
+  /**
+   * This swallowed its failure entirely and set the summary to null, which
+   * is indistinguishable from "still loading" - so the same dead end, on the
+   * one section that decides whether a partner can go online at all.
+   */
+  const loadVerification = useCallback(() => {
+    setVerificationError(null);
+    verificationApi
+      .getMyStatus()
+      .then(setVerification)
+      .catch((err) =>
+        setVerificationError(err instanceof ApiError ? err.message : 'Could not check your verification status')
+      );
   }, []);
 
   useEffect(() => {
     loadProfile();
-    verificationApi.getMyStatus().then(setVerification).catch(() => setVerification(null));
-  }, [loadProfile]);
+    loadVerification();
+  }, [loadProfile, loadVerification]);
 
   const isOnline = profile?.onlineStatus === 'ONLINE';
   const isVerified = verification?.genderVerificationStatus === 'VERIFIED' && verification?.policeVerificationStatus === 'VERIFIED';
@@ -195,10 +240,13 @@ export function Home() {
         </Card>
       )}
 
+      {profileError ? (
+        <LoadError title="Could not load your profile" detail={profileError} onRetry={loadProfile} />
+      ) : (
       <Card className="flex items-center gap-3">
         <IconCircle size="lg" tone="soft" icon={<User />} />
         <div className="flex-1">
-          <p className="font-heading font-semibold text-text-primary">{profile?.name || 'Loading...'}</p>
+          <p className="font-heading font-semibold text-text-primary">{profile?.name || 'Loading your profile...'}</p>
           <div className="flex items-center gap-2">
             {/* Online/offline dot, as the mockup shows beside the name. Real
                 state from the profile, not decoration. */}
@@ -214,6 +262,7 @@ export function Home() {
           </div>
         </div>
       </Card>
+      )}
 
       {/* One card split by dividers, matching the mockup, rather than three
           separate cards with gaps between them. */}
@@ -241,8 +290,10 @@ export function Home() {
         </div>
       </Card>
 
-      {!verification ? (
-        <p className="text-center text-sm text-text-secondary">Loading...</p>
+      {verificationError ? (
+        <LoadError title="Could not check your verification" detail={verificationError} onRetry={loadVerification} />
+      ) : !verification ? (
+        <p className="text-center text-sm text-text-secondary">Checking your verification...</p>
       ) : !isVerified ? (
         <Card className="flex items-center gap-3 bg-accent-orange/10">
           <IconCircle color="orange" tone="soft" icon={<ShieldCheck />} />
@@ -254,6 +305,12 @@ export function Home() {
             Review
           </Button>
         </Card>
+      ) : !profile ? (
+        // Verified, but the profile never arrived, so the current online
+        // status is unknown. handleToggleOnline returns early without one,
+        // which would have made this a button that does nothing at all. The
+        // profile card above is already offering the retry.
+        null
       ) : (
         <Card variant={isOnline ? 'primary' : 'surface'} className="flex items-center justify-between">
           <div>
