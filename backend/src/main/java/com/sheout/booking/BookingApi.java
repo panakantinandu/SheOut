@@ -58,4 +58,35 @@ public interface BookingApi {
      * adding only once something actually needs to page.
      */
     List<BookingSummary> findRecent(int limit);
+
+    /**
+     * The ids of every booking this customer has made.
+     *
+     * Added for one caller: payments needs to list a customer's payment
+     * history, and a payment row knows only its bookingId - there is no
+     * customerId on it. The alternatives were worse. Denormalising a
+     * customerId into payments would put a users concept inside a module
+     * that has no business knowing about one, and would need backfilling.
+     * Returning full summaries here would duplicate BookingService's own
+     * list method into the public interface for no gain.
+     *
+     * FLAGGED: this becomes an IN clause the size of the customer's whole
+     * history. Fine at the scale of one person's trips; if a single account
+     * ever accumulates thousands, payments needs its own scoping column
+     * rather than a bigger list.
+     */
+    java.util.Set<java.util.UUID> bookingIdsForCustomer(java.util.UUID customerId);
+
+    /**
+     * A page of every booking, narrowed by {@link BookingQuery}. No owner
+     * scope - this is the ops console's view.
+     * <p>
+     * findRecent above is what the console used to call, and it is kept
+     * because nothing has stopped calling it yet. It cannot do this job: a
+     * hard cap with no offset means the rows past the cap are unreachable,
+     * and no filters means an operator looking for one cancelled trip last
+     * Tuesday has to read the whole page themselves.
+     */
+    org.springframework.data.domain.Page<BookingSummary> pageBookings(
+            BookingQuery query, org.springframework.data.domain.Pageable pageable);
 }

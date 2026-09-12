@@ -107,3 +107,13 @@ export interface NotificationView {
   failureReason: string | null;
   createdAt: string;
 }
+
+/** One page of a list - mirrors PageResponse on the backend. */
+export interface PagedResult<T> {
+  items: T[];
+  page: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
+  hasMore: boolean;
+}

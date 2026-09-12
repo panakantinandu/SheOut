@@ -1,5 +1,7 @@
 package com.sheout.dispatch.internal;
 
+import com.sheout.auth.AccountSummary;
+import com.sheout.auth.AuthApi;
 import com.sheout.booking.BookingApi;
 import com.sheout.booking.BookingCategory;
 import com.sheout.booking.BookingError;
@@ -39,6 +41,7 @@ public class DispatchService {
     private final OfferStore offerStore;
     private final MatchingStrategy matchingStrategy;
     private final DriverProfileApi driverProfileApi;
+    private final AuthApi authApi;
     private final BookingApi bookingApi;
 
     private final double initialRadiusKm;
@@ -53,6 +56,7 @@ public class DispatchService {
             MatchingStrategy matchingStrategy,
             DriverProfileApi driverProfileApi,
             BookingApi bookingApi,
+            AuthApi authApi,
             @Value("${sheout.dispatch.initial-radius-km:3.0}") double initialRadiusKm,
             @Value("${sheout.dispatch.radius-expansion-factor:2.0}") double radiusExpansionFactor,
             @Value("${sheout.dispatch.candidate-count:5}") int candidateCount,
@@ -63,6 +67,7 @@ public class DispatchService {
         this.offerStore = offerStore;
         this.matchingStrategy = matchingStrategy;
         this.driverProfileApi = driverProfileApi;
+        this.authApi = authApi;
         this.bookingApi = bookingApi;
         this.initialRadiusKm = initialRadiusKm;
         this.radiusExpansionFactor = radiusExpansionFactor;
@@ -221,10 +226,21 @@ public class DispatchService {
      * Deliberately NOT DriverProfileSummary.verified: that field is a
      * cached projection of an AccountVerified event and can be stale,
      * which would reintroduce the same class of bug one layer down.
+     * <p>
+     * A blocked account is refused here too, and here only - the same
+     * single place, for the same reason. Blocking is meant to take effect
+     * immediately regardless of what the driver's online flag or
+     * verification says, and a blocked driver who happens to be ONLINE and
+     * verified would otherwise keep receiving real bookings. Adding a
+     * second check somewhere else would recreate exactly the drift this
+     * method exists to prevent.
      */
     private boolean isAvailableNow(UUID driverId) {
         Optional<DriverProfileSummary> profile = driverProfileApi.findByAccountId(driverId);
         if (profile.isEmpty() || profile.get().onlineStatus() != OnlineStatus.ONLINE) {
+            return false;
+        }
+        if (authApi.findAccount(driverId).map(AccountSummary::blocked).orElse(true)) {
             return false;
         }
         return driverProfileApi.isCurrentlyVerified(driverId);

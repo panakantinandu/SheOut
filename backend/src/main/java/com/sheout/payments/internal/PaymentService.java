@@ -7,7 +7,13 @@ import com.sheout.payments.PaymentStatus;
 import com.sheout.payments.PaymentSummary;
 import com.sheout.payments.internal.gateway.GatewayOrder;
 import com.sheout.payments.internal.gateway.PaymentGateway;
+import com.sheout.payments.PaymentStatus;
 import com.sheout.sharedkernel.Result;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
+import java.time.Instant;
+import java.util.Collection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -139,6 +145,36 @@ public class PaymentService implements PaymentApi {
             payment.setFailureReason(failureReason);
         }
         paymentRepository.save(payment);
+    }
+
+    /**
+     * A page of the caller's payments. bookingIds is their ownership scope,
+     * resolved from the token by the controller.
+     *
+     * This replaces what the customer app was doing: fetching every booking
+     * and then one payment request per booking, discarding the ones with no
+     * payment row. That was an N+1 on the client, it could not be filtered
+     * or paged at all, and it grew with a customer's whole history.
+     */
+    public Page<PaymentSummary> pageForBookings(
+            Collection<UUID> bookingIds,
+            PaymentStatus status,
+            Instant from,
+            Instant to,
+            BigDecimal minAmount,
+            BigDecimal maxAmount,
+            Pageable pageable) {
+        if (bookingIds.isEmpty()) {
+            // An empty IN clause is not valid SQL, and a customer with no
+            // bookings has no payments - answer that directly.
+            return Page.empty(pageable);
+        }
+        Pageable sorted = org.springframework.data.domain.PageRequest.of(
+                pageable.getPageNumber(), pageable.getPageSize(),
+                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt"));
+        return paymentRepository
+                .findAll(PaymentSpecs.matching(bookingIds, status, from, to, minAmount, maxAmount), sorted)
+                .map(this::toSummary);
     }
 
     private PaymentSummary toSummary(PaymentEntity payment) {

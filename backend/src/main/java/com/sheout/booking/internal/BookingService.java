@@ -23,7 +23,11 @@ import com.sheout.driververification.VerificationSummary;
 import com.sheout.sharedkernel.Result;
 import com.sheout.sharedkernel.event.DomainEventPublisher;
 import org.springframework.beans.factory.annotation.Value;
+import com.sheout.booking.BookingQuery;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -270,8 +274,52 @@ public class BookingService implements BookingApi {
         return bookingRepository.findByCustomerId(customerId).stream().map(this::toSummary).toList();
     }
 
+    @Override
+    public java.util.Set<UUID> bookingIdsForCustomer(UUID customerId) {
+        return bookingRepository.findByCustomerId(customerId).stream()
+                .map(BookingEntity::getId)
+                .collect(java.util.stream.Collectors.toSet());
+    }
+
     public List<BookingSummary> listForDriver(UUID driverId) {
         return bookingRepository.findByDriverId(driverId).stream().map(this::toSummary).toList();
+    }
+
+    /**
+     * A page of one person's own trips, narrowed by whatever they asked for.
+     * <p>
+     * The unpaged listForCustomer/listForDriver above are kept because
+     * callers that genuinely need the whole set still exist - the driver
+     * dashboard totals today's earnings across every completed trip, and
+     * paging that would mean summing pages client-side and getting a
+     * different answer depending on how far someone scrolled. Deleting them
+     * in favour of paging everything would trade one honest number for
+     * several inconsistent ones.
+     */
+    public Page<BookingSummary> pageForCustomer(UUID customerId, BookingQuery query, Pageable pageable) {
+        return search(customerId, null, query, pageable);
+    }
+
+    public Page<BookingSummary> pageForDriver(UUID driverId, BookingQuery query, Pageable pageable) {
+        return search(null, driverId, query, pageable);
+    }
+
+    /** No owner scope: the ops console sees every booking. */
+    @Override
+    public Page<BookingSummary> pageBookings(BookingQuery query, Pageable pageable) {
+        return search(null, null, query, pageable);
+    }
+
+    private Page<BookingSummary> search(UUID customerId, UUID driverId, BookingQuery query, Pageable pageable) {
+        // Newest first, applied here rather than in the Specification: the
+        // sort belongs to the request, and every caller wants page 0 to be
+        // the most recent. It also keeps offset paging stable enough - new
+        // rows land on page 0 instead of shifting everything below them.
+        Pageable sorted = PageRequest.of(
+                pageable.getPageNumber(), pageable.getPageSize(), Sort.by(Sort.Direction.DESC, "createdAt"));
+        return bookingRepository
+                .findAll(BookingSpecs.matching(customerId, driverId, query), sorted)
+                .map(this::toSummary);
     }
 
     /**

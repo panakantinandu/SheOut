@@ -5,6 +5,8 @@ import com.sheout.auth.CurrentAccount;
 import com.sheout.auth.CurrentAccountContext;
 import com.sheout.booking.BookingCategory;
 import com.sheout.booking.BookingError;
+import com.sheout.booking.BookingQuery;
+import com.sheout.booking.BookingStatus;
 import com.sheout.booking.internal.ServiceArea;
 import com.sheout.booking.internal.fare.FareQuote;
 import com.sheout.booking.BookingSummary;
@@ -14,6 +16,10 @@ import com.sheout.booking.RequestBookingCommand;
 import com.sheout.booking.internal.BookingService;
 import com.sheout.sharedkernel.Result;
 import com.sheout.sharedkernel.web.ApiException;
+import com.sheout.sharedkernel.web.PageResponse;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
@@ -25,11 +31,14 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -106,6 +115,13 @@ public class BookingController {
                 request.category()));
     }
 
+    /**
+     * Unpaged, and staying that way. The driver dashboard sums today's
+     * earnings and the Earnings screen sums a period across every completed
+     * trip; paging those would mean adding up pages in the browser and
+     * showing a different total depending on how far someone had scrolled.
+     * See /search below for the list a person actually reads.
+     */
     @GetMapping("/api/v1/bookings/me")
     public ResponseEntity<List<BookingSummary>> listMyBookings() {
         CurrentAccount caller = requireAuthenticated();
@@ -113,6 +129,34 @@ public class BookingController {
                 ? bookingService.listForDriver(caller.accountId())
                 : bookingService.listForCustomer(caller.accountId());
         return ResponseEntity.ok(bookings);
+    }
+
+    /**
+     * The caller's own trips, paged and filtered. Scoped by the token, not
+     * by a parameter: there is no customerId or driverId to pass, so no
+     * request can page through anybody else's history.
+     * <p>
+     * GET with query parameters rather than a POST body, because it is a
+     * read - so a filtered list is a link that can be bookmarked, shared
+     * with support, or re-opened by the browser's back button.
+     */
+    @GetMapping("/api/v1/bookings/me/search")
+    public ResponseEntity<PageResponse<BookingSummary>> searchMyBookings(
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer pageSize,
+            @RequestParam(required = false) BookingStatus status,
+            @RequestParam(required = false) Instant from,
+            @RequestParam(required = false) Instant to,
+            @RequestParam(required = false) Set<BookingCategory> category,
+            @RequestParam(required = false) String q) {
+        CurrentAccount caller = requireAuthenticated();
+        BookingQuery query = new BookingQuery(status, from, to, category, q);
+        Pageable pageable = PageRequest.of(
+                PageResponse.normalizePage(page), PageResponse.normalizePageSize(pageSize));
+        Page<BookingSummary> result = caller.role() == AccountRole.DRIVER
+                ? bookingService.pageForDriver(caller.accountId(), query, pageable)
+                : bookingService.pageForCustomer(caller.accountId(), query, pageable);
+        return ResponseEntity.ok(PageResponse.from(result, summary -> summary));
     }
 
     @GetMapping("/api/v1/bookings/{bookingId}")

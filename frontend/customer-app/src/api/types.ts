@@ -120,12 +120,15 @@ export interface NotificationView {
 }
 
 /** A booking's payment. razorpayOrderId/paymentId are null for a CASH payment. */
+/** Named so filter controls can enumerate it without repeating the union. */
+export type PaymentStatus = 'PENDING' | 'CAPTURED' | 'FAILED' | 'REFUNDED';
+
 export interface PaymentSummary {
   id: string;
   bookingId: string;
   amount: number;
   method: 'UPI' | 'CASH';
-  status: 'PENDING' | 'CAPTURED' | 'FAILED' | 'REFUNDED';
+  status: PaymentStatus;
   razorpayOrderId: string | null;
   razorpayPaymentId: string | null;
   failureReason: string | null;
@@ -155,4 +158,17 @@ export interface FareQuote {
   fareEstimate: number;
   distanceKm: number;
   category: BookingCategory;
+}
+
+/**
+ * One page of a list - the shape every paged endpoint returns. Mirrors
+ * PageResponse on the backend.
+ */
+export interface PagedResult<T> {
+  items: T[];
+  page: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
+  hasMore: boolean;
 }

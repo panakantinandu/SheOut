@@ -8,6 +8,9 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 
+import java.time.Instant;
+import java.util.UUID;
+
 @Entity
 @Table(name = "accounts")
 public class AccountEntity extends BaseEntity {
@@ -23,6 +26,20 @@ public class AccountEntity extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private AccountRole role;
+
+    /**
+     * Non-null means blocked. The same shape SosAlertEntity uses for
+     * resolution: the timestamp is the flag, and who did it and why sit
+     * beside it so the decision is answerable later. See V8.
+     */
+    @Column
+    private Instant blockedAt;
+
+    @Column
+    private UUID blockedBy;
+
+    @Column(length = 500)
+    private String blockReason;
 
     protected AccountEntity() {
         // JPA
@@ -64,5 +81,41 @@ public class AccountEntity extends BaseEntity {
      */
     void promoteToAdmin() {
         this.role = AccountRole.ADMIN;
+    }
+
+    public boolean isBlocked() {
+        return blockedAt != null;
+    }
+
+    public Instant getBlockedAt() {
+        return blockedAt;
+    }
+
+    public UUID getBlockedBy() {
+        return blockedBy;
+    }
+
+    public String getBlockReason() {
+        return blockReason;
+    }
+
+    /** A reason is required by the caller, not defaulted here - see AdminAccountService. */
+    void block(UUID adminAccountId, String reason) {
+        this.blockedAt = Instant.now();
+        this.blockedBy = adminAccountId;
+        this.blockReason = reason;
+    }
+
+    /**
+     * Clears all three, rather than keeping the old reason beside a null
+     * timestamp. A stale reason on an active account is a trap: it reads as
+     * current in every list and every detail view that shows it, and there
+     * is no field saying it is historical. If a block history is wanted it
+     * needs its own table, which is a bigger thing than this.
+     */
+    void unblock() {
+        this.blockedAt = null;
+        this.blockedBy = null;
+        this.blockReason = null;
     }
 }

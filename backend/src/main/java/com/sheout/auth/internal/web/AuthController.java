@@ -93,6 +93,15 @@ public class AuthController {
                     // Shared between the phone and Google flows (see verifyGoogle) - kept
                     // provider-agnostic rather than saying "phone number" for both.
                     new ApiException(HttpStatus.CONFLICT, "Conflict", "This account is already registered under a different role");
+            // 403, and specific rather than a generic auth failure: someone
+            // locked out deserves to know they were blocked rather than
+            // thinking the app is broken and retrying forever. The reason the
+            // admin typed is NOT returned - it is an operational note, and
+            // handing back free text an operator wrote about a person is not
+            // something this endpoint should do.
+            case ACCOUNT_BLOCKED ->
+                    new ApiException(HttpStatus.FORBIDDEN, "ACCOUNT_BLOCKED",
+                            "This account has been blocked by SheOut. Please contact support if you think this is a mistake.");
             case ADMIN_SELF_SIGNUP_FORBIDDEN ->
                     // A pure role gate, not tied to a specific resource id, so 403
                     // rather than the 404 used for per-resource authorization.

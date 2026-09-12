@@ -14,6 +14,8 @@ public record SosAlertRow(
         double lng,
         int contactsNotified,
         int contactsFailed,
-        Instant createdAt
+        Instant createdAt,
+        /** An alert from a blocked account still needs answering - the badge is context, not a filter. */
+        boolean customerBlocked
 ) {
 }

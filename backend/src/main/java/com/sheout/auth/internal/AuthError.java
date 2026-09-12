@@ -28,6 +28,13 @@ public enum AuthError {
     ROLE_MISMATCH,
 
     /**
+     * An admin has blocked this account - see AccountEntity. Checked only
+     * after the OTP is verified, so the endpoint cannot be used to discover
+     * whether an arbitrary number is blocked.
+     */
+    ACCOUNT_BLOCKED,
+
+    /**
      * Signup tried to create a NEW account with role=ADMIN. Refused at
      * account creation rather than on any request carrying role=ADMIN,
      * because an existing ADMIN still has to be able to sign in - see
