@@ -1,11 +1,13 @@
 import { MapPin } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Button, Card, IconCircle, ListRow, TextField, LiveMap, TopHeader } from '@sheout/design-system';
+import { Button, Card, IconCircle, TextField, LiveMap, TopHeader } from '@sheout/design-system';
 import type { MapMarker } from '@sheout/design-system';
 import { ApiError, bookingApi } from '../api/client';
 import { FareEstimateCard } from '../components/FareEstimateCard';
 import { LocationPicker } from '../components/LocationPicker';
+import type { PickerMode } from '../components/LocationPicker';
+import { LocationRow } from '../components/LocationRow';
 import { currentPosition, describePoint } from '../lib/geocode';
 import { useFareQuote } from '../lib/useFareQuote';
 import type { BookingCategory, GeoAddress } from '../api/types';
@@ -69,6 +71,7 @@ export function DeliveryBooking() {
   const [pickupError, setPickupError] = useState<string | null>(null);
   const [drop, setDrop] = useState<GeoAddress | null>(null);
   const [picking, setPicking] = useState<'pickup' | 'drop' | null>(null);
+  const [pickerMode, setPickerMode] = useState<PickerMode>('search');
   const [details, setDetails] = useState('');
   const [mealType, setMealType] = useState<MealType>('VEG');
   const [plan, setPlan] = useState<Plan>('DAILY');
@@ -76,6 +79,11 @@ export function DeliveryBooking() {
   const fare = useFareQuote({ type: 'DELIVERY', category: config.category, pickup, drop });
   const [error, setError] = useState<string | null>(null);
   const isLunchbox = kind === 'lunchbox';
+
+  function openPicker(field: 'pickup' | 'drop', mode: PickerMode) {
+    setPickerMode(mode);
+    setPicking(field);
+  }
 
   // Try the device once on arrival as a convenience, and reverse-geocode it
   // so the row reads as a place rather than "Your Current Location". A
@@ -130,22 +138,20 @@ export function DeliveryBooking() {
       </div>
 
       <Card className="divide-y divide-border p-0">
-        <div className="p-4">
-          <ListRow
-            icon={<IconCircle icon={<MapPin />} size="sm" />}
-            label="Pickup Location"
-            sublabel={pickup?.label ?? (pickupError ? 'Tap to choose your pickup point' : 'Finding your location...')}
-            onClick={() => setPicking('pickup')}
-          />
-        </div>
-        <div className="p-4">
-          <ListRow
-            icon={<IconCircle color="orange" icon={<MapPin />} size="sm" />}
-            label="Drop Location"
-            sublabel={drop?.label ?? 'Select Destination'}
-            onClick={() => setPicking('drop')}
-          />
-        </div>
+        <LocationRow
+          icon={<IconCircle icon={<MapPin />} size="sm" />}
+          label="Pickup Location"
+          sublabel={pickup?.label ?? (pickupError ? 'Tap to choose your pickup point' : 'Finding your location...')}
+          onSearch={() => openPicker('pickup', 'search')}
+          onMap={() => openPicker('pickup', 'map')}
+        />
+        <LocationRow
+          icon={<IconCircle color="orange" icon={<MapPin />} size="sm" />}
+          label="Drop Location"
+          sublabel={drop?.label ?? 'Select Destination'}
+          onSearch={() => openPicker('drop', 'search')}
+          onMap={() => openPicker('drop', 'map')}
+        />
       </Card>
 
 
@@ -219,6 +225,9 @@ export function DeliveryBooking() {
         title={picking === 'pickup' ? 'Set pickup location' : 'Where to?'}
         presets={DROP_PRESETS}
         allowCurrentLocation={picking === 'pickup'}
+        initialMode={pickerMode}
+        markerKind={picking === 'pickup' ? 'pickup' : 'drop'}
+        startAt={picking === 'pickup' ? pickup : drop}
         onSelect={(address) => (picking === 'pickup' ? setPickup(address) : setDrop(address))}
         onClose={() => setPicking(null)}
       />

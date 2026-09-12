@@ -99,7 +99,7 @@ export function Home() {
         </div>
       </div>
 
-      <Card className="relative flex items-center gap-3 overflow-hidden bg-primary-light">
+      <Card tone="brand" className="relative flex items-center gap-3 overflow-hidden">
         <div className="flex-1">
           <p className="text-sm font-semibold text-primary">Women Supporting Women</p>
           <p className="mt-1 text-xs text-text-secondary">Safe &middot; Empowered &middot; Together</p>

@@ -23,7 +23,7 @@ function startOfDay(): Date {
  */
 function LoadError({ title, detail, onRetry }: { title: string; detail: string; onRetry: () => void }) {
   return (
-    <Card className="flex items-start gap-3 bg-danger/10">
+    <Card tone="danger" className="flex items-start gap-3">
       <IconCircle color="red" tone="soft" icon={<CloudOff />} />
       <div className="min-w-0 flex-1">
         <p className="font-heading font-semibold text-text-primary">{title}</p>
@@ -231,7 +231,7 @@ export function Home() {
           looked normal while requests went to drivers who were really
           there. Say it plainly instead. */}
       {isOnline && location.status === 'blocked' && (
-        <Card className="flex items-start gap-3 bg-danger/10">
+        <Card tone="danger" className="flex items-start gap-3">
           <IconCircle color="red" tone="soft" icon={<MapPinOff />} />
           <div className="flex-1">
             <p className="font-heading font-semibold text-text-primary">Location not shared</p>
@@ -295,7 +295,7 @@ export function Home() {
       ) : !verification ? (
         <p className="text-center text-sm text-text-secondary">Checking your verification...</p>
       ) : !isVerified ? (
-        <Card className="flex items-center gap-3 bg-accent-orange/10">
+        <Card tone="warning" className="flex items-center gap-3">
           <IconCircle color="orange" tone="soft" icon={<ShieldCheck />} />
           <div className="flex-1">
             <p className="font-heading font-semibold text-text-primary">Complete verification to go online</p>
