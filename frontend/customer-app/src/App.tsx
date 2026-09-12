@@ -7,6 +7,7 @@ import { Home } from './screens/Home'
 import { About } from './screens/About'
 import { HelpSupport } from './screens/HelpSupport'
 import { Login } from './screens/Login'
+import { EmergencyContacts } from './screens/EmergencyContacts'
 import { Privacy } from './screens/Privacy'
 import { Terms } from './screens/Terms'
 import { Notifications } from './screens/Notifications'
@@ -66,6 +67,7 @@ function App() {
       <Route path="/profile/details" element={protectedOnly(<PersonalDetails />)} />
       <Route path="/profile/addresses" element={protectedOnly(<SavedAddresses />)} />
       <Route path="/profile/payments" element={protectedOnly(<PaymentMethods />)} />
+      <Route path="/profile/emergency-contacts" element={protectedOnly(<EmergencyContacts />)} />
       <Route path="/verification" element={protectedOnly(<Verification />)} />
       <Route path="/help" element={protectedOnly(<HelpSupport />)} />
       <Route path="/about" element={protectedOnly(<About />)} />

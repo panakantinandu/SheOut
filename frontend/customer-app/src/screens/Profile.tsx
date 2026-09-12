@@ -1,4 +1,4 @@
-import { BadgeCheck, FileText, HelpCircle, Info, Lock, LogOut, MapPin, Receipt, User } from 'lucide-react';
+import { BadgeCheck, FileText, HelpCircle, Info, Lock, LogOut, MapPin, Receipt, ShieldAlert, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, ConfirmDialog, IconCircle, ListRow, TopHeader } from '@sheout/design-system';
@@ -67,10 +67,13 @@ export function Profile() {
       </section>
 
       <section>
-        <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">Verification</h2>
-        <Card className="p-0">
+        <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">Safety</h2>
+        <Card className="divide-y divide-border p-0">
           <div className="p-4">
             <ListRow icon={<IconCircle tone="soft" size="sm" icon={<BadgeCheck />} />} label="Identity Verification" onClick={() => navigate('/verification')} />
+          </div>
+          <div className="p-4">
+            <ListRow icon={<IconCircle color="red" tone="soft" size="sm" icon={<ShieldAlert />} />} label="Emergency Contacts" sublabel="Who an SOS alerts" onClick={() => navigate('/profile/emergency-contacts')} />
           </div>
         </Card>
       </section>
