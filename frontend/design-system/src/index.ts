@@ -1,5 +1,6 @@
 export * from './lib/toast';
 export * from './lib/labels';
+export * from './lib/usePagedList';
 export * from './legal/content';
 export * from './components';
 export * from './tokens';

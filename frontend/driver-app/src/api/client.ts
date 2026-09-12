@@ -1,7 +1,10 @@
 import type {
   ApiErrorResponse,
   AuthSession,
+  BookingCategory,
+  BookingStatus,
   BookingSummary,
+  PagedResult,
   DriverOnlineStatus,
   DriverProfileSummary,
   OfferSummary,
@@ -22,6 +25,28 @@ import type {
 // the code looking wrong. An empty value means "not configured" here, so
 // it must fall back like a missing one.
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+/**
+ * Turns a filter object into a query string, dropping anything unset.
+ * An unset filter must be absent, not present-and-empty: the backend cannot
+ * parse a blank enum, where an omitted parameter correctly means "do not
+ * narrow". An array becomes a repeated parameter, which is how Spring binds
+ * a Set.
+ */
+function buildQuery(params: Record<string, unknown>): string {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === '') continue;
+    if (Array.isArray(value)) {
+      if (value.length === 0) continue;
+      for (const entry of value) search.append(key, String(entry));
+    } else {
+      search.append(key, String(value));
+    }
+  }
+  const query = search.toString();
+  return query ? `?${query}` : '';
+}
+
 const TOKEN_STORAGE_KEY = 'sheout_driver_access_token';
 
 export class ApiError extends Error {
@@ -175,6 +200,23 @@ export const dispatchApi = {
 };
 
 export const bookingApi = {
+  /**
+   * The partner's own trips, paged and filtered. Same endpoint the rider
+   * app calls - it is scoped by the token, so a DRIVER token returns the
+   * trips they drove.
+   */
+  search(params: {
+    page?: number;
+    pageSize?: number;
+    status?: BookingStatus;
+    from?: string;
+    to?: string;
+    category?: BookingCategory[];
+    q?: string;
+  }): Promise<PagedResult<BookingSummary>> {
+    return request(`/api/v1/bookings/me/search${buildQuery(params)}`);
+  },
+
   listMine(): Promise<BookingSummary[]> {
     return request('/api/v1/bookings/me');
   },

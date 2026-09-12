@@ -1,7 +1,18 @@
 import { Bike, Calendar, ChevronDown, Package, TrendingUp, UtensilsCrossed } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AmountText, Button, Card, IconCircle, TopHeader } from '@sheout/design-system';
+import {
+  AmountText,
+  Button,
+  Card,
+  DateRangeFields,
+  IconCircle,
+  ListFilterBar,
+  LoadMore,
+  SelectField,
+  TopHeader,
+} from '@sheout/design-system';
+import type { DateRangeValue } from '@sheout/design-system';
 import { ApiError, bookingApi } from '../api/client';
 import type { BookingCategory, BookingSummary } from '../api/types';
 
@@ -39,6 +50,9 @@ const PERIODS: { key: Period; label: string }[] = [
   { key: 'ALL', label: 'All Time' },
 ];
 
+/** How many detail rows appear at a time under View Details. */
+const DETAIL_PAGE_SIZE = 10;
+
 function startOfDay(): Date {
   const d = new Date();
   d.setHours(0, 0, 0, 0);
@@ -64,10 +78,22 @@ function periodStart(period: Period): Date | null {
  * earnings module on the backend, so this sums finalFare across the
  * driver's own COMPLETED bookings from GET /api/v1/bookings/me.
  * <p>
- * The period filter is applied client-side, on completedAt, over that same
- * response. A date-range query parameter would mean widening the booking
- * API for one screen when the list is already in hand and driver-sized -
- * worth revisiting only if a driver's history ever outgrows one fetch.
+ * DELIBERATELY NOT PAGED, unlike every other history list in this app, and
+ * this is the one place that trade-off goes the other way. The point of
+ * this screen is a total. A paged total is a wrong total: it would show a
+ * different number depending on how far the driver had scrolled, and a
+ * partner checking what they earned this week would be given a figure that
+ * silently grew as they tapped. So the fetch stays whole, every filter is
+ * applied over the whole set, and only the trip list under View Details is
+ * paged - in memory, since the rows are already here.
+ * <p>
+ * FLAGGED: the honest fix at real scale is an aggregate endpoint that
+ * returns sums for a filter without returning the rows. That does not exist
+ * on this backend, and inventing one was a bigger change than this pass.
+ * Until then this download grows with a working driver's history.
+ * <p>
+ * The period preset, the custom date range and the work-type filter are all
+ * applied client-side over that same response, on completedAt and category.
  */
 export function Earnings() {
   const navigate = useNavigate();
@@ -76,6 +102,10 @@ export function Earnings() {
   const [period, setPeriod] = useState<Period>('WEEK');
   const [pickingPeriod, setPickingPeriod] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  const [dates, setDates] = useState<DateRangeValue>({ from: '', to: '' });
+  const [group, setGroup] = useState<EarningsGroup | ''>('');
+  /** How many detail rows are on screen. See DETAIL_PAGE_SIZE. */
+  const [detailShown, setDetailShown] = useState(DETAIL_PAGE_SIZE);
 
   useEffect(() => {
     bookingApi
@@ -86,8 +116,21 @@ export function Earnings() {
 
   const { periodTotal, allTimeTotal, completedTrips, byGroup, trips } = useMemo(() => {
     const completed = (bookings ?? []).filter((b) => b.status === 'COMPLETED' && b.completedAt);
-    const from = periodStart(period);
-    const inPeriod = from ? completed.filter((b) => new Date(b.completedAt!) >= from) : completed;
+    // A custom range overrides the period preset when one is set - two date
+    // filters both narrowing at once would leave a driver unable to tell
+    // which one produced the number.
+    const customFrom = dates.from ? new Date(`${dates.from}T00:00:00`) : null;
+    // Inclusive to the end of the chosen day: "to today" means through
+    // today, and the off-by-one there hides a whole day's earnings.
+    const customTo = dates.to ? new Date(`${dates.to}T23:59:59.999`) : null;
+    const from = customFrom ?? periodStart(period);
+    const byDate = completed.filter((b) => {
+      const at = new Date(b.completedAt!);
+      if (from && at < from) return false;
+      if (customTo && at > customTo) return false;
+      return true;
+    });
+    const inPeriod = group ? byDate.filter((b) => groupOf(b.category) === group) : byDate;
     const fareOf = (b: BookingSummary) => b.finalFare ?? b.fareEstimate;
 
     const groupTotals = new Map<EarningsGroup, { amount: number; count: number }>();
@@ -106,9 +149,18 @@ export function Earnings() {
       byGroup: Array.from(groupTotals.entries()),
       trips: inPeriod.slice().sort((a, b) => new Date(b.completedAt!).getTime() - new Date(a.completedAt!).getTime()),
     };
-  }, [bookings, period]);
+  }, [bookings, period, dates.from, dates.to, group]);
 
   const periodLabel = PERIODS.find((p) => p.key === period)!.label;
+
+  const activeFilters = [group, dates.from, dates.to].filter(Boolean).length;
+  const hasFilters = activeFilters > 0;
+
+  function clearFilters() {
+    setGroup('');
+    setDates({ from: '', to: '' });
+    setDetailShown(DETAIL_PAGE_SIZE);
+  }
 
   return (
     <div className="space-y-6">
@@ -119,6 +171,27 @@ export function Earnings() {
 
       {bookings && (
         <>
+          {/* No search box: a partner searching their earnings by address is
+              looking for a trip, which the Bookings screen does properly
+              with a server-side query. Here the question is always "how
+              much, over what period, for what kind of work". */}
+          <ListFilterBar activeCount={activeFilters} onClearAll={clearFilters}>
+            <SelectField
+              label="Type of work"
+              placeholder="All types"
+              value={group}
+              onChange={(e) => setGroup(e.target.value as EarningsGroup | '')}
+              options={(['RIDES', 'PARCELS', 'LUNCH_BOX'] as EarningsGroup[]).map((g) => ({
+                value: g,
+                label: GROUP_LABEL[g],
+              }))}
+            />
+            <DateRangeFields value={dates} onChange={setDates} label="Custom date range" />
+            <p className="text-xs text-text-secondary">
+              A custom range replaces the period button above it, so only one date filter is ever in effect.
+            </p>
+          </ListFilterBar>
+
           <Card variant="primary" className="space-y-3">
             <div className="flex items-start justify-between gap-3">
               <div>
@@ -204,26 +277,39 @@ export function Earnings() {
           </Button>
 
           {showDetails && (
-            <Card className="divide-y divide-border p-0">
-              {trips.length === 0 ? (
-                <p className="p-4 text-center text-sm text-text-secondary">Nothing to show for {periodLabel.toLowerCase()}.</p>
-              ) : (
-                trips.map((b) => (
-                  <div key={b.id} className="flex items-center gap-3 p-4">
-                    <IconCircle tone="soft" size="sm" icon={groupIcon(groupOf(b.category))} />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-text-primary">{b.drop.label}</p>
-                      <p className="text-xs text-text-secondary">{new Date(b.completedAt!).toLocaleString()}</p>
+            <>
+              <Card className="divide-y divide-border p-0">
+                {trips.length === 0 ? (
+                  <p className="p-4 text-center text-sm text-text-secondary">
+                    {hasFilters
+                      ? 'No results match your filters.'
+                      : `Nothing to show for ${periodLabel.toLowerCase()}.`}
+                  </p>
+                ) : (
+                  trips.slice(0, detailShown).map((b) => (
+                    <div key={b.id} className="flex items-center gap-3 p-4">
+                      <IconCircle tone="soft" size="sm" icon={groupIcon(groupOf(b.category))} />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-text-primary">{b.drop.label}</p>
+                        <p className="text-xs text-text-secondary">{new Date(b.completedAt!).toLocaleString()}</p>
+                      </div>
+                      <AmountText amount={b.finalFare ?? b.fareEstimate} />
                     </div>
-                    <AmountText amount={b.finalFare ?? b.fareEstimate} />
-                  </div>
-                ))
-              )}
-            </Card>
+                  ))
+                )}
+              </Card>
+              <LoadMore
+                shown={Math.min(detailShown, trips.length)}
+                total={trips.length}
+                hasMore={detailShown < trips.length}
+                loading={false}
+                onLoadMore={() => setDetailShown((n) => n + DETAIL_PAGE_SIZE)}
+              />
+            </>
           )}
 
           <p className="text-center text-xs text-text-secondary">
-            Totals are worked out from the trips you have completed.
+            Totals are worked out from every trip you completed in this period, not just the ones listed.
           </p>
         </>
       )}

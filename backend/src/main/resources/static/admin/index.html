@@ -164,9 +164,51 @@
   .b-role-driver   { color: #1D4ED8; background: #EAF0FE; border-color: #C5D6FB; }
   .b-role-customer { color: var(--brand); background: var(--brand-tint); border-color: #D9CCF3; }
 
+  /* Blocked is neither a role nor one of the three status tones, and must
+     not be mistaken for either. Status badges are pale tints; a role badge
+     is a pale tint in a different hue. This is the only solid-filled badge
+     in the console, so a blocked account is unmistakable at a glance down a
+     column of otherwise pale pills. */
+  .b-blocked {
+    color: #fff; background: #7F1D1D; border-color: #7F1D1D;
+    letter-spacing: .02em; text-transform: uppercase; font-size: 10.5px;
+  }
+
   .wait { font-weight: 650; }
   .wait.warn { color: var(--amber); }
   .wait.bad { color: var(--red); }
+
+  /* ---------- filters + pager ---------- */
+  .filters {
+    display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+    padding: 13px 16px; border-bottom: 1px solid var(--line-soft);
+  }
+  .filters .f { display: flex; flex-direction: column; gap: 4px; }
+  .filters .f > span { font-size: 11px; font-weight: 650; color: var(--muted); }
+  .filters input, .filters select {
+    padding: 7px 9px; border: 1px solid var(--line); border-radius: 8px;
+    font: inherit; font-size: 13px; background: #fff; color: var(--text);
+  }
+  .filters input:focus, .filters select:focus { outline: none; border-color: var(--brand); }
+  .filters .f.wide input { min-width: 230px; }
+  .filters .spacer { margin-left: auto; }
+  .filters .active {
+    align-self: center; font-size: 12px; font-weight: 650; color: var(--brand);
+  }
+
+  .pager {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 12px 16px; border-top: 1px solid var(--line-soft); font-size: 13px;
+  }
+  .pager .count { color: var(--muted); }
+  .pager .controls { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+  .pager button {
+    padding: 6px 11px; border: 1px solid var(--line); border-radius: 8px;
+    background: #fff; color: var(--text); cursor: pointer;
+  }
+  .pager button:hover:not([disabled]) { border-color: var(--muted-soft); }
+  .pager button[disabled] { opacity: .45; cursor: not-allowed; }
+  .pager .of { color: var(--muted); font-variant-numeric: tabular-nums; }
 
   /* ---------- states ---------- */
   .state { padding: 44px 20px; text-align: center; color: var(--muted); }
@@ -335,6 +377,11 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7h18M3 12h18M3 17h18"/></svg>
         Bookings <span class="count" id="cBookings">–</span>
       </button>
+      <div class="label">People</div>
+      <button data-tab="accounts" aria-current="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/></svg>
+        Accounts <span class="count" id="cAccounts">–</span>
+      </button>
     </nav>
 
     <div class="me">
@@ -364,12 +411,14 @@
         <h2 id="cardTitle"></h2>
         <span class="hint" id="cardHint"></span>
       </div>
+      <div class="filters" id="filters" hidden></div>
       <div class="scroll">
         <table>
           <thead id="head"></thead>
           <tbody id="rows"></tbody>
         </table>
       </div>
+      <div class="pager" id="pager" hidden></div>
     </div>
   </main>
 </div>
@@ -516,13 +565,24 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal()
  * driver, or resolving a safety alert, has real consequences and an ops
  * person who clicked the wrong row deserves the chance to catch it.
  */
-function confirmAction({ title, message, confirmLabel, tone = 'primary', withReason = false }) {
+function confirmAction({
+  title,
+  message,
+  confirmLabel,
+  tone = 'primary',
+  withReason = false,
+  /** Blocking needs one; rejecting a document does not. */
+  reasonRequired = false,
+  reasonLabel = 'Reason (optional, shared with the driver)',
+  reasonPlaceholder = 'e.g. Document is blurred and the name cannot be read',
+}) {
   return new Promise(resolve => {
     openModal(`
       <div class="modal-head"><h3>${esc(title)}</h3><p>${esc(message)}</p></div>
       <div class="modal-body">
-        ${withReason ? `<label for="reasonInput">Reason (optional, shared with the driver)</label>
-        <textarea id="reasonInput" placeholder="e.g. Document is blurred and the name cannot be read"></textarea>` : ''}
+        ${withReason ? `<label for="reasonInput">${esc(reasonLabel)}</label>
+        <textarea id="reasonInput" placeholder="${esc(reasonPlaceholder)}"></textarea>
+        <p class="field-err" id="reasonErr" hidden>Please say why. This is kept as the record of the decision.</p>` : ''}
       </div>
       <div class="modal-foot">
         <button class="btn" data-cancel type="button">Cancel</button>
@@ -531,9 +591,17 @@ function confirmAction({ title, message, confirmLabel, tone = 'primary', withRea
     const root = $('modalRoot');
     root.querySelector('[data-cancel]').addEventListener('click', () => { closeModal(); resolve(null); });
     root.querySelector('[data-go]').addEventListener('click', () => {
-      const reason = withReason ? (root.querySelector('#reasonInput').value.trim() || null) : null;
+      const box = withReason ? root.querySelector('#reasonInput') : null;
+      const reason = box ? box.value.trim() : '';
+      // Refused here as well as by the API. The server is the rule, but
+      // finding out after the dialog closed would lose what was typed.
+      if (reasonRequired && !reason) {
+        root.querySelector('#reasonErr').hidden = false;
+        box.focus();
+        return;
+      }
       closeModal();
-      resolve({ reason });
+      resolve({ reason: reason || null });
     });
   });
 }
@@ -626,6 +694,126 @@ const ICON_EMPTY_QUEUE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentCo
 const ICON_EMPTY_SOS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6L9 17l-5-5"/></svg>';
 const ICON_EMPTY_LIST = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 6h16M4 12h16M4 18h10"/></svg>';
 
+const ICON_EMPTY_SEARCH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5M8 11h6"/></svg>';
+const ICON_EMPTY_PEOPLE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>';
+
+/** Rows per page. Dense table on a wide screen, so more than a phone list. */
+const PAGE_SIZE = 25;
+
+/**
+ * Filter and page state, kept per section.
+ *
+ * Per section rather than one shared object: switching from Bookings to
+ * Accounts and back should not silently carry a status filter across, and a
+ * date range that means something in one table means nothing in the other.
+ */
+const filterState = {};
+
+function stateFor(name) {
+  if (!filterState[name]) filterState[name] = { page: 0 };
+  return filterState[name];
+}
+
+/**
+ * Turns the current filter state into a query string.
+ *
+ * A blank filter is omitted entirely, not sent empty: the backend cannot
+ * parse `status=` into an enum, while an absent `status` correctly means
+ * "do not narrow". Dates are widened to the whole local day - a "to" of
+ * today means through the end of today, and the off-by-one there hides a
+ * day's worth of rows.
+ */
+function filterQuery(state, extra = {}) {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries({ ...state, ...extra })) {
+    if (value === '' || value === null || value === undefined) continue;
+    if (key === 'from') params.set('from', new Date(`${value}T00:00:00`).toISOString());
+    else if (key === 'to') params.set('to', new Date(`${value}T23:59:59.999`).toISOString());
+    else params.set(key, String(value));
+  }
+  const query = params.toString();
+  return query ? `?${query}` : '';
+}
+
+/** How many filters are narrowing the list. page is not a filter. */
+function activeFilterCount(view, state) {
+  if (!view.filters) return 0;
+  return view.filters.filter(f => state[f.key] !== undefined && state[f.key] !== '').length;
+}
+
+function paintFilters(view) {
+  const host = $('filters');
+  if (!view.filters) { host.hidden = true; host.innerHTML = ''; return; }
+  const state = stateFor(tab);
+  const count = activeFilterCount(view, state);
+  host.hidden = false;
+  host.innerHTML = view.filters.map(f => {
+    const value = state[f.key] ?? '';
+    if (f.kind === 'text') {
+      return `<label class="f ${f.wide ? 'wide' : ''}"><span>${esc(f.label)}</span>
+        <input type="search" data-filter="${esc(f.key)}" placeholder="${esc(f.placeholder || '')}" value="${esc(value === '' ? '' : value)}"></label>`;
+    }
+    if (f.kind === 'date') {
+      return `<label class="f"><span>${esc(f.label)}</span>
+        <input type="date" data-filter="${esc(f.key)}" value="${esc(value === '' ? '' : value)}"></label>`;
+    }
+    const options = f.options().map(o =>
+      `<option value="${esc(o.value)}"${String(value) === String(o.value) ? ' selected' : ''}>${esc(o.label)}</option>`).join('');
+    return `<label class="f"><span>${esc(f.label)}</span>
+      <select data-filter="${esc(f.key)}"><option value="">${esc(f.any)}</option>${options}</select></label>`;
+  }).join('')
+    + (count > 0
+      ? `<span class="spacer"></span><span class="active">${count} filter${count === 1 ? '' : 's'} applied</span>
+         <button class="btn" data-clear-filters type="button">Clear filters</button>`
+      : '');
+
+  // The value is re-read from the DOM on every change rather than tracked
+  // per keystroke, and a text box waits before reloading so typing an
+  // address does not fire a request per letter.
+  host.querySelectorAll('[data-filter]').forEach(el => {
+    const commit = () => {
+      const s = stateFor(tab);
+      s[el.dataset.filter] = el.value;
+      s.page = 0;
+      render({ keepFocus: el.dataset.filter });
+    };
+    if (el.type === 'search') {
+      let timer;
+      el.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(commit, 400); });
+    } else {
+      el.addEventListener('change', commit);
+    }
+  });
+  const clear = host.querySelector('[data-clear-filters]');
+  if (clear) clear.addEventListener('click', () => { filterState[tab] = { page: 0 }; render(); });
+}
+
+function paintPager(paged) {
+  const host = $('pager');
+  if (!paged) { host.hidden = true; host.innerHTML = ''; return; }
+  const { page, totalItems, totalPages, hasMore } = paged;
+  if (totalItems === 0) { host.hidden = true; host.innerHTML = ''; return; }
+  const first = page * paged.pageSize + 1;
+  const last = first + paged.items.length - 1;
+  host.hidden = false;
+  // Numbered pages rather than load-more, unlike the phone screens: an
+  // operator scanning a dense grid on a wide screen wants to jump, and
+  // knowing there are four pages is itself information.
+  host.innerHTML = `
+    <span class="count">Showing <strong>${first}–${last}</strong> of <strong>${totalItems}</strong></span>
+    <span class="controls">
+      <button data-page="0" type="button" ${page === 0 ? 'disabled' : ''}>First</button>
+      <button data-page="${page - 1}" type="button" ${page === 0 ? 'disabled' : ''}>Previous</button>
+      <span class="of">Page ${page + 1} of ${Math.max(totalPages, 1)}</span>
+      <button data-page="${page + 1}" type="button" ${hasMore ? '' : 'disabled'}>Next</button>
+      <button data-page="${Math.max(totalPages - 1, 0)}" type="button" ${hasMore ? '' : 'disabled'}>Last</button>
+    </span>`;
+  host.querySelectorAll('[data-page]').forEach(b => b.addEventListener('click', () => {
+    stateFor(tab).page = Math.max(Number(b.dataset.page), 0);
+    render();
+  }));
+}
+
 const VIEWS = {
   queue: {
     title: 'Verification Queue',
@@ -646,7 +834,7 @@ const VIEWS = {
     load: () => api('/admin/verification/review-queue'),
     cell: (r, key) => {
       if (key === 'role') return roleBadge(r.role);
-      if (key === 'name') return `<span class="strong">${esc(r.name || 'Name not set')}</span>`;
+      if (key === 'name') return `<span class="strong">${esc(r.name || 'Name not set')}</span>${r.blocked ? ' <span class="badge b-blocked">Blocked</span>' : ''}`;
       if (key === 'phoneNumber') return `<span class="num">${esc(r.phoneNumber)}</span>`;
       if (key === 'gender') return badge(r.genderVerificationStatus);
       if (key === 'police') return isCustomer(r)
@@ -679,7 +867,7 @@ const VIEWS = {
     ],
     load: () => api('/admin/sos/active'),
     cell: (r, key) => {
-      if (key === 'customer') return `<span class="strong">${esc(r.customerName || 'Unknown')}</span>`;
+      if (key === 'customer') return `<span class="strong">${esc(r.customerName || 'Unknown')}</span>${r.customerBlocked ? ' <span class="badge b-blocked">Blocked</span>' : ''}`;
       if (key === 'phone') return `<span class="num">${esc(r.customerPhone)}</span>`;
       if (key === 'location') return `<a href="https://maps.google.com/?q=${r.lat},${r.lng}" target="_blank" rel="noreferrer">Open map</a>
         <div class="subtle num">${r.lat.toFixed(4)}, ${r.lng.toFixed(4)}</div>`;
@@ -698,10 +886,26 @@ const VIEWS = {
 
   bookings: {
     title: 'Bookings',
-    desc: 'A read-only view of recent bookings for monitoring. There are no actions to take from this page.',
-    cardTitle: 'Recent bookings',
+    desc: 'Every booking, searchable by pickup or drop address and narrowable by status, service and date. Read-only - there are no actions to take from this page.',
+    cardTitle: 'Bookings',
     hint: 'Read-only — monitoring view',
     empty: { icon: ICON_EMPTY_LIST, title: 'No bookings yet', text: 'Bookings made in the customer app will be listed here.' },
+    emptyFiltered: {
+      icon: ICON_EMPTY_SEARCH,
+      title: 'No results match your filters',
+      text: 'Every booking is still here. Widen the date range, clear the status, or clear the filters.',
+    },
+    paged: true,
+    filters: [
+      { key: 'q', kind: 'text', label: 'Search address', placeholder: 'Pickup or drop contains…', wide: true },
+      { key: 'status', kind: 'select', label: 'Status', any: 'Any status', options: () => Object.entries(STATUS_TEXT)
+          .filter(([v]) => ['REQUESTED', 'MATCHED', 'ACCEPTED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'].includes(v))
+          .map(([value, label]) => ({ value, label })) },
+      { key: 'category', kind: 'select', label: 'Service', any: 'Any service', options: () => Object.entries(SERVICE_TEXT)
+          .map(([value, label]) => ({ value, label })) },
+      { key: 'from', kind: 'date', label: 'From' },
+      { key: 'to', kind: 'date', label: 'To' },
+    ],
     columns: [
       { key: 'status', label: 'Status', sort: r => r.status || '' },
       { key: 'service', label: 'Service', sort: r => r.category || '' },
@@ -711,7 +915,7 @@ const VIEWS = {
       { key: 'payment', label: 'Payment', sort: r => r.paymentStatus || '' },
       { key: 'requestedAt', label: 'Requested', sort: r => new Date(r.requestedAt || 0).getTime() },
     ],
-    load: () => api('/admin/bookings/recent?limit=50'),
+    load: (state) => api(`/admin/bookings${filterQuery(state, { pageSize: PAGE_SIZE })}`),
     cell: (r, key) => {
       if (key === 'status') return badge(r.status);
       if (key === 'service') return `${esc(serviceText(r.category))}<div class="subtle">${esc(tripTypeText(r.type))}</div>`;
@@ -725,6 +929,81 @@ const VIEWS = {
       }
       if (key === 'payment') return badge(r.paymentStatus) + (r.paymentMethod ? `<div class="subtle">${esc(payMethodText(r.paymentMethod))}</div>` : '');
       if (key === 'requestedAt') return `<span class="subtle">${time(r.requestedAt)}</span>`;
+      return '—';
+    },
+  },
+
+  /**
+   * The account list, and the only place blocking can be reached.
+   *
+   * This section was flagged as a judgement call rather than assumed. The
+   * alternative was hanging Block off the Bookings table, and that would
+   * have been half a feature: a driver who has never completed a trip, or
+   * someone who signed up and abused SOS without ever booking, does not
+   * appear in Bookings at all and so could never be blocked. An account
+   * list is the surface blocking actually needs, and it is one paged
+   * endpoint plus this section rather than a new subsystem.
+   */
+  accounts: {
+    title: 'Accounts',
+    desc: 'Everyone with a SheOut account, searchable by phone or email. Blocking an account stops that person signing in, and immediately stops a partner receiving trips. Operations accounts are not listed and cannot be blocked from here.',
+    cardTitle: 'Accounts',
+    hint: 'Blocking takes effect immediately',
+    empty: { icon: ICON_EMPTY_PEOPLE, title: 'No accounts yet', text: 'Riders and partners appear here as they sign up.' },
+    emptyFiltered: {
+      icon: ICON_EMPTY_SEARCH,
+      title: 'No results match your filters',
+      text: 'Every account is still here. Clear the search, or switch the account type and blocked filters back to Any.',
+    },
+    paged: true,
+    filters: [
+      { key: 'q', kind: 'text', label: 'Search', placeholder: 'Phone or email contains…', wide: true },
+      { key: 'role', kind: 'select', label: 'Account type', any: 'Any type', options: () => [
+          { value: 'CUSTOMER', label: 'Customer' },
+          { value: 'DRIVER', label: 'Driver' },
+        ] },
+      { key: 'blocked', kind: 'select', label: 'Status', any: 'Any', options: () => [
+          { value: 'false', label: 'Active only' },
+          { value: 'true', label: 'Blocked only' },
+        ] },
+    ],
+    columns: [
+      { key: 'role', label: 'Account type', sort: r => r.role || '' },
+      { key: 'name', label: 'Name', sort: r => (r.name || '').toLowerCase() },
+      { key: 'contact', label: 'Phone / email', sort: r => (r.phoneNumber || r.email || '') },
+      { key: 'verification', label: 'Verification', sort: r => r.genderVerificationStatus || '' },
+      { key: 'blocked', label: 'Access', sort: r => (r.blocked ? 1 : 0) },
+      { key: 'createdAt', label: 'Joined', sort: r => new Date(r.createdAt || 0).getTime() },
+      { key: 'act', label: '' },
+    ],
+    load: (state) => api(`/admin/accounts${filterQuery(state, { pageSize: PAGE_SIZE })}`),
+    cell: (r, key) => {
+      if (key === 'role') return roleBadge(r.role);
+      if (key === 'name') return `<span class="strong">${esc(r.name || 'Name not set')}</span>`;
+      if (key === 'contact') return `<span class="num">${esc(r.phoneNumber || r.email)}</span>`;
+      if (key === 'verification') {
+        const gender = badge(r.genderVerificationStatus);
+        // Customers are not police-checked - saying "not required" is the
+        // truth, where an empty cell reads as missing data.
+        const police = isCustomer(r)
+          ? '<div class="subtle">Police: not required</div>'
+          : `<div class="subtle">Police: ${esc(STATUS_TEXT[r.policeVerificationStatus] || r.policeVerificationStatus || '—')}</div>`;
+        return gender + police;
+      }
+      if (key === 'blocked') {
+        if (!r.blocked) return '<span class="badge b-green">Active</span>';
+        // Who and why, inline. An operator looking at a blocked account
+        // should not have to open anything to find out what happened.
+        return `<span class="badge b-blocked">Blocked</span>
+          <div class="subtle">${esc(time(r.blockedAt))}${r.blockedByPhone ? ` by ${esc(r.blockedByPhone)}` : ''}</div>
+          ${r.blockReason ? `<div class="subtle">“${esc(r.blockReason)}”</div>` : ''}`;
+      }
+      if (key === 'createdAt') return `<span class="subtle">${time(r.createdAt)}</span>`;
+      if (key === 'act') {
+        return r.blocked
+          ? `<button class="btn" data-unblock="${esc(r.accountId)}" type="button">Unblock</button>`
+          : `<button class="btn btn-reject" data-block="${esc(r.accountId)}" type="button">Block</button>`;
+      }
       return '—';
     },
   },
@@ -877,11 +1156,12 @@ function skeletonRows(cols) {
   ).join('');
 }
 
-function paintRows(view, data) {
+function paintRows(view, data, emptyState) {
   const cols = view.columns;
+  const state = emptyState || view.empty;
   if (!data.length) {
     $('rows').innerHTML = `<tr><td colspan="${cols.length}">
-      <div class="state">${view.empty.icon}<h3>${esc(view.empty.title)}</h3><p>${esc(view.empty.text)}</p></div>
+      <div class="state">${state.icon}<h3>${esc(state.title)}</h3><p>${esc(state.text)}</p></div>
     </td></tr>`;
     return;
   }
@@ -920,7 +1200,7 @@ function paintHead(view) {
   }));
 }
 
-async function render() {
+async function render(opts = {}) {
   const view = VIEWS[tab];
   $('pageTitle').textContent = view.title;
   $('pageDesc').textContent = view.desc;
@@ -928,14 +1208,38 @@ async function render() {
   $('cardHint').textContent = view.hint;
   $('err').hidden = true;
   paintHead(view);
+  paintFilters(view);
+  // Typing into the search box re-renders the bar, which would otherwise
+  // take the cursor with it mid-word.
+  if (opts.keepFocus) {
+    const el = $('filters').querySelector(`[data-filter="${opts.keepFocus}"]`);
+    if (el) { el.focus(); if (el.setSelectionRange) el.setSelectionRange(el.value.length, el.value.length); }
+  }
   $('rows').innerHTML = skeletonRows(view.columns.length);
   try {
-    const data = await view.load();
-    paintRows(view, data);
-    const counts = { queue: 'cQueue', sos: 'cSos', bookings: 'cBookings' };
-    $(counts[tab]).textContent = data.length;
+    const state = stateFor(tab);
+    const result = await view.load(state);
+    // A paged endpoint answers with items and totals; the unpaged ones
+    // still answer with a bare array. Normalise so the rest does not care.
+    const paged = Array.isArray(result)
+      ? null
+      : { ...result, pageSize: result.pageSize || PAGE_SIZE };
+    const rows = paged ? paged.items : result;
+
+    // Which empty state: "nothing here yet" and "nothing matches" mean
+    // completely different things, and showing the first to someone whose
+    // filters are simply too narrow reads as lost data.
+    const narrowed = activeFilterCount(view, state) > 0;
+    paintRows(view, rows, narrowed && view.emptyFiltered ? view.emptyFiltered : view.empty);
+    paintPager(paged);
+
+    const counts = { queue: 'cQueue', sos: 'cSos', bookings: 'cBookings', accounts: 'cAccounts' };
+    // The badge counts everything matching, not the rows on this page -
+    // "25" beside Bookings when there are 400 would be a lie.
+    $(counts[tab]).textContent = paged ? paged.totalItems : rows.length;
   } catch (err) {
     if (err.message === 'unauthorized') return;
+    paintPager(null);
     $('rows').innerHTML = `<tr><td colspan="${view.columns.length}">
       <div class="state"><h3>Could not load this section</h3><p>${esc(err.message)}</p></div></td></tr>`;
     $('err').textContent = err.message;
@@ -974,6 +1278,61 @@ $('rows').addEventListener('click', async e => {
     }
     return;
   }
+  const blockBtn = e.target.closest('[data-block]');
+  if (blockBtn) {
+    const row = lastRows[Number(blockBtn.closest('tr[data-i]').dataset.i)];
+    const who = row.name || row.phoneNumber || row.email;
+    const ok = await confirmAction({
+      title: 'Block this account?',
+      message: row.role === 'DRIVER'
+        ? `${who} will not be able to sign in, and will stop receiving trips immediately even if they are online right now.`
+        : `${who} will not be able to sign in or book. Any trip already in progress is not cancelled by this.`,
+      confirmLabel: 'Block account',
+      tone: 'reject',
+      // Required, not optional, and the console enforces it before the
+      // request is sent - see requireReason. An audit row that says nothing
+      // is worse than none, because it looks answered.
+      withReason: true,
+      reasonRequired: true,
+      reasonLabel: 'Why are you blocking this account? (required, kept for audit)',
+      reasonPlaceholder: 'e.g. Repeated no-shows reported by three riders on 11 Sep',
+    });
+    if (!ok) return;
+    try {
+      await api(`/admin/accounts/${row.accountId}/block`, {
+        method: 'POST',
+        body: JSON.stringify({ reason: ok.reason }),
+      });
+      toast('ok', 'Account blocked', `${who} can no longer sign in.`);
+      render();
+    } catch (err) {
+      if (err.message === 'unauthorized') return;
+      toast('bad', 'Could not block that account', err.message);
+    }
+    return;
+  }
+
+  const unblockBtn = e.target.closest('[data-unblock]');
+  if (unblockBtn) {
+    const row = lastRows[Number(unblockBtn.closest('tr[data-i]').dataset.i)];
+    const who = row.name || row.phoneNumber || row.email;
+    const ok = await confirmAction({
+      title: 'Restore access for this account?',
+      message: `${who} will be able to sign in again${row.role === 'DRIVER' ? ' and can go back online' : ''}. The reason recorded for the block is cleared.`,
+      confirmLabel: 'Unblock account',
+    });
+    if (!ok) return;
+    try {
+      await api(`/admin/accounts/${row.accountId}/unblock`, { method: 'POST' });
+      toast('ok', 'Account unblocked', `${who} can sign in again.`);
+      render();
+    } catch (err) {
+      if (err.message === 'unauthorized') return;
+      toast('bad', 'Could not unblock that account', err.message);
+    }
+    return;
+  }
+
   const view = VIEWS[tab];
   if (!view.onRowClick) return;
   const tr = e.target.closest('tr[data-i]');

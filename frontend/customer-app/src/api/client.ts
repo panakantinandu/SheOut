@@ -2,6 +2,7 @@ import type {
   ApiErrorResponse,
   AuthSession,
   BookingCategory,
+  BookingStatus,
   BookingSummary,
   BookingType,
   CustomerProfileSummary,
@@ -10,6 +11,8 @@ import type {
   FareQuote,
   GeoAddress,
   NotificationView,
+  PagedResult,
+  PaymentStatus,
   PaymentSummary,
   SosResponse,
   VerificationSummary,
@@ -28,6 +31,29 @@ import type {
 // it must fall back like a missing one.
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 const TOKEN_STORAGE_KEY = 'sheout_access_token';
+
+/**
+ * Turns a filter object into a query string, dropping anything unset.
+ * <p>
+ * An unset filter must be absent, not present-and-empty: the backend reads
+ * `status=` as a blank value and fails to parse it into an enum, where an
+ * omitted `status` correctly means "do not narrow". An array becomes a
+ * repeated parameter, which is how Spring binds a Set.
+ */
+function buildQuery(params: Record<string, unknown>): string {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === '') continue;
+    if (Array.isArray(value)) {
+      if (value.length === 0) continue;
+      for (const entry of value) search.append(key, String(entry));
+    } else {
+      search.append(key, String(value));
+    }
+  }
+  const query = search.toString();
+  return query ? `?${query}` : '';
+}
 
 export class ApiError extends Error {
   constructor(
@@ -170,6 +196,29 @@ export const paymentsApi = {
   getForBooking(bookingId: string): Promise<PaymentSummary> {
     return request(`/api/v1/payments/bookings/${bookingId}`);
   },
+
+  /**
+   * The caller's own payments, paged and filtered by date, status and
+   * amount range.
+   * <p>
+   * Replaces what Payment History used to do: fetch every booking, then one
+   * payment request per booking, then throw away the ones with no payment.
+   * That was an N+1 from the browser that grew with the customer's whole
+   * history and could not be paged or filtered at all.
+   * <p>
+   * No text search, deliberately - a payment has nothing worth typing at.
+   */
+  search(params: {
+    page?: number;
+    pageSize?: number;
+    status?: PaymentStatus;
+    from?: string;
+    to?: string;
+    minAmount?: number;
+    maxAmount?: number;
+  }): Promise<PagedResult<PaymentSummary>> {
+    return request(`/api/v1/payments/me/search${buildQuery(params)}`);
+  },
 };
 
 export const dispatchApi = {
@@ -232,6 +281,23 @@ export const bookingApi = {
 
   getById(bookingId: string): Promise<BookingSummary> {
     return request(`/api/v1/bookings/${bookingId}`);
+  },
+
+  /**
+   * The caller's own trips, paged and filtered. Every filter is optional
+   * and an omitted one does not narrow the list. Category is repeated per
+   * value, which is how Spring reads a Set from a query string.
+   */
+  search(params: {
+    page?: number;
+    pageSize?: number;
+    status?: BookingStatus;
+    from?: string;
+    to?: string;
+    category?: BookingCategory[];
+    q?: string;
+  }): Promise<PagedResult<BookingSummary>> {
+    return request(`/api/v1/bookings/me/search${buildQuery(params)}`);
   },
 
   listMine(): Promise<BookingSummary[]> {

@@ -20,6 +20,8 @@ public record ReviewQueueRow(
         VerificationStatus genderVerificationStatus,
         VerificationStatus policeVerificationStatus,
         boolean documentSubmitted,
-        Instant updatedAt
+        Instant updatedAt,
+        /** Shown as a badge in the queue: reviewing a blocked account is almost always a mistake. */
+        boolean blocked
 ) {
 }

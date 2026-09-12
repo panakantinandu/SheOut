@@ -1,56 +1,96 @@
-import { useEffect, useState } from 'react';
+import { ReceiptText, SearchX } from 'lucide-react';
+import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AmountText, Card, StatusBadge, TopHeader, paymentMethodLabel, paymentStatusLabel } from '@sheout/design-system';
-import { ApiError, bookingApi, paymentsApi } from '../api/client';
-import type { BookingSummary, PaymentSummary } from '../api/types';
+import {
+  AmountText,
+  Card,
+  DateRangeFields,
+  ListEmptyState,
+  ListFilterBar,
+  LoadMore,
+  SelectField,
+  StatusBadge,
+  TextField,
+  TopHeader,
+  paymentMethodLabel,
+  paymentStatusLabel,
+  endOfDayIso,
+  startOfDayIso,
+  usePagedList,
+} from '@sheout/design-system';
+import type { DateRangeValue, StatusTone } from '@sheout/design-system';
+import { paymentsApi } from '../api/client';
+import type { PaymentStatus } from '../api/types';
 
-const TONES = {
-  CAPTURED: 'success',
+const TONES: Record<PaymentStatus, StatusTone> = {
   PENDING: 'warning',
+  CAPTURED: 'success',
   FAILED: 'danger',
-  REFUNDED: 'neutral',
-} as const;
+  REFUNDED: 'primary',
+};
+
+const STATUS_OPTIONS: { value: PaymentStatus; label: string }[] = [
+  { value: 'CAPTURED', label: 'Paid' },
+  { value: 'PENDING', label: 'Awaiting payment' },
+  { value: 'FAILED', label: 'Failed' },
+  { value: 'REFUNDED', label: 'Refunded' },
+];
 
 /**
- * REAL: every payment against this customer's own bookings, read from
- * GET /payments/bookings/{id} for each booking from GET /bookings/me.
+ * What the customer has actually been charged, paged and filtered.
  * <p>
- * This is deliberately payment HISTORY, not saved cards or UPI IDs. The
- * payments module stores a payment per booking and nothing else - there is
- * no stored-instrument concept anywhere in the backend - so a "add a card"
- * UI would be inventing a capability. The old placeholder here claimed
- * there was no payments module at all, which stopped being true once one
- * was built.
+ * This screen used to fetch every booking the customer had ever made and
+ * then issue one payment request per booking, discarding every booking
+ * without a payment row. An N+1 from the browser, growing with the whole
+ * history, and impossible to page or filter. It now reads one paged
+ * endpoint - see paymentsApi.search.
  * <p>
- * One request per booking is an N+1, accepted because PaymentApi is
- * per-booking by design and a customer's own booking list is small.
+ * No search box. A payment has an amount, a method, a status and two
+ * timestamps, and nothing worth typing at; a box that matched nothing would
+ * be worse than none. Date, status and amount range are what someone
+ * actually reaches for when hunting a charge they half-remember.
  */
 export function PaymentMethods() {
   const navigate = useNavigate();
-  const [rows, setRows] = useState<{ booking: BookingSummary; payment: PaymentSummary | null }[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<PaymentStatus | ''>('');
+  const [dates, setDates] = useState<DateRangeValue>({ from: '', to: '' });
+  const [minAmount, setMinAmount] = useState('');
+  const [maxAmount, setMaxAmount] = useState('');
 
-  useEffect(() => {
-    bookingApi
-      .listMine()
-      .then(async (bookings) => {
-        const resolved = await Promise.all(
-          bookings.map(async (booking) => ({
-            booking,
-            // A booking with no payment row yet 404s - normal until a trip
-            // completes, so it becomes null rather than an error.
-            payment: await paymentsApi.getForBooking(booking.id).catch(() => null),
-          }))
-        );
-        setRows(resolved.filter((r) => r.payment !== null));
-      })
-      .catch((err) => setError(err instanceof ApiError ? err.message : 'Could not load payments'));
-  }, []);
+  const fetchPage = useCallback(
+    (page: number) =>
+      paymentsApi.search({
+        page,
+        status: status || undefined,
+        from: startOfDayIso(dates.from),
+        to: endOfDayIso(dates.to),
+        // An empty box is no bound at all, not zero - a min of 0 would read
+        // as a filter while changing nothing.
+        minAmount: minAmount ? Number(minAmount) : undefined,
+        maxAmount: maxAmount ? Number(maxAmount) : undefined,
+      }),
+    [status, dates.from, dates.to, minAmount, maxAmount]
+  );
+
+  const list = usePagedList(fetchPage, [status, dates.from, dates.to, minAmount, maxAmount], {
+    debounceMs: 400,
+  });
+
+  const activeFilters = useMemo(
+    () => [status, dates.from, dates.to, minAmount, maxAmount].filter(Boolean).length,
+    [status, dates.from, dates.to, minAmount, maxAmount]
+  );
+
+  function clearAll() {
+    setStatus('');
+    setDates({ from: '', to: '' });
+    setMinAmount('');
+    setMaxAmount('');
+  }
 
   return (
     <div className="space-y-6">
       <TopHeader variant="back" title="Payment History" onBack={() => navigate('/profile')} />
-      {error && <p className="text-sm text-danger">{error}</p>}
 
       <Card>
         <p className="text-sm text-text-primary">Payments are taken per trip via UPI or cash.</p>
@@ -60,31 +100,87 @@ export function PaymentMethods() {
         </p>
       </Card>
 
-      {!rows ? (
-        <p className="text-center text-sm text-text-secondary">Loading...</p>
-      ) : rows.length === 0 ? (
-        <Card className="text-center">
-          <p className="font-heading font-semibold text-text-primary">No payments yet</p>
-          <p className="mt-1 text-sm text-text-secondary">Payments appear here once a trip is completed.</p>
-        </Card>
-      ) : (
-        <div className="space-y-3">
-          {rows.map(({ booking, payment }) => (
-            <Card key={booking.id} className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-text-primary">
-                  {booking.type === 'RIDE' ? 'Ride' : 'Delivery'} &middot; {paymentMethodLabel(payment!.method)}
-                </p>
-                <p className="text-xs text-text-secondary">{new Date(payment!.createdAt).toLocaleString()}</p>
-              </div>
-              <div className="flex items-center gap-3">
-                <AmountText amount={payment!.amount} />
-                <StatusBadge tone={TONES[payment!.status]}>{paymentStatusLabel(payment!.status)}</StatusBadge>
-              </div>
-            </Card>
-          ))}
+      <ListFilterBar activeCount={activeFilters} onClearAll={clearAll}>
+        <SelectField
+          label="Status"
+          placeholder="Any status"
+          value={status}
+          onChange={(e) => setStatus(e.target.value as PaymentStatus | '')}
+          options={STATUS_OPTIONS}
+        />
+        <DateRangeFields value={dates} onChange={setDates} />
+        <div>
+          <span className="mb-1.5 block text-sm font-medium text-text-primary">Amount range</span>
+          <div className="flex items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <TextField
+                type="number"
+                inputMode="numeric"
+                aria-label="Minimum amount"
+                placeholder="Min ₹"
+                value={minAmount}
+                min={0}
+                onChange={(e) => setMinAmount(e.target.value)}
+              />
+            </div>
+            <span className="shrink-0 text-sm text-text-secondary">to</span>
+            <div className="min-w-0 flex-1">
+              <TextField
+                type="number"
+                inputMode="numeric"
+                aria-label="Maximum amount"
+                placeholder="Max ₹"
+                value={maxAmount}
+                min={0}
+                onChange={(e) => setMaxAmount(e.target.value)}
+              />
+            </div>
+          </div>
         </div>
+      </ListFilterBar>
+
+      {list.error && <p className="text-sm text-danger">{list.error}</p>}
+      {list.loading && <p className="text-center text-sm text-text-secondary">Loading...</p>}
+
+      {!list.loading && list.items.length === 0 && !list.error && (
+        activeFilters > 0 ? (
+          <ListEmptyState
+            icon={<SearchX />}
+            title="No results match your filters"
+            message="Your payments are still here. Try a wider date range, a different status, or clear the filters."
+            action={{ label: 'Clear filters', onClick: clearAll }}
+          />
+        ) : (
+          <ListEmptyState
+            icon={<ReceiptText />}
+            title="No payments yet"
+            message="Payments appear here once a trip is completed."
+          />
+        )
       )}
+
+      <div className="space-y-3">
+        {list.items.map((payment) => (
+          <Card key={payment.id} className="flex items-center justify-between">
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-medium text-text-primary">{paymentMethodLabel(payment.method)}</p>
+              <p className="text-xs text-text-secondary">{new Date(payment.createdAt).toLocaleString()}</p>
+            </div>
+            <div className="flex shrink-0 items-center gap-3">
+              <StatusBadge tone={TONES[payment.status]}>{paymentStatusLabel(payment.status)}</StatusBadge>
+              <AmountText amount={payment.amount} />
+            </div>
+          </Card>
+        ))}
+      </div>
+
+      <LoadMore
+        shown={list.items.length}
+        total={list.total}
+        hasMore={list.hasMore}
+        loading={list.loadingMore}
+        onLoadMore={list.loadMore}
+      />
     </div>
   );
 }
