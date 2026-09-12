@@ -1,11 +1,14 @@
-import { Crosshair, MapPin, Search, X } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
-import { Button, Card, IconCircle, TextField } from '@sheout/design-system';
+import { Crosshair, MapPin, MapPinned, Search, X } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Button, Card, IconCircle, LiveMap, TextField } from '@sheout/design-system';
+import type { MapMarker } from '@sheout/design-system';
 import type { GeoAddress } from '../api/types';
-import { currentPosition, describePoint, searchPlaces } from '../lib/geocode';
+import { CITY_CENTRE, currentPosition, describePoint, reverseGeocode, searchPlaces } from '../lib/geocode';
 
 /** Nominatim asks for roughly one request a second; this stays well inside that. */
 const SEARCH_DEBOUNCE_MS = 500;
+
+export type PickerMode = 'search' | 'map';
 
 export interface LocationPickerProps {
   open: boolean;
@@ -14,6 +17,12 @@ export interface LocationPickerProps {
   presets?: GeoAddress[];
   /** Offers "Use my current location" - only meaningful for pickup. */
   allowCurrentLocation?: boolean;
+  /** Which tab to open on. The map icon beside a field opens straight on 'map'. */
+  initialMode?: PickerMode;
+  /** Colours the dropped pin to match the field it is setting. */
+  markerKind?: 'pickup' | 'drop';
+  /** Where the map opens when no pin has been dropped yet. */
+  startAt?: GeoAddress | null;
   onSelect: (address: GeoAddress) => void;
   onClose: () => void;
 }
@@ -33,9 +42,13 @@ export function LocationPicker({
   title,
   presets = [],
   allowCurrentLocation = false,
+  initialMode = 'search',
+  markerKind = 'drop',
+  startAt = null,
   onSelect,
   onClose,
 }: LocationPickerProps) {
+  const [mode, setMode] = useState<PickerMode>(initialMode);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<GeoAddress[]>([]);
   const [searching, setSearching] = useState(false);
@@ -43,13 +56,59 @@ export function LocationPicker({
   const [locating, setLocating] = useState(false);
   const inFlight = useRef<AbortController | null>(null);
 
+  /** The pin the customer has dropped, and the address we resolved for it. */
+  const [pin, setPin] = useState<{ lat: number; lng: number } | null>(null);
+  const [pinAddress, setPinAddress] = useState<GeoAddress | null>(null);
+  const [resolving, setResolving] = useState(false);
+  const [pinError, setPinError] = useState<string | null>(null);
+  const pinLookup = useRef<AbortController | null>(null);
+
   useEffect(() => {
     if (!open) {
       setQuery('');
       setResults([]);
       setError(null);
+      setPin(null);
+      setPinAddress(null);
+      setPinError(null);
+      setResolving(false);
+      return;
     }
+    // Each opening starts on whichever tab the caller asked for, and on the
+    // pin already set for this field if there is one, so re-opening shows
+    // where the current choice actually is.
+    setMode(initialMode);
+    setPin(startAt ? { lat: startAt.lat, lng: startAt.lng } : null);
+    setPinAddress(startAt);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  /**
+   * Resolves a dropped pin to an address. Kept separate from the search
+   * request so a slow lookup for an abandoned pin cannot overwrite the one
+   * the customer is actually looking at.
+   */
+  const resolvePin = useCallback(async (lat: number, lng: number) => {
+    setPin({ lat, lng });
+    setPinAddress(null);
+    setPinError(null);
+    setResolving(true);
+    pinLookup.current?.abort();
+    const controller = new AbortController();
+    pinLookup.current = controller;
+    try {
+      setPinAddress(await reverseGeocode(lat, lng, controller.signal));
+    } catch (err) {
+      if ((err as Error).name === 'AbortError') return;
+      setPinError(
+        (err as Error).message === 'No address found at that point'
+          ? 'No address found at that point. Move the pin somewhere closer to a road or landmark.'
+          : 'Could not look up that point. Check your connection and try again.'
+      );
+    } finally {
+      if (!controller.signal.aborted) setResolving(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -69,9 +128,18 @@ export function LocationPicker({
       try {
         const found = await searchPlaces(trimmed, controller.signal);
         setResults(found);
-        setError(found.length === 0 ? 'No places found for that search.' : null);
+        // Both messages name the way out rather than just the problem. A
+        // lane or a gate often has no name the map knows, so "nothing found"
+        // is a normal answer here, not a fault - and the pin always works.
+        setError(
+          found.length === 0
+            ? 'No results. Try a different search, or drop a pin on the map.'
+            : null
+        );
       } catch (err) {
-        if ((err as Error).name !== 'AbortError') setError('Could not search right now. Check your connection and try again.');
+        if ((err as Error).name !== 'AbortError') {
+          setError('Could not search right now. Check your connection, or drop a pin on the map instead.');
+        }
       } finally {
         if (!controller.signal.aborted) setSearching(false);
       }
@@ -110,6 +178,47 @@ export function LocationPicker({
       </div>
 
       <div className="space-y-4 overflow-y-auto px-screen pb-8 pt-4">
+        {/* Two ways to the same answer, in the app's own tab treatment
+            rather than a map widget's. Typing an address suits somewhere
+            that has a name; dropping a pin suits a gate, a lane or a
+            building the map has never heard of. */}
+        <div className="flex gap-2">
+          {([
+            { key: 'search', label: 'Search', icon: <Search className="h-4 w-4" /> },
+            { key: 'map', label: 'Pick on map', icon: <MapPinned className="h-4 w-4" /> },
+          ] as const).map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setMode(tab.key)}
+              aria-pressed={mode === tab.key}
+              className={
+                mode === tab.key
+                  ? 'flex flex-1 items-center justify-center gap-1.5 rounded-full bg-primary py-2 text-sm font-semibold text-text-inverse'
+                  : 'flex flex-1 items-center justify-center gap-1.5 rounded-full border border-border py-2 text-sm font-medium text-text-secondary'
+              }
+            >
+              {tab.icon}
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {mode === 'map' ? (
+          <MapPane
+            pin={pin}
+            address={pinAddress}
+            resolving={resolving}
+            error={pinError}
+            markerKind={markerKind}
+            onPick={resolvePin}
+            onConfirm={(address) => {
+              onSelect(address);
+              onClose();
+            }}
+          />
+        ) : (
+        <>
         <TextField
           autoFocus
           icon={<Search className="h-4 w-4 text-text-secondary" />}
@@ -167,9 +276,93 @@ export function LocationPicker({
             </Card>
           </div>
         )}
+        </>
+        )}
 
         <p className="text-center text-xs text-text-secondary">Search results &copy; OpenStreetMap contributors</p>
       </div>
+    </div>
+  );
+}
+
+/**
+ * The map half of the picker. A tap or a dragged pin reports a point, the
+ * point is reverse-geocoded, and the resulting address is shown for the
+ * customer to read before it is accepted. Nothing is chosen by coordinate
+ * alone - a silent lat/lng is not something a person can check.
+ */
+function MapPane({
+  pin,
+  address,
+  resolving,
+  error,
+  markerKind,
+  onPick,
+  onConfirm,
+}: {
+  pin: { lat: number; lng: number } | null;
+  address: GeoAddress | null;
+  resolving: boolean;
+  error: string | null;
+  markerKind: 'pickup' | 'drop';
+  onPick: (lat: number, lng: number) => void;
+  onConfirm: (address: GeoAddress) => void;
+}) {
+  const markers: MapMarker[] = pin
+    ? [{ key: 'pin', lat: pin.lat, lng: pin.lng, label: 'Selected point', kind: markerKind }]
+    : [];
+
+  // Captured once, when the map opens: the pin already set for this field if
+  // there is one, otherwise the city. Recomputing it on every render would
+  // re-centre the map under the user mid-pan, and following the pin would
+  // snap the view on every tap.
+  const [initialCentre] = useState(() => (pin ? { lat: pin.lat, lng: pin.lng } : CITY_CENTRE));
+
+  return (
+    <div className="space-y-3">
+      <LiveMap
+        markers={markers}
+        onPick={onPick}
+        center={initialCentre}
+        zoom={15}
+        autoFit={false}
+        className="h-72"
+      />
+      <p className="text-xs text-text-secondary">
+        Tap anywhere on the map to drop a pin, or drag the pin to move it.
+      </p>
+
+      {!pin ? (
+        <Card className="text-center">
+          <p className="text-sm text-text-secondary">No pin yet. Tap the map to choose a point.</p>
+        </Card>
+      ) : resolving ? (
+        <Card className="flex items-center gap-3">
+          <IconCircle tone="soft" size="sm" icon={<MapPin />} />
+          <p className="text-sm text-text-secondary">Looking up this address...</p>
+        </Card>
+      ) : error ? (
+        <Card tone="danger" className="space-y-3">
+          <p className="text-sm font-medium text-text-primary">Could not name this point</p>
+          <p className="text-xs text-text-secondary">{error}</p>
+          <Button variant="secondary" fullWidth onClick={() => onPick(pin.lat, pin.lng)}>
+            Try again
+          </Button>
+        </Card>
+      ) : address ? (
+        <Card className="space-y-3">
+          <div className="flex items-start gap-3">
+            <IconCircle tone="soft" size="sm" color={markerKind === 'pickup' ? undefined : 'orange'} icon={<MapPin />} />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-text-secondary">Pin dropped at</p>
+              <p className="text-sm font-medium text-text-primary">{address.label}</p>
+            </div>
+          </div>
+          <Button fullWidth onClick={() => onConfirm(address)}>
+            Use this location
+          </Button>
+        </Card>
+      ) : null}
     </div>
   );
 }

@@ -142,7 +142,7 @@ export function Offer() {
         <>
           {markers.length > 0 && <LiveMap markers={markers} className="h-52" />}
 
-          <Card className="flex items-center justify-between bg-primary-light">
+          <Card tone="brand" className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-primary">
               <Clock className="h-4 w-4" />
               <span className="text-sm font-semibold">Respond within {secondsLeft}s</span>

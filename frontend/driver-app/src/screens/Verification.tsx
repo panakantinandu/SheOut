@@ -79,7 +79,7 @@ export function Verification() {
 
       {summary && (
         <>
-          <Card className={bothVerified ? 'flex items-center gap-3 bg-accent-green/10' : 'flex items-center gap-3 bg-accent-orange/10'}>
+          <Card tone={bothVerified ? 'success' : 'warning'} className="flex items-center gap-3">
             <IconCircle color={bothVerified ? 'green' : 'orange'} tone="soft" icon={bothVerified ? <ShieldCheck /> : <Clock />} />
             <div>
               <p className="font-heading font-semibold text-text-primary">

@@ -21,6 +21,50 @@ const NOMINATIM = 'https://nominatim.openstreetmap.org';
 /** Biases results towards India, which is where this app operates. */
 const COUNTRY_CODES = 'in';
 
+/**
+ * Hyderabad, the only city SheOut launches in. Passed as a viewbox so
+ * matching places here float to the top, without `bounded=1` - a customer
+ * searching for somewhere outside the city should still find it rather than
+ * get an empty list.
+ */
+const HYDERABAD_VIEWBOX = '78.24,17.20,78.62,17.60';
+
+/**
+ * Hyderabad's centre. Where the map picker opens before a pin exists.
+ */
+export const CITY_CENTRE = { lat: 17.4483, lng: 78.3915 };
+
+/**
+ * Nominatim's policy caps absolute traffic at one request per second, so
+ * every call queues through here. Debouncing each input is not the same
+ * guarantee: two fields, a search and a reverse lookup can each be within
+ * their own debounce and still land in the same second.
+ *
+ * IDENTIFICATION: the policy asks for an identifying User-Agent. A browser
+ * will not let us set one - `User-Agent` is a forbidden header name, and
+ * fetch drops it silently rather than erroring, so code that "sets" it is
+ * only pretending. What does identify us is the Referer, which the browser
+ * attaches automatically and which carries this app's own domain. The
+ * optional contact below is the other identifier Nominatim documents; it is
+ * blank on purpose, because it is sent to a third party and nobody's
+ * address should be put there without them choosing to.
+ */
+const NOMINATIM_CONTACT = '';
+
+let lastRequestAt = 0;
+const MIN_REQUEST_GAP_MS = 1100;
+
+async function throttled<T>(run: () => Promise<T>): Promise<T> {
+  const wait = Math.max(0, lastRequestAt + MIN_REQUEST_GAP_MS - Date.now());
+  if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+  lastRequestAt = Date.now();
+  return run();
+}
+
+function contactParam(): string {
+  return NOMINATIM_CONTACT ? `&email=${encodeURIComponent(NOMINATIM_CONTACT)}` : '';
+}
+
 interface NominatimPlace {
   display_name: string;
   lat: string;
@@ -45,12 +89,37 @@ export async function searchPlaces(query: string, signal?: AbortSignal): Promise
 
   const url =
     `${NOMINATIM}/search?format=jsonv2&limit=6&addressdetails=0` +
-    `&countrycodes=${COUNTRY_CODES}&q=${encodeURIComponent(trimmed)}`;
+    `&countrycodes=${COUNTRY_CODES}&viewbox=${HYDERABAD_VIEWBOX}` +
+    `&q=${encodeURIComponent(trimmed)}${contactParam()}`;
 
-  const res = await fetch(url, { signal, headers: { Accept: 'application/json' } });
+  const res = await throttled(() => fetch(url, { signal, headers: { Accept: 'application/json' } }));
   if (!res.ok) throw new Error(`Search failed (${res.status})`);
   const places: NominatimPlace[] = await res.json();
   return places.map((p) => ({ label: shortLabel(p), lat: Number(p.lat), lng: Number(p.lon) }));
+}
+
+/**
+ * The same reverse lookup as describePoint, but it reports failure instead
+ * of hiding it.
+ * <p>
+ * The difference matters because the two callers want opposite things. A
+ * pickup taken from the device already knows where it is and only wants a
+ * nicer name, so a failed lookup should not stop anything. A pin the
+ * customer dropped is the opposite: the address text IS the thing they are
+ * being asked to confirm, and quietly showing them raw coordinates dressed
+ * up as a fallback label would have them confirm something they cannot
+ * read.
+ */
+export async function reverseGeocode(lat: number, lng: number, signal?: AbortSignal): Promise<GeoAddress> {
+  const url =
+    `${NOMINATIM}/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=16&addressdetails=0${contactParam()}`;
+  const res = await throttled(() => fetch(url, { signal, headers: { Accept: 'application/json' } }));
+  if (!res.ok) throw new Error(`Lookup failed (${res.status})`);
+  const place: NominatimPlace & { error?: string } = await res.json();
+  if (place.error || !place.display_name) {
+    throw new Error('No address found at that point');
+  }
+  return { label: shortLabel(place), lat, lng };
 }
 
 /**
@@ -61,11 +130,7 @@ export async function searchPlaces(query: string, signal?: AbortSignal): Promise
  */
 export async function describePoint(lat: number, lng: number, fallback: string): Promise<GeoAddress> {
   try {
-    const url = `${NOMINATIM}/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=16&addressdetails=0`;
-    const res = await fetch(url, { headers: { Accept: 'application/json' } });
-    if (!res.ok) throw new Error('reverse failed');
-    const place: NominatimPlace = await res.json();
-    return { label: place.display_name ? shortLabel(place) : fallback, lat, lng };
+    return await reverseGeocode(lat, lng);
   } catch {
     return { label: fallback, lat, lng };
   }
