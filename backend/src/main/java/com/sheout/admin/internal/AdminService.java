@@ -14,6 +14,7 @@ import com.sheout.notifications.SosError;
 import com.sheout.payments.PaymentApi;
 import com.sheout.payments.PaymentStatus;
 import com.sheout.sharedkernel.Result;
+import com.sheout.users.CancellationStats;
 import com.sheout.users.CustomerProfileApi;
 import com.sheout.users.DriverProfileApi;
 import org.springframework.data.domain.Page;
@@ -153,8 +154,69 @@ public class AdminService {
         return authApi.findAccount(accountId).map(a -> a.phoneNumber()).orElse(null);
     }
 
+    /** The console's bookings table, paged and filtered - see BookingQuery. */
+    public Page<BookingOpsRow> pagedBookings(com.sheout.booking.BookingQuery query, Pageable pageable) {
+        return bookingApi.pageBookings(query, pageable).map(this::toBookingRow);
+    }
+
     /**
-     * A page of accounts, composed from three modules - see AccountOpsRow.
+     * Accounts whose cancellation rate crossed the configured threshold,
+     * riders and partners in one queue, oldest crossing first.
+     * <p>
+     * A queue, not an action. Crossing the threshold has already done
+     * everything it is ever going to do by putting an account on this list;
+     * blocking stays a separate, deliberate decision made with the
+     * already-built block action, by a person who can see the figures. That
+     * is the same rule driver verification follows, and it matters more here
+     * - a high rate can mean somebody dodging fares or somebody repeatedly
+     * abandoned by partners who never arrived, and the number cannot tell
+     * those apart.
+     * <p>
+     * Merged from both profile modules here rather than in either of them:
+     * neither users' customer half nor its driver half should have to know
+     * the other exists, and joining is what this module is for.
+     */
+    public List<CancellationReviewRow> cancellationReviewQueue() {
+        List<CancellationReviewRow> customers = customerProfileApi.findFlaggedForReview().stream()
+                .map(p -> new CancellationReviewRow(
+                        p.accountId(), p.name(), p.phoneNumber(), AccountRole.CUSTOMER,
+                        p.cancellationStats(), p.cancellationStats().flaggedAt(),
+                        p.cancellationStats().flaggedReason(), isBlocked(p.accountId())))
+                .toList();
+        List<CancellationReviewRow> drivers = driverProfileApi.findFlaggedForReview().stream()
+                .map(p -> new CancellationReviewRow(
+                        p.accountId(), p.name(), p.phoneNumber(), AccountRole.DRIVER,
+                        p.cancellationStats(), p.cancellationStats().flaggedAt(),
+                        p.cancellationStats().flaggedReason(), isBlocked(p.accountId())))
+                .toList();
+
+        return java.util.stream.Stream.concat(customers.stream(), drivers.stream())
+                .sorted(java.util.Comparator.comparing(
+                        CancellationReviewRow::flaggedAt,
+                        java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())))
+                .toList();
+    }
+
+    /**
+     * Takes an account off the review queue.
+     * <p>
+     * Clearing the flag does not reset the counters, and that is deliberate:
+     * the rate is a fact about the account's history and an operator's
+     * decision does not change what happened. It only says this history has
+     * been looked at. If the account keeps cancelling it will cross the
+     * threshold again and come back, which is the behaviour you want from a
+     * review queue.
+     */
+    public void clearCancellationFlag(UUID accountId, AccountRole role) {
+        if (role == AccountRole.DRIVER) {
+            driverProfileApi.clearReviewFlag(accountId);
+        } else {
+            customerProfileApi.clearReviewFlag(accountId);
+        }
+    }
+
+    /**
+     * A page of accounts, composed from four modules - see AccountOpsRow.
      * <p>
      * ADMIN accounts are excluded from what the console lists. An operator
      * blocking another operator, or themselves, is not a workflow this
@@ -163,11 +225,6 @@ public class AdminService {
      * The filter is applied by asking auth for a role rather than
      * discarding rows after the fact, so page sizes stay honest.
      */
-    /** The console's bookings table, paged and filtered - see BookingQuery. */
-    public Page<BookingOpsRow> pagedBookings(com.sheout.booking.BookingQuery query, Pageable pageable) {
-        return bookingApi.pageBookings(query, pageable).map(this::toBookingRow);
-    }
-
     public Page<AccountOpsRow> accounts(String text, AccountRole role, Boolean blocked, Pageable pageable) {
         java.util.Set<AccountRole> roles = role == null || role == AccountRole.ADMIN
                 ? java.util.Set.of(AccountRole.CUSTOMER, AccountRole.DRIVER)
@@ -202,9 +259,10 @@ public class AdminService {
         Optional<AccountBlock> block = account.blocked()
                 ? authApi.findBlockDetail(account.id())
                 : Optional.empty();
+        ProfileFacts profile = profileFactsFor(account);
         return new AccountOpsRow(
                 account.id(),
-                nameFor(account),
+                profile.name(),
                 account.phoneNumber(),
                 account.email(),
                 account.role(),
@@ -214,19 +272,35 @@ public class AdminService {
                 block.map(AccountBlock::blockedAt).orElse(null),
                 block.map(AccountBlock::blockedByAccountId).map(this::phoneFor).orElse(null),
                 block.map(AccountBlock::reason).orElse(null),
+                profile.cancellationStats(),
                 account.createdAt());
     }
 
+    /** The two things a row needs from a profile, read together - see profileFactsFor. */
+    private record ProfileFacts(String name, CancellationStats cancellationStats) {
+    }
+
     /**
-     * A driver's name lives in driver-verification's sibling module and a
-     * customer's in users; neither knows about the other, so the role picks
-     * which one to ask.
+     * A rider's profile lives in users' customer half and a partner's in its
+     * driver half; neither knows the other exists, so the role picks which
+     * one to ask.
+     * <p>
+     * One lookup, not two. The name and the cancellation figures come off
+     * the same profile row, and asking for them separately would have
+     * doubled the queries behind every page of the accounts table - the same
+     * reasoning the block detail above is read once for.
+     * <p>
+     * An account with no profile row at all - an ADMIN, or one caught
+     * mid-registration - gets empty stats rather than null, so the console
+     * never has to render a missing number differently from a zero one.
      */
-    private String nameFor(AccountSummary account) {
-        if (account.role() == AccountRole.DRIVER) {
-            return driverProfileApi.findByAccountId(account.id()).map(p -> p.name()).orElse(null);
-        }
-        return customerProfileApi.findByAccountId(account.id()).map(p -> p.name()).orElse(null);
+    private ProfileFacts profileFactsFor(AccountSummary account) {
+        Optional<ProfileFacts> facts = account.role() == AccountRole.DRIVER
+                ? driverProfileApi.findByAccountId(account.id())
+                        .map(p -> new ProfileFacts(p.name(), p.cancellationStats()))
+                : customerProfileApi.findByAccountId(account.id())
+                        .map(p -> new ProfileFacts(p.name(), p.cancellationStats()));
+        return facts.orElseGet(() -> new ProfileFacts(null, new CancellationStats(0, 0, false, null, null)));
     }
 
 }

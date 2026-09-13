@@ -382,6 +382,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/></svg>
         Accounts <span class="count" id="cAccounts">–</span>
       </button>
+      <button data-tab="cancellations" aria-current="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
+        Cancellation Review <span class="count" id="cCancel">–</span>
+      </button>
     </nav>
 
     <div class="me">
@@ -972,6 +976,10 @@ const VIEWS = {
       { key: 'name', label: 'Name', sort: r => (r.name || '').toLowerCase() },
       { key: 'contact', label: 'Phone / email', sort: r => (r.phoneNumber || r.email || '') },
       { key: 'verification', label: 'Verification', sort: r => r.genderVerificationStatus || '' },
+      // On this table, not only on the review queue: an operator deciding
+      // whether to block somebody needs the number in front of them at the
+      // moment of the decision, whatever brought them to this row.
+      { key: 'cancellations', label: 'Cancellations', sort: r => -(r.cancellationStats ? r.cancellationStats.totalCancellations / Math.max(r.cancellationStats.totalBookings, 1) : 0) },
       { key: 'blocked', label: 'Access', sort: r => (r.blocked ? 1 : 0) },
       { key: 'createdAt', label: 'Joined', sort: r => new Date(r.createdAt || 0).getTime() },
       { key: 'act', label: '' },
@@ -998,6 +1006,7 @@ const VIEWS = {
           <div class="subtle">${esc(time(r.blockedAt))}${r.blockedByPhone ? ` by ${esc(r.blockedByPhone)}` : ''}</div>
           ${r.blockReason ? `<div class="subtle">“${esc(r.blockReason)}”</div>` : ''}`;
       }
+      if (key === 'cancellations') return rateCell(r.cancellationStats);
       if (key === 'createdAt') return `<span class="subtle">${time(r.createdAt)}</span>`;
       if (key === 'act') {
         return r.blocked
@@ -1007,7 +1016,80 @@ const VIEWS = {
       return '—';
     },
   },
+
+  /**
+   * Accounts whose cancellation rate has crossed the configured threshold.
+   *
+   * A queue, not an enforcement screen. Crossing the line has already done
+   * everything it is ever going to do by putting a row here: nothing is
+   * blocked, throttled or charged automatically. That is the same rule the
+   * verification queue follows, and it matters more here, because a high
+   * rate has two opposite explanations - somebody dodging fares, or
+   * somebody repeatedly abandoned by partners who never turned up - and the
+   * number cannot tell them apart. Whoever reads this screen can.
+   *
+   * Block sits on this row too, because sending an operator to another tab
+   * to act on what they just read is how a queue stops being worked.
+   */
+  cancellations: {
+    title: 'Cancellation Review',
+    desc: 'Accounts that cancel often enough to be worth a look. Being listed here is not a penalty and nothing has been done to these accounts — read the numbers, decide, then either clear the flag or block. A high rate can mean somebody avoiding fares, or somebody being repeatedly let down; only you can tell which.',
+    cardTitle: 'Flagged for review',
+    hint: 'Nothing here is automatic — every outcome is your decision',
+    empty: { icon: ICON_EMPTY_QUEUE, title: 'Nobody to review', text: 'Accounts appear here only once they have enough trips for a cancellation rate to mean anything, and that rate crosses the configured threshold.' },
+    columns: [
+      { key: 'role', label: 'Account type', sort: r => r.role || '' },
+      { key: 'name', label: 'Name', sort: r => (r.name || '').toLowerCase() },
+      { key: 'phoneNumber', label: 'Phone', sort: r => r.phoneNumber || '' },
+      { key: 'rate', label: 'Cancellation rate', sort: r => -(r.cancellationStats ? r.cancellationStats.totalCancellations / Math.max(r.cancellationStats.totalBookings, 1) : 0) },
+      { key: 'why', label: 'Reading when flagged', sort: null },
+      { key: 'flaggedAt', label: 'Flagged', sort: r => new Date(r.flaggedAt || 0).getTime() },
+      { key: 'waiting', label: 'Waiting', sort: r => -new Date(r.flaggedAt || 0).getTime() },
+      { key: 'act', label: '', sort: null },
+    ],
+    load: () => api('/admin/cancellations/review-queue'),
+    cell: (r, key) => {
+      if (key === 'role') return roleBadge(r.role);
+      if (key === 'name') return `<span class="strong">${esc(r.name || 'Name not set')}</span>${r.blocked ? ' <span class="badge b-blocked">Blocked</span>' : ''}`;
+      if (key === 'phoneNumber') return `<span class="num">${esc(r.phoneNumber || '—')}</span>`;
+      if (key === 'rate') return rateCell(r.cancellationStats);
+      // Dated, not presented as a current figure. The rate column is live
+      // and this one is the reading that raised the flag, so the two will
+      // legitimately disagree once the account books again - and two
+      // different percentages side by side with nothing to separate them
+      // reads as one of them being wrong.
+      if (key === 'why') return `<span class="subtle">At the time: ${esc(r.flaggedReason || 'no reason recorded')}</span>`;
+      if (key === 'flaggedAt') return `<span class="subtle">${time(r.flaggedAt)}</span>`;
+      if (key === 'waiting') { const w = waited(r.flaggedAt); return `<span class="wait ${w.cls}">${w.text}</span>`; }
+      if (key === 'act') {
+        // Clear first and blocking second, in that order deliberately: the
+        // common outcome of reading one of these is "this is fine", and the
+        // easier button should be the one that takes nothing away.
+        return `<button class="btn" data-clearflag="${esc(r.accountId)}" type="button">Clear flag</button>
+          ${r.blocked ? '' : `<button class="btn btn-reject" data-block="${esc(r.accountId)}" type="button">Block</button>`}`;
+      }
+      return '—';
+    },
+  },
 };
+
+/**
+ * A cancellation rate, with the counts it came from.
+ *
+ * Both halves, always. A bare "50%" is unreadable without knowing whether
+ * it is one trip out of two or four hundred out of eight hundred, and an
+ * operator about to remove somebody's access should never have to guess
+ * which. The colour is a hint, not a verdict.
+ */
+function rateCell(stats) {
+  if (!stats || !stats.totalBookings) {
+    return '<span class="subtle">No trips yet</span>';
+  }
+  const percent = Math.round((stats.totalCancellations / stats.totalBookings) * 100);
+  const tone = percent >= 40 ? 'b-red' : percent >= 20 ? 'b-amber' : 'b-green';
+  return `<span class="badge ${tone}">${percent}%</span>
+    <div class="subtle num">${stats.totalCancellations} of ${stats.totalBookings} trips</div>`;
+}
 
 // ---- driver detail + decisions -------------------------------------------
 /**
@@ -1185,7 +1267,13 @@ function paintRows(view, data, emptyState) {
 
 function paintHead(view) {
   $('head').innerHTML = '<tr>' + view.columns.map(c => {
-    if (!c.sort) return `<th></th>`;
+    // Not sortable still gets its name. Only a column with no label - the
+    // action column - is genuinely nameless. This used to drop the label
+    // along with the arrow, so an unsortable data column arrived with a
+    // blank heading and the operator had to guess what was under it.
+    // esc() renders an em dash for an empty value, which is right in a data
+    // cell and wrong in a heading - so an empty label stays genuinely empty.
+    if (!c.sort) return `<th>${c.label ? esc(c.label) : ''}</th>`;
     const active = sort.key === c.key;
     const arrow = active ? (sort.dir === 'asc' ? '▲' : '▼') : '↕';
     return `<th class="sortable" data-sort="${c.key}" ${active ? `aria-sort="${sort.dir === 'asc' ? 'ascending' : 'descending'}"` : ''}>
@@ -1233,7 +1321,7 @@ async function render(opts = {}) {
     paintRows(view, rows, narrowed && view.emptyFiltered ? view.emptyFiltered : view.empty);
     paintPager(paged);
 
-    const counts = { queue: 'cQueue', sos: 'cSos', bookings: 'cBookings', accounts: 'cAccounts' };
+    const counts = { queue: 'cQueue', sos: 'cSos', bookings: 'cBookings', accounts: 'cAccounts', cancellations: 'cCancel' };
     // The badge counts everything matching, not the rows on this page -
     // "25" beside Bookings when there are 400 would be a lie.
     $(counts[tab]).textContent = paged ? paged.totalItems : rows.length;
@@ -1308,6 +1396,30 @@ $('rows').addEventListener('click', async e => {
     } catch (err) {
       if (err.message === 'unauthorized') return;
       toast('bad', 'Could not block that account', err.message);
+    }
+    return;
+  }
+
+  const clearFlagBtn = e.target.closest('[data-clearflag]');
+  if (clearFlagBtn) {
+    const row = lastRows[Number(clearFlagBtn.closest('tr[data-i]').dataset.i)];
+    const who = row.name || row.phoneNumber || row.email;
+    const ok = await confirmAction({
+      title: 'Clear this review flag?',
+      // Says plainly what clearing does and does not do. An operator who
+      // believes this wipes the record will use it as a favour, and that is
+      // not what it is.
+      message: `${who} comes off this list. Their cancellation history is not reset — the figures stay exactly as they are, and if they keep cancelling they will be flagged again.`,
+      confirmLabel: 'Clear flag',
+    });
+    if (!ok) return;
+    try {
+      await api(`/admin/accounts/${row.accountId}/clear-cancellation-flag`, { method: 'POST' });
+      toast('ok', 'Flag cleared', `${who} is off the review list.`);
+      render();
+    } catch (err) {
+      if (err.message === 'unauthorized') return;
+      toast('bad', 'Could not clear that flag', err.message);
     }
     return;
   }

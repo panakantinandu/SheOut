@@ -13,6 +13,7 @@ import com.sheout.booking.BookingParticipants;
 import com.sheout.booking.BookingRequested;
 import com.sheout.booking.BookingStarted;
 import com.sheout.booking.BookingStatus;
+import com.sheout.booking.CancellationReason;
 import com.sheout.booking.BookingSummary;
 import com.sheout.booking.RequestBookingCommand;
 import com.sheout.booking.internal.fare.FareCalculator;
@@ -227,9 +228,33 @@ public class BookingService implements BookingApi {
         return Result.success(toSummary(booking));
     }
 
-    /** Self-service - either participant (customer or the assigned driver) can cancel pre-IN_PROGRESS. Checked by the controller. */
+    /**
+     * Self-service - either participant (customer or the assigned driver)
+     * can cancel pre-IN_PROGRESS. Which of them it was is checked by the
+     * controller and recorded here.
+     * <p>
+     * Cancels a booking, recording who did it and why.
+     * <p>
+     * The reason is required rather than optional, which BookingCancelled's
+     * own Javadoc already flagged as the gap. Without it a cancellation is a
+     * fact with no explanation: a rider who changed their mind and one whose
+     * partner never arrived were counted identically, and any accountability
+     * built on that count would have been unfair in both directions.
+     * <p>
+     * OTHER additionally requires a note. An "Other" with nothing after it
+     * is the same as no reason, dressed up as an answer.
+     */
     @Transactional
-    public Result<BookingSummary, BookingError> cancelBooking(UUID bookingId) {
+    public Result<BookingSummary, BookingError> cancelBooking(
+            UUID bookingId, UUID cancelledBy, CancellationReason reason, String note) {
+        if (reason == null) {
+            return Result.failure(BookingError.CANCELLATION_REASON_REQUIRED);
+        }
+        String trimmedNote = note == null ? null : note.trim();
+        if (reason.requiresNote() && (trimmedNote == null || trimmedNote.isBlank())) {
+            return Result.failure(BookingError.CANCELLATION_NOTE_REQUIRED);
+        }
+
         Optional<BookingEntity> found = bookingRepository.findById(bookingId);
         if (found.isEmpty()) {
             return Result.failure(BookingError.BOOKING_NOT_FOUND);
@@ -244,9 +269,14 @@ public class BookingService implements BookingApi {
 
         booking.setStatus(BookingStatus.CANCELLED);
         booking.setCancelledAt(Instant.now());
+        booking.recordCancellation(cancelledBy, reason, trimmedNote);
         bookingRepository.save(booking);
 
-        eventPublisher.publish(new BookingCancelled(booking.getId(), booking.getCustomerId(), booking.getDriverId()));
+        // cancelledBy and the reason travel on the event, because the module
+        // that counts cancellations against an account cannot work out
+        // whose fault it was from a booking id alone.
+        eventPublisher.publish(new BookingCancelled(
+                booking.getId(), booking.getCustomerId(), booking.getDriverId(), cancelledBy, reason));
         return Result.success(toSummary(booking));
     }
 
@@ -266,7 +296,7 @@ public class BookingService implements BookingApi {
     public Result<BookingParticipants, BookingError> getParticipants(UUID bookingId) {
         return bookingRepository.findById(bookingId)
                 .<Result<BookingParticipants, BookingError>>map(
-                        b -> Result.success(new BookingParticipants(b.getCustomerId(), b.getDriverId())))
+                        b -> Result.success(new BookingParticipants(b.getCustomerId(), b.getDriverId(), b.getStatus())))
                 .orElseGet(() -> Result.failure(BookingError.BOOKING_NOT_FOUND));
     }
 

@@ -1,11 +1,20 @@
-import { Navigation, Phone } from 'lucide-react';
+import { MessageCircle, Navigation } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Button, Card, LiveMap, StatusBadge, TopHeader, bookingStatusLabel } from '@sheout/design-system';
-import type { MapMarker } from '@sheout/design-system';
-import { ApiError, bookingApi } from '../api/client';
+import {
+  Button,
+  CancelReasonDialog,
+  Card,
+  ContactSupportButton,
+  DRIVER_CANCELLATION_REASONS,
+  LiveMap,
+  StatusBadge,
+  TopHeader,
+  bookingStatusLabel,
+} from '@sheout/design-system';
+import type { CancellationReason, MapMarker } from '@sheout/design-system';
+import { ApiError, bookingApi, chatApi } from '../api/client';
 import type { BookingSummary } from '../api/types';
-import { mockAction } from '../lib/mockAction';
 import { useLocationBroadcast } from '../lib/useLocationBroadcast';
 
 const POLL_INTERVAL_MS = 4000;
@@ -22,9 +31,15 @@ const POLL_INTERVAL_MS = 4000;
  * a failure mode. Position updates only when the browser reports real
  * movement; nothing here interpolates between fixes.
  * <p>
- * MOCK: customer name/phone - there's no driver-facing endpoint to look up
+ * MOCK: customer name - there's no driver-facing endpoint to look up
  * another account's customer profile by id (mirrors the same gap flagged
  * in customer-app's Tracking screen, just the other direction).
+ * <p>
+ * NO PHONE NUMBERS. The Call button here was a mock dialog saying the
+ * rider's number was not shared "yet", which read as a promise that one day
+ * it would be. It will not. Everything routine goes through booking-scoped
+ * chat, which is writable only while this trip is live; anything needing a
+ * voice goes to a person at SheOut on the support number.
  * <p>
  * FLAGGED: the backend has no "arrived at pickup" state - only accept,
  * start, complete, cancel - so this screen has exactly those four actions,
@@ -36,6 +51,11 @@ export function Trip() {
   const [booking, setBooking] = useState<BookingSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [askingWhy, setAskingWhy] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+  // Served by the chat endpoint alongside the thread. Null keeps the button
+  // off the screen rather than offering one that dials nothing.
+  const [supportPhoneNumber, setSupportPhoneNumber] = useState<string | null>(null);
   // Keep broadcasting for the whole live trip, not just while on Home -
   // this is exactly when the customer's tracking map is watching. The hook
   // both sends the position and hands it back for the marker below, so
@@ -64,6 +84,48 @@ export function Trip() {
       clearInterval(interval);
     };
   }, [bookingId]);
+
+  // One call, not a poll: the support number does not change mid-trip.
+  useEffect(() => {
+    if (!bookingId) return;
+    let cancelled = false;
+    chatApi
+      .getThread(bookingId)
+      .then((thread) => {
+        if (!cancelled) setSupportPhoneNumber(thread.supportPhoneNumber || null);
+      })
+      .catch(() => {
+        // Not worth surfacing - the button simply stays hidden.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [bookingId]);
+
+  /**
+   * Cancels, with the reason the dialog collected.
+   * <p>
+   * A partner's cancellations are counted the same way a rider's are, and
+   * for the same reason: an account that walks away from trips it took on
+   * is a real cost to whoever was waiting. The reason is what lets an
+   * operator later tell a partner with a broken-down bike apart from one
+   * who cherry-picks fares.
+   */
+  async function handleCancel(reason: CancellationReason, note?: string) {
+    if (!bookingId) return;
+    setBusy(true);
+    setCancelError(null);
+    try {
+      const updated = await bookingApi.cancel(bookingId, reason, note);
+      setBooking(updated);
+      setAskingWhy(false);
+      navigate('/home', { replace: true });
+    } catch (err) {
+      setCancelError(err instanceof ApiError ? err.message : 'Could not cancel trip');
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function runAction(action: (id: string) => Promise<BookingSummary>) {
     if (!bookingId) return;
@@ -134,13 +196,14 @@ export function Trip() {
             {/* MOCK: no endpoint exists for a driver to look up the customer's profile by id. */}
             <div>
               <p className="font-heading font-semibold text-text-primary">Customer details unavailable (mock)</p>
-              <p className="text-xs text-text-secondary">Contact details are not shared before pickup</p>
+              <p className="text-xs text-text-secondary">Phone numbers are never shared. Message her instead.</p>
             </div>
             <button
+              aria-label="Message your rider"
               className="rounded-full p-2 text-primary hover:bg-background"
-              onClick={() => mockAction('Call customer', "the rider's number is not shared here yet")}
+              onClick={() => navigate(`/chat/${bookingId}`)}
             >
-              <Phone className="h-5 w-5" />
+              <MessageCircle className="h-5 w-5" />
             </button>
           </Card>
 
@@ -156,13 +219,28 @@ export function Trip() {
               </Button>
             )}
             {(booking.status === 'MATCHED' || booking.status === 'ACCEPTED') && (
-              <Button fullWidth variant="danger" disabled={busy} onClick={() => runAction(bookingApi.cancel)}>
-                {busy ? 'Cancelling...' : 'Cancel Trip'}
+              <Button
+                fullWidth
+                variant="danger"
+                disabled={busy}
+                onClick={() => { setCancelError(null); setAskingWhy(true); }}
+              >
+                Cancel Trip
               </Button>
             )}
+            <ContactSupportButton phoneNumber={supportPhoneNumber} />
           </div>
         </>
       )}
+
+      <CancelReasonDialog
+        open={askingWhy}
+        options={DRIVER_CANCELLATION_REASONS}
+        busy={busy}
+        error={cancelError}
+        onConfirm={handleCancel}
+        onCancel={() => setAskingWhy(false)}
+      />
     </div>
   );
 }

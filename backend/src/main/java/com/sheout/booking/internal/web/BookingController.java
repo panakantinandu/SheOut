@@ -7,6 +7,7 @@ import com.sheout.booking.BookingCategory;
 import com.sheout.booking.BookingError;
 import com.sheout.booking.BookingQuery;
 import com.sheout.booking.BookingStatus;
+import com.sheout.booking.CancellationReason;
 import com.sheout.booking.internal.ServiceArea;
 import com.sheout.booking.internal.fare.FareQuote;
 import com.sheout.booking.BookingSummary;
@@ -25,6 +26,7 @@ import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -189,13 +191,24 @@ public class BookingController {
         return respond(bookingService.completeTrip(bookingId));
     }
 
+    /**
+     * Cancels a booking. The reason is part of the request, not optional.
+     * <p>
+     * The body is required, so an old client that posts nothing gets a 400
+     * naming the missing reason rather than silently cancelling without one.
+     * That is the right failure: a cancellation with no reason is exactly
+     * what this change exists to stop recording.
+     */
     @PostMapping("/api/v1/bookings/{bookingId}/cancel")
-    public ResponseEntity<BookingSummary> cancel(@PathVariable UUID bookingId) {
+    public ResponseEntity<BookingSummary> cancel(
+            @PathVariable UUID bookingId,
+            @Valid @RequestBody CancelRequest request) {
         CurrentAccount caller = requireAuthenticated();
         BookingSummary booking = bookingService.findById(bookingId)
                 .orElseThrow(() -> ApiException.notFound("No such booking"));
         requireParticipant(caller, booking);
-        return respond(bookingService.cancelBooking(bookingId));
+        return respond(bookingService.cancelBooking(
+                bookingId, caller.accountId(), request.reason(), request.note()));
     }
 
     private ResponseEntity<BookingSummary> respond(Result<BookingSummary, BookingError> result) {
@@ -255,6 +268,10 @@ public class BookingController {
             // the one the standard error shape already has for the kind of
             // error. The message carries the configured radius so it stays
             // true when the boundary is widened.
+            case CANCELLATION_REASON_REQUIRED -> new ApiException(
+                    HttpStatus.BAD_REQUEST, "Bad Request", "Please choose a reason for cancelling");
+            case CANCELLATION_NOTE_REQUIRED -> new ApiException(
+                    HttpStatus.BAD_REQUEST, "Bad Request", "Please say a little more about why you are cancelling");
             case OUTSIDE_SERVICE_AREA -> new ApiException(
                     HttpStatus.CONFLICT, "OUTSIDE_SERVICE_AREA",
                     "SheOut currently operates only in and around " + serviceArea.centreName()
@@ -266,6 +283,13 @@ public class BookingController {
             case INVALID_STATE_TRANSITION -> new ApiException(
                     HttpStatus.CONFLICT, "Conflict", "This action isn't valid for the booking's current status");
         };
+    }
+
+    /** The reason is required; the note only when the reason is OTHER - checked in the service so every caller gets the same rule. */
+    public record CancelRequest(
+            @NotNull CancellationReason reason,
+            @Size(max = 500) String note
+    ) {
     }
 
     public record GeoAddressRequest(

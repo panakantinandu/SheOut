@@ -21,6 +21,7 @@ import { RideBooking } from './screens/RideBooking'
 import { Sos } from './screens/Sos'
 import { Splash } from './screens/Splash'
 import { Tracking } from './screens/Tracking'
+import { Chat } from './screens/Chat'
 import { Wallet } from './screens/Wallet'
 
 // Screens with the bottom tab bar (Home/Bookings/Wallet/Profile/SOS) get
@@ -75,6 +76,7 @@ function App() {
       <Route path="/book/ride" element={protectedOnly(<RideBooking />)} />
       <Route path="/book/:kind" element={protectedOnly(<DeliveryBooking />)} />
       <Route path="/tracking/:bookingId" element={protectedOnly(<Tracking />)} />
+      <Route path="/chat/:bookingId" element={protectedOnly(<Chat />)} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

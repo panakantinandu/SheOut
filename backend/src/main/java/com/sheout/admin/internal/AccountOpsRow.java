@@ -2,6 +2,7 @@ package com.sheout.admin.internal;
 
 import com.sheout.auth.AccountRole;
 import com.sheout.driververification.VerificationStatus;
+import com.sheout.users.CancellationStats;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -19,6 +20,12 @@ import java.util.UUID;
  * and policeVerificationStatus is null for every customer - customers are
  * not police-checked, which the console renders as "not required" rather
  * than as a missing status.
+ * <p>
+ * cancellationStats is here so an operator deciding whether to block
+ * somebody can see the number the flag was raised on, next to the account
+ * it was raised against. A block decision made from a flag alone, without
+ * the figures behind it, is the automatic block this design set out to
+ * avoid - just with a person clicking the button.
  */
 public record AccountOpsRow(
         UUID accountId,
@@ -32,6 +39,7 @@ public record AccountOpsRow(
         Instant blockedAt,
         String blockedByPhone,
         String blockReason,
+        CancellationStats cancellationStats,
         Instant createdAt
 ) {
 }

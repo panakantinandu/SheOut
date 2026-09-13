@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -38,6 +39,22 @@ public class DriverProfileService implements DriverProfileApi {
     @Override
     public Optional<DriverProfileSummary> findByAccountId(UUID accountId) {
         return driverProfileRepository.findByAccountId(accountId).map(this::toSummary);
+    }
+
+    @Override
+    public List<DriverProfileSummary> findFlaggedForReview() {
+        return driverProfileRepository.findByFlaggedAtIsNotNullOrderByFlaggedAtAsc().stream()
+                .map(this::toSummary)
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public void clearReviewFlag(UUID accountId) {
+        driverProfileRepository.findByAccountId(accountId).ifPresent(profile -> {
+            profile.clearReviewFlag();
+            driverProfileRepository.save(profile);
+        });
     }
 
     @Transactional
@@ -133,6 +150,7 @@ public class DriverProfileService implements DriverProfileApi {
                 profile.getVehicleRegistrationNumber(),
                 profile.getOnlineStatus(),
                 profile.isVerified(),
+                profile.getCancellationStats(),
                 profile.getUpdatedAt()
         );
     }

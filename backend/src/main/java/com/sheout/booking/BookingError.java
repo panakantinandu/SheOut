@@ -13,5 +13,11 @@ public enum BookingError {
     OUTSIDE_SERVICE_AREA,
     CATEGORY_TYPE_MISMATCH,
     BOOKING_NOT_FOUND,
+
+    /** Cancelling without saying why. See CancellationReason. */
+    CANCELLATION_REASON_REQUIRED,
+
+    /** Reason OTHER with no note - an answer that answers nothing. */
+    CANCELLATION_NOTE_REQUIRED,
     INVALID_STATE_TRANSITION
 }
