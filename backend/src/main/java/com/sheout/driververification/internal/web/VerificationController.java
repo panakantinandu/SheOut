@@ -5,7 +5,7 @@ import com.sheout.auth.CurrentAccountContext;
 import com.sheout.driververification.VerificationSummary;
 import com.sheout.driververification.internal.VerificationError;
 import com.sheout.driververification.internal.VerificationService;
-import com.sheout.driververification.internal.storage.DocumentUpload;
+import com.sheout.sharedkernel.storage.DocumentUpload;
 import com.sheout.sharedkernel.Result;
 import com.sheout.sharedkernel.web.ApiException;
 import org.springframework.http.HttpStatus;
@@ -35,11 +35,18 @@ public class VerificationController {
     }
 
     @PostMapping(value = "/api/v1/driver-verification/documents", consumes = "multipart/form-data")
-    public ResponseEntity<VerificationSummary> submitDocument(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<VerificationSummary> submitDocument(
+            @RequestParam("file") MultipartFile file,
+            // Optional on the wire, required for partners by the service. A
+            // rider has no vehicle and cannot produce one; making it
+            // mandatory here would break her submission to enforce a rule
+            // that was never about her.
+            @RequestParam(value = "rcFile", required = false) MultipartFile rcFile) {
         CurrentAccount caller = requireAuthenticated();
         DocumentUpload upload = toUpload(file);
+        DocumentUpload rcUpload = rcFile == null || rcFile.isEmpty() ? null : toUpload(rcFile);
         Result<VerificationSummary, VerificationError> result =
-                verificationService.submitDocument(caller.accountId(), upload);
+                verificationService.submitDocument(caller.accountId(), upload, rcUpload);
         if (result.isFailure()) {
             throw toApiException(result.error());
         }
@@ -70,6 +77,8 @@ public class VerificationController {
                     new ApiException(HttpStatus.CONFLICT, "Conflict", "Police verification does not apply to this account");
             case INVALID_DECISION ->
                     new ApiException(HttpStatus.BAD_REQUEST, "Bad Request", "Decision must be VERIFIED or REJECTED");
+            case RC_DOCUMENT_REQUIRED -> new ApiException(HttpStatus.BAD_REQUEST, "RC_DOCUMENT_REQUIRED",
+                    "Add a photo of your vehicle's registration certificate as well as your ID.");
         };
     }
 

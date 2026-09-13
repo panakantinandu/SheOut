@@ -8,6 +8,16 @@ public enum VerificationError {
     /** Document upload failed at the storage layer. */
     STORAGE_FAILED,
 
+    /**
+     * A partner submitted without the vehicle registration certificate.
+     * <p>
+     * Required for partners only - a rider has no vehicle to produce one
+     * for. Without it an operator has nothing to check the typed
+     * registration number against, which is the whole reason that check
+     * exists.
+     */
+    RC_DOCUMENT_REQUIRED,
+
     /** Gender review attempted while status isn't UNDER_REVIEW (must be submitted first). */
     NOT_UNDER_REVIEW,
 

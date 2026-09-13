@@ -1,4 +1,4 @@
-package com.sheout.driververification.internal.storage;
+package com.sheout.sharedkernel.storage;
 
 import java.time.Instant;
 import java.util.UUID;

@@ -1,7 +1,18 @@
-import { Bike, Car, FileText, HelpCircle, Lock, LogOut, ShieldCheck, Truck, User } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Bike, Camera, Car, FileText, HelpCircle, Lock, LogOut, ShieldCheck, Truck, User } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Card, ConfirmDialog, IconCircle, ListRow, StatusBadge, TextField, TopHeader, vehicleLabel } from '@sheout/design-system';
+import {
+  Avatar,
+  Button,
+  Card,
+  ConfirmDialog,
+  IconCircle,
+  ListRow,
+  StatusBadge,
+  TextField,
+  TopHeader,
+  vehicleLabel,
+} from '@sheout/design-system';
 import { ApiError, usersApi } from '../api/client';
 import type { DriverProfileSummary, VehicleType } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
@@ -29,6 +40,24 @@ export function Profile() {
   const [vehicleType, setVehicleType] = useState<VehicleType>('BIKE');
   const [vehicleReg, setVehicleReg] = useState('');
   const [saving, setSaving] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+
+  async function handlePhotoSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    // Cleared immediately so picking the same file twice still fires.
+    e.target.value = '';
+    if (!file) return;
+    setUploadingPhoto(true);
+    setError(null);
+    try {
+      setProfile(await usersApi.uploadMyPhoto(file));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not upload that photo');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  }
 
   useEffect(() => {
     usersApi
@@ -66,7 +95,7 @@ export function Profile() {
       <TopHeader variant="back" title="My Profile" onBack={() => navigate('/home')} />
 
       <Card className="flex items-center gap-3">
-        <IconCircle size="lg" tone="soft" icon={<User />} />
+        <Avatar url={profile?.profilePhotoUrl} name={profile?.name} size="lg" />
         <div className="min-w-0 flex-1">
           <p className="font-heading font-semibold text-text-primary">
             {profile ? profile.name || 'Add your name' : error || 'Loading...'}
@@ -79,6 +108,52 @@ export function Profile() {
           )}
         </div>
       </Card>
+
+      {/* The photo step, shown first and loudest when it is missing, because
+          it is what stands between her and her first booking. Riders check
+          the face on their screen against the person at the kerb; it is the
+          one thing that tells her she has the right vehicle. */}
+      {profile && (
+        <Card tone={profile.profilePhotoUrl ? 'default' : 'warning'} className="space-y-3">
+          <div className="flex items-start gap-3">
+            <IconCircle
+              tone="soft"
+              color={profile.profilePhotoUrl ? undefined : 'orange'}
+              icon={profile.profilePhotoUrl ? <User /> : <Camera />}
+            />
+            <div className="flex-1">
+              <p className="font-heading font-semibold text-text-primary">
+                {profile.profilePhotoUrl ? 'Your photo' : 'Add a photo to go online'}
+              </p>
+              <p className="mt-1 text-sm text-text-secondary">
+                {profile.profilePhotoUrl
+                  ? 'Riders see this when you are on your way, so they know they have the right vehicle.'
+                  : 'Riders see this when you are on your way. You cannot go online until you add one. A clear photo of your face, in good light.'}
+              </p>
+            </div>
+          </div>
+          <input
+            ref={photoInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handlePhotoSelected}
+          />
+          <Button
+            fullWidth
+            variant={profile.profilePhotoUrl ? 'secondary' : 'primary'}
+            icon={<Camera className="h-4 w-4" />}
+            disabled={uploadingPhoto}
+            onClick={() => photoInputRef.current?.click()}
+          >
+            {uploadingPhoto
+              ? 'Uploading...'
+              : profile.profilePhotoUrl
+                ? 'Change photo'
+                : 'Add photo'}
+          </Button>
+        </Card>
+      )}
 
       {error && <p className="text-sm text-danger">{error}</p>}
 

@@ -163,6 +163,18 @@ export const usersApi = {
     return request('/api/v1/users/driver/me', { method: 'PUT', body: update });
   },
 
+  /**
+   * Uploads the photo a rider sees on her tracking screen. Required before
+   * going online for the first time - the backend refuses ONLINE without
+   * one, with its own machine code so this app can send her to the camera
+   * rather than showing a refusal she cannot act on.
+   */
+  uploadMyPhoto(file: File): Promise<DriverProfileSummary> {
+    const form = new FormData();
+    form.append('file', file);
+    return request('/api/v1/users/driver/me/photo', { method: 'POST', body: form });
+  },
+
   setOnlineStatus(status: DriverOnlineStatus): Promise<DriverProfileSummary> {
     return request('/api/v1/users/driver/me/status', { method: 'POST', body: { status } });
   },
@@ -179,9 +191,16 @@ export const verificationApi = {
     return request('/api/v1/driver-verification/me');
   },
 
-  uploadDocument(file: File): Promise<VerificationSummary> {
+  /**
+   * Both documents in one call, because they are evidence for one decision:
+   * the ID establishes who she is, the registration certificate lets an
+   * operator check the number she typed against the vehicle she owns.
+   * Submitting half would put her in the queue as a row nobody can action.
+   */
+  uploadDocuments(file: File, rcFile: File): Promise<VerificationSummary> {
     const form = new FormData();
     form.append('file', file);
+    form.append('rcFile', rcFile);
     return request('/api/v1/driver-verification/documents', { method: 'POST', body: form });
   },
 };

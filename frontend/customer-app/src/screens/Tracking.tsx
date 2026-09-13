@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import {
   AggregateRatingText,
   AmountText,
+  Avatar,
   Button,
   CancelReasonDialog,
   Card,
@@ -13,10 +14,11 @@ import {
   StatusBadge,
   TopHeader,
   bookingStatusLabel,
+  vehicleLabel,
 } from '@sheout/design-system';
 import type { CancellationReason as SharedCancellationReason, MapMarker } from '@sheout/design-system';
-import { ApiError, bookingApi, chatApi, dispatchApi, ratingsApi } from '../api/client';
-import type { AggregateRating, BookingSummary, DriverLocation } from '../api/types';
+import { ApiError, bookingApi, chatApi, dispatchApi } from '../api/client';
+import type { AssignedDriver, BookingStatus, BookingSummary, DriverLocation } from '../api/types';
 import { RatingPrompt } from '../components/RatingPrompt';
 import { mockAction } from '../lib/mockAction';
 
@@ -28,6 +30,17 @@ const POLL_INTERVAL_MS = 3000;
  * retuned there and this is forgotten, the fetched value still wins.
  */
 const DEFAULT_SEARCH_TIMEOUT_SECONDS = 90;
+
+/**
+ * The statuses in which a rider may see who her partner is.
+ * <p>
+ * MATCHED is deliberately absent, and this list has to agree with the
+ * server's - the server is the one that enforces it, and this only decides
+ * whether to ask. A driverId exists from MATCHED onwards, so anything
+ * keyed on "is a driver assigned" would ask too early and, if the server
+ * ever relaxed, would leak the identity of a partner who never confirmed.
+ */
+const DRIVER_DETAILS_STATUSES: BookingStatus[] = ['ACCEPTED', 'IN_PROGRESS', 'COMPLETED'];
 
 /**
  * How far past the server's own deadline the client waits before giving up
@@ -98,11 +111,19 @@ const DRIVER_LOCATION_POLL_MS = 7000;
  * have not actually been. Genuine real-time needs a WebSocket/SSE push
  * channel, which does not exist in this backend.
  * <p>
- * MOCK: driver name/photo/rating/vehicle and ETA. There is no
- * customer-facing endpoint to look up another account's driver profile
- * (users only exposes self-service GET /users/driver/me), so once a
- * driverId is present this screen shows clearly-labeled placeholder driver
- * details rather than pretending driverId alone is enough.
+ * REAL, and GATED: the partner's name, photo, vehicle and rating, from
+ * GET /api/v1/dispatch/bookings/{id}/driver. They were placeholders until
+ * that endpoint existed.
+ * <p>
+ * They appear only from ACCEPTED onwards, never during MATCHED. MATCHED
+ * means a partner has claimed the booking but has not confirmed she is
+ * coming, and releasing her name, face, vehicle and registration number at
+ * that point would hand a rider the identity of somebody who may never
+ * arrive - for every partner the booking touched on its way to being
+ * accepted. The server enforces it; this screen additionally does not ask,
+ * so nothing leaks even transiently.
+ * <p>
+ * MOCK still: the ETA and distance strip. Nothing computes either.
  * <p>
  * NO PHONE NUMBERS. The Call and Message buttons here were both mock
  * dialogs saying a partner's number was not shared "yet", which read as a
@@ -126,7 +147,9 @@ export function Tracking() {
   // Null keeps the support button off the screen rather than offering a
   // button that dials nothing.
   const [supportPhoneNumber, setSupportPhoneNumber] = useState<string | null>(null);
-  const [driverRating, setDriverRating] = useState<AggregateRating | null>(null);
+  // Everything the rider is allowed to know about her partner. Null until
+  // the server releases it, which it does only from ACCEPTED onwards.
+  const [driver, setDriver] = useState<AssignedDriver | null>(null);
   // Seconds this screen has watched the search run. Drives both the changing
   // copy and the defensive fallback below.
   const [searchedSeconds, setSearchedSeconds] = useState(0);
@@ -269,25 +292,37 @@ export function Tracking() {
     };
   }, [bookingId]);
 
-  // Fetched once a partner is assigned. Her score does not move during a
-  // trip, so there is nothing to poll for.
+  /**
+   * Fetched only once the booking is genuinely ACCEPTED.
+   * <p>
+   * Keyed on the status, not on driverId. A driverId appears at MATCHED -
+   * the moment a partner claims the booking, before she has confirmed she
+   * is coming - and asking then would be asking for the identity of
+   * somebody who may never arrive. The server refuses it either way; this
+   * is the client not asking a question it has no business asking.
+   * <p>
+   * Cleared whenever the status is not one that releases details, so a
+   * partner's name can never linger on screen from a previous render.
+   */
   useEffect(() => {
-    const driverId = booking?.driverId;
-    if (!driverId) return;
+    if (!bookingId || !DRIVER_DETAILS_STATUSES.includes(booking?.status as BookingStatus)) {
+      setDriver(null);
+      return;
+    }
     let cancelled = false;
-    ratingsApi
-      .forAccount(driverId)
-      .then((rating) => {
-        if (!cancelled) setDriverRating(rating);
+    dispatchApi
+      .getAssignedDriver(bookingId)
+      .then((assigned) => {
+        if (!cancelled) setDriver(assigned);
       })
       .catch(() => {
-        // The line falls back to "No ratings yet", which is also what a
-        // genuinely unrated partner shows. Nothing here is worth an error.
+        // A 404 here is the server declining to release details, which is
+        // a normal state, not a failure. The card keeps its placeholder.
       });
     return () => {
       cancelled = true;
     };
-  }, [booking?.driverId]);
+  }, [bookingId, booking?.status]);
 
   /**
    * Books the same trip again, as a genuinely new booking.
@@ -370,7 +405,18 @@ export function Tracking() {
   // that, which is why Try Again still works from here.
   const isFinished = terminalStatus || clientGaveUp;
   const searchFailed = noDrivers || clientGaveUp;
-  const hasDriver = Boolean(booking?.driverId) && !isFinished;
+  /**
+   * A partner has confirmed she is coming.
+   * <p>
+   * Keyed on the status, not on driverId. A driverId is set at MATCHED, the
+   * moment somebody claims the booking, and this used to key on that - so
+   * the header read "On the Way" about a partner who had not agreed to come
+   * and might never. Saying it early is the same overclaim the details gate
+   * exists to prevent, just in the title bar.
+   */
+  const hasDriver = Boolean(booking?.driverId)
+    && !isFinished
+    && DRIVER_DETAILS_STATUSES.includes(booking?.status as BookingStatus);
   const markers: MapMarker[] = [];
   if (booking) {
     markers.push({ key: 'pickup', lat: booking.pickup.lat, lng: booking.pickup.lng, label: 'Pickup', kind: 'pickup' });
@@ -470,10 +516,19 @@ export function Tracking() {
               has hung closes it and books something else - so this is about
               keeping her informed, not about filling the silence. Every
               stage matches what dispatch is really doing; see SEARCH_STAGES. */}
+          {/* MATCHED gets its own line. The staged search copy would say
+              "Searching for a nearby driver" directly above a badge reading
+              "Partner assigned", which contradicts itself. This says what is
+              actually happening - somebody has the request and is deciding -
+              without naming her, because she has not agreed to come yet. */}
           <p className="font-heading font-semibold text-text-primary">
-            {searchStage(searchedSeconds).title}
+            {booking.status === 'MATCHED' ? 'A partner is confirming...' : searchStage(searchedSeconds).title}
           </p>
-          <p className="mt-1 text-sm text-text-secondary">{searchStage(searchedSeconds).detail}</p>
+          <p className="mt-1 text-sm text-text-secondary">
+            {booking.status === 'MATCHED'
+              ? 'Someone nearby has your request. You will see who as soon as she accepts.'
+              : searchStage(searchedSeconds).detail}
+          </p>
 
           {/* A real bar against the real budget, so the wait has a visible
               end. Capped at 100% rather than allowed to overflow while the
@@ -498,20 +553,39 @@ export function Tracking() {
         </Card>
       ) : (
         <Card className="flex items-center gap-3">
-          <IconCircle size="lg" tone="soft" icon={<Star />} />
-          <div className="flex-1">
-            {/* Name, photo and vehicle are still MOCK - see the file header.
-                The rating is not: it is her real average, from what riders
-                submitted after her completed trips. */}
-            <p className="font-heading font-semibold text-text-primary">Driver details unavailable (mock)</p>
-            <p className="text-xs text-text-secondary">
-              <AggregateRatingText
-                averageStars={driverRating?.averageStars}
-                totalRatings={driverRating?.totalRatings}
-                emptyLabel="No ratings yet"
-              />{' '}
-              &middot; Bike (mock) &middot; Reg. unavailable (mock)
+          {/* Her real photo, or a silhouette. Never a broken image - this is
+              the screen where a rider checks the person in front of her is
+              the one the app sent. */}
+          <Avatar url={driver?.photoUrl} name={driver?.name} size="lg" />
+          <div className="min-w-0 flex-1">
+            {/* All real now, and released by the server only once she has
+                accepted. Nothing here is rendered during MATCHED: the
+                request is not even made - see DRIVER_DETAILS_STATUSES. */}
+            <p className="truncate font-heading font-semibold text-text-primary">
+              {driver?.name || 'Your partner'}
             </p>
+            {/* Rendered only once the server has actually released her
+                details. Showing "New partner" while waiting would assert
+                something about a specific person - that nobody has rated her
+                - on no information at all. */}
+            {driver && (
+              <p className="truncate text-xs text-text-secondary">
+                <AggregateRatingText
+                  averageStars={driver.averageStars}
+                  totalRatings={driver.totalRatings}
+                  emptyLabel="New partner"
+                />
+                {driver.vehicleType && <> &middot; {vehicleLabel(driver.vehicleType)}</>}
+              </p>
+            )}
+            {driver?.vehicleRegistrationNumber && (
+              // The number to look for, set apart rather than buried in the
+              // line above: at night, at a kerb, it is the thing she is
+              // actually checking.
+              <p className="mt-1 inline-block rounded bg-background px-2 py-0.5 font-heading text-sm font-semibold tracking-wide text-text-primary">
+                {driver.vehicleRegistrationNumber}
+              </p>
+            )}
           </div>
           {/* The one way to reach her. Not a call, and not a number. */}
           <button
