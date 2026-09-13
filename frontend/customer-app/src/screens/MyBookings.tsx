@@ -41,7 +41,11 @@ type Tab = 'ALL' | 'RIDES' | 'PARCELS' | 'FOOD';
 type View = 'all' | 'live' | 'history';
 
 const LIVE_STATUSES: BookingStatus[] = ['REQUESTED', 'MATCHED', 'ACCEPTED', 'IN_PROGRESS'];
-const PAST_STATUSES: BookingStatus[] = ['COMPLETED', 'CANCELLED'];
+// Every status a trip can end in, including the one where the platform
+// could not find anyone. It belongs in history like any other finished
+// trip - leaving it out would make a booking a rider definitely made
+// vanish from her own list.
+const PAST_STATUSES: BookingStatus[] = ['COMPLETED', 'CANCELLED', 'NO_DRIVERS_AVAILABLE'];
 
 const VIEW_COPY: Record<View, {
   title: string;
@@ -101,6 +105,7 @@ const STATUS_OPTIONS: Record<View, { value: BookingStatus; label: string }[]> = 
     { value: 'IN_PROGRESS', label: 'In progress' },
     { value: 'COMPLETED', label: 'Completed' },
     { value: 'CANCELLED', label: 'Cancelled' },
+    { value: 'NO_DRIVERS_AVAILABLE', label: 'No drivers found' },
   ],
   // Each view only offers the statuses it can actually contain. Offering
   // "Completed" inside Live Tracking would be a filter guaranteed to empty
@@ -114,12 +119,15 @@ const STATUS_OPTIONS: Record<View, { value: BookingStatus; label: string }[]> = 
   history: [
     { value: 'COMPLETED', label: 'Completed' },
     { value: 'CANCELLED', label: 'Cancelled' },
+    { value: 'NO_DRIVERS_AVAILABLE', label: 'No drivers found' },
   ],
 };
 
 function statusTone(status: BookingStatus): StatusTone {
   if (status === 'COMPLETED') return 'success';
   if (status === 'CANCELLED') return 'danger';
+  // Warning, not danger: the platform fell short, the rider did nothing wrong.
+  if (status === 'NO_DRIVERS_AVAILABLE') return 'warning';
   if (status === 'REQUESTED') return 'warning';
   return 'primary';
 }

@@ -38,7 +38,15 @@ export interface DriverProfileSummary {
 
 export type BookingType = 'RIDE' | 'DELIVERY';
 export type BookingCategory = 'BIKE' | 'AUTO' | 'CAB' | 'PARCEL' | 'LUNCHBOX';
-export type BookingStatus = 'REQUESTED' | 'MATCHED' | 'ACCEPTED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+export type BookingStatus =
+  | 'REQUESTED'
+  | 'MATCHED'
+  | 'ACCEPTED'
+  | 'IN_PROGRESS'
+  | 'COMPLETED'
+  | 'CANCELLED'
+  /** Dispatch searched, found nobody and stopped. Not a cancellation - see the backend enum. */
+  | 'NO_DRIVERS_AVAILABLE';
 
 export interface GeoAddress {
   label: string;

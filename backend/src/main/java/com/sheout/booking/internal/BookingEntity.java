@@ -37,7 +37,10 @@ public class BookingEntity extends BaseEntity {
     private BookingCategory category;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    // 30, not 20: NO_DRIVERS_AVAILABLE is exactly 20 characters, so the
+    // old width fit it by coincidence with no room for the next one. See
+    // V11.
+    @Column(nullable = false, length = 30)
     private BookingStatus status;
 
     @Column(nullable = false)

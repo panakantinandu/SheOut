@@ -7,15 +7,19 @@ import com.sheout.booking.BookingCategory;
 import com.sheout.booking.BookingError;
 import com.sheout.booking.BookingRequested;
 import com.sheout.booking.BookingSummary;
+import com.sheout.dispatch.DispatchExhausted;
 import com.sheout.dispatch.internal.matching.MatchingStrategy;
 import com.sheout.dispatch.internal.redis.DriverLocationStore;
 import com.sheout.dispatch.internal.redis.OfferStore;
 import com.sheout.dispatch.internal.redis.RoundState;
 import com.sheout.sharedkernel.Result;
+import com.sheout.sharedkernel.event.DomainEventPublisher;
 import com.sheout.users.DriverProfileApi;
 import com.sheout.users.DriverProfileSummary;
 import com.sheout.users.OnlineStatus;
 import com.sheout.users.VehicleType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
@@ -37,18 +41,22 @@ import java.util.stream.Collectors;
 @Service
 public class DispatchService {
 
+    private static final Logger log = LoggerFactory.getLogger(DispatchService.class);
+
     private final DriverLocationStore locationStore;
     private final OfferStore offerStore;
     private final MatchingStrategy matchingStrategy;
     private final DriverProfileApi driverProfileApi;
     private final AuthApi authApi;
     private final BookingApi bookingApi;
+    private final DomainEventPublisher eventPublisher;
 
     private final double initialRadiusKm;
     private final double radiusExpansionFactor;
     private final int candidateCount;
     private final long offerWindowSeconds;
     private final int maxRetries;
+    private final long searchTimeoutSeconds;
 
     public DispatchService(
             DriverLocationStore locationStore,
@@ -57,11 +65,17 @@ public class DispatchService {
             DriverProfileApi driverProfileApi,
             BookingApi bookingApi,
             AuthApi authApi,
+            DomainEventPublisher eventPublisher,
             @Value("${sheout.dispatch.initial-radius-km:3.0}") double initialRadiusKm,
             @Value("${sheout.dispatch.radius-expansion-factor:2.0}") double radiusExpansionFactor,
             @Value("${sheout.dispatch.candidate-count:5}") int candidateCount,
             @Value("${sheout.dispatch.offer-window-seconds:15}") long offerWindowSeconds,
-            @Value("${sheout.dispatch.max-retries:3}") int maxRetries
+            @Value("${sheout.dispatch.max-retries:3}") int maxRetries,
+            // The TOTAL budget for one search, across every round and every
+            // radius expansion. NOT the per-offer accept window above, which
+            // bounds one driver answering one offer - the two solve different
+            // problems and must never be collapsed into each other.
+            @Value("${sheout.dispatch.search-timeout-seconds:90}") long searchTimeoutSeconds
     ) {
         this.locationStore = locationStore;
         this.offerStore = offerStore;
@@ -69,11 +83,15 @@ public class DispatchService {
         this.driverProfileApi = driverProfileApi;
         this.authApi = authApi;
         this.bookingApi = bookingApi;
+        this.eventPublisher = eventPublisher;
         this.initialRadiusKm = initialRadiusKm;
         this.radiusExpansionFactor = radiusExpansionFactor;
         this.candidateCount = candidateCount;
         this.offerWindowSeconds = offerWindowSeconds;
         this.maxRetries = maxRetries;
+        this.searchTimeoutSeconds = searchTimeoutSeconds;
+        log.info("Dispatch: up to {} retries, {}s per offer, {}s total search budget",
+                maxRetries, offerWindowSeconds, searchTimeoutSeconds);
     }
 
     public void recordLocation(UUID driverId, double lat, double lng) {
@@ -92,8 +110,14 @@ public class DispatchService {
      */
     @EventListener
     public void onBookingRequested(BookingRequested event) {
+        // The deadline for the WHOLE search is fixed here, once, and copied
+        // forward through every retry. Not recomputed per round, which would
+        // let a search that kept finding rounds to run go on indefinitely -
+        // which is precisely the hole this closes.
+        Instant startedAt = Instant.now();
         RoundState firstRound = new RoundState(
-                1, initialRadiusKm, event.pickup().lat(), event.pickup().lng(), event.category());
+                1, initialRadiusKm, event.pickup().lat(), event.pickup().lng(), event.category(),
+                event.customerId(), startedAt, startedAt.plusSeconds(searchTimeoutSeconds));
         runRound(event.bookingId(), firstRound);
     }
 
@@ -154,23 +178,77 @@ public class DispatchService {
             }
             RoundState current = round.get();
 
-            // attempt=1 is the initial round (not itself a retry), so maxRetries
-            // retries means attempt is allowed to reach maxRetries + 1 total rounds.
-            if (current.attempt() > maxRetries) {
-                // Retries exhausted - leave the booking REQUESTED for manual/customer-visible retry, per spec.
-                offerStore.clearRound(bookingId);
+            // Two independent limits, and whichever is hit first ends the
+            // search. The time budget is checked FIRST, and it is checked
+            // against when the NEXT round would finish, not just against now.
+            //
+            // Checking only "has the deadline passed" is not enough, and a
+            // live run proved it: rounds are only examined when one expires,
+            // so a round starting a second before the deadline still runs a
+            // full offer window past it. With a 90s budget and a 15s window
+            // that gives up at ~104s, which is not the 90s anybody
+            // configured - and it fires after the client's own fallback,
+            // inverting the order those two are meant to happen in.
+            //
+            // So a round that cannot finish inside the budget is not started
+            // at all. This does NOT shorten anybody's accept window: the
+            // window stays exactly as configured, and a round either runs in
+            // full or does not run. The two timeouts stay separate.
+            //
+            // A round ending exactly ON the deadline is inside the budget and
+            // does run - see noRoomForAnotherRound for what getting that
+            // boundary wrong cost in testing.
+            Instant now = Instant.now();
+            if (current.deadlinePassed(now) || current.noRoomForAnotherRound(now, offerWindowSeconds)) {
+                giveUp(bookingId, current, DispatchExhausted.Reason.SEARCH_TIMED_OUT, now);
                 continue;
             }
 
-            RoundState next = new RoundState(
-                    current.attempt() + 1,
-                    current.radiusKm() * radiusExpansionFactor,
-                    current.pickupLat(),
-                    current.pickupLng(),
-                    current.category()
-            );
-            runRound(bookingId, next);
+            // attempt=1 is the initial round (not itself a retry), so maxRetries
+            // retries means attempt is allowed to reach maxRetries + 1 total rounds.
+            if (current.attempt() > maxRetries) {
+                giveUp(bookingId, current, DispatchExhausted.Reason.RETRIES_EXHAUSTED, now);
+                continue;
+            }
+
+            runRound(bookingId, current.nextAttempt(current.radiusKm() * radiusExpansionFactor));
         }
+    }
+
+    /**
+     * Ends a search that found nobody, and says so out loud.
+     * <p>
+     * The saying-so is the whole point. This used to clear its Redis state
+     * and return, which left the booking in REQUESTED with nothing running -
+     * a rider watching "Searching for a nearby driver..." on a search that
+     * had already stopped, with no way to tell the difference and no end to
+     * it. Silence was the bug; the event is the fix.
+     * <p>
+     * Dispatch does not set the booking's status itself. It reports that it
+     * has stopped looking, and booking decides what that means for a
+     * booking - which is the module boundary this codebase keeps everywhere
+     * else.
+     */
+    private void giveUp(UUID bookingId, RoundState state, DispatchExhausted.Reason reason, Instant now) {
+        offerStore.clearRound(bookingId);
+        Duration searchedFor = Duration.between(state.searchStartedAt(), now);
+        log.info("Dispatch gave up on booking {} after {} rounds and {}s: {}",
+                bookingId, state.attempt(), searchedFor.toSeconds(), reason);
+        eventPublisher.publish(new DispatchExhausted(
+                bookingId, state.customerId(), reason, state.attempt(), searchedFor));
+    }
+
+    /**
+     * The total time budget for one search, in seconds, so a client can show
+     * an honest countdown instead of guessing.
+     * <p>
+     * Exposed rather than duplicated in the apps: a frontend that hardcodes
+     * its own idea of the timeout drifts the moment this is retuned, and the
+     * drift is invisible until a rider is shown "no drivers" while the
+     * search is still running, or left spinning after it stopped.
+     */
+    public long searchTimeoutSeconds() {
+        return searchTimeoutSeconds;
     }
 
     /**

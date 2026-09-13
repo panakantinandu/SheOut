@@ -14,6 +14,7 @@ import static com.sheout.booking.BookingStatus.CANCELLED;
 import static com.sheout.booking.BookingStatus.COMPLETED;
 import static com.sheout.booking.BookingStatus.IN_PROGRESS;
 import static com.sheout.booking.BookingStatus.MATCHED;
+import static com.sheout.booking.BookingStatus.NO_DRIVERS_AVAILABLE;
 import static com.sheout.booking.BookingStatus.REQUESTED;
 
 /**
@@ -29,12 +30,22 @@ final class BookingStateMachine {
     private static final Map<BookingStatus, Set<BookingStatus>> ALLOWED = new EnumMap<>(BookingStatus.class);
 
     static {
-        ALLOWED.put(REQUESTED, EnumSet.of(MATCHED, CANCELLED));
+        // NO_DRIVERS_AVAILABLE is reachable ONLY from REQUESTED. A booking
+        // that already has a driver assigned cannot later decide nobody was
+        // available, and this is the guard that makes the race safe: if a
+        // driver accepts a still-live offer moments after the search timed
+        // out, assignDriver asks for NO_DRIVERS_AVAILABLE -> MATCHED, is
+        // refused here, and dispatch releases its claim. The rider is not
+        // silently handed a partner she was already told did not exist.
+        ALLOWED.put(REQUESTED, EnumSet.of(MATCHED, CANCELLED, NO_DRIVERS_AVAILABLE));
         ALLOWED.put(MATCHED, EnumSet.of(ACCEPTED, CANCELLED));
         ALLOWED.put(ACCEPTED, EnumSet.of(IN_PROGRESS, CANCELLED));
         ALLOWED.put(IN_PROGRESS, EnumSet.of(COMPLETED));
         ALLOWED.put(COMPLETED, EnumSet.noneOf(BookingStatus.class));
         ALLOWED.put(CANCELLED, EnumSet.noneOf(BookingStatus.class));
+        // A dead end on purpose - retrying is a new booking, not a revival
+        // of this one. See BookingStatus.NO_DRIVERS_AVAILABLE.
+        ALLOWED.put(NO_DRIVERS_AVAILABLE, EnumSet.noneOf(BookingStatus.class));
     }
 
     private BookingStateMachine() {

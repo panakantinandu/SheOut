@@ -1,4 +1,4 @@
-import { CheckCircle2, Headphones, MessageCircle, Radio, ShieldAlert, Star, XCircle } from 'lucide-react';
+import { CheckCircle2, Headphones, MessageCircle, Radio, SearchX, ShieldAlert, Star, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
@@ -21,6 +21,63 @@ import { RatingPrompt } from '../components/RatingPrompt';
 import { mockAction } from '../lib/mockAction';
 
 const POLL_INTERVAL_MS = 3000;
+
+/**
+ * Used only until the real figure arrives from the backend, which serves it
+ * so the two cannot drift. Matches the backend default; if it is ever
+ * retuned there and this is forgotten, the fetched value still wins.
+ */
+const DEFAULT_SEARCH_TIMEOUT_SECONDS = 90;
+
+/**
+ * How far past the server's own deadline the client waits before giving up
+ * on its own.
+ * <p>
+ * The server stops at its deadline plus at most one sweep interval, because
+ * dispatch refuses to start a round it cannot finish inside the budget. This
+ * has to comfortably clear that, plus a missed poll and the round trip, so
+ * the server's answer is what a rider normally sees and this never
+ * pre-empts it.
+ */
+const CLIENT_GRACE_SECONDS = 15;
+
+/**
+ * What a waiting rider is told, and when.
+ * <p>
+ * Not decoration. Ninety seconds of an unchanging spinner reads as a frozen
+ * app long before it reads as a search, and the rider closes it and books a
+ * different service. Copy that moves tells her something is still
+ * happening. Every line here is also true of what dispatch is actually
+ * doing at that moment: the radius really does expand between rounds, which
+ * is why "Expanding the search area" is not a placating lie.
+ */
+const SEARCH_STAGES: { afterSeconds: number; title: string; detail: string }[] = [
+  {
+    afterSeconds: 0,
+    title: 'Searching for a nearby driver...',
+    detail: 'This usually takes under a minute.',
+  },
+  {
+    afterSeconds: 15,
+    title: 'Still searching...',
+    detail: 'We are offering your trip to the closest partners first.',
+  },
+  {
+    afterSeconds: 35,
+    title: 'Expanding the search area...',
+    detail: 'Nobody very close by has taken it, so we are looking further out.',
+  },
+  {
+    afterSeconds: 60,
+    title: 'Still looking, hang on...',
+    detail: 'This one is taking longer than usual. We will tell you either way.',
+  },
+];
+
+function searchStage(seconds: number) {
+  return SEARCH_STAGES.reduce((chosen, stage) => (seconds >= stage.afterSeconds ? stage : chosen), SEARCH_STAGES[0]);
+}
+
 // Matches driver-app's LOCATION_SEND_MS exactly - polling faster than the
 // driver broadcasts just re-fetches a position we already have.
 const DRIVER_LOCATION_POLL_MS = 7000;
@@ -70,12 +127,82 @@ export function Tracking() {
   // button that dials nothing.
   const [supportPhoneNumber, setSupportPhoneNumber] = useState<string | null>(null);
   const [driverRating, setDriverRating] = useState<AggregateRating | null>(null);
+  // Seconds this screen has watched the search run. Drives both the changing
+  // copy and the defensive fallback below.
+  const [searchedSeconds, setSearchedSeconds] = useState(0);
+  const [searchTimeoutSeconds, setSearchTimeoutSeconds] = useState(DEFAULT_SEARCH_TIMEOUT_SECONDS);
+  const [rebooking, setRebooking] = useState(false);
 
   /** Set once the trip reaches a status that can never change again. */
-  const terminalStatus = booking?.status === 'CANCELLED' || booking?.status === 'COMPLETED';
+  const terminalStatus =
+    booking?.status === 'CANCELLED'
+    || booking?.status === 'COMPLETED'
+    || booking?.status === 'NO_DRIVERS_AVAILABLE';
+
+  /** The search ran and found nobody. Not a cancellation, and not still running. */
+  const noDrivers = booking?.status === 'NO_DRIVERS_AVAILABLE';
+
+  /**
+   * The client's own giving-up point, and a fallback only.
+   * <p>
+   * The backend deciding the search is over, and saying so in the booking's
+   * status, is the real mechanism. This exists for the case where that
+   * answer never arrives - a dropped poll, a backend restart mid-search, a
+   * phone that slept through the transition. Without it, any one of those
+   * leaves a rider watching a spinner with no end, which is the exact
+   * failure this whole change is about.
+   * <p>
+   * Deliberately later than the server's deadline, never earlier. Firing
+   * first would tell a rider nobody was found while a driver was still
+   * being offered her trip, and she would book again on top of a search
+   * that was about to succeed.
+   */
+  const clientGaveUp = !booking || terminalStatus
+    ? false
+    : booking.status === 'REQUESTED' && searchedSeconds > searchTimeoutSeconds + CLIENT_GRACE_SECONDS;
+
+  // The real search budget, so the fallback below sits just behind the
+  // server's own deadline rather than at a number guessed in this file.
+  useEffect(() => {
+    let cancelled = false;
+    dispatchApi
+      .getSearchConfig()
+      .then((config) => {
+        if (!cancelled && config.searchTimeoutSeconds > 0) {
+          setSearchTimeoutSeconds(config.searchTimeoutSeconds);
+        }
+      })
+      .catch(() => {
+        // Keeps the compiled-in default, which matches the backend's. A
+        // failed config fetch must not be the thing that decides how long
+        // somebody waits.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Ticks only while a search is genuinely running. Measured from when this
+  // screen started watching, not from requestedAt, so reopening the app
+  // mid-search does not immediately jump to "still looking, hang on".
+  useEffect(() => {
+    if (booking?.status !== 'REQUESTED') {
+      setSearchedSeconds(0);
+      return;
+    }
+    const started = Date.now();
+    const tick = setInterval(() => {
+      setSearchedSeconds(Math.floor((Date.now() - started) / 1000));
+    }, 1000);
+    return () => clearInterval(tick);
+  }, [booking?.status]);
 
   useEffect(() => {
-    if (!bookingId || terminalStatus) return;
+    // Stops the moment the trip is finished OR the client has given up. The
+    // second half matters: without it, a booking stuck in REQUESTED because
+    // the backend never answered would be polled every three seconds for as
+    // long as the screen stayed open.
+    if (!bookingId || terminalStatus || clientGaveUp) return;
     let cancelled = false;
 
     async function poll() {
@@ -96,7 +223,7 @@ export function Tracking() {
     // terminalStatus in the deps, not the whole booking: re-subscribing on
     // every poll would defeat the interval. Once the trip is finished the
     // effect tears its timer down and never sets another.
-  }, [bookingId, terminalStatus]);
+  }, [bookingId, terminalStatus, clientGaveUp]);
 
   // Driver position, polled only once a driver is actually assigned - before
   // that the endpoint has nothing to return and would 404 on every tick.
@@ -163,6 +290,47 @@ export function Tracking() {
   }, [booking?.driverId]);
 
   /**
+   * Books the same trip again, as a genuinely new booking.
+   * <p>
+   * A fresh record, not a revival of this one, and the backend enforces that
+   * by making NO_DRIVERS_AVAILABLE a dead end. The pickup and drop are
+   * reused because retyping them would be absurd, but they are re-submitted
+   * and re-priced rather than resurrected: the fare is recalculated, the
+   * service-area check runs again, and the new booking gets its own search
+   * with its own full budget. Reusing the old record would leave it
+   * ambiguous whether "trying again" was working from addresses that were
+   * accurate ninety seconds ago.
+   * <p>
+   * The old booking is deliberately NOT cancelled first, in the one case
+   * where it is still technically REQUESTED (the client fallback fired
+   * before the server's answer arrived). Cancelling it would put a
+   * cancellation on her record for a search she did not abandon - the exact
+   * unfairness NO_DRIVERS_AVAILABLE exists to prevent - and it is not
+   * needed: dispatch's own deadline has already passed, so the sweeper
+   * settles that booking on its own within a tick or two.
+   */
+  async function handleTryAgain() {
+    if (!booking) return;
+    setRebooking(true);
+    setError(null);
+    try {
+      const fresh = await bookingApi.create({
+        type: booking.type,
+        category: booking.category,
+        pickup: booking.pickup,
+        drop: booking.drop,
+      });
+      // replace, not push: the failed booking should not be a back-button
+      // away from a trip that is now live.
+      navigate(`/tracking/${fresh.id}`, { replace: true });
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not book that again');
+    } finally {
+      setRebooking(false);
+    }
+  }
+
+  /**
    * Cancels, with the reason the dialog collected.
    * <p>
    * The reason is required by the backend, so there is no path from this
@@ -197,7 +365,11 @@ export function Tracking() {
    * polling the booking every 3 seconds and the driver's position every 7,
    * forever, for a trip that no longer existed.
    */
-  const isFinished = terminalStatus;
+  // The client giving up counts as finished for rendering: the screen must
+  // stop claiming to search either way. The booking itself is untouched by
+  // that, which is why Try Again still works from here.
+  const isFinished = terminalStatus || clientGaveUp;
+  const searchFailed = noDrivers || clientGaveUp;
   const hasDriver = Boolean(booking?.driverId) && !isFinished;
   const markers: MapMarker[] = [];
   if (booking) {
@@ -207,16 +379,54 @@ export function Tracking() {
   if (driverLocation) {
     markers.push({ key: 'driver', lat: driverLocation.lat, lng: driverLocation.lng, label: 'Driver', kind: 'driver' });
   }
-  const canCancel = booking && ['REQUESTED', 'MATCHED', 'ACCEPTED'].includes(booking.status);
+  // Unchanged for every normal case: cancelling during a live search still
+  // works exactly as it did, reason dialog and all. Only suppressed once the
+  // failure card is up, which carries its own way out - two Cancel buttons
+  // on one screen, meaning different things, is worse than either.
+  const canCancel =
+    booking && !searchFailed && ['REQUESTED', 'MATCHED', 'ACCEPTED'].includes(booking.status);
 
   return (
     <div className="space-y-6">
-      <TopHeader variant="back" title={isFinished ? (booking?.status === 'CANCELLED' ? 'Trip Cancelled' : 'Trip Completed') : hasDriver ? 'On the Way' : 'Finding a Driver'} onBack={() => navigate('/home')} />
+      <TopHeader
+        variant="back"
+        title={
+          searchFailed
+            ? 'No Drivers Found'
+            : isFinished
+              ? (booking?.status === 'CANCELLED' ? 'Trip Cancelled' : 'Trip Completed')
+              : hasDriver
+                ? 'On the Way'
+                : 'Finding a Driver'
+        }
+        onBack={() => navigate('/home')}
+      />
 
       {error && <p className="text-sm text-danger">{error}</p>}
 
       {!booking ? (
         <p className="text-center text-sm text-text-secondary">Loading...</p>
+      ) : searchFailed ? (
+        /* The search is over and found nobody. Two ways forward and no
+           spinner - which is the entire point of the status existing. */
+        <Card tone="warning" className="flex items-start gap-3">
+          <IconCircle size="lg" tone="soft" color="orange" icon={<SearchX />} />
+          <div className="flex-1">
+            <p className="font-heading font-semibold text-text-primary">No drivers available right now</p>
+            <p className="mt-1 text-sm text-text-secondary">
+              We could not find anyone free near {booking.pickup.label}. Nothing has been charged, and you can try
+              again straight away.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button size="md" disabled={rebooking} onClick={handleTryAgain}>
+                {rebooking ? 'Booking...' : 'Try Again'}
+              </Button>
+              <Button size="md" variant="secondary" disabled={rebooking} onClick={() => navigate('/home')}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </Card>
       ) : isFinished ? (
         <Card
           tone={booking.status === 'CANCELLED' ? 'danger' : 'success'}
@@ -255,8 +465,33 @@ export function Tracking() {
         </Card>
       ) : !hasDriver ? (
         <Card className="text-center">
-          <p className="font-heading font-semibold text-text-primary">Searching for a nearby driver...</p>
-          <p className="mt-1 text-sm text-text-secondary">This usually takes under a minute.</p>
+          {/* Copy that moves with the clock. A static line for ninety
+              seconds reads as a frozen app, and a rider who thinks the app
+              has hung closes it and books something else - so this is about
+              keeping her informed, not about filling the silence. Every
+              stage matches what dispatch is really doing; see SEARCH_STAGES. */}
+          <p className="font-heading font-semibold text-text-primary">
+            {searchStage(searchedSeconds).title}
+          </p>
+          <p className="mt-1 text-sm text-text-secondary">{searchStage(searchedSeconds).detail}</p>
+
+          {/* A real bar against the real budget, so the wait has a visible
+              end. Capped at 100% rather than allowed to overflow while the
+              client waits out its grace period. */}
+          <div
+            className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-background"
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={searchTimeoutSeconds}
+            aria-valuenow={Math.min(searchedSeconds, searchTimeoutSeconds)}
+            aria-label="Time spent searching"
+          >
+            <div
+              className="h-full rounded-full bg-primary transition-[width] duration-1000 ease-linear"
+              style={{ width: `${Math.min(100, (searchedSeconds / searchTimeoutSeconds) * 100)}%` }}
+            />
+          </div>
+
           <StatusBadge tone="warning" className="mt-3">
             {bookingStatusLabel(booking.status)}
           </StatusBadge>
@@ -317,7 +552,7 @@ export function Tracking() {
           <span className="text-sm text-text-secondary">
             {booking.status === 'COMPLETED'
               ? 'Final Fare'
-              : booking.status === 'CANCELLED'
+              : booking.status === 'CANCELLED' || searchFailed
                 ? 'Estimated fare - not charged'
                 : 'Estimated Fare'}
           </span>

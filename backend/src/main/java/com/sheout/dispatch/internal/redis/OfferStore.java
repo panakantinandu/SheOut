@@ -84,6 +84,12 @@ public class OfferStore {
         redisTemplate.opsForHash().put(key, "pickupLat", String.valueOf(state.pickupLat()));
         redisTemplate.opsForHash().put(key, "pickupLng", String.valueOf(state.pickupLng()));
         redisTemplate.opsForHash().put(key, "category", state.category().name());
+        redisTemplate.opsForHash().put(key, "customerId", state.customerId().toString());
+        // Absolute instants, not durations - see RoundState. Re-written each
+        // round with the same values, so a restart mid-search recovers the
+        // original deadline rather than starting the clock again.
+        redisTemplate.opsForHash().put(key, "searchStartedAt", String.valueOf(state.searchStartedAt().toEpochMilli()));
+        redisTemplate.opsForHash().put(key, "searchDeadline", String.valueOf(state.searchDeadline().toEpochMilli()));
         redisTemplate.expire(key, ROUND_STATE_TTL);
         redisTemplate.opsForZSet().add(PENDING_ROUNDS_KEY, bookingId.toString(), expiresAt.toEpochMilli());
     }
@@ -95,7 +101,16 @@ public class OfferStore {
         Object pickupLat = redisTemplate.opsForHash().get(key, "pickupLat");
         Object pickupLng = redisTemplate.opsForHash().get(key, "pickupLng");
         Object category = redisTemplate.opsForHash().get(key, "category");
-        if (attempt == null || radiusKm == null || pickupLat == null || pickupLng == null || category == null) {
+        Object customerId = redisTemplate.opsForHash().get(key, "customerId");
+        Object searchStartedAt = redisTemplate.opsForHash().get(key, "searchStartedAt");
+        Object searchDeadline = redisTemplate.opsForHash().get(key, "searchDeadline");
+        if (attempt == null || radiusKm == null || pickupLat == null || pickupLng == null || category == null
+                || customerId == null || searchStartedAt == null || searchDeadline == null) {
+            // Any missing field means this hash predates the search-deadline
+            // fields or was partially written. Treated as no round at all, so
+            // the sweeper skips it rather than reviving a search it cannot
+            // bound. Rounds live 30 minutes, so a rolling deploy clears the
+            // last of these on its own.
             return Optional.empty();
         }
         return Optional.of(new RoundState(
@@ -103,7 +118,10 @@ public class OfferStore {
                 Double.parseDouble(radiusKm.toString()),
                 Double.parseDouble(pickupLat.toString()),
                 Double.parseDouble(pickupLng.toString()),
-                BookingCategory.valueOf(category.toString())
+                BookingCategory.valueOf(category.toString()),
+                UUID.fromString(customerId.toString()),
+                Instant.ofEpochMilli(Long.parseLong(searchStartedAt.toString())),
+                Instant.ofEpochMilli(Long.parseLong(searchDeadline.toString()))
         ));
     }
 

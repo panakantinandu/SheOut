@@ -57,6 +57,10 @@ const BOOKING_STATUS: Record<string, string> = {
   IN_PROGRESS: 'In progress',
   COMPLETED: 'Completed',
   CANCELLED: 'Cancelled',
+  // Deliberately not phrased as a cancellation. Nobody called this off;
+  // the search ended without finding anyone, and telling a rider she
+  // cancelled a trip she was waiting for is both wrong and insulting.
+  NO_DRIVERS_AVAILABLE: 'No drivers found',
 };
 
 export function bookingStatusLabel(status: string | null | undefined): string {
