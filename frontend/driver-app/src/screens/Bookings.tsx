@@ -1,4 +1,4 @@
-import { Bike, CalendarX, MessageCircle, Package, SearchX, UtensilsCrossed } from 'lucide-react';
+import { Bike, CalendarX, MessageCircle, Package, SearchX, Star, UtensilsCrossed } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -21,6 +21,8 @@ import {
 import type { DateRangeValue, StatusTone } from '@sheout/design-system';
 import { bookingApi } from '../api/client';
 import type { BookingCategory, BookingStatus } from '../api/types';
+import { RatingPrompt } from '../components/RatingPrompt';
+import { useRatingMarks } from '../lib/useRatingMarks';
 
 type Tab = 'ALL' | 'RIDES' | 'PARCELS';
 
@@ -89,6 +91,11 @@ export function Bookings() {
   );
 
   const list = usePagedList(fetchPage, [tab, query, status, dates.from, dates.to], { debounceMs: 400 });
+
+  // So a trip already rated is marked, and one still open offers the way to
+  // rate it from here - which is when a partner actually has a moment.
+  const ratingMarks = useRatingMarks(list.items);
+  const [ratingBookingId, setRatingBookingId] = useState<string | null>(null);
 
   const activeFilters = useMemo(
     () => [status, dates.from, dates.to].filter(Boolean).length,
@@ -199,6 +206,28 @@ export function Bookings() {
                   Messages
                 </button>
               )}
+              {/* Already rated, still rateable, or past its window - so
+                  nobody is asked twice for the same trip. */}
+              {booking.status === 'COMPLETED' && ratingMarks.has(booking.id) && (
+                ratingMarks.get(booking.id)!.stars !== null ? (
+                  <p className="mt-1 flex items-center gap-1 text-xs text-text-secondary">
+                    <Star className="h-3.5 w-3.5 fill-accent-orange text-accent-orange" />
+                    You rated this {ratingMarks.get(booking.id)!.stars} out of 5
+                  </p>
+                ) : new Date(ratingMarks.get(booking.id)!.rateableUntil) > new Date() ? (
+                  <button
+                    type="button"
+                    className="mt-1 ml-3 inline-flex items-center gap-1 text-xs font-semibold text-primary"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setRatingBookingId(booking.id);
+                    }}
+                  >
+                    <Star className="h-3.5 w-3.5" />
+                    Rate this trip
+                  </button>
+                ) : null
+              )}
             </div>
             <AmountText amount={booking.finalFare ?? booking.fareEstimate} />
           </Card>
@@ -212,6 +241,21 @@ export function Bookings() {
         loading={list.loadingMore}
         onLoadMore={list.loadMore}
       />
+
+      {/* Opened by the row's own "Rate this trip", so it is always about the
+          trip she tapped. Keyed by booking id so reopening it for another
+          trip starts clean. */}
+      {ratingBookingId && (
+        <RatingPrompt
+          key={ratingBookingId}
+          bookingId={ratingBookingId}
+          counterpartLabel="your rider"
+          onRated={() => {
+            setRatingBookingId(null);
+            list.reload();
+          }}
+        />
+      )}
     </div>
   );
 }

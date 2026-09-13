@@ -101,6 +101,29 @@ sheout:
     # second trip with an open case against her.
     cancellation-minimum-bookings: ${CANCELLATION_MINIMUM_BOOKINGS:5}
 
+    # The other half of the same flag: an average below this is worth a
+    # look. Both signals raise one flag onto one queue, because an account
+    # that cancels constantly AND is rated badly is one case with two facts
+    # in it, not two cases.
+    rating-review-threshold: ${RATING_REVIEW_THRESHOLD:3.5}
+    # The same floor, for the same reason. One furious rider on a partner's
+    # first night out is an anecdote, not a pattern, and should not open a
+    # case against her.
+    rating-minimum-count: ${RATING_MINIMUM_COUNT:5}
+
+  ratings:
+    # How long after a trip somebody may still rate it.
+    #
+    # A rating is a memory, and memories go off: days later what is left is
+    # rarely the ride, it is whatever has happened since. It also closes an
+    # obvious lever - with no expiry, a trip from six months ago stays a
+    # live threat either party can hold over the other.
+    #
+    # The deadline is written onto each rating slot when the trip completes,
+    # so changing this affects trips completing from then on and can never
+    # reopen a slot somebody was already told had closed.
+    window-hours: ${RATING_WINDOW_HOURS:72}
+
   auth:
     # No default - see JwtService Javadoc for why a missing/weak secret
     # should fail startup rather than silently signing with something

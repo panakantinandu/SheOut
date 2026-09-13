@@ -14,7 +14,7 @@ import com.sheout.notifications.SosError;
 import com.sheout.payments.PaymentApi;
 import com.sheout.payments.PaymentStatus;
 import com.sheout.sharedkernel.Result;
-import com.sheout.users.CancellationStats;
+import com.sheout.users.TrustStats;
 import com.sheout.users.CustomerProfileApi;
 import com.sheout.users.DriverProfileApi;
 import org.springframework.data.domain.Page;
@@ -160,39 +160,46 @@ public class AdminService {
     }
 
     /**
-     * Accounts whose cancellation rate crossed the configured threshold,
-     * riders and partners in one queue, oldest crossing first.
+     * Accounts flagged for review, riders and partners in one queue, oldest
+     * flag first.
      * <p>
-     * A queue, not an action. Crossing the threshold has already done
-     * everything it is ever going to do by putting an account on this list;
-     * blocking stays a separate, deliberate decision made with the
-     * already-built block action, by a person who can see the figures. That
-     * is the same rule driver verification follows, and it matters more here
-     * - a high rate can mean somebody dodging fares or somebody repeatedly
-     * abandoned by partners who never arrived, and the number cannot tell
-     * those apart.
+     * One queue for every trust signal, not one per signal. Cancelling too
+     * often and being rated badly are two ways of arriving at the same
+     * question, and an account that does both is one case with two facts in
+     * it - a second parallel list would show it twice, let half of it be
+     * cleared, and leave nobody able to say when the queue was done.
+     * <p>
+     * A queue, not an action. Being flagged has already done everything it
+     * is ever going to do by putting an account on this list; blocking stays
+     * a separate, deliberate decision made with the already-built block
+     * action, by a person who can see the figures. That is the same rule
+     * driver verification follows, and it matters more here - a high
+     * cancellation rate can mean somebody dodging fares or somebody
+     * repeatedly abandoned by partners who never arrived, and a low average
+     * can mean a careless partner or three bad nights. The numbers cannot
+     * tell those apart.
      * <p>
      * Merged from both profile modules here rather than in either of them:
      * neither users' customer half nor its driver half should have to know
      * the other exists, and joining is what this module is for.
      */
-    public List<CancellationReviewRow> cancellationReviewQueue() {
-        List<CancellationReviewRow> customers = customerProfileApi.findFlaggedForReview().stream()
-                .map(p -> new CancellationReviewRow(
+    public List<TrustReviewRow> trustReviewQueue() {
+        List<TrustReviewRow> customers = customerProfileApi.findFlaggedForReview().stream()
+                .map(p -> new TrustReviewRow(
                         p.accountId(), p.name(), p.phoneNumber(), AccountRole.CUSTOMER,
-                        p.cancellationStats(), p.cancellationStats().flaggedAt(),
-                        p.cancellationStats().flaggedReason(), isBlocked(p.accountId())))
+                        p.trustStats(), p.trustStats().flaggedAt(),
+                        p.trustStats().flaggedReason(), isBlocked(p.accountId())))
                 .toList();
-        List<CancellationReviewRow> drivers = driverProfileApi.findFlaggedForReview().stream()
-                .map(p -> new CancellationReviewRow(
+        List<TrustReviewRow> drivers = driverProfileApi.findFlaggedForReview().stream()
+                .map(p -> new TrustReviewRow(
                         p.accountId(), p.name(), p.phoneNumber(), AccountRole.DRIVER,
-                        p.cancellationStats(), p.cancellationStats().flaggedAt(),
-                        p.cancellationStats().flaggedReason(), isBlocked(p.accountId())))
+                        p.trustStats(), p.trustStats().flaggedAt(),
+                        p.trustStats().flaggedReason(), isBlocked(p.accountId())))
                 .toList();
 
         return java.util.stream.Stream.concat(customers.stream(), drivers.stream())
                 .sorted(java.util.Comparator.comparing(
-                        CancellationReviewRow::flaggedAt,
+                        TrustReviewRow::flaggedAt,
                         java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())))
                 .toList();
     }
@@ -200,14 +207,14 @@ public class AdminService {
     /**
      * Takes an account off the review queue.
      * <p>
-     * Clearing the flag does not reset the counters, and that is deliberate:
-     * the rate is a fact about the account's history and an operator's
-     * decision does not change what happened. It only says this history has
-     * been looked at. If the account keeps cancelling it will cross the
-     * threshold again and come back, which is the behaviour you want from a
-     * review queue.
+     * Clearing the flag does not reset any counter or average, and that is
+     * deliberate: they are facts about what happened, and an operator's
+     * decision does not change what happened. Clearing only records that
+     * somebody has read them. An account that keeps cancelling, or keeps
+     * being rated badly, crosses the line again and comes back - which is
+     * what a review queue should do.
      */
-    public void clearCancellationFlag(UUID accountId, AccountRole role) {
+    public void clearReviewFlag(UUID accountId, AccountRole role) {
         if (role == AccountRole.DRIVER) {
             driverProfileApi.clearReviewFlag(accountId);
         } else {
@@ -272,12 +279,12 @@ public class AdminService {
                 block.map(AccountBlock::blockedAt).orElse(null),
                 block.map(AccountBlock::blockedByAccountId).map(this::phoneFor).orElse(null),
                 block.map(AccountBlock::reason).orElse(null),
-                profile.cancellationStats(),
+                profile.trustStats(),
                 account.createdAt());
     }
 
     /** The two things a row needs from a profile, read together - see profileFactsFor. */
-    private record ProfileFacts(String name, CancellationStats cancellationStats) {
+    private record ProfileFacts(String name, TrustStats trustStats) {
     }
 
     /**
@@ -297,10 +304,10 @@ public class AdminService {
     private ProfileFacts profileFactsFor(AccountSummary account) {
         Optional<ProfileFacts> facts = account.role() == AccountRole.DRIVER
                 ? driverProfileApi.findByAccountId(account.id())
-                        .map(p -> new ProfileFacts(p.name(), p.cancellationStats()))
+                        .map(p -> new ProfileFacts(p.name(), p.trustStats()))
                 : customerProfileApi.findByAccountId(account.id())
-                        .map(p -> new ProfileFacts(p.name(), p.cancellationStats()));
-        return facts.orElseGet(() -> new ProfileFacts(null, new CancellationStats(0, 0, false, null, null)));
+                        .map(p -> new ProfileFacts(p.name(), p.trustStats()));
+        return facts.orElseGet(() -> new ProfileFacts(null, TrustStats.empty()));
     }
 
 }

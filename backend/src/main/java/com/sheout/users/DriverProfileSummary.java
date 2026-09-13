@@ -17,7 +17,7 @@ public record DriverProfileSummary(
         String vehicleRegistrationNumber,
         OnlineStatus onlineStatus,
         boolean verified,
-        CancellationStats cancellationStats,
+        TrustStats trustStats,
         Instant updatedAt
 ) {
 }

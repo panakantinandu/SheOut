@@ -21,7 +21,7 @@ public record CustomerProfileSummary(
         String homeAddress,
         String workAddress,
         boolean verified,
-        CancellationStats cancellationStats,
+        TrustStats trustStats,
         Instant updatedAt
 ) {
 }

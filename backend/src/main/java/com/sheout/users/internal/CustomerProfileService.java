@@ -113,7 +113,7 @@ public class CustomerProfileService implements CustomerProfileApi, EmergencyCont
                 profile.getHomeAddress(),
                 profile.getWorkAddress(),
                 profile.isVerified(),
-                profile.getCancellationStats(),
+                profile.getTrustStats(),
                 profile.getUpdatedAt()
         );
     }

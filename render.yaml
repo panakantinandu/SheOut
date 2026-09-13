@@ -146,6 +146,22 @@ services:
       - key: CANCELLATION_MINIMUM_BOOKINGS
         value: "5"
 
+      # The other half of the same flag. An average below this, once enough
+      # people have rated, puts the account on the same Trust Review queue -
+      # one queue, because an account failing both checks is one case.
+      - key: RATING_REVIEW_THRESHOLD
+        value: "3.5"
+      # One furious rider on a partner's first night out is an anecdote, not
+      # a pattern. No rating flag until at least this many people have rated.
+      - key: RATING_MINIMUM_COUNT
+        value: "5"
+
+      # How long after a trip it can still be rated. A rating is a memory,
+      # and days later what is left is rarely the ride. It also stops an old
+      # trip staying a live threat either party can hold over the other.
+      - key: RATING_WINDOW_HOURS
+        value: "72"
+
       # Google Sign-In - see GoogleTokenVerifier. Not set yet: no real
       # Google Cloud OAuth Client ID exists for this build. Until it's set,
       # the /api/v1/auth/google/verify endpoint returns 503 rather than

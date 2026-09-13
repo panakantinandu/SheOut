@@ -1,4 +1,4 @@
-import { Bike, CalendarX, MapPinned, Package, SearchX, UtensilsCrossed } from 'lucide-react';
+import { Bike, CalendarX, MapPinned, Package, SearchX, Star, UtensilsCrossed } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
@@ -22,6 +22,8 @@ import {
 import type { DateRangeValue, StatusTone } from '@sheout/design-system';
 import { bookingApi } from '../api/client';
 import type { BookingCategory, BookingStatus } from '../api/types';
+import { RatingPrompt } from '../components/RatingPrompt';
+import { useRatingMarks } from '../lib/useRatingMarks';
 
 type Tab = 'ALL' | 'RIDES' | 'PARCELS' | 'FOOD';
 
@@ -173,6 +175,11 @@ export function MyBookings() {
     { debounceMs: 400 }
   );
 
+  // So a trip already rated is marked as such, and one still open offers the
+  // way to rate it here - which is where people actually remember to.
+  const ratingMarks = useRatingMarks(list.items);
+  const [ratingBookingId, setRatingBookingId] = useState<string | null>(null);
+
   const activeFilters = useMemo(
     () => [status, dates.from, dates.to].filter(Boolean).length,
     [status, dates.from, dates.to]
@@ -281,6 +288,31 @@ export function MyBookings() {
               <StatusBadge tone={statusTone(booking.status)} className="mt-1">
                 {bookingStatusLabel(booking.status)}
               </StatusBadge>
+              {/* Says which of the three a completed trip is in: already
+                  rated, still rateable, or past its window. Without this,
+                  somebody who rated on the tracking screen gets asked again
+                  here, and a prompt that repeats is a prompt people learn to
+                  dismiss without reading. */}
+              {booking.status === 'COMPLETED' && ratingMarks.has(booking.id) && (
+                ratingMarks.get(booking.id)!.stars !== null ? (
+                  <p className="mt-1 flex items-center gap-1 text-xs text-text-secondary">
+                    <Star className="h-3.5 w-3.5 fill-accent-orange text-accent-orange" />
+                    You rated this {ratingMarks.get(booking.id)!.stars} out of 5
+                  </p>
+                ) : new Date(ratingMarks.get(booking.id)!.rateableUntil) > new Date() ? (
+                  <button
+                    type="button"
+                    className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-primary"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setRatingBookingId(booking.id);
+                    }}
+                  >
+                    <Star className="h-3.5 w-3.5" />
+                    Rate this trip
+                  </button>
+                ) : null
+              )}
             </div>
             {copy.trackable ? (
               // Named, not just a chevron. In the live view the useful thing
@@ -303,6 +335,22 @@ export function MyBookings() {
         loading={list.loadingMore}
         onLoadMore={list.loadMore}
       />
+
+      {/* Opened by the row's own "Rate this trip", so it is always about the
+          trip she tapped. Keyed by booking id so reopening it for a
+          different trip starts clean rather than reusing the last one's
+          stars. */}
+      {ratingBookingId && (
+        <RatingPrompt
+          key={ratingBookingId}
+          bookingId={ratingBookingId}
+          counterpartLabel="your partner"
+          onRated={() => {
+            setRatingBookingId(null);
+            list.reload();
+          }}
+        />
+      )}
     </div>
   );
 }

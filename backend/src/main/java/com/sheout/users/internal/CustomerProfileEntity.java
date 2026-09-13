@@ -1,11 +1,13 @@
 package com.sheout.users.internal;
 
 import com.sheout.sharedkernel.BaseEntity;
-import com.sheout.users.CancellationStats;
+import com.sheout.users.TrustStats;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -55,6 +57,23 @@ public class CustomerProfileEntity extends BaseEntity {
 
     @Column(length = 500)
     private String flaggedReason;
+
+    /**
+     * What this account's ratings come to.
+     * <p>
+     * A projection maintained from RatingSubmitted, the same way the
+     * cancellation counters beside it are maintained from booking events.
+     * The ratings table stays the source of truth; these are here so one row
+     * carries every number the trust check needs to make a single decision.
+     * <p>
+     * Null average means nobody has rated this account yet, which is not the
+     * same as a bad score - see TrustStats.
+     */
+    @Column(precision = 3, scale = 2)
+    private BigDecimal averageStars;
+
+    @Column(nullable = false)
+    private int totalRatings = 0;
 
     protected CustomerProfileEntity() {
         // JPA
@@ -117,8 +136,19 @@ public class CustomerProfileEntity extends BaseEntity {
         return flaggedReason;
     }
 
-    public CancellationStats getCancellationStats() {
-        return new CancellationStats(totalBookings, totalCancellations, flaggedAt != null, flaggedAt, flaggedReason);
+    /**
+     * Every trust number this account carries, in one record, because there
+     * is one flag and it is decided from all of them together.
+     */
+    public TrustStats getTrustStats() {
+        return new TrustStats(
+                totalBookings,
+                totalCancellations,
+                averageStars == null ? null : averageStars.doubleValue(),
+                totalRatings,
+                flaggedAt != null,
+                flaggedAt,
+                flaggedReason);
     }
 
     /** One more booking in the denominator. */
@@ -151,5 +181,23 @@ public class CustomerProfileEntity extends BaseEntity {
     public void clearReviewFlag() {
         this.flaggedAt = null;
         this.flaggedReason = null;
+    }
+
+    public BigDecimal getAverageStars() {
+        return averageStars;
+    }
+
+    public int getTotalRatings() {
+        return totalRatings;
+    }
+
+    /**
+     * Takes the figures the ratings module just calculated, rather than
+     * recomputing them here. Two modules independently averaging the same
+     * rows is how they end up disagreeing about somebody's score.
+     */
+    public void recordRatingAggregate(double averageStars, int totalRatings) {
+        this.averageStars = BigDecimal.valueOf(averageStars).setScale(2, RoundingMode.HALF_UP);
+        this.totalRatings = totalRatings;
     }
 }
