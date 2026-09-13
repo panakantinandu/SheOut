@@ -14,6 +14,7 @@ import { Offer } from './screens/Offer'
 import { Profile } from './screens/Profile'
 import { Splash } from './screens/Splash'
 import { Trip } from './screens/Trip'
+import { Chat } from './screens/Chat'
 import { Verification } from './screens/Verification'
 
 // Dashboard-level screens (Home/Earnings/Bookings/Profile) get the bottom
@@ -62,6 +63,7 @@ function App() {
       <Route path="/verification" element={protectedOnly(<Verification />)} />
       <Route path="/offer/:bookingId" element={protectedOnly(<Offer />)} />
       <Route path="/trip/:bookingId" element={protectedOnly(<Trip />)} />
+      <Route path="/chat/:bookingId" element={protectedOnly(<Chat />)} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

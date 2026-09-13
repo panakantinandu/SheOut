@@ -1,7 +1,10 @@
 package com.sheout.sharedkernel.web;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -20,6 +23,8 @@ import java.util.List;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiErrorResponse> handleValidation(MethodArgumentNotValidException ex,
                                                                HttpServletRequest request) {
@@ -32,6 +37,34 @@ public class GlobalExceptionHandler {
                 "Validation failed",
                 request.getRequestURI(),
                 details
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    /**
+     * A body that is missing, empty, or not parseable as JSON.
+     * <p>
+     * This was falling through to the catch-all below and coming back as a
+     * 500 with Spring's own message, which named the controller method, its
+     * package and its full parameter list. That is the caller's mistake
+     * being reported as the server's fault, and reported by handing them a
+     * map of the internals. It surfaced the moment cancelling a booking
+     * started requiring a reason: any client still posting the old empty
+     * cancel got a 500 instead of being told what was missing.
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiErrorResponse> handleUnreadableBody(HttpMessageNotReadableException ex,
+                                                                  HttpServletRequest request) {
+        log.debug("Unreadable request body on {}", request.getRequestURI(), ex);
+        ApiErrorResponse body = ApiErrorResponse.of(
+                HttpStatus.BAD_REQUEST.value(),
+                "Bad Request",
+                // Deliberately says nothing about the handler it failed to
+                // bind to. What the caller needs is that the body was the
+                // problem; what the exception carries is our class names.
+                "This request needs a JSON body, and it was missing or could not be read",
+                request.getRequestURI(),
+                List.of()
         );
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }

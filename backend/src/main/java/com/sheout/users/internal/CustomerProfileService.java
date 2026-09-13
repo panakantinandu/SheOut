@@ -34,6 +34,22 @@ public class CustomerProfileService implements CustomerProfileApi, EmergencyCont
         return customerProfileRepository.findByAccountId(accountId).map(this::toSummary);
     }
 
+    @Override
+    public List<CustomerProfileSummary> findFlaggedForReview() {
+        return customerProfileRepository.findByFlaggedAtIsNotNullOrderByFlaggedAtAsc().stream()
+                .map(this::toSummary)
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public void clearReviewFlag(UUID accountId) {
+        customerProfileRepository.findByAccountId(accountId).ifPresent(profile -> {
+            profile.clearReviewFlag();
+            customerProfileRepository.save(profile);
+        });
+    }
+
     @Transactional
     public Result<CustomerProfileSummary, CustomerProfileError> updateProfile(
             UUID accountId, String name, String homeAddress, String workAddress) {
@@ -97,6 +113,7 @@ public class CustomerProfileService implements CustomerProfileApi, EmergencyCont
                 profile.getHomeAddress(),
                 profile.getWorkAddress(),
                 profile.isVerified(),
+                profile.getCancellationStats(),
                 profile.getUpdatedAt()
         );
     }

@@ -63,6 +63,44 @@ sheout:
       # city's name as a person would say it.
       centre-name: ${SERVICE_CENTRE_NAME:Hyderabad}
 
+  support:
+    # The number a rider or partner is offered instead of each other's.
+    #
+    # Direct customer-to-driver calling does not exist in this product, on
+    # purpose: handing a stranger a woman's real phone number is exactly the
+    # risk this platform exists to remove, and once it is disclosed it cannot
+    # be taken back. Everything routine goes through booking-scoped chat; a
+    # real person on this number handles what chat cannot.
+    #
+    # Served to both apps from ChatController rather than baked into either
+    # of them. It used to be hardcoded, differently, in each app, so support
+    # answered on one number from one app and another from the other, and
+    # changing it meant a frontend deploy.
+    #
+    # Blank by default. Both apps hide the Contact Support action when it is
+    # unset rather than showing a button that dials nothing.
+    phone-number: ${SUPPORT_PHONE_NUMBER:}
+
+  users:
+    # Where the cancellation review line sits.
+    #
+    # A rate, not a count: a rider of three years with forty cancellations in
+    # nine hundred trips is not the problem a brand-new account that cancelled
+    # three out of three is, and a raw count would rank them the wrong way
+    # round.
+    #
+    # Crossing this flags the account for a person to look at. It never
+    # blocks, throttles or charges anyone - a high rate can mean somebody
+    # dodging fares or somebody repeatedly abandoned by partners who never
+    # arrived, and the number cannot tell those apart. Same rule driver
+    # verification follows: a human decides.
+    cancellation-rate-warning-threshold: ${CANCELLATION_RATE_WARNING_THRESHOLD:0.4}
+    # No flag until there is enough history for the rate to mean anything.
+    # Without this floor, one cancellation on a first-ever booking is a rate
+    # of 100%, and every new user who changed her mind once would start her
+    # second trip with an open case against her.
+    cancellation-minimum-bookings: ${CANCELLATION_MINIMUM_BOOKINGS:5}
+
   auth:
     # No default - see JwtService Javadoc for why a missing/weak secret
     # should fail startup rather than silently signing with something

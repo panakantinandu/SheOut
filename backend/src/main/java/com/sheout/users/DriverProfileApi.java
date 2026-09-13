@@ -1,11 +1,23 @@
 package com.sheout.users;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 public interface DriverProfileApi {
 
     Optional<DriverProfileSummary> findByAccountId(UUID accountId);
+
+    /**
+     * Every partner whose cancellation rate has crossed the configured
+     * threshold, oldest crossing first. See
+     * {@link CustomerProfileApi#findFlaggedForReview()} for why this raises
+     * a flag rather than acting on it.
+     */
+    List<DriverProfileSummary> findFlaggedForReview();
+
+    /** An operator has reviewed this account and is satisfied. Idempotent. */
+    void clearReviewFlag(UUID accountId);
 
     /**
      * Whether this driver's verification is VERIFIED on both checks right

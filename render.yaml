@@ -114,6 +114,38 @@ services:
       - key: ADMIN_BOOTSTRAP_PHONE
         sync: false
 
+      # The number a rider or partner is offered instead of each other's.
+      #
+      # Direct customer-to-driver calling does not exist in this product and
+      # is not coming: handing a stranger a woman's real number cannot be
+      # undone, and it outlives the trip it was given for. Everything
+      # routine goes through booking-scoped chat; this number is where a
+      # real person picks up for everything else.
+      #
+      # Must be set for production. Both apps hide their Contact Support
+      # action while it is blank, which leaves a live service with no way to
+      # reach a human.
+      - key: SUPPORT_PHONE_NUMBER
+        sync: false
+
+      # When a cancellation rate is worth a person's attention, as a
+      # fraction: 0.4 means "cancels more than 40% of her trips".
+      #
+      # Crossing it puts the account on the console's Cancellation Review
+      # list and does nothing else - no block, no throttle, no fee. That is
+      # deliberate and should stay that way: a high rate can mean somebody
+      # avoiding fares or somebody repeatedly abandoned by partners who
+      # never turned up, and only a person reading the reasons can tell.
+      - key: CANCELLATION_RATE_WARNING_THRESHOLD
+        value: "0.4"
+
+      # No flag until an account has this many bookings behind it. Without
+      # it, one cancellation on a first-ever booking is a rate of 100% and
+      # every new user who changed her mind once starts her second trip with
+      # an open case against her.
+      - key: CANCELLATION_MINIMUM_BOOKINGS
+        value: "5"
+
       # Google Sign-In - see GoogleTokenVerifier. Not set yet: no real
       # Google Cloud OAuth Client ID exists for this build. Until it's set,
       # the /api/v1/auth/google/verify endpoint returns 503 rather than

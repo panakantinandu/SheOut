@@ -117,3 +117,32 @@ export interface PagedResult<T> {
   totalPages: number;
   hasMore: boolean;
 }
+
+export type CancellationReason =
+  | 'CHANGE_OF_PLANS'
+  | 'DRIVER_TAKING_TOO_LONG'
+  | 'FOUND_ANOTHER_RIDE'
+  | 'WRONG_PICKUP_LOCATION'
+  | 'CUSTOMER_NOT_AT_PICKUP'
+  | 'DRIVER_UNAVAILABLE'
+  | 'OTHER';
+
+export interface ChatMessage {
+  id: string;
+  bookingId: string;
+  senderAccountId: string;
+  senderRole: AccountRole;
+  body: string;
+  sentAt: string;
+}
+
+export interface ChatThreadResponse {
+  messages: ChatMessage[];
+  open: boolean;
+  supportPhoneNumber: string;
+}
+
+/** What GET /support/contact returns. phoneNumber is null when none is configured. */
+export interface SupportContact {
+  phoneNumber: string | null;
+}

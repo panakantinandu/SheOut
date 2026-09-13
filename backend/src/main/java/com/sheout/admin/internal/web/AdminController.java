@@ -3,6 +3,7 @@ package com.sheout.admin.internal.web;
 import com.sheout.admin.internal.AccountOpsRow;
 import com.sheout.admin.internal.AdminService;
 import com.sheout.admin.internal.BookingOpsRow;
+import com.sheout.admin.internal.CancellationReviewRow;
 import com.sheout.admin.internal.ReviewQueueRow;
 import com.sheout.admin.internal.SosAlertRow;
 import com.sheout.auth.AccountRole;
@@ -190,6 +191,42 @@ public class AdminController {
     public ResponseEntity<AccountOpsRow> unblock(@PathVariable UUID accountId) {
         requireAdmin();
         return ResponseEntity.ok(adminService.unblock(accountId)
+                .orElseThrow(() -> ApiException.notFound("No such account")));
+    }
+
+    /**
+     * The cancellation review queue.
+     * <p>
+     * Sits beside the verification review queue rather than inside the
+     * accounts table, because it is the same kind of screen: a list of
+     * accounts waiting on a human decision, worked through and emptied.
+     * Crossing the threshold puts an account here and does nothing else -
+     * no block, no throttle, no fee. Blocking remains the separate,
+     * deliberate action next door, taken by an operator who can see the
+     * figures this row carries.
+     */
+    @GetMapping("/cancellations/review-queue")
+    public ResponseEntity<List<CancellationReviewRow>> cancellationReviewQueue() {
+        requireAdmin();
+        return ResponseEntity.ok(adminService.cancellationReviewQueue());
+    }
+
+    /**
+     * Takes an account off the review queue once an operator has looked.
+     * <p>
+     * Does not reset the counters. The rate is a fact about what the account
+     * did, and an operator's decision does not change what happened - it
+     * only records that somebody has read it. An account that keeps
+     * cancelling crosses the line again and comes back, which is what a
+     * review queue should do.
+     */
+    @PostMapping("/accounts/{accountId}/clear-cancellation-flag")
+    public ResponseEntity<AccountOpsRow> clearCancellationFlag(@PathVariable UUID accountId) {
+        requireAdmin();
+        AccountOpsRow target = adminService.findAccountRow(accountId)
+                .orElseThrow(() -> ApiException.notFound("No such account"));
+        adminService.clearCancellationFlag(accountId, target.role());
+        return ResponseEntity.ok(adminService.findAccountRow(accountId)
                 .orElseThrow(() -> ApiException.notFound("No such account")));
     }
 

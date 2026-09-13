@@ -5,6 +5,10 @@ import type {
   BookingStatus,
   BookingSummary,
   BookingType,
+  CancellationReason,
+  ChatMessage,
+  ChatThreadResponse,
+  SupportContact,
   CustomerProfileSummary,
   DriverLocation,
   EmergencyContact,
@@ -304,7 +308,53 @@ export const bookingApi = {
     return request('/api/v1/bookings/me');
   },
 
-  cancel(bookingId: string): Promise<BookingSummary> {
-    return request(`/api/v1/bookings/${bookingId}/cancel`, { method: 'POST' });
+  /**
+   * A reason is required, and the backend rejects a cancel without one.
+   * <p>
+   * This used to post an empty body. It stopped being allowed to when
+   * cancellations became something an account is answerable for: a
+   * cancellation with no reason cannot be told apart from any other, which
+   * makes every number built on it meaningless.
+   */
+  cancel(bookingId: string, reason: CancellationReason, note?: string): Promise<BookingSummary> {
+    return request(`/api/v1/bookings/${bookingId}/cancel`, {
+      method: 'POST',
+      body: { reason, note },
+    });
+  },
+};
+
+/**
+ * Booking-scoped chat with the assigned partner.
+ * <p>
+ * There is no endpoint anywhere that hands a rider a partner's phone
+ * number, and there never was. This is the whole channel between them.
+ */
+export const chatApi = {
+  /** The thread, whether it can still be written to, and the support number. */
+  getThread(bookingId: string): Promise<ChatThreadResponse> {
+    return request(`/api/v1/bookings/${bookingId}/chat`);
+  },
+
+  /**
+   * 409 CHAT_CLOSED once the trip has ended, 400 CONTACT_DETAILS_NOT_ALLOWED
+   * for a message carrying something phone-number shaped. Both are refusals
+   * the screen should show, not failures to retry.
+   */
+  send(bookingId: string, body: string): Promise<ChatMessage> {
+    return request(`/api/v1/bookings/${bookingId}/chat`, { method: 'POST', body: { body } });
+  },
+};
+
+/**
+ * The number for reaching a person at SheOut.
+ * <p>
+ * Unauthenticated, deliberately: somebody who cannot sign in is exactly the
+ * person most likely to need it, so the way to reach a human must not
+ * depend on a working session.
+ */
+export const supportApi = {
+  getContact(): Promise<SupportContact> {
+    return request('/api/v1/support/contact', { auth: false });
   },
 };

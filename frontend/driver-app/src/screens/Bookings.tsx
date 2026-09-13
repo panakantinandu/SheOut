@@ -1,4 +1,4 @@
-import { Bike, CalendarX, Package, SearchX, UtensilsCrossed } from 'lucide-react';
+import { Bike, CalendarX, MessageCircle, Package, SearchX, UtensilsCrossed } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -182,6 +182,23 @@ export function Bookings() {
               <StatusBadge tone={statusTone(booking.status)} className="mt-1">
                 {bookingStatusLabel(booking.status)}
               </StatusBadge>
+              {/* A finished trip's chat is read-only but never deleted. If a
+                  partner is ever accused of something that happened on a
+                  trip, the thread is her account of it - so it has to stay
+                  reachable from here, not only while the trip is live. */}
+              {['COMPLETED', 'CANCELLED'].includes(booking.status) && (
+                <button
+                  type="button"
+                  className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-primary"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/chat/${booking.id}`);
+                  }}
+                >
+                  <MessageCircle className="h-3.5 w-3.5" />
+                  Messages
+                </button>
+              )}
             </div>
             <AmountText amount={booking.finalFare ?? booking.fareEstimate} />
           </Card>

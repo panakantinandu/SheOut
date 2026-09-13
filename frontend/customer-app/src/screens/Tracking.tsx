@@ -1,9 +1,20 @@
-import { CheckCircle2, MessageCircle, Phone, Radio, ShieldAlert, Star, XCircle } from 'lucide-react';
+import { CheckCircle2, Headphones, MessageCircle, Radio, ShieldAlert, Star, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { AmountText, Button, Card, IconCircle, LiveMap, StatusBadge, TopHeader, bookingStatusLabel } from '@sheout/design-system';
-import type { MapMarker } from '@sheout/design-system';
-import { ApiError, bookingApi, dispatchApi } from '../api/client';
+import {
+  AmountText,
+  Button,
+  CancelReasonDialog,
+  Card,
+  CUSTOMER_CANCELLATION_REASONS,
+  IconCircle,
+  LiveMap,
+  StatusBadge,
+  TopHeader,
+  bookingStatusLabel,
+} from '@sheout/design-system';
+import type { CancellationReason as SharedCancellationReason, MapMarker } from '@sheout/design-system';
+import { ApiError, bookingApi, chatApi, dispatchApi } from '../api/client';
 import type { BookingSummary, DriverLocation } from '../api/types';
 import { mockAction } from '../lib/mockAction';
 
@@ -33,6 +44,15 @@ const DRIVER_LOCATION_POLL_MS = 7000;
  * (users only exposes self-service GET /users/driver/me), so once a
  * driverId is present this screen shows clearly-labeled placeholder driver
  * details rather than pretending driverId alone is enough.
+ * <p>
+ * NO PHONE NUMBERS. The Call and Message buttons here were both mock
+ * dialogs saying a partner's number was not shared "yet", which read as a
+ * promise that one day it would be. It will not. A partner's number is
+ * never shown to a rider and a rider's is never shown to a partner: it
+ * cannot be taken back once given, and it outlives the trip it was given
+ * for. Everything routine goes through booking-scoped chat; anything that
+ * genuinely needs a voice goes to a person at SheOut on the support number,
+ * who can hear both sides.
  */
 export function Tracking() {
   const { bookingId } = useParams<{ bookingId: string }>();
@@ -40,7 +60,13 @@ export function Tracking() {
   const [booking, setBooking] = useState<BookingSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+  const [askingWhy, setAskingWhy] = useState(false);
   const [driverLocation, setDriverLocation] = useState<DriverLocation | null>(null);
+  // Fetched from the chat endpoint, which serves it alongside the thread.
+  // Null keeps the support button off the screen rather than offering a
+  // button that dials nothing.
+  const [supportPhoneNumber, setSupportPhoneNumber] = useState<string | null>(null);
 
   /** Set once the trip reaches a status that can never change again. */
   const terminalStatus = booking?.status === 'CANCELLED' || booking?.status === 'COMPLETED';
@@ -93,14 +119,45 @@ export function Tracking() {
     };
   }, [bookingId, booking?.driverId, terminalStatus]);
 
-  async function handleCancel() {
+  // One call, not a poll: the support number does not change while a trip
+  // is running, and this is the endpoint that already knows it.
+  useEffect(() => {
+    if (!bookingId) return;
+    let cancelled = false;
+    chatApi
+      .getThread(bookingId)
+      .then((thread) => {
+        if (!cancelled) setSupportPhoneNumber(thread.supportPhoneNumber || null);
+      })
+      .catch(() => {
+        // Not worth surfacing. The support button simply stays hidden, and
+        // SOS - which is the thing that actually matters in an emergency -
+        // does not depend on this at all.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [bookingId]);
+
+  /**
+   * Cancels, with the reason the dialog collected.
+   * <p>
+   * The reason is required by the backend, so there is no path from this
+   * screen that cancels without one. That is the point: a cancellation with
+   * no reason cannot be told apart from any other, and an account later
+   * flagged for cancelling too often deserves to have its side of it on
+   * record.
+   */
+  async function handleCancel(reason: SharedCancellationReason, note?: string) {
     if (!bookingId) return;
     setCancelling(true);
+    setCancelError(null);
     try {
-      await bookingApi.cancel(bookingId);
+      await bookingApi.cancel(bookingId, reason, note);
+      setAskingWhy(false);
       navigate('/home', { replace: true });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not cancel booking');
+      setCancelError(err instanceof ApiError ? err.message : 'Could not cancel booking');
     } finally {
       setCancelling(false);
     }
@@ -157,9 +214,20 @@ export function Tracking() {
                 ? 'No driver is on the way. Book again whenever you are ready.'
                 : 'Thanks for riding with SheOut.'}
             </p>
-            <Button size="md" variant="secondary" className="mt-3" onClick={() => navigate('/home')}>
-              {booking.status === 'CANCELLED' ? 'Book another ride' : 'Back to home'}
-            </Button>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button size="md" variant="secondary" onClick={() => navigate('/home')}>
+                {booking.status === 'CANCELLED' ? 'Book another ride' : 'Back to home'}
+              </Button>
+              {/* The thread is read-only now, but it is not gone. If there is
+                  ever a disagreement about what was agreed on this trip, it
+                  is the only account of it either side has - so it stays
+                  reachable after the trip, not only during it. */}
+              {booking.driverId && (
+                <Button size="md" variant="secondary" onClick={() => navigate(`/chat/${booking.id}`)}>
+                  View messages
+                </Button>
+              )}
+            </div>
           </div>
         </Card>
       ) : !hasDriver ? (
@@ -178,15 +246,11 @@ export function Tracking() {
             <p className="font-heading font-semibold text-text-primary">Driver details unavailable (mock)</p>
             <p className="text-xs text-text-secondary">★ -- &middot; Bike &middot; Reg. unavailable</p>
           </div>
+          {/* The one way to reach her. Not a call, and not a number. */}
           <button
+            aria-label="Message your partner"
             className="rounded-full p-2 text-primary hover:bg-background"
-            onClick={() => mockAction('Call driver', "your partner's number is not shared here yet")}
-          >
-            <Phone className="h-5 w-5" />
-          </button>
-          <button
-            className="rounded-full p-2 text-primary hover:bg-background"
-            onClick={() => mockAction('Message driver', "your partner's number is not shared here yet")}
+            onClick={() => navigate(`/chat/${bookingId}`)}
           >
             <MessageCircle className="h-5 w-5" />
           </button>
@@ -245,8 +309,8 @@ export function Tracking() {
       )}
 
       {/* Hidden once the trip is over. Sharing a live location for a
-          cancelled trip, or offering to call a driver who was never coming,
-          are both offers of something that does not exist. SOS stays
+          cancelled trip, or offering to message a driver who was never
+          coming, are both offers of something that does not exist. SOS stays
           reachable from the tab bar and Home regardless. */}
       {!isFinished && (
       <div className="flex justify-around">
@@ -264,21 +328,45 @@ export function Tracking() {
           <IconCircle color="red" tone="soft" icon={<ShieldAlert />} />
           SOS
         </button>
-        <button
-          className="flex flex-col items-center gap-1 text-xs text-text-secondary"
-          onClick={() => mockAction('Call driver', "your partner's number is not shared here yet")}
-        >
-          <IconCircle tone="soft" icon={<Phone />} />
-          Call
-        </button>
+        {/* Was "Call", and it dialled nothing. It now reaches a person at
+            SheOut rather than the partner - which is what a rider wanting to
+            call about a trip actually needs, and the only call this product
+            will ever place between the two of them. Hidden entirely when no
+            support number is configured. */}
+        {supportPhoneNumber ? (
+          <button
+            className="flex flex-col items-center gap-1 text-xs text-text-secondary"
+            onClick={() => { window.location.href = `tel:${supportPhoneNumber}`; }}
+          >
+            <IconCircle tone="soft" icon={<Headphones />} />
+            Support
+          </button>
+        ) : (
+          <button
+            className="flex flex-col items-center gap-1 text-xs text-text-secondary"
+            onClick={() => navigate(`/chat/${bookingId}`)}
+          >
+            <IconCircle tone="soft" icon={<MessageCircle />} />
+            Chat
+          </button>
+        )}
       </div>
       )}
 
       {canCancel && (
-        <Button variant="danger" fullWidth disabled={cancelling} onClick={handleCancel}>
-          {cancelling ? 'Cancelling...' : 'Cancel Ride'}
+        <Button variant="danger" fullWidth disabled={cancelling} onClick={() => { setCancelError(null); setAskingWhy(true); }}>
+          Cancel Ride
         </Button>
       )}
+
+      <CancelReasonDialog
+        open={askingWhy}
+        options={CUSTOMER_CANCELLATION_REASONS}
+        busy={cancelling}
+        error={cancelError}
+        onConfirm={handleCancel}
+        onCancel={() => setAskingWhy(false)}
+      />
     </div>
   );
 }

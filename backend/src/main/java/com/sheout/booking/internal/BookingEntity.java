@@ -2,6 +2,7 @@ package com.sheout.booking.internal;
 
 import com.sheout.booking.BookingCategory;
 import com.sheout.booking.BookingStatus;
+import com.sheout.booking.CancellationReason;
 import com.sheout.booking.BookingType;
 import com.sheout.sharedkernel.BaseEntity;
 import jakarta.persistence.AttributeOverride;
@@ -71,6 +72,17 @@ public class BookingEntity extends BaseEntity {
     private Instant startedAt;
     private Instant completedAt;
     private Instant cancelledAt;
+
+    /** All three are null unless this booking was cancelled - see V9. */
+    @Enumerated(EnumType.STRING)
+    @Column(length = 40)
+    private CancellationReason cancellationReason;
+
+    @Column(length = 500)
+    private String cancellationNote;
+
+    @Column
+    private UUID cancelledBy;
 
     protected BookingEntity() {
         // JPA
@@ -173,5 +185,24 @@ public class BookingEntity extends BaseEntity {
 
     public void setCancelledAt(Instant cancelledAt) {
         this.cancelledAt = cancelledAt;
+    }
+
+    public CancellationReason getCancellationReason() {
+        return cancellationReason;
+    }
+
+    public String getCancellationNote() {
+        return cancellationNote;
+    }
+
+    public UUID getCancelledBy() {
+        return cancelledBy;
+    }
+
+    /** Set together, always, by BookingService.cancelBooking. */
+    public void recordCancellation(UUID by, CancellationReason reason, String note) {
+        this.cancelledBy = by;
+        this.cancellationReason = reason;
+        this.cancellationNote = note;
     }
 }
