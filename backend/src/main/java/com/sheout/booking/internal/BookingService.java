@@ -170,15 +170,49 @@ public class BookingService implements BookingApi {
 
         booking.setStatus(BookingStatus.ACCEPTED);
         booking.setAcceptedAt(Instant.now());
+        // Generated here, at the one moment a partner becomes committed to
+        // this trip, so the rider's screen has a code to show her from the
+        // instant she is told somebody is coming. Generating it later - at
+        // arrival, say - would need an "arrived" state the booking module
+        // does not have, and would leave a window where she is watching a
+        // partner approach with nothing to read out.
+        booking.setPickupOtp(PickupCode.generate());
         bookingRepository.save(booking);
 
         eventPublisher.publish(new BookingAccepted(booking.getId(), booking.getCustomerId(), booking.getDriverId()));
         return Result.success(toSummary(booking));
     }
 
-    /** Self-service - driver marks pickup complete / trip underway. */
+    /**
+     * The partner proves she is at the pickup, and the trip begins.
+     * <p>
+     * This replaces an unverified "Start Trip" tap. That tap let a partner
+     * move a booking to IN_PROGRESS and then COMPLETED with nobody in the
+     * vehicle, and the rider was charged the fare for it. The code is the
+     * only thing standing between the two, so it is checked here - in the
+     * same transaction that moves the status - rather than in the
+     * controller, where a second caller could one day skip it.
+     * <p>
+     * Order matters, and it is deliberate:
+     * <ol>
+     *   <li>the state machine first, so a booking that cannot start is
+     *       refused before a guess is ever counted against it - otherwise
+     *       replaying a stale request would burn a legitimate partner's
+     *       attempts;</li>
+     *   <li>the attempt limit next, so an exhausted booking stops accepting
+     *       guesses rather than merely recording them;</li>
+     *   <li>the code last.</li>
+     * </ol>
+     * <p>
+     * A booking with no code stored is one accepted before this existed.
+     * Those start unverified, because refusing them would strand every
+     * partner who was mid-job at the moment of the deploy. The set is closed
+     * - every acceptance from now on writes a code - and
+     * {@code pickupVerifiedAt} stays null on them, which is how a row can
+     * later be told apart from one that was actually verified.
+     */
     @Transactional
-    public Result<BookingSummary, BookingError> startTrip(UUID bookingId) {
+    public Result<BookingSummary, BookingError> startTrip(UUID bookingId, String submittedCode) {
         Optional<BookingEntity> found = bookingRepository.findById(bookingId);
         if (found.isEmpty()) {
             return Result.failure(BookingError.BOOKING_NOT_FOUND);
@@ -191,12 +225,57 @@ public class BookingService implements BookingApi {
             return Result.failure(transition.error());
         }
 
+        boolean verified = false;
+        if (booking.getPickupOtp() != null) {
+            if (booking.pickupAttemptsExhausted()) {
+                return Result.failure(BookingError.PICKUP_VERIFICATION_LOCKED);
+            }
+            if (!PickupCode.isWellFormed(submittedCode)) {
+                return Result.failure(BookingError.PICKUP_CODE_REQUIRED);
+            }
+            if (!PickupCode.matches(booking.getPickupOtp(), submittedCode)) {
+                // Saved on its own, because the surrounding transaction is
+                // about to return a failure Result - which does not roll
+                // back, but leaving the count to an implicit flush would
+                // make that a thing to reason about rather than read.
+                booking.recordFailedPickupAttempt();
+                bookingRepository.save(booking);
+                return Result.failure(booking.pickupAttemptsExhausted()
+                        ? BookingError.PICKUP_VERIFICATION_LOCKED
+                        : BookingError.INVALID_PICKUP_CODE);
+            }
+            verified = true;
+        }
+
+        Instant now = Instant.now();
         booking.setStatus(BookingStatus.IN_PROGRESS);
-        booking.setStartedAt(Instant.now());
+        booking.setStartedAt(now);
+        if (verified) {
+            booking.setPickupVerifiedAt(now);
+        }
         bookingRepository.save(booking);
 
-        eventPublisher.publish(new BookingStarted(booking.getId(), booking.getCustomerId(), booking.getDriverId()));
+        eventPublisher.publish(new BookingStarted(
+                booking.getId(), booking.getCustomerId(), booking.getDriverId(), verified));
         return Result.success(toSummary(booking));
+    }
+
+    /**
+     * The pickup code, for the rider who booked and nobody else.
+     * <p>
+     * Returned as an Optional rather than put on {@link BookingSummary},
+     * and that is the whole design. {@code GET /bookings/{id}} is served to
+     * both participants; a field on the summary would hand the partner the
+     * code she is supposed to be proving she was told, which would make the
+     * check worthless. So the code has its own read path, and the only
+     * caller is an endpoint that has already established the caller is the
+     * customer.
+     */
+    public Optional<String> findPickupCodeForCustomer(UUID bookingId, UUID customerId) {
+        return bookingRepository.findById(bookingId)
+                .filter(booking -> booking.getCustomerId().equals(customerId))
+                .filter(booking -> booking.getStatus() == BookingStatus.ACCEPTED)
+                .map(BookingEntity::getPickupOtp);
     }
 
     /**

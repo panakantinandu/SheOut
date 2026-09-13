@@ -1,5 +1,5 @@
-import { MessageCircle, Navigation } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { CheckCircle2, MapPin, MessageCircle, Navigation } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Button,
@@ -7,43 +7,75 @@ import {
   Card,
   ContactSupportButton,
   DRIVER_CANCELLATION_REASONS,
+  IconCircle,
   LiveMap,
+  OpenInMapsButton,
+  PICKUP_CODE_LENGTH,
+  PickupCodeField,
   StatusBadge,
   TopHeader,
   bookingStatusLabel,
 } from '@sheout/design-system';
 import type { CancellationReason, MapMarker } from '@sheout/design-system';
 import { ApiError, bookingApi, chatApi } from '../api/client';
-import type { BookingSummary } from '../api/types';
-import { useLocationBroadcast } from '../lib/useLocationBroadcast';
+import type { BookingSummary, TripRoute } from '../api/types';
+import { useShareLocation } from '../lib/LocationBroadcastContext';
 
 const POLL_INTERVAL_MS = 4000;
 
 /**
- * REAL: booking status/pickup/drop/fare, polled from GET /bookings/{id}
- * (same poll-based pattern as everything else here - no push backend
- * exists). Start/Complete/Cancel are real state transitions.
+ * How far she has to drift from the point the route was drawn for before it
+ * is worth drawing again.
  * <p>
- * REAL: the map. Pickup and drop come from the booking; "You" is this
- * device's own GPS via the browser's geolocation API, not a round trip
- * through the backend - the driver already knows where they are, so
- * reading their own position back from dispatch would only add latency and
- * a failure mode. Position updates only when the browser reports real
- * movement; nothing here interpolates between fixes.
+ * Three hundred metres, and the number is a rate-limit decision, not a
+ * cartographic one. Re-routing on every position update would mean roughly
+ * fifty OSRM calls per trip against a volunteer-run demo instance; this
+ * makes it about two, plus one if she takes a different road than the line
+ * suggested. The drawn line is orientation - the real turn-by-turn is in
+ * Google Maps, one tap away, and it reroutes properly.
+ */
+const ROUTE_REFRESH_METRES = 300;
+
+const EARTH_RADIUS_M = 6371000;
+
+function metresBetween(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const h =
+    Math.sin(dLat / 2) ** 2
+    + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * EARTH_RADIUS_M * Math.asin(Math.sqrt(h));
+}
+
+/**
+ * The active trip, in its two phases.
  * <p>
- * MOCK: customer name - there's no driver-facing endpoint to look up
- * another account's customer profile by id (mirrors the same gap flagged
- * in customer-app's Tracking screen, just the other direction).
+ * PHASE ONE - ACCEPTED. She is going to the rider. The map draws the road
+ * from where she is to the PICKUP, and the Google Maps button navigates
+ * there. The drop is not the job yet, and showing a route to it would send
+ * her to the wrong end of the trip.
  * <p>
- * NO PHONE NUMBERS. The Call button here was a mock dialog saying the
- * rider's number was not shared "yet", which read as a promise that one day
- * it would be. It will not. Everything routine goes through booking-scoped
- * chat, which is writable only while this trip is live; anything needing a
- * voice goes to a person at SheOut on the support number.
+ * PHASE TWO - IN_PROGRESS. The rider is in the vehicle. The map and the
+ * button both switch to the DROP.
  * <p>
- * FLAGGED: the backend has no "arrived at pickup" state - only accept,
- * start, complete, cancel - so this screen has exactly those four actions,
- * gated by the booking's current status.
+ * BETWEEN THEM IS THE PICKUP CODE, AND THAT IS THE POINT OF THIS SCREEN.
+ * "Start Trip" used to be an unverified tap: a partner could move a booking
+ * to IN_PROGRESS and then COMPLETED with nobody in the vehicle, and the
+ * rider was charged the fare. Now the rider reads four digits off her own
+ * screen, the partner types them, and the server checks them. Which phase
+ * the screen is in is read from the booking's status, never from local
+ * state, so a refresh, a second device or a backgrounded app all agree.
+ * <p>
+ * REAL: booking status/pickup/drop/fare, polled from GET /bookings/{id}.
+ * The route comes from GET /bookings/{id}/route, which picks its own
+ * destination from that same status. "You" is this device's own GPS.
+ * <p>
+ * MOCK: customer name - there is still no driver-facing endpoint to look up
+ * a rider's profile by id.
+ * <p>
+ * NO PHONE NUMBERS. Everything routine goes through booking-scoped chat;
+ * anything needing a voice goes to a person at SheOut on the support number.
  */
 export function Trip() {
   const { bookingId } = useParams<{ bookingId: string }>();
@@ -53,16 +85,29 @@ export function Trip() {
   const [busy, setBusy] = useState(false);
   const [askingWhy, setAskingWhy] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
-  // Served by the chat endpoint alongside the thread. Null keeps the button
-  // off the screen rather than offering one that dials nothing.
   const [supportPhoneNumber, setSupportPhoneNumber] = useState<string | null>(null);
-  // Keep broadcasting for the whole live trip, not just while on Home -
-  // this is exactly when the customer's tracking map is watching. The hook
-  // both sends the position and hands it back for the marker below, so
-  // there is only one GPS subscription.
-  const tripIsLive = booking ? ['ACCEPTED', 'IN_PROGRESS'].includes(booking.status) : false;
-  const location = useLocationBroadcast(tripIsLive);
+
+  const [pickupCode, setPickupCode] = useState('');
+  const [codeError, setCodeError] = useState<string | null>(null);
+  /** Set once the server says the attempt limit is spent. The keypad closes. */
+  const [codeLocked, setCodeLocked] = useState(false);
+
+  const [route, setRoute] = useState<TripRoute | null>(null);
+  const [routeError, setRouteError] = useState(false);
+  // Where she was when the current line was drawn, so the next fix can be
+  // measured against it rather than re-routing on every one.
+  const routedFrom = useRef<{ lat: number; lng: number } | null>(null);
+
+  // Live for the whole trip, MATCHED included. The subscription itself
+  // lives above the router so it is not dropped on the way in from Home or
+  // the offer screen - see LocationBroadcastContext.
+  const tripIsLive = booking
+    ? ['MATCHED', 'ACCEPTED', 'IN_PROGRESS'].includes(booking.status)
+    : false;
+  const location = useShareLocation(tripIsLive);
   const myPosition = location.position;
+
+  const phase = booking?.status === 'IN_PROGRESS' ? 'DROP' : 'PICKUP';
 
   useEffect(() => {
     if (!bookingId) return;
@@ -84,6 +129,47 @@ export function Trip() {
       clearInterval(interval);
     };
   }, [bookingId]);
+
+  /**
+   * Draws the road to wherever this phase is going.
+   * <p>
+   * Fetched when the phase changes, and again only once she has moved well
+   * off the point it was drawn from. The server decides the destination
+   * from the booking's status; this never asks for one.
+   */
+  const loadRoute = useCallback(
+    async (from: { lat: number; lng: number }) => {
+      if (!bookingId) return;
+      try {
+        const fetched = await bookingApi.getRoute(bookingId, from);
+        setRoute(fetched);
+        setRouteError(!fetched.points.length);
+        routedFrom.current = from;
+      } catch {
+        // A route is a convenience, not the trip. The destination marker and
+        // the Google Maps button both still work without it, so this is
+        // reported on the map caption rather than as a screen error.
+        setRouteError(true);
+      }
+    },
+    [bookingId]
+  );
+
+  // Re-route on a phase change, and drop the old line immediately so a route
+  // to the pickup is never left on screen after the trip has started.
+  useEffect(() => {
+    setRoute(null);
+    setRouteError(false);
+    routedFrom.current = null;
+  }, [phase, bookingId]);
+
+  useEffect(() => {
+    if (!myPosition || !booking) return;
+    if (booking.status !== 'ACCEPTED' && booking.status !== 'IN_PROGRESS') return;
+    const last = routedFrom.current;
+    if (last && metresBetween(last, myPosition) < ROUTE_REFRESH_METRES) return;
+    loadRoute(myPosition);
+  }, [myPosition, booking, loadRoute]);
 
   // One call, not a poll: the support number does not change mid-trip.
   useEffect(() => {
@@ -107,9 +193,7 @@ export function Trip() {
    * <p>
    * A partner's cancellations are counted the same way a rider's are, and
    * for the same reason: an account that walks away from trips it took on
-   * is a real cost to whoever was waiting. The reason is what lets an
-   * operator later tell a partner with a broken-down bike apart from one
-   * who cherry-picks fares.
+   * is a real cost to whoever was waiting.
    */
   async function handleCancel(reason: CancellationReason, note?: string) {
     if (!bookingId) return;
@@ -127,30 +211,85 @@ export function Trip() {
     }
   }
 
-  async function runAction(action: (id: string) => Promise<BookingSummary>) {
-    if (!bookingId) return;
+  /**
+   * Confirms the pickup with the code the rider read out.
+   * <p>
+   * A wrong code and a lockout are told apart on the machine-readable code
+   * the server sends, not on the message text. One leaves her the keypad to
+   * try again; the other takes it away and points her at support, because
+   * five more attempts she cannot make is not useful information at a kerb.
+   */
+  async function handleConfirmPickup() {
+    if (!bookingId || pickupCode.length !== PICKUP_CODE_LENGTH) return;
     setBusy(true);
-    setError(null);
+    setCodeError(null);
     try {
-      const updated = await action(bookingId);
+      const updated = await bookingApi.start(bookingId, pickupCode);
       setBooking(updated);
-      if (updated.status === 'COMPLETED' || updated.status === 'CANCELLED') {
-        navigate('/home', { replace: true });
-      }
+      setPickupCode('');
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Action failed');
+      if (err instanceof ApiError && err.body?.error === 'PICKUP_VERIFICATION_LOCKED') {
+        setCodeLocked(true);
+        setCodeError(err.message);
+      } else {
+        setCodeError(err instanceof ApiError ? err.message : 'Could not confirm pickup');
+        // Cleared so she types four fresh digits rather than editing a
+        // wrong code - which is how a second attempt becomes a third.
+        setPickupCode('');
+      }
     } finally {
       setBusy(false);
     }
   }
 
+  async function handleComplete() {
+    if (!bookingId) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const updated = await bookingApi.complete(bookingId);
+      setBooking(updated);
+      if (updated.status === 'COMPLETED') navigate('/home', { replace: true });
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not complete trip');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /**
+   * Only the leg she is on, plus where she is.
+   * <p>
+   * Both ends of the trip used to be drawn at all times, which meant the map
+   * auto-fitted to show a drop she was not going to yet and zoomed out past
+   * the point where a pickup on a side street was findable.
+   */
   const markers: MapMarker[] = [];
   if (booking) {
-    markers.push({ key: 'pickup', lat: booking.pickup.lat, lng: booking.pickup.lng, label: 'Pickup', kind: 'pickup' });
-    markers.push({ key: 'drop', lat: booking.drop.lat, lng: booking.drop.lng, label: 'Drop', kind: 'drop' });
+    if (phase === 'PICKUP') {
+      markers.push({ key: 'pickup', lat: booking.pickup.lat, lng: booking.pickup.lng, label: 'Pickup', kind: 'pickup' });
+    } else {
+      markers.push({ key: 'drop', lat: booking.drop.lat, lng: booking.drop.lng, label: 'Drop', kind: 'drop' });
+    }
   }
   if (myPosition) {
     markers.push({ key: 'me', lat: myPosition.lat, lng: myPosition.lng, label: 'You', kind: 'driver' });
+  }
+
+  const destination = booking ? (phase === 'PICKUP' ? booking.pickup : booking.drop) : null;
+  const navigable = booking?.status === 'ACCEPTED' || booking?.status === 'IN_PROGRESS';
+
+  function mapCaption(): string {
+    if (!navigable) return 'Your position updates as your device reports movement.';
+    if (routeError) return 'Could not draw the road right now - open Google Maps for directions.';
+    if (route?.distanceKm != null) {
+      const minutes = route.durationMinutes == null ? null : Math.round(route.durationMinutes);
+      return `${route.distanceKm} km${minutes == null ? '' : ` - about ${minutes} min`} to the ${
+        phase === 'PICKUP' ? 'pickup' : 'drop'
+      }.`;
+    }
+    if (!myPosition) return location.error ?? 'Finding your location...';
+    return 'Working out the route...';
   }
 
   return (
@@ -158,12 +297,8 @@ export function Trip() {
       <TopHeader variant="back" title="Trip" onBack={() => navigate('/home')} />
 
       <div className="space-y-1">
-        <LiveMap markers={markers} />
-        <p className="text-xs text-text-secondary">
-          {myPosition
-            ? 'Your position updates as your device reports movement.'
-            : location.error ?? 'Finding your location...'}
-        </p>
+        <LiveMap markers={markers} route={route?.points} />
+        <p className="text-xs text-text-secondary">{mapCaption()}</p>
       </div>
 
       {error && <p className="text-sm text-danger">{error}</p>}
@@ -171,6 +306,74 @@ export function Trip() {
 
       {booking && (
         <>
+          {/* Where she is going NEXT, on its own and stated first. The
+              two-address list below is the whole trip; this is the job in
+              front of her. */}
+          {navigable && destination && (
+            <Card tone={phase === 'PICKUP' ? 'brand' : 'default'} className="space-y-3">
+              <div className="flex items-start gap-3">
+                <IconCircle
+                  tone="soft"
+                  color={phase === 'PICKUP' ? undefined : 'orange'}
+                  icon={phase === 'PICKUP' ? <MapPin /> : <Navigation />}
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="font-heading font-semibold text-text-primary">
+                    {phase === 'PICKUP' ? 'Go to pickup' : 'Go to drop'}
+                  </p>
+                  <p className="mt-0.5 text-sm text-text-secondary">{destination.label}</p>
+                </div>
+              </div>
+              <OpenInMapsButton
+                lat={destination.lat}
+                lng={destination.lng}
+                label={destination.label}
+                variant={phase === 'PICKUP' ? 'primary' : 'secondary'}
+              >
+                {phase === 'PICKUP' ? 'Navigate to pickup' : 'Navigate to drop'}
+              </OpenInMapsButton>
+            </Card>
+          )}
+
+          {/* The gate between the two phases. */}
+          {booking.status === 'ACCEPTED' && (
+            <Card className="space-y-3">
+              <div className="flex items-start gap-3">
+                <IconCircle tone="soft" icon={<CheckCircle2 />} />
+                <div className="min-w-0 flex-1">
+                  <p className="font-heading font-semibold text-text-primary">Confirm pickup</p>
+                  <p className="mt-0.5 text-sm text-text-secondary">
+                    {codeLocked
+                      ? 'This trip needs support to sort out before it can start.'
+                      : 'Ask your rider for her four-digit code and enter it here. The trip starts once it matches.'}
+                  </p>
+                </div>
+              </div>
+              {!codeLocked && (
+                <>
+                  <PickupCodeField
+                    value={pickupCode}
+                    onChange={(v) => {
+                      setPickupCode(v);
+                      setCodeError(null);
+                    }}
+                    error={codeError ?? undefined}
+                    disabled={busy}
+                    onSubmit={handleConfirmPickup}
+                  />
+                  <Button
+                    fullWidth
+                    disabled={busy || pickupCode.length !== PICKUP_CODE_LENGTH}
+                    onClick={handleConfirmPickup}
+                  >
+                    {busy ? 'Checking...' : 'Confirm Pickup & Start Trip'}
+                  </Button>
+                </>
+              )}
+              {codeLocked && codeError && <p className="text-sm text-danger">{codeError}</p>}
+            </Card>
+          )}
+
           <Card className="space-y-3">
             <div className="flex items-center justify-between">
               <p className="font-heading font-semibold text-text-primary">{booking.type === 'RIDE' ? 'Ride' : 'Delivery'}</p>
@@ -208,13 +411,8 @@ export function Trip() {
           </Card>
 
           <div className="space-y-3">
-            {booking.status === 'ACCEPTED' && (
-              <Button fullWidth disabled={busy} onClick={() => runAction(bookingApi.start)}>
-                {busy ? 'Starting...' : 'Start Trip'}
-              </Button>
-            )}
             {booking.status === 'IN_PROGRESS' && (
-              <Button fullWidth variant="success" disabled={busy} onClick={() => runAction(bookingApi.complete)}>
+              <Button fullWidth variant="success" disabled={busy} onClick={handleComplete}>
                 {busy ? 'Completing...' : 'Complete Trip'}
               </Button>
             )}

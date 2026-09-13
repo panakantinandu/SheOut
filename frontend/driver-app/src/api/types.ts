@@ -50,6 +50,30 @@ export interface DriverProfileSummary {
   updatedAt: string;
 }
 
+/**
+ * Which leg of the trip a route is for. The server derives it from the
+ * booking's status, so a client can never ask for - or draw - the wrong one.
+ */
+export type TripPhase = 'PICKUP' | 'DROP';
+
+/**
+ * The road to draw, plus where it ends.
+ * <p>
+ * points is empty and the two figures are null when the router could not be
+ * reached. Draw nothing in that case: a straight line between two points in
+ * Hyderabad regularly crosses a lake, and a partner reading it as a road is
+ * worse off than one told there is no route to show.
+ */
+export interface TripRoute {
+  phase: TripPhase;
+  destinationLat: number;
+  destinationLng: number;
+  destinationLabel: string;
+  points: { lat: number; lng: number }[];
+  distanceKm: number | null;
+  durationMinutes: number | null;
+}
+
 export type BookingType = 'RIDE' | 'DELIVERY';
 export type BookingCategory = 'BIKE' | 'AUTO' | 'CAB' | 'PARCEL' | 'LUNCHBOX';
 export type BookingStatus =

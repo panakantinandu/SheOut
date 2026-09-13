@@ -126,6 +126,59 @@ public class OsrmRouteProvider implements RouteProvider {
     }
 
     /**
+     * The route's shape, for a partner's navigation map.
+     * <p>
+     * Asks for GeoJSON geometry rather than OSRM's encoded-polyline default.
+     * The encoded form is smaller, but decoding it means writing and
+     * maintaining a decoder on both sides of the wire for a saving measured
+     * in kilobytes, on a request made about twice per trip. GeoJSON is
+     * coordinates, already parsed.
+     * <p>
+     * No fallback, unlike {@link #route}. A fare has to exist or a rider
+     * cannot book; a drawn line does not, and inventing a straight one would
+     * show a partner a road that is not there - through a lake, in
+     * Hyderabad's case, more often than one would like.
+     */
+    @Override
+    public RoutePath routePath(GeoAddress from, GeoAddress to) {
+        try {
+            // lng,lat - OSRM's order, not this codebase's. Reversing it
+            // returns a confident route somewhere else entirely.
+            String path = "/route/v1/driving/%f,%f;%f,%f?overview=full&geometries=geojson"
+                    .formatted(from.lng(), from.lat(), to.lng(), to.lat());
+
+            OsrmGeometryResponse response = restClient.get()
+                    .uri(baseUrl + path)
+                    .retrieve()
+                    .body(OsrmGeometryResponse.class);
+
+            if (response == null || !"Ok".equals(response.code())
+                    || response.routes() == null || response.routes().isEmpty()) {
+                log.warn("OSRM returned no drawable route ({})",
+                        response == null ? "no body" : response.code());
+                return RoutePath.unavailable();
+            }
+
+            OsrmGeometryRoute route = response.routes().get(0);
+            if (route.geometry() == null || route.geometry().coordinates() == null) {
+                return RoutePath.unavailable();
+            }
+
+            List<RoutePath.RoutePoint> points = route.geometry().coordinates().stream()
+                    // Each entry is [lng, lat]. Flipped here, once, so
+                    // nothing downstream has to remember.
+                    .filter(pair -> pair.size() >= 2)
+                    .map(pair -> new RoutePath.RoutePoint(pair.get(1), pair.get(0)))
+                    .toList();
+
+            return new RoutePath(points, route.distance() / 1000.0, route.duration() / 60.0);
+        } catch (RuntimeException e) {
+            log.warn("OSRM route geometry failed ({})", e.toString());
+            return RoutePath.unavailable();
+        }
+    }
+
+    /**
      * Straight-line distance scaled up, with duration from an assumed
      * average speed.
      * <p>
@@ -149,5 +202,16 @@ public class OsrmRouteProvider implements RouteProvider {
 
     /** distance is metres and duration is seconds, which is OSRM's contract, not a choice made here. */
     record OsrmRoute(double distance, double duration) {
+    }
+
+    /** The same response, plus the geometry the pricing call deliberately does not ask for. */
+    record OsrmGeometryResponse(String code, List<OsrmGeometryRoute> routes) {
+    }
+
+    record OsrmGeometryRoute(double distance, double duration, OsrmGeometry geometry) {
+    }
+
+    /** GeoJSON LineString: a list of [lng, lat] pairs, in that order. */
+    record OsrmGeometry(List<List<Double>> coordinates) {
     }
 }

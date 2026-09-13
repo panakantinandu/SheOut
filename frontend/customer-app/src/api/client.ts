@@ -15,6 +15,7 @@ import type {
   AggregateRating,
   CustomerProfileSummary,
   DriverLocation,
+  PickupCodeResponse,
   EmergencyContact,
   FareQuote,
   GeoAddress,
@@ -310,6 +311,22 @@ export const bookingApi = {
 
   getById(bookingId: string): Promise<BookingSummary> {
     return request(`/api/v1/bookings/${bookingId}`);
+  },
+
+  /**
+   * The four digits she reads out to her partner at the kerb.
+   * <p>
+   * Its own call rather than a field on the booking, and that is the whole
+   * design: GET /bookings/{id} is served to both participants, so a field
+   * there would hand the partner the answer to the question she is being
+   * asked, and the check would verify nothing.
+   * <p>
+   * 404s whenever there is no code to give - not her booking, or a booking
+   * not in a state that has one. That is the normal case before ACCEPTED
+   * and after the trip starts, not an error to show her.
+   */
+  getPickupCode(bookingId: string): Promise<PickupCodeResponse> {
+    return request(`/api/v1/bookings/${bookingId}/pickup-code`);
   },
 
   /**
