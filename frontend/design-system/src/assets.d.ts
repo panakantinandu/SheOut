@@ -8,3 +8,21 @@ declare module '*.png' {
   const src: string;
   export default src;
 }
+
+/**
+ * The map tile settings, read from whichever app is bundling this package.
+ * <p>
+ * Declared here rather than pulled in via `vite/client` types: this package
+ * is consumed as source by both apps and has no Vite config of its own, so
+ * naming the two variables it actually reads keeps the contract visible and
+ * avoids widening every env lookup in here to `any`. See LiveMap for what
+ * they are for and what to set them to.
+ */
+interface ImportMetaEnv {
+  readonly VITE_MAP_TILE_URL?: string;
+  readonly VITE_MAP_TILE_ATTRIBUTION?: string;
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
+}

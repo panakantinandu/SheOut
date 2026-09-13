@@ -575,6 +575,35 @@ visiting it directly. This is easy to miss, because the PWA service worker
 serves `index.html` from cache for anyone who has already opened the app
 once; only first-time visitors and `curl` see the 404.
 
+### VITE_MAP_TILE_URL / VITE_MAP_TILE_ATTRIBUTION
+
+Optional, and unset by default, in which case `LiveMap` uses standard
+OpenStreetMap tiles - the same ones it has always used.
+
+The intended look is CARTO's **Voyager** style: pale, with road hierarchy
+and place names still legible, so this app's purple/teal/red markers and
+the route line read as the foreground instead of competing with a
+saturated basemap. CARTO **now requires an API key** for its basemaps.
+Keyless tiles are still served, but with `API KEY REQUIRED /
+carto.com/basemaps/apikey` printed diagonally across every one of them, at
+every zoom - which is not something to ship on a map a rider is meant to
+trust.
+
+Their free tier is enough for this. Once you have a key, set on **both**
+Vercel projects (no code change, no release of `@sheout/design-system`):
+
+```
+VITE_MAP_TILE_URL=https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png?api_key=YOUR_KEY
+VITE_MAP_TILE_ATTRIBUTION=&copy; OpenStreetMap contributors &copy; CARTO
+```
+
+The braces are Leaflet's own placeholders and must be left exactly as they
+are. Set the attribution whenever you set the URL: a tile provider's
+attribution line is usually a term of use, not decoration.
+
+Any other raster provider works the same way - this is a URL, not a CARTO
+integration.
+
 ### VITE_API_BASE_URL
 
 `client.ts` reads `VITE_API_BASE_URL`, falling back to

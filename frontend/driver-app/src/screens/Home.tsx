@@ -15,7 +15,7 @@ import {
 import { ApiError, bookingApi, dispatchApi, ratingsApi, usersApi, verificationApi } from '../api/client';
 import type { AggregateRating, BookingSummary, DriverProfileSummary, VerificationSummary } from '../api/types';
 import { RatingPrompt } from '../components/RatingPrompt';
-import { useLocationBroadcast } from '../lib/useLocationBroadcast';
+import { useShareLocation } from '../lib/LocationBroadcastContext';
 
 const BOOKINGS_POLL_MS = 5000;
 const OFFER_POLL_MS = 4000;
@@ -207,9 +207,12 @@ export function Home() {
     };
   }, [isOnline, activeTrip, navigate]);
 
-  // Broadcast position while online. Shared with Trip via the hook so it
-  // survives the navigation into a trip - see useLocationBroadcast.
-  const location = useLocationBroadcast(isOnline);
+  // Share position while online, and while a trip is live even if she has
+  // somehow gone offline with one in hand - a rider watching a partner
+  // approach should not lose her because of a toggle. The subscription
+  // itself lives above the router, so it is not dropped when this screen
+  // unmounts into an offer or a trip; see LocationBroadcastContext.
+  const location = useShareLocation(isOnline || Boolean(activeTrip));
 
   async function handleToggleOnline() {
     if (!profile) return;

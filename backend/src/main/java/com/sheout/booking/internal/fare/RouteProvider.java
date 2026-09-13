@@ -17,4 +17,28 @@ import com.sheout.booking.GeoAddress;
 public interface RouteProvider {
 
     RouteEstimate route(GeoAddress pickup, GeoAddress drop);
+
+    /**
+     * The same road route, but with its shape, for drawing on a partner's
+     * navigation map.
+     * <p>
+     * A second method rather than a field on {@link RouteEstimate} because
+     * the two callers want opposite things: pricing asks for no geometry and
+     * should not pay to transfer it, and navigation wants the line and not
+     * the price. Asking OSRM for geometry on every fare quote would make
+     * every booking slower for a few hundred coordinates nobody reads.
+     * <p>
+     * Unlike {@link #route}, this has no fallback. A missing route is
+     * reported as missing - see {@link RoutePath}.
+     * <p>
+     * Defaulted to "unavailable" rather than left abstract, because drawing
+     * a line is optional and pricing a trip is not: a router that can do the
+     * one but not the other is still a usable router, and the map simply
+     * says it has no route to show. It also keeps this a functional
+     * interface, which the fare tests rely on to stub a fixed distance in
+     * one line.
+     */
+    default RoutePath routePath(GeoAddress from, GeoAddress to) {
+        return RoutePath.unavailable();
+    }
 }

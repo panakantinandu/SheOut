@@ -10,6 +10,8 @@ import com.sheout.booking.BookingStatus;
 import com.sheout.booking.CancellationReason;
 import com.sheout.booking.internal.ServiceArea;
 import com.sheout.booking.internal.fare.FareQuote;
+import com.sheout.booking.internal.fare.RoutePath;
+import com.sheout.booking.internal.fare.RouteProvider;
 import com.sheout.booking.BookingSummary;
 import com.sheout.booking.BookingType;
 import com.sheout.booking.GeoAddress;
@@ -26,6 +28,7 @@ import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -53,10 +56,17 @@ public class BookingController {
 
     private final BookingService bookingService;
     private final ServiceArea serviceArea;
+    private final RouteProvider routeProvider;
 
-    public BookingController(BookingService bookingService, ServiceArea serviceArea) {
+    public BookingController(BookingService bookingService, ServiceArea serviceArea, RouteProvider routeProvider) {
         this.bookingService = bookingService;
         this.serviceArea = serviceArea;
+        this.routeProvider = routeProvider;
+    }
+
+    /** One decimal is all a "2.4 km away" line can use; more would imply a precision the router does not have. */
+    private static BigDecimal round(double value) {
+        return BigDecimal.valueOf(value).setScale(1, RoundingMode.HALF_UP);
     }
 
     @PostMapping("/api/v1/bookings")
@@ -185,11 +195,98 @@ public class BookingController {
         return respond(bookingService.acceptBooking(bookingId));
     }
 
+    /**
+     * Starts the trip, and only on proof the partner is at the pickup.
+     * <p>
+     * The body is required and carries the code the rider read out. This
+     * used to be a bare tap with no verification at all, which meant a
+     * partner could start and complete a trip for a rider who was never
+     * collected, and the rider was charged for it.
+     * <p>
+     * The check itself lives in the service, in the same transaction as the
+     * status change - not here. A guard in a controller is a guard exactly
+     * one caller respects.
+     */
     @PostMapping("/api/v1/bookings/{bookingId}/start")
-    public ResponseEntity<BookingSummary> start(@PathVariable UUID bookingId) {
+    public ResponseEntity<BookingSummary> start(@PathVariable UUID bookingId,
+                                                 @Valid @RequestBody StartTripRequest request) {
         CurrentAccount caller = requireRole(AccountRole.DRIVER);
         requireAssignedDriver(caller, bookingId);
-        return respond(bookingService.startTrip(bookingId));
+        return respond(bookingService.startTrip(bookingId, request.pickupCode()));
+    }
+
+    /**
+     * The code the rider reads to her partner at the kerb.
+     * <p>
+     * Hers alone. It is deliberately not a field on the booking, because
+     * {@code GET /bookings/{id}} serves both participants and a field there
+     * would hand the partner the answer to the question she is being asked -
+     * which would leave the check looking like verification while verifying
+     * nothing.
+     * <p>
+     * 404 for every refusal, the enumeration-safe convention this codebase
+     * uses throughout: not her booking, no such booking, or a booking not in
+     * a state that has a code, are one answer from outside. Her own screen
+     * knows which status she is in and says so without being told anything.
+     */
+    /**
+     * The road route from where the partner is now to where she is going
+     * next, for drawing on her map.
+     * <p>
+     * WHICH destination is the booking's business, not the caller's: during
+     * ACCEPTED it is the pickup, during IN_PROGRESS it is the drop. Taking a
+     * destination as a parameter would let a partner's map show a route to
+     * the drop while she is still meant to be collecting somebody, which is
+     * exactly the confusion the two-phase flow exists to remove.
+     * <p>
+     * Her own position comes from the request, not from the dispatch
+     * location store. The device knows where it is; reading its own position
+     * back out of the server would add a round trip, a staleness window and
+     * a failure mode, to tell her something she already knows.
+     * <p>
+     * Deliberately NOT cached or polled server-side. The apps fetch this
+     * about twice per trip - once per phase, plus a refresh if she strays
+     * well off the line - because the route is drawn for orientation and the
+     * real turn-by-turn happens in Google Maps. Re-routing on every location
+     * ping would multiply calls to a volunteer-run OSRM instance by fifty.
+     */
+    @GetMapping("/api/v1/bookings/{bookingId}/route")
+    public ResponseEntity<RouteResponse> route(
+            @PathVariable UUID bookingId,
+            @RequestParam @DecimalMin("-90") @DecimalMax("90") double fromLat,
+            @RequestParam @DecimalMin("-180") @DecimalMax("180") double fromLng) {
+        CurrentAccount caller = requireRole(AccountRole.DRIVER);
+        BookingSummary booking = bookingService.findById(bookingId)
+                .orElseThrow(() -> ApiException.notFound("No such booking"));
+        if (!caller.accountId().equals(booking.driverId())) {
+            throw ApiException.notFound("No such booking");
+        }
+
+        GeoAddress destination = switch (booking.status()) {
+            case ACCEPTED -> booking.pickup();
+            case IN_PROGRESS -> booking.drop();
+            default -> throw ApiException.notFound("No route for this booking's current status");
+        };
+
+        RoutePath path = routeProvider.routePath(
+                new GeoAddress("You", fromLat, fromLng), destination);
+
+        return ResponseEntity.ok(new RouteResponse(
+                booking.status() == BookingStatus.ACCEPTED ? "PICKUP" : "DROP",
+                destination.lat(),
+                destination.lng(),
+                destination.label(),
+                path.points().stream().map(p -> new RoutePointResponse(p.lat(), p.lng())).toList(),
+                path.isAvailable() ? round(path.distanceKm()) : null,
+                path.isAvailable() ? round(path.durationMinutes()) : null));
+    }
+
+    @GetMapping("/api/v1/bookings/{bookingId}/pickup-code")
+    public ResponseEntity<PickupCodeResponse> pickupCode(@PathVariable UUID bookingId) {
+        CurrentAccount caller = requireAuthenticated();
+        return bookingService.findPickupCodeForCustomer(bookingId, caller.accountId())
+                .map(code -> ResponseEntity.ok(new PickupCodeResponse(code)))
+                .orElseThrow(() -> ApiException.notFound("No pickup code for this booking"));
     }
 
     @PostMapping("/api/v1/bookings/{bookingId}/complete")
@@ -290,6 +387,21 @@ public class BookingController {
             case BOOKING_NOT_FOUND -> ApiException.notFound("No such booking");
             case INVALID_STATE_TRANSITION -> new ApiException(
                     HttpStatus.CONFLICT, "Conflict", "This action isn't valid for the booking's current status");
+            // A machine-readable code rather than the reason phrase, for the
+            // same reason OUTSIDE_SERVICE_AREA carries one: the driver app
+            // has to tell a wrong code apart from a lockout so it can keep
+            // the keypad open for one and not the other. The message says
+            // what to do next, because a partner reading "invalid" at a kerb
+            // needs to know whether to retype or to ask again.
+            case INVALID_PICKUP_CODE -> new ApiException(
+                    HttpStatus.BAD_REQUEST, "INVALID_PICKUP_CODE",
+                    "That code doesn't match. Ask your rider to read it out again from her screen.");
+            case PICKUP_CODE_REQUIRED -> new ApiException(
+                    HttpStatus.BAD_REQUEST, "PICKUP_CODE_REQUIRED",
+                    "Enter the four-digit code your rider reads out to you.");
+            case PICKUP_VERIFICATION_LOCKED -> new ApiException(
+                    HttpStatus.CONFLICT, "PICKUP_VERIFICATION_LOCKED",
+                    "Too many wrong codes for this trip. Call support and they will sort it out with you.");
         };
     }
 
@@ -298,6 +410,50 @@ public class BookingController {
             @NotNull CancellationReason reason,
             @Size(max = 500) String note
     ) {
+    }
+
+    /**
+     * The code the partner typed.
+     * <p>
+     * Validated for shape here so an empty field fails as a validation error
+     * naming the field, rather than being counted as a wrong guess against
+     * the booking's attempt limit. Whether it is the RIGHT code is the
+     * service's question, not this one's.
+     */
+    public record StartTripRequest(
+            @NotBlank @Pattern(regexp = "\\d{4}", message = "must be the four-digit code your rider reads out")
+            String pickupCode
+    ) {
+    }
+
+    /** Shown to the rider, read aloud to her partner. Never served to the driver - see the endpoint above. */
+    public record PickupCodeResponse(String pickupCode) {
+    }
+
+    /**
+     * Where the partner is headed next, and the road that gets her there.
+     * <p>
+     * {@code phase} is the server's answer to "which leg is this", derived
+     * from the booking's own status so the map and the booking cannot
+     * disagree about which half of the trip is happening.
+     * <p>
+     * {@code points} is empty and the two figures are null when the router
+     * could not be reached. The app then draws the destination without a
+     * line and says the route is unavailable, rather than drawing a straight
+     * one that would read as a road.
+     */
+    public record RouteResponse(
+            String phase,
+            double destinationLat,
+            double destinationLng,
+            String destinationLabel,
+            List<RoutePointResponse> points,
+            BigDecimal distanceKm,
+            BigDecimal durationMinutes
+    ) {
+    }
+
+    public record RoutePointResponse(double lat, double lng) {
     }
 
     public record GeoAddressRequest(

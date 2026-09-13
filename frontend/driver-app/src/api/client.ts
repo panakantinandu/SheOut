@@ -14,6 +14,7 @@ import type {
   DriverOnlineStatus,
   DriverProfileSummary,
   OfferSummary,
+  TripRoute,
   VehicleType,
   VerificationSummary,
   NotificationView,
@@ -255,8 +256,37 @@ export const bookingApi = {
     return request(`/api/v1/bookings/${bookingId}/accept`, { method: 'POST' });
   },
 
-  start(bookingId: string): Promise<BookingSummary> {
-    return request(`/api/v1/bookings/${bookingId}/start`, { method: 'POST' });
+  /**
+   * ACCEPTED -> IN_PROGRESS, and only with the code the rider read out.
+   * <p>
+   * The code is required. This used to post nothing at all, which is
+   * precisely the gap it closes: a partner could start - and then complete -
+   * a trip with nobody in the vehicle, and the rider was charged for it.
+   * <p>
+   * Fails as 400 INVALID_PICKUP_CODE for a wrong code and 409
+   * PICKUP_VERIFICATION_LOCKED once the attempt limit is spent. The Trip
+   * screen tells those apart: one keeps the keypad open, the other does not.
+   */
+  start(bookingId: string, pickupCode: string): Promise<BookingSummary> {
+    return request(`/api/v1/bookings/${bookingId}/start`, {
+      method: 'POST',
+      body: { pickupCode },
+    });
+  },
+
+  /**
+   * The road from where she is now to wherever this booking says she is
+   * going next - the pickup during ACCEPTED, the drop during IN_PROGRESS.
+   * <p>
+   * The destination is the server's decision, not a parameter, so her map
+   * and the booking can never disagree about which leg is happening.
+   * <p>
+   * Called about twice per trip, not on every position update: it routes
+   * through a volunteer-run OSRM instance, and the in-app line is for
+   * orientation while the real turn-by-turn happens in Google Maps.
+   */
+  getRoute(bookingId: string, from: { lat: number; lng: number }): Promise<TripRoute> {
+    return request(`/api/v1/bookings/${bookingId}/route?fromLat=${from.lat}&fromLng=${from.lng}`);
   },
 
   complete(bookingId: string): Promise<BookingSummary> {

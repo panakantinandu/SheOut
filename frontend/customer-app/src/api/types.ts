@@ -165,6 +165,17 @@ export interface DriverLocation {
 }
 
 /**
+ * The code she reads out to her partner before getting in.
+ * <p>
+ * Served only to the customer, and only while the booking is ACCEPTED. It is
+ * deliberately not part of BookingSummary: that is served to the driver too,
+ * and a partner who can read the code is not proving anything by typing it.
+ */
+export interface PickupCodeResponse {
+  pickupCode: string;
+}
+
+/**
  * A price for a trip that has not been created. fareEstimate is the exact
  * amount the booking will be created with, not an approximation of it.
  * distanceKm is straight-line, the distance the fare was derived from,

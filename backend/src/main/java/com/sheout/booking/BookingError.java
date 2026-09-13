@@ -19,5 +19,22 @@ public enum BookingError {
 
     /** Reason OTHER with no note - an answer that answers nothing. */
     CANCELLATION_NOTE_REQUIRED,
-    INVALID_STATE_TRANSITION
+    INVALID_STATE_TRANSITION,
+
+    /**
+     * The partner typed a code, and it was not this booking's code. Said
+     * plainly to her, because the alternative - a trip that silently does
+     * not start - leaves her standing at a kerb with no idea why.
+     */
+    INVALID_PICKUP_CODE,
+
+    /**
+     * No code submitted at all. Distinct from a wrong one so an out-of-date
+     * client gets told what it is missing rather than being accused of
+     * getting it wrong.
+     */
+    PICKUP_CODE_REQUIRED,
+
+    /** Too many wrong guesses on this booking. See PickupCode.MAX_ATTEMPTS. */
+    PICKUP_VERIFICATION_LOCKED
 }

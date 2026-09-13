@@ -1,4 +1,4 @@
-import { CheckCircle2, Headphones, MessageCircle, Radio, SearchX, ShieldAlert, Star, XCircle } from 'lucide-react';
+import { CheckCircle2, Headphones, MessageCircle, Navigation, Radio, SearchX, ShieldAlert, Star, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
@@ -11,6 +11,8 @@ import {
   CUSTOMER_CANCELLATION_REASONS,
   IconCircle,
   LiveMap,
+  OpenInMapsButton,
+  PickupCodeCard,
   StatusBadge,
   TopHeader,
   bookingStatusLabel,
@@ -155,6 +157,8 @@ export function Tracking() {
   const [searchedSeconds, setSearchedSeconds] = useState(0);
   const [searchTimeoutSeconds, setSearchTimeoutSeconds] = useState(DEFAULT_SEARCH_TIMEOUT_SECONDS);
   const [rebooking, setRebooking] = useState(false);
+  // The code she reads out before getting in. Null except while ACCEPTED.
+  const [pickupCode, setPickupCode] = useState<string | null>(null);
 
   /** Set once the trip reaches a status that can never change again. */
   const terminalStatus =
@@ -304,6 +308,39 @@ export function Tracking() {
    * Cleared whenever the status is not one that releases details, so a
    * partner's name can never linger on screen from a previous render.
    */
+  /**
+   * The four digits she reads out at the kerb.
+   * <p>
+   * Fetched only while the booking is ACCEPTED, which is the only window in
+   * which it exists and the only one in which it is any use: before that
+   * nobody is coming, and after it the trip has already started. Its own
+   * call, not a field on the booking, because the booking is served to her
+   * partner too - see the endpoint's own note.
+   * <p>
+   * Cleared whenever the status is not ACCEPTED, so a code can never linger
+   * on screen into a trip that has already begun.
+   */
+  useEffect(() => {
+    if (!bookingId || booking?.status !== 'ACCEPTED') {
+      setPickupCode(null);
+      return;
+    }
+    let cancelled = false;
+    bookingApi
+      .getPickupCode(bookingId)
+      .then((result) => {
+        if (!cancelled) setPickupCode(result.pickupCode);
+      })
+      .catch(() => {
+        // A 404 is the normal answer for a booking that predates pickup
+        // verification. The card simply does not appear, and her partner's
+        // app lets that trip start without a code - see the backend.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [bookingId, booking?.status]);
+
   useEffect(() => {
     if (!bookingId || !DRIVER_DETAILS_STATUSES.includes(booking?.status as BookingStatus)) {
       setDriver(null);
@@ -598,6 +635,35 @@ export function Tracking() {
         </Card>
       )}
 
+      {/* The one thing on this screen she has to DO, so it sits directly
+          under the partner it belongs to and above the map. It disappears
+          the moment the trip starts, because by then it has been used. */}
+      <PickupCodeCard code={booking?.status === 'ACCEPTED' ? pickupCode : null} />
+
+      {/* Which half of the trip is happening, said plainly. "Partner
+          assigned" and "trip underway" are very different facts to a woman
+          watching a marker move, and the status badge alone was carrying
+          both. */}
+      {(booking?.status === 'ACCEPTED' || booking?.status === 'IN_PROGRESS') && (
+        <Card className="flex items-start gap-3">
+          <IconCircle
+            tone="soft"
+            color={booking?.status === 'IN_PROGRESS' ? 'green' : undefined}
+            icon={booking?.status === 'IN_PROGRESS' ? <Navigation /> : <Radio />}
+          />
+          <div className="min-w-0 flex-1">
+            <p className="font-heading font-semibold text-text-primary">
+              {booking?.status === 'IN_PROGRESS' ? 'On your way' : 'Coming to collect you'}
+            </p>
+            <p className="mt-1 text-sm text-text-secondary">
+              {booking?.status === 'IN_PROGRESS'
+                ? 'Your trip has started. The map now follows you to your drop.'
+                : 'Watch her approach on the map. Have your code ready to read out.'}
+            </p>
+          </div>
+        </Card>
+      )}
+
       <div className="space-y-1">
         <LiveMap markers={markers} />
         <p className="text-xs text-text-secondary">
@@ -609,6 +675,23 @@ export function Tracking() {
                 ? 'Waiting for the driver to report a position...'
                 : 'Showing your pickup and drop. The driver appears once one is assigned.'}
         </p>
+        {/* Her partner's last reported position, in the map she already
+            knows how to read. A small Leaflet view in a card is fine for a
+            glance; somebody trying to work out which side of a flyover a
+            bike is on wants to pinch and zoom in something familiar.
+            Offered only while a trip is live and a real position exists -
+            never a stale point from a finished trip. */}
+        {!isFinished && driverLocation && (
+          <OpenInMapsButton
+            lat={driverLocation.lat}
+            lng={driverLocation.lng}
+            label="Your partner"
+            variant="secondary"
+            className="mt-2"
+          >
+            Open her position in Google Maps
+          </OpenInMapsButton>
+        )}
       </div>
 
       {error && <p className="text-sm text-danger">{error}</p>}

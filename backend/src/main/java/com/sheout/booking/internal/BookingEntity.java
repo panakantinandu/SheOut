@@ -87,6 +87,22 @@ public class BookingEntity extends BaseEntity {
     @Column
     private UUID cancelledBy;
 
+    /**
+     * The code the rider reads to her partner at pickup. Set when the
+     * partner accepts; null before that, and on bookings accepted before
+     * this check existed. Never released to the driver by any endpoint -
+     * see BookingController's pickup-code endpoint.
+     */
+    @Column(length = 4)
+    private String pickupOtp;
+
+    /** When the partner proved she was at the pickup. Null means this trip was never verified. */
+    private Instant pickupVerifiedAt;
+
+    /** Wrong guesses so far. See {@link PickupCode#MAX_ATTEMPTS}. */
+    @Column(nullable = false)
+    private int pickupAttempts;
+
     protected BookingEntity() {
         // JPA
     }
@@ -207,5 +223,39 @@ public class BookingEntity extends BaseEntity {
         this.cancelledBy = by;
         this.cancellationReason = reason;
         this.cancellationNote = note;
+    }
+
+    public String getPickupOtp() {
+        return pickupOtp;
+    }
+
+    public void setPickupOtp(String pickupOtp) {
+        this.pickupOtp = pickupOtp;
+    }
+
+    public Instant getPickupVerifiedAt() {
+        return pickupVerifiedAt;
+    }
+
+    public void setPickupVerifiedAt(Instant pickupVerifiedAt) {
+        this.pickupVerifiedAt = pickupVerifiedAt;
+    }
+
+    public int getPickupAttempts() {
+        return pickupAttempts;
+    }
+
+    public void recordFailedPickupAttempt() {
+        this.pickupAttempts++;
+    }
+
+    /**
+     * Whether this booking has run out of tries.
+     * <p>
+     * Asked before a guess is checked, so the limit is a real stop rather
+     * than something that merely gets recorded after the fact.
+     */
+    public boolean pickupAttemptsExhausted() {
+        return pickupAttempts >= PickupCode.MAX_ATTEMPTS;
     }
 }

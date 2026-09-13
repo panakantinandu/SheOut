@@ -5,6 +5,7 @@ import { AmountText, Button, Card, LiveMap, TopHeader } from '@sheout/design-sys
 import type { MapMarker } from '@sheout/design-system';
 import { ApiError, bookingApi, dispatchApi } from '../api/client';
 import type { OfferSummary } from '../api/types';
+import { useShareLocation } from '../lib/LocationBroadcastContext';
 
 const POLL_INTERVAL_MS = 3000;
 // Matches sheout.dispatch.offer-window-seconds's default (see render.yaml /
@@ -57,6 +58,13 @@ export function Offer() {
   const [responding, setResponding] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(OFFER_WINDOW_SECONDS);
   const seenAtRef = useRef(Date.now());
+
+  // Keep sharing position while this screen is open. This screen is what a
+  // partner is looking at during MATCHED, and it previously shared nothing:
+  // the whole time the rider was being told a partner had been found, the
+  // driver marker on the rider's map sat at whatever position was last sent
+  // from Home. Retaining here closes that gap. See LocationBroadcastContext.
+  useShareLocation(true);
 
   // Fetches the offer (with its enriched booking details) and keeps
   // re-confirming it's still ours to answer, on the same poll.

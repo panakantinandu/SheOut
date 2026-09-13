@@ -12,8 +12,24 @@ export interface MapMarker {
   kind: 'pickup' | 'drop' | 'driver';
 }
 
+/** One point on a drawn route. Deliberately the same shape the backend serves. */
+export interface RoutePoint {
+  lat: number;
+  lng: number;
+}
+
 export interface LiveMapProps {
   markers: MapMarker[];
+  /**
+   * The road to draw, as the router gave it back.
+   * <p>
+   * Omit it, or pass an empty array, and no line is drawn at all. There is
+   * deliberately no "join the markers with a straight line" fallback: a
+   * straight line between two points in Hyderabad routinely crosses a lake,
+   * and a partner reading it as a road is worse off than one who can see
+   * there is no route to show.
+   */
+  route?: RoutePoint[];
   className?: string;
   /** Re-fit the viewport to the markers whenever they change. Off once the user has panned. */
   autoFit?: boolean;
@@ -30,10 +46,51 @@ export interface LiveMapProps {
   zoom?: number;
 }
 
-const COLORS: Record<MapMarker['kind'], string> = {
+/**
+ * WHERE THE MAP'S LOOK IS DECIDED, AND WHY IT IS A SETTING RATHER THAN A
+ * CONSTANT.
+ * <p>
+ * The intent was to move from raw OpenStreetMap tiles to CARTO's Voyager
+ * style. Standard OSM tiles are dense and saturated - pink motorways, bright
+ * green parks, brown buildings - and this app's purple, teal and red markers
+ * end up competing with the basemap rather than sitting on top of it.
+ * Voyager is pale and keeps road hierarchy and place names legible, which is
+ * exactly what a partner squinting for a kerb needs.
+ * <p>
+ * THAT PLAN RAN INTO A FACT ABOUT CARTO. Their basemap CDN no longer serves
+ * unauthenticated tiles cleanly: every keyless tile comes back with "API KEY
+ * REQUIRED / carto.com/basemaps/apikey" printed diagonally across it. Not a
+ * quota error, not an outage - a watermark, at every zoom, on a map a woman
+ * is meant to trust. Shipping that would have looked like a broken app.
+ * <p>
+ * So the URL is configuration. Set VITE_MAP_TILE_URL (and optionally
+ * VITE_MAP_TILE_ATTRIBUTION, since a provider's attribution is usually a
+ * term of use, not decoration) and this uses it - CARTO Voyager with a key,
+ * or any other provider - with no code change and no redeploy of this
+ * package. For CARTO specifically that is:
+ * <p>
+ * {@code https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png?api_key=YOUR_KEY}
+ * <p>
+ * with attribution {@code &copy; OpenStreetMap contributors &copy; CARTO}.
+ * <p>
+ * Unset, it stays on standard OSM: the same tiles this app has always used,
+ * whose behaviour is known. Falling back to a different volunteer-run server
+ * instead would have swapped one set of usage-policy questions for another
+ * without being much better to look at.
+ */
+const TILE_URL =
+  import.meta.env.VITE_MAP_TILE_URL || 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+
+const TILE_ATTRIBUTION =
+  import.meta.env.VITE_MAP_TILE_ATTRIBUTION || '&copy; OpenStreetMap contributors';
+
+const COLORS: Record<MapMarker['kind'] | 'route', string> = {
   pickup: '#7c3aed',
   drop: '#0f766e',
   driver: '#dc2626',
+  // The brand purple, which against Voyager's pale roads reads as "the way
+  // you are going" rather than as another road.
+  route: '#7c3aed',
 };
 
 /**
@@ -49,10 +106,11 @@ const COLORS: Record<MapMarker['kind'], string> = {
  * With a polling caller that means the marker jumps on each poll; that is
  * honest, and smoothing it would draw a driver where they have not been.
  */
-export function LiveMap({ markers, className, autoFit = true, onPick, center, zoom }: LiveMapProps) {
+export function LiveMap({ markers, route, className, autoFit = true, onPick, center, zoom }: LiveMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markerRefs = useRef<Map<string, L.Marker>>(new Map());
+  const routeRef = useRef<L.Polyline | null>(null);
   // Held in a ref so the map's click handler can be bound once, at creation,
   // and still call the caller's current function. Binding it in an effect
   // that depends on onPick would add and remove a listener on every render
@@ -65,9 +123,10 @@ export function LiveMap({ markers, className, autoFit = true, onPick, center, zo
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
     const map = L.map(containerRef.current, { zoomControl: true, attributionControl: true });
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '&copy; OpenStreetMap contributors',
+    L.tileLayer(TILE_URL, {
+      maxZoom: 20,
+      subdomains: 'abcd',
+      attribution: TILE_ATTRIBUTION,
     }).addTo(map);
     map.setView([20.5937, 78.9629], 5); // India, until real markers arrive
     map.on('click', (e: L.LeafletMouseEvent) => onPickRef.current?.(e.latlng.lat, e.latlng.lng));
@@ -135,6 +194,27 @@ export function LiveMap({ markers, className, autoFit = true, onPick, center, zo
     // Leaflet mis-sizes when its container was hidden or resized at mount.
     setTimeout(() => map.invalidateSize(), 0);
   }, [markers, autoFit, onPick]);
+
+  // The route line, kept in its own effect so a driver position arriving
+  // every few seconds does not redraw a route that has not changed.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    if (routeRef.current) {
+      routeRef.current.remove();
+      routeRef.current = null;
+    }
+    if (!route || route.length < 2) return;
+
+    routeRef.current = L.polyline(
+      route.map((p) => [p.lat, p.lng] as [number, number]),
+      // Under the markers, not over them: the line is context, and the
+      // pickup pin it ends at is the thing being looked for.
+      { color: COLORS.route, weight: 5, opacity: 0.75, lineJoin: 'round', lineCap: 'round' }
+    ).addTo(map);
+    routeRef.current.bringToBack();
+  }, [route]);
 
   return (
     <div
