@@ -1,4 +1,4 @@
-import { Bell, Bike, CheckCircle2, ClipboardList, CloudOff, IndianRupee, MapPinOff, Navigation2, Power, RefreshCw, ShieldCheck, User } from 'lucide-react';
+import { Bell, Bike, CheckCircle2, ClipboardList, CloudOff, Globe2, IndianRupee, MapPinOff, Navigation2, Power, RefreshCw, ShieldCheck, User } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -15,7 +15,7 @@ import {
 import { ApiError, bookingApi, dispatchApi, ratingsApi, usersApi, verificationApi } from '../api/client';
 import type { AggregateRating, BookingSummary, DriverProfileSummary, VerificationSummary } from '../api/types';
 import { RatingPrompt } from '../components/RatingPrompt';
-import { useShareLocation } from '../lib/LocationBroadcastContext';
+import { readPositionOnce, useShareLocation } from '../lib/LocationBroadcastContext';
 
 const BOOKINGS_POLL_MS = 5000;
 const OFFER_POLL_MS = 4000;
@@ -77,6 +77,9 @@ export function Home() {
   const [profileError, setProfileError] = useState<string | null>(null);
   const [verificationError, setVerificationError] = useState<string | null>(null);
   const [togglingOnline, setTogglingOnline] = useState(false);
+  // Set when the server says she is not anywhere SheOut operates. Not an
+  // error - a standing fact about where she is, which no retry changes.
+  const [outOfArea, setOutOfArea] = useState<string | null>(null);
   const [rating, setRating] = useState<AggregateRating | null>(null);
   const navigatedToOfferRef = useRef<string | null>(null);
 
@@ -218,9 +221,24 @@ export function Home() {
     if (!profile) return;
     setTogglingOnline(true);
     setError(null);
+    setOutOfArea(null);
     try {
-      const updated = await usersApi.setOnlineStatus(isOnline ? 'OFFLINE' : 'ONLINE');
-      setProfile(updated);
+      if (isOnline) {
+        // Stopping work asks nothing and checks nothing. She must be able to
+        // go offline anywhere, including outside the service area and with
+        // location switched off.
+        setProfile(await usersApi.setOnlineStatus('OFFLINE'));
+        return;
+      }
+      // One fix, taken now because she asked to start working. The server
+      // decides whether it is anywhere SheOut operates; this app does not
+      // second-guess it with its own copy of the boundary.
+      const here = await readPositionOnce(location.position);
+      if (!here) {
+        setError('We need your location to send you nearby trips. Allow location access and try again.');
+        return;
+      }
+      setProfile(await usersApi.setOnlineStatus('ONLINE', here));
     } catch (err) {
       // A missing photo is the one refusal she can fix herself, in under a
       // minute, so it goes straight to the screen that fixes it rather than
@@ -229,6 +247,13 @@ export function Home() {
       if (err instanceof ApiError && err.body?.error === 'PROFILE_PHOTO_REQUIRED') {
         navigate('/profile');
         setError(err.message);
+        return;
+      }
+      // Being in the wrong part of the world is not an error she can retry
+      // away, so it gets a standing explanation rather than a red line that
+      // reads like something went wrong.
+      if (err instanceof ApiError && err.body?.error === 'OUTSIDE_SERVICE_AREA') {
+        setOutOfArea(err.message);
         return;
       }
       setError(err instanceof ApiError ? err.message : 'Could not update status');
@@ -266,6 +291,21 @@ export function Home() {
       />
 
       {error && <p className="text-sm text-danger">{error}</p>}
+
+      {/* Not a red error, because nothing failed and nothing can be retried.
+          SheOut runs in one city; a partner opening this app from anywhere
+          else needs to be told that plainly rather than left tapping a
+          button that used to say "Looking for ride requests nearby" while
+          dispatch had no possible trip to send her. */}
+      {outOfArea && (
+        <Card tone="warning" className="flex items-start gap-3">
+          <IconCircle color="orange" tone="soft" icon={<Globe2 />} />
+          <div className="min-w-0 flex-1">
+            <p className="font-heading font-semibold text-text-primary">You are outside our service area</p>
+            <p className="mt-0.5 text-xs text-text-secondary">{outOfArea}</p>
+          </div>
+        </Card>
+      )}
 
       {/* A driver who is online but not actually sharing a position is in no
           dispatch search results at all. That used to be invisible: the app

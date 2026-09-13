@@ -8,7 +8,7 @@ import com.sheout.booking.BookingError;
 import com.sheout.booking.BookingQuery;
 import com.sheout.booking.BookingStatus;
 import com.sheout.booking.CancellationReason;
-import com.sheout.booking.internal.ServiceArea;
+import com.sheout.sharedkernel.geo.ServiceArea;
 import com.sheout.booking.internal.fare.FareQuote;
 import com.sheout.booking.internal.fare.RoutePath;
 import com.sheout.booking.internal.fare.RouteProvider;

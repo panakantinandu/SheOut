@@ -1,7 +1,7 @@
 package com.sheout.booking.internal.fare;
 
 import com.sheout.booking.GeoAddress;
-import com.sheout.booking.internal.GeoDistance;
+import com.sheout.sharedkernel.geo.GeoDistance;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -190,7 +190,7 @@ public class OsrmRouteProvider implements RouteProvider {
      * earnings.
      */
     private RouteEstimate estimate(GeoAddress pickup, GeoAddress drop) {
-        double straightLineKm = GeoDistance.haversineKm(pickup, drop);
+        double straightLineKm = GeoDistance.haversineKm(pickup.lat(), pickup.lng(), drop.lat(), drop.lng());
         double roadKm = straightLineKm * roadDistanceFactor;
         double minutes = fallbackSpeedKmph <= 0 ? 0 : (roadKm / fallbackSpeedKmph) * 60.0;
         return new RouteEstimate(roadKm, minutes, RouteEstimate.Source.ESTIMATED);

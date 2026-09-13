@@ -146,6 +146,37 @@ export function LocationBroadcastProvider({ children }: { children: ReactNode })
 }
 
 /**
+ * One position, now, without starting a broadcast.
+ * <p>
+ * Going online needs a fix BEFORE the request is sent - the server has to
+ * decide whether she is anywhere SheOut operates - but she is not sharing
+ * her location yet, and should not be until she has actually gone online.
+ * A continuous watch just to answer one question would be sharing her
+ * whereabouts while she is still deciding whether to work.
+ * <p>
+ * So: a single read, triggered by her own tap, and nothing retained. Falls
+ * back to the last watched fix when one already exists, which is the case
+ * when she is already online and toggling off and on again.
+ */
+export function readPositionOnce(fallback: { lat: number; lng: number } | null):
+    Promise<{ lat: number; lng: number } | null> {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) {
+      resolve(fallback);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      // Never invent one. A null here becomes "we need your location",
+      // which is the truth; a guessed coordinate would put her in a
+      // dispatch queue for a place she is not.
+      () => resolve(fallback),
+      { enableHighAccuracy: true, maximumAge: 30000, timeout: 10000 }
+    );
+  });
+}
+
+/**
  * Shares this partner's position for as long as {@code active} is true and
  * this component is mounted, and hands back the latest fix.
  * <p>

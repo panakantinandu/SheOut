@@ -6,6 +6,7 @@ import com.sheout.driververification.VerificationApi;
 import com.sheout.driververification.VerificationStatus;
 import com.sheout.driververification.VerificationSummary;
 import com.sheout.sharedkernel.Result;
+import com.sheout.sharedkernel.geo.ServiceArea;
 import com.sheout.sharedkernel.storage.DocumentStorage;
 import com.sheout.sharedkernel.storage.DocumentUpload;
 import com.sheout.users.DriverProfileApi;
@@ -27,17 +28,20 @@ public class DriverProfileService implements DriverProfileApi {
     private final AuthApi authApi;
     private final VerificationApi verificationApi;
     private final DocumentStorage documentStorage;
+    private final ServiceArea serviceArea;
     private final String verifiedDriverBypassPhone;
 
     public DriverProfileService(DriverProfileRepository driverProfileRepository,
                                  AuthApi authApi,
                                  VerificationApi verificationApi,
                                  DocumentStorage documentStorage,
+                                 ServiceArea serviceArea,
                                  @Value("${sheout.testing.verified-driver-bypass-phone:}") String verifiedDriverBypassPhone) {
         this.driverProfileRepository = driverProfileRepository;
         this.authApi = authApi;
         this.verificationApi = verificationApi;
         this.documentStorage = documentStorage;
+        this.serviceArea = serviceArea;
         this.verifiedDriverBypassPhone = verifiedDriverBypassPhone;
     }
 
@@ -142,12 +146,38 @@ public class DriverProfileService implements DriverProfileApi {
      * through the real, unmodified check below.
      */
     @Transactional
-    public Result<DriverProfileSummary, DriverProfileError> setOnlineStatus(UUID accountId, OnlineStatus requested) {
+    public Result<DriverProfileSummary, DriverProfileError> setOnlineStatus(
+            UUID accountId, OnlineStatus requested, Double lat, Double lng) {
         Optional<DriverProfileEntity> found = driverProfileRepository.findByAccountId(accountId);
         if (found.isEmpty()) {
             return Result.failure(DriverProfileError.PROFILE_NOT_FOUND);
         }
         DriverProfileEntity profile = found.get();
+
+        // Where she is, before anything else about who she is.
+        //
+        // This app operates in one city. Going online used to succeed from
+        // anywhere on earth: a partner in Dallas could tap Go Online, be
+        // told "Looking for ride requests nearby", and wait forever for
+        // requests that could never reach her, because dispatch searches a
+        // radius around a Hyderabad pickup and she was thirteen thousand
+        // kilometres outside it. Nothing was broken, and nothing said so.
+        //
+        // Deliberately first, so somebody standing in the wrong country is
+        // told the thing that is actually true of her rather than being sent
+        // to fix a photo that was never the obstacle.
+        //
+        // Going OFFLINE is never checked. A partner must always be able to
+        // stop working, wherever she is - the same principle the photo gate
+        // below follows.
+        if (requested == OnlineStatus.ONLINE) {
+            if (lat == null || lng == null) {
+                return Result.failure(DriverProfileError.LOCATION_REQUIRED);
+            }
+            if (!serviceArea.covers(lat, lng)) {
+                return Result.failure(DriverProfileError.OUTSIDE_SERVICE_AREA);
+            }
+        }
 
         if (requested == OnlineStatus.ONLINE && !isFullyVerified(accountId) && !isVerifiedBypassAccount(accountId)) {
             return Result.failure(DriverProfileError.NOT_VERIFIED);
