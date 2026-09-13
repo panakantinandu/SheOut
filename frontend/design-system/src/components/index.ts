@@ -11,6 +11,7 @@ export * from './IconCircle';
 export * from './BottomNavBar';
 export * from './TopHeader';
 export * from './ListRow';
+export * from './FaqList';
 export * from './StatusBadge';
 export * from './AmountText';
 export * from './Avatar';

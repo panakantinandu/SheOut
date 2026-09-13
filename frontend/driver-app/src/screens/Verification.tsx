@@ -3,8 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Card, IconCircle, StatusBadge, TopHeader, verificationStatusLabel } from '@sheout/design-system';
 import type { StatusTone } from '@sheout/design-system';
-import { ApiError, verificationApi } from '../api/client';
-import type { VerificationStatus, VerificationSummary } from '../api/types';
+import { ApiError, usersApi, verificationApi } from '../api/client';
+import type { DriverProfileSummary, VerificationStatus, VerificationSummary } from '../api/types';
 import { mockAction } from '../lib/mockAction';
 
 function statusTone(status: VerificationStatus | null): StatusTone {
@@ -48,6 +48,9 @@ export function Verification() {
   const [summary, setSummary] = useState<VerificationSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  // Going online needs a photo as well as both checks, so this screen has
+  // to know about it to tell the truth about what is still outstanding.
+  const [profile, setProfile] = useState<DriverProfileSummary | null>(null);
 
   /** Clears the input so re-picking the same file still fires a change. */
   function pickFile(e: React.ChangeEvent<HTMLInputElement>, set: (f: File | null) => void) {
@@ -64,6 +67,16 @@ export function Verification() {
   }
 
   useEffect(load, []);
+
+  useEffect(() => {
+    usersApi
+      .getMyProfile()
+      .then(setProfile)
+      .catch(() => {
+        // The verification rows still render. Worst case the banner is a
+        // little less specific, which is better than the screen failing.
+      });
+  }, []);
 
   /**
    * Both documents go up together, in one request.
@@ -92,6 +105,8 @@ export function Verification() {
   }
 
   const bothVerified = summary?.genderVerificationStatus === 'VERIFIED' && summary?.policeVerificationStatus === 'VERIFIED';
+  const hasPhoto = Boolean(profile?.hasProfilePhoto);
+  const readyToWork = bothVerified && hasPhoto;
   const canUpload = summary && summary.genderVerificationStatus !== 'VERIFIED' && summary.genderVerificationStatus !== 'UNDER_REVIEW';
 
   return (
@@ -103,15 +118,39 @@ export function Verification() {
 
       {summary && (
         <>
-          <Card tone={bothVerified ? 'success' : 'warning'} className="flex items-center gap-3">
-            <IconCircle color={bothVerified ? 'green' : 'orange'} tone="soft" icon={bothVerified ? <ShieldCheck /> : <Clock />} />
-            <div>
+          {/* This card used to say "You're fully verified - you can go
+              online and accept trips" the moment both checks passed. That
+              became untrue when a profile photo became a requirement for
+              going online: a partner read it, tapped Go Online, and was
+              refused for a reason this screen had never mentioned.
+              Verification is only one of the two things standing between
+              her and her first trip, so the card has to know about both. */}
+          <Card tone={readyToWork ? 'success' : 'warning'} className="flex items-start gap-3">
+            <IconCircle
+              color={readyToWork ? 'green' : 'orange'}
+              tone="soft"
+              icon={readyToWork ? <ShieldCheck /> : <Clock />}
+            />
+            <div className="flex-1">
               <p className="font-heading font-semibold text-text-primary">
-                {bothVerified ? "You're fully verified" : 'Verification in progress'}
+                {readyToWork
+                  ? "You're ready to work"
+                  : bothVerified
+                    ? 'One more thing'
+                    : 'Verification in progress'}
               </p>
-              <p className="text-xs text-text-secondary">
-                {bothVerified ? 'You can go online and accept trips.' : "Complete the steps below before you can go online."}
+              <p className="mt-1 text-xs text-text-secondary">
+                {readyToWork
+                  ? 'Both checks are approved and your photo is on file. You can go online and accept trips.'
+                  : bothVerified
+                    ? 'Both checks are approved. Add a profile photo and you can go online - riders use it to check they have the right vehicle.'
+                    : 'Complete the steps below before you can go online.'}
               </p>
+              {bothVerified && !hasPhoto && (
+                <Button size="md" className="mt-3" onClick={() => navigate('/profile')}>
+                  Add your photo
+                </Button>
+              )}
             </div>
           </Card>
 

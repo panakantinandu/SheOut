@@ -27,7 +27,7 @@ export interface LocationRowProps {
 export function LocationRow({ icon, label, sublabel, onSearch, onMap }: LocationRowProps) {
   return (
     <div className="flex items-center gap-2 p-4">
-      <ListRow className="flex-1" icon={icon} label={label} sublabel={sublabel} onClick={onSearch} />
+      <ListRow padded={false} className="flex-1" icon={icon} label={label} sublabel={sublabel} onClick={onSearch} />
       <button
         type="button"
         aria-label={`Pick ${label.toLowerCase()} on the map`}

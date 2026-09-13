@@ -202,6 +202,28 @@ public class DriverProfileService implements DriverProfileApi {
                 .orElse(false);
     }
 
+    /**
+     * The photo URL, but only if a browser could actually load it.
+     * <p>
+     * With local-disk storage - which is the default, and what this service
+     * runs on today - resolveUrl hands back a file:// path. No browser will
+     * load one from a web page, and returning it achieved two bad things at
+     * once: every client logged a blocked-resource error, and the API was
+     * handing out an absolute server filesystem path to anyone who asked.
+     * <p>
+     * Null instead, which the apps already render as a silhouette. That is
+     * the honest answer: there is no photo anyone can see. It is not a fix
+     * for the underlying problem - see the note on the storage provider -
+     * it just stops the API claiming otherwise.
+     */
+    private String displayablePhotoUrl(DriverProfileEntity profile) {
+        if (!profile.hasProfilePhoto()) {
+            return null;
+        }
+        String url = documentStorage.resolveUrl(profile.getProfilePhotoKey());
+        return url != null && (url.startsWith("http://") || url.startsWith("https://")) ? url : null;
+    }
+
     private DriverProfileSummary toSummary(DriverProfileEntity profile) {
         String phoneNumber = authApi.findAccount(profile.getAccountId())
                 .map(AccountSummary::phoneNumber)
@@ -217,7 +239,8 @@ public class DriverProfileService implements DriverProfileApi {
                 // Resolved at read time, never stored. A presigned S3 URL is
                 // valid for minutes; a column holding one would be wrong
                 // almost immediately.
-                profile.hasProfilePhoto() ? documentStorage.resolveUrl(profile.getProfilePhotoKey()) : null,
+                displayablePhotoUrl(profile),
+                profile.hasProfilePhoto(),
                 profile.getTrustStats(),
                 profile.getUpdatedAt()
         );

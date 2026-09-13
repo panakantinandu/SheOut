@@ -57,63 +57,43 @@ export function Profile() {
       <section>
         <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">Account</h2>
         <Card className="divide-y divide-border p-0">
-          <div className="p-4">
-            <ListRow icon={<IconCircle tone="soft" size="sm" icon={<User />} />} label="Personal Details" onClick={() => navigate('/profile/details')} />
-          </div>
-          <div className="p-4">
-            <ListRow icon={<IconCircle tone="soft" size="sm" icon={<MapPin />} />} label="Saved Addresses" onClick={() => navigate('/profile/addresses')} />
-          </div>
+          <ListRow icon={<IconCircle tone="soft" size="sm" icon={<User />} />} label="Personal Details" onClick={() => navigate('/profile/details')} />
+          <ListRow icon={<IconCircle tone="soft" size="sm" icon={<MapPin />} />} label="Saved Addresses" onClick={() => navigate('/profile/addresses')} />
         </Card>
       </section>
 
       <section>
         <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">Safety</h2>
         <Card className="divide-y divide-border p-0">
-          <div className="p-4">
-            <ListRow icon={<IconCircle tone="soft" size="sm" icon={<BadgeCheck />} />} label="Identity Verification" onClick={() => navigate('/verification')} />
-          </div>
-          <div className="p-4">
-            <ListRow icon={<IconCircle color="red" tone="soft" size="sm" icon={<ShieldAlert />} />} label="Emergency Contacts" sublabel="Who an SOS alerts" onClick={() => navigate('/profile/emergency-contacts')} />
-          </div>
+          <ListRow icon={<IconCircle tone="soft" size="sm" icon={<BadgeCheck />} />} label="Identity Verification" onClick={() => navigate('/verification')} />
+          <ListRow icon={<IconCircle color="red" tone="soft" size="sm" icon={<ShieldAlert />} />} label="Emergency Contacts" sublabel="Who an SOS alerts" onClick={() => navigate('/profile/emergency-contacts')} />
         </Card>
       </section>
 
       <section>
         <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">Payments</h2>
         <Card className="p-0">
-          <div className="p-4">
-            <ListRow icon={<IconCircle tone="soft" size="sm" icon={<Receipt />} />} label="Payment History" onClick={() => navigate('/profile/payments')} />
-          </div>
+          <ListRow icon={<IconCircle tone="soft" size="sm" icon={<Receipt />} />} label="Payment History" onClick={() => navigate('/profile/payments')} />
         </Card>
       </section>
 
       <section>
         <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">Support</h2>
         <Card className="divide-y divide-border p-0">
-          <div className="p-4">
-            <ListRow icon={<IconCircle tone="soft" size="sm" icon={<HelpCircle />} />} label="Help & Support" onClick={() => navigate('/help')} />
-          </div>
-          <div className="p-4">
-            <ListRow icon={<IconCircle tone="soft" size="sm" icon={<Info />} />} label="About SheOut" onClick={() => navigate('/about')} />
-          </div>
-          <div className="p-4">
-            <ListRow icon={<IconCircle tone="soft" size="sm" icon={<Lock />} />} label="Privacy Policy" onClick={() => navigate('/privacy')} />
-          </div>
-          <div className="p-4">
-            <ListRow icon={<IconCircle tone="soft" size="sm" icon={<FileText />} />} label="Terms of Service" onClick={() => navigate('/terms')} />
-          </div>
+          <ListRow icon={<IconCircle tone="soft" size="sm" icon={<HelpCircle />} />} label="Help & Support" onClick={() => navigate('/help')} />
+          <ListRow icon={<IconCircle tone="soft" size="sm" icon={<Info />} />} label="About SheOut" onClick={() => navigate('/about')} />
+          <ListRow icon={<IconCircle tone="soft" size="sm" icon={<Lock />} />} label="Privacy Policy" onClick={() => navigate('/privacy')} />
+          <ListRow icon={<IconCircle tone="soft" size="sm" icon={<FileText />} />} label="Terms of Service" onClick={() => navigate('/terms')} />
         </Card>
       </section>
 
       <Card className="p-0">
-        <div className="p-4">
-          <ListRow
-            icon={<IconCircle color="red" tone="soft" size="sm" icon={<LogOut />} />}
-            label="Log Out"
-            chevron={false}
-            onClick={() => setConfirmingLogout(true)}
-          />
-        </div>
+        <ListRow
+          icon={<IconCircle color="red" tone="soft" size="sm" icon={<LogOut />} />}
+          label="Log Out"
+          chevron={false}
+          onClick={() => setConfirmingLogout(true)}
+        />
       </Card>
 
       {/* Logging out used to fire on a single tap of the row above, with

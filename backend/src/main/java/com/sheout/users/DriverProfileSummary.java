@@ -24,6 +24,17 @@ public record DriverProfileSummary(
          * broken image.
          */
         String profilePhotoUrl,
+        /**
+         * Whether a photo exists at all, which is NOT the same question as
+         * whether profilePhotoUrl is set.
+         *
+         * With local-disk storage the stored file cannot be served to a
+         * browser, so the URL is null even though she has uploaded one.
+         * Without this flag every screen that asks "does she still need to
+         * add a photo" would answer yes forever and keep nagging somebody
+         * who has already done it.
+         */
+        boolean hasProfilePhoto,
         TrustStats trustStats,
         Instant updatedAt
 ) {

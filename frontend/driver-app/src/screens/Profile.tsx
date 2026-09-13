@@ -114,19 +114,19 @@ export function Profile() {
           the face on their screen against the person at the kerb; it is the
           one thing that tells her she has the right vehicle. */}
       {profile && (
-        <Card tone={profile.profilePhotoUrl ? 'default' : 'warning'} className="space-y-3">
+        <Card tone={profile.hasProfilePhoto ? 'default' : 'warning'} className="space-y-3">
           <div className="flex items-start gap-3">
             <IconCircle
               tone="soft"
-              color={profile.profilePhotoUrl ? undefined : 'orange'}
-              icon={profile.profilePhotoUrl ? <User /> : <Camera />}
+              color={profile.hasProfilePhoto ? undefined : 'orange'}
+              icon={profile.hasProfilePhoto ? <User /> : <Camera />}
             />
             <div className="flex-1">
               <p className="font-heading font-semibold text-text-primary">
-                {profile.profilePhotoUrl ? 'Your photo' : 'Add a photo to go online'}
+                {profile.hasProfilePhoto ? 'Your photo' : 'Add a photo to go online'}
               </p>
               <p className="mt-1 text-sm text-text-secondary">
-                {profile.profilePhotoUrl
+                {profile.hasProfilePhoto
                   ? 'Riders see this when you are on your way, so they know they have the right vehicle.'
                   : 'Riders see this when you are on your way. You cannot go online until you add one. A clear photo of your face, in good light.'}
               </p>
@@ -141,14 +141,18 @@ export function Profile() {
           />
           <Button
             fullWidth
-            variant={profile.profilePhotoUrl ? 'secondary' : 'primary'}
+            variant={profile.hasProfilePhoto ? 'secondary' : 'primary'}
             icon={<Camera className="h-4 w-4" />}
             disabled={uploadingPhoto}
             onClick={() => photoInputRef.current?.click()}
           >
+            {/* hasProfilePhoto, not the URL: on local-disk storage a photo
+                that exists still has no displayable URL, and keying the
+                label off the URL would offer "Add photo" to somebody who
+                already added one. */}
             {uploadingPhoto
               ? 'Uploading...'
-              : profile.profilePhotoUrl
+              : profile.hasProfilePhoto
                 ? 'Change photo'
                 : 'Add photo'}
           </Button>
@@ -211,45 +215,35 @@ export function Profile() {
       )}
 
       <Card className="divide-y divide-border p-0">
-        <div className="p-4">
-          <ListRow
-            icon={<IconCircle tone="soft" size="sm" icon={<ShieldCheck />} />}
-            label="Verification"
-            onClick={() => navigate('/verification')}
-          />
-        </div>
-        <div className="p-4">
-          <ListRow
-            icon={<IconCircle tone="soft" size="sm" icon={<HelpCircle />} />}
-            label="Help & Support"
-            onClick={() => navigate('/help')}
-          />
-        </div>
-        <div className="p-4">
-          <ListRow
-            icon={<IconCircle tone="soft" size="sm" icon={<Lock />} />}
-            label="Privacy Policy"
-            onClick={() => navigate('/privacy')}
-          />
-        </div>
-        <div className="p-4">
-          <ListRow
-            icon={<IconCircle tone="soft" size="sm" icon={<FileText />} />}
-            label="Terms of Service"
-            onClick={() => navigate('/terms')}
-          />
-        </div>
+        <ListRow
+          icon={<IconCircle tone="soft" size="sm" icon={<ShieldCheck />} />}
+          label="Verification"
+          onClick={() => navigate('/verification')}
+        />
+        <ListRow
+          icon={<IconCircle tone="soft" size="sm" icon={<HelpCircle />} />}
+          label="Help & Support"
+          onClick={() => navigate('/help')}
+        />
+        <ListRow
+          icon={<IconCircle tone="soft" size="sm" icon={<Lock />} />}
+          label="Privacy Policy"
+          onClick={() => navigate('/privacy')}
+        />
+        <ListRow
+          icon={<IconCircle tone="soft" size="sm" icon={<FileText />} />}
+          label="Terms of Service"
+          onClick={() => navigate('/terms')}
+        />
       </Card>
 
       <Card className="p-0">
-        <div className="p-4">
-          <ListRow
-            icon={<IconCircle color="red" tone="soft" size="sm" icon={<LogOut />} />}
-            label="Log Out"
-            chevron={false}
-            onClick={() => setConfirmingLogout(true)}
-          />
-        </div>
+        <ListRow
+          icon={<IconCircle color="red" tone="soft" size="sm" icon={<LogOut />} />}
+          label="Log Out"
+          chevron={false}
+          onClick={() => setConfirmingLogout(true)}
+        />
       </Card>
 
       {/* Logging out used to fire on a single tap of the row above, with
