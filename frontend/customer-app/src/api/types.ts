@@ -140,6 +140,14 @@ export interface PaymentSummary {
   razorpayOrderId: string | null;
   razorpayPaymentId: string | null;
   failureReason: string | null;
+  /**
+   * What the partner receives, and the rate that produced it. Both null
+   * until capture - nothing is owed before the rider has paid. The rider's
+   * price and the platform's margin stay two separate numbers rather than
+   * the margin being folded into a higher price.
+   */
+  driverPayout: number | null;
+  commissionPercent: number | null;
   createdAt: string;
   updatedAt: string;
   capturedAt: string | null;
@@ -162,9 +170,25 @@ export interface DriverLocation {
  * distanceKm is straight-line, the distance the fare was derived from,
  * rounded to one decimal by the backend.
  */
+/**
+ * A price and how it was reached.
+ * <p>
+ * The breakdown comes back, not just the total, so a rider asking why a
+ * short trip cost what it did can be answered. routed says whether the
+ * distance is a real road route or a fallback estimate - a guess must never
+ * be shown as a measurement.
+ */
 export interface FareQuote {
   fareEstimate: number;
   distanceKm: number;
+  durationMinutes: number;
+  routed: boolean;
+  baseFare: number;
+  distanceCharge: number;
+  timeCharge: number;
+  surgeMultiplier: number;
+  nightMultiplier: number;
+  minimumFareApplied: boolean;
   category: BookingCategory;
 }
 

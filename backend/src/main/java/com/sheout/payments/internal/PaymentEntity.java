@@ -49,6 +49,20 @@ public class PaymentEntity extends BaseEntity {
     @Column(name = "failure_reason", length = 500)
     private String failureReason;
 
+    /**
+     * What the partner receives. Null until capture - nothing is owed to
+     * anyone before the rider has paid.
+     */
+    @Column(precision = 10, scale = 2)
+    private BigDecimal driverPayout;
+
+    /**
+     * The rate in force when this payment was captured, frozen onto the row
+     * so a later rate change cannot rewrite what somebody was already paid.
+     */
+    @Column(precision = 5, scale = 2)
+    private BigDecimal commissionPercent;
+
     private Instant capturedAt;
 
     protected PaymentEntity() {
@@ -112,6 +126,20 @@ public class PaymentEntity extends BaseEntity {
 
     public Instant getCapturedAt() {
         return capturedAt;
+    }
+
+    public BigDecimal getDriverPayout() {
+        return driverPayout;
+    }
+
+    public BigDecimal getCommissionPercent() {
+        return commissionPercent;
+    }
+
+    /** Set together, because a payout without the rate that produced it cannot be explained to anybody. */
+    public void recordSettlement(BigDecimal driverPayout, BigDecimal commissionPercent) {
+        this.driverPayout = driverPayout;
+        this.commissionPercent = commissionPercent;
     }
 
     public void setCapturedAt(Instant capturedAt) {
