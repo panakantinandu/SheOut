@@ -114,6 +114,14 @@ public class BookingController {
         return ResponseEntity.ok(new FareQuoteResponse(
                 quote.amount(),
                 BigDecimal.valueOf(quote.distanceKm()).setScale(1, RoundingMode.HALF_UP),
+                BigDecimal.valueOf(quote.durationMinutes()).setScale(0, RoundingMode.HALF_UP),
+                quote.routed(),
+                quote.baseFare(),
+                quote.distanceCharge(),
+                quote.timeCharge(),
+                quote.surgeMultiplier(),
+                quote.nightMultiplier(),
+                quote.minimumFareApplied(),
                 request.category()));
     }
 
@@ -320,18 +328,36 @@ public class BookingController {
     }
 
     /**
-     * distanceKm is the straight-line distance the fare was derived from,
-     * rounded to one decimal for display. It is not a routed distance - see
-     * DistanceBasedFareCalculator.
+     * The price and how it was reached.
+     * <p>
+     * distanceKm is real road distance now, not the straight line it used to
+     * be, rounded to one decimal for display.
      * <p>
      * A single amount, not a range. The mockup shows "₹42 - 58", but this
      * calculator is deterministic: there is no spread to report, and
      * inventing one would imply a variability the pricing does not have and
      * would not match the fare the booking is then created with.
+     * <p>
+     * The breakdown is returned, not just the total, because a rider asking
+     * why a short trip cost what it did deserves an answer, and because the
+     * same shape is what a partner's payout breakdown will be built from.
+     * A single number invites the suspicion that it was made up.
+     * <p>
+     * routed says whether the distance is a real road route or a fallback
+     * estimate. It is surfaced rather than hidden so a fare built on a guess
+     * is never mistaken for one built on a measurement.
      */
     public record FareQuoteResponse(
             BigDecimal fareEstimate,
             BigDecimal distanceKm,
+            BigDecimal durationMinutes,
+            boolean routed,
+            BigDecimal baseFare,
+            BigDecimal distanceCharge,
+            BigDecimal timeCharge,
+            BigDecimal surgeMultiplier,
+            BigDecimal nightMultiplier,
+            boolean minimumFareApplied,
             BookingCategory category
     ) {
     }

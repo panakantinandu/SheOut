@@ -201,6 +201,43 @@ sheout:
     # this never moves the deadline of a search already in flight.
     search-timeout-seconds: ${SEARCH_TIMEOUT_SECONDS:90}
 
+  # Pricing lives entirely in configuration - there is not a rupee value in
+  # the fare code. Every default below is a STARTING HYPOTHESIS shaped from
+  # Rapido's published Hyderabad structure, not a final price: none of it
+  # has been checked against what it actually costs a woman here to run a
+  # scooter for an hour, and the first real driver feedback should move it.
+  #
+  # The individual rates are read as flat env vars (BIKE_PER_KM_RATE and so
+  # on - see FareConfiguration) rather than nested keys, so whoever is
+  # changing a price under pressure can find the name.
+  fare:
+    # Night windows are wall-clock, so they need a wall clock. Render runs
+    # in UTC; reading a 22:00-06:00 window in UTC would apply the night
+    # surcharge over breakfast and nothing at midnight.
+    timezone: ${FARE_TIMEZONE:Asia/Kolkata}
+
+  routing:
+    # Real road distance and duration, from OSRM - open source, built on the
+    # same OpenStreetMap data the maps and address search already use, so no
+    # new vendor and no API key.
+    #
+    # THE PUBLIC DEMO SERVER IS A DEBT. router.project-osrm.org is run by
+    # the OSRM project as a demonstration: documented rate limits, no uptime
+    # guarantee, no support, and a usage policy that does not contemplate a
+    # commercial service pricing its trips on it. Fine for development and a
+    # small launch; not fine as the thing every fare in the city depends on.
+    # The fix is to self-host - OSRM ships a Docker image and a
+    # Hyderabad-sized extract is modest - once real traffic justifies the
+    # instance. Point this at it and nothing else changes.
+    osrm-base-url: ${OSRM_BASE_URL:https://router.project-osrm.org}
+    timeout-ms: ${ROUTING_TIMEOUT_MS:4000}
+    # Used only when routing is unavailable. A rider must still be able to
+    # book when a volunteer-run server is rate-limiting us, so the fallback
+    # scales the straight line rather than refusing the trip. Erring high is
+    # deliberate: the error then costs the rider a little, not the partner.
+    road-distance-factor: ${ROAD_DISTANCE_FACTOR:1.4}
+    fallback-speed-kmph: ${FALLBACK_SPEED_KMPH:22}
+
   payments:
     razorpay:
       key-id: ${RAZORPAY_KEY_ID:}

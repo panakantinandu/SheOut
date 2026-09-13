@@ -5,6 +5,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -67,6 +68,31 @@ public class GlobalExceptionHandler {
                 List.of()
         );
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    /**
+     * A body sent as the wrong content type, or with none at all.
+     * <p>
+     * Same family as the unreadable body above, and found the same way: the
+     * multipart photo upload answered a bodyless request with a 500 saying
+     * "Content-Type is not supported". That is the caller's mistake reported
+     * as the server's fault, and it makes a genuine server fault impossible
+     * to spot in the logs among the noise.
+     */
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ApiErrorResponse> handleUnsupportedMediaType(HttpMediaTypeNotSupportedException ex,
+                                                                        HttpServletRequest request) {
+        log.debug("Unsupported content type on {}", request.getRequestURI(), ex);
+        ApiErrorResponse body = ApiErrorResponse.of(
+                HttpStatus.UNSUPPORTED_MEDIA_TYPE.value(),
+                "Unsupported Media Type",
+                ex.getSupportedMediaTypes().isEmpty()
+                        ? "This request was sent with a content type this endpoint does not accept"
+                        : "This endpoint accepts " + ex.getSupportedMediaTypes(),
+                request.getRequestURI(),
+                List.of()
+        );
+        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).body(body);
     }
 
     @ExceptionHandler(ApiException.class)

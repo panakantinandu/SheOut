@@ -128,6 +128,86 @@ services:
       - key: SUPPORT_PHONE_NUMBER
         sync: false
 
+      # --- Fare engine ---
+      #
+      # Pricing is entirely configuration: there is not a rupee value in the
+      # fare code, so a rate can change without a redeploy. That matters -
+      # "we cannot change the price until the next release" is not an answer
+      # to a partner who says a rate does not cover her fuel.
+      #
+      # These are a STARTING HYPOTHESIS shaped from Rapido's published
+      # Hyderabad structure, NOT a final price. Nothing here has been checked
+      # against real costs, and the first driver feedback should move it.
+      #
+      # fare = base + (perKm x km) + (perMinute x min), x surge, x night if
+      # inside the window, then floored at the minimum.
+      - key: BIKE_BASE_FARE
+        value: "22.00"
+      - key: BIKE_PER_KM_RATE
+        value: "9.00"
+      - key: BIKE_PER_MINUTE_RATE
+        value: "1.20"
+      - key: BIKE_MINIMUM_FARE
+        value: "37.00"
+      - key: BIKE_NIGHT_MULTIPLIER
+        value: "1.30"
+      - key: BIKE_NIGHT_WINDOW_START
+        value: "22:00"
+      - key: BIKE_NIGHT_WINDOW_END
+        value: "06:00"
+      # The slot real demand-based surge will fill. 1.00 means no surge.
+      - key: BIKE_SURGE_MULTIPLIER
+        value: "1.00"
+
+      # A parcel carries no passenger, so time in traffic costs a partner
+      # less than carrying somebody through it.
+      - key: PARCEL_BASE_FARE
+        value: "25.00"
+      - key: PARCEL_PER_KM_RATE
+        value: "10.00"
+      - key: PARCEL_PER_MINUTE_RATE
+        value: "1.00"
+      - key: PARCEL_MINIMUM_FARE
+        value: "40.00"
+      - key: PARCEL_NIGHT_MULTIPLIER
+        value: "1.30"
+      - key: PARCEL_NIGHT_WINDOW_START
+        value: "22:00"
+      - key: PARCEL_NIGHT_WINDOW_END
+        value: "06:00"
+      - key: PARCEL_SURGE_MULTIPLIER
+        value: "1.00"
+
+      # Night windows are wall-clock and this service runs in UTC. Without
+      # this, a 22:00-06:00 window would apply the surcharge from 03:30 to
+      # 11:30 local - over breakfast, and not at midnight.
+      - key: FARE_TIMEZONE
+        value: Asia/Kolkata
+
+      # Real road distance and duration, from OSRM. THE PUBLIC DEMO SERVER
+      # IS A DEBT: documented rate limits, no uptime guarantee, no support,
+      # and a usage policy that does not contemplate a commercial service
+      # pricing its trips on it. Self-host (it ships a Docker image) once
+      # real traffic justifies the instance, then point this at it.
+      - key: OSRM_BASE_URL
+        value: https://router.project-osrm.org
+      - key: ROUTING_TIMEOUT_MS
+        value: "4000"
+      # Used only when routing is unavailable, so a rider can still book
+      # rather than being refused. Erring high is deliberate: the error then
+      # costs the rider a little, not the partner.
+      - key: ROAD_DISTANCE_FACTOR
+        value: "1.4"
+      - key: FALLBACK_SPEED_KMPH
+        value: "22"
+
+      # What the platform keeps of each captured fare. The rider pays the
+      # full fare she was quoted; this comes out of it and is recorded, so
+      # the margin is never silently folded into a higher price and a
+      # partner can be shown her own breakdown.
+      - key: PLATFORM_COMMISSION_PERCENT
+        value: "18.00"
+
       # Total time dispatch may spend hunting for a driver for one booking,
       # across every retry round and radius expansion. NOT the per-offer
       # accept window - that bounds one driver answering one offer. They

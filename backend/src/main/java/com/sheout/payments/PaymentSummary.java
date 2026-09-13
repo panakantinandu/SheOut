@@ -21,6 +21,17 @@ public record PaymentSummary(
         String razorpayOrderId,
         String razorpayPaymentId,
         String failureReason,
+        /**
+         * What the partner receives, and the rate that produced it.
+         * <p>
+         * Both null until the payment is captured - nothing is owed to
+         * anyone before the rider has paid. Kept alongside the full amount
+         * rather than replacing it: the rider's price and the platform's
+         * margin are two separate numbers, and a partner is entitled to see
+         * both rather than being told only what is left.
+         */
+        BigDecimal driverPayout,
+        BigDecimal commissionPercent,
         Instant createdAt,
         Instant updatedAt,
         Instant capturedAt

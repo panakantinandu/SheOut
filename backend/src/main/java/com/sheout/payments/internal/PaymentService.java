@@ -33,10 +33,13 @@ public class PaymentService implements PaymentApi {
 
     private final PaymentRepository paymentRepository;
     private final PaymentGateway paymentGateway;
+    private final PlatformCommission platformCommission;
 
-    public PaymentService(PaymentRepository paymentRepository, PaymentGateway paymentGateway) {
+    public PaymentService(PaymentRepository paymentRepository, PaymentGateway paymentGateway,
+                          PlatformCommission platformCommission) {
         this.paymentRepository = paymentRepository;
         this.paymentGateway = paymentGateway;
+        this.platformCommission = platformCommission;
     }
 
     @Override
@@ -68,6 +71,11 @@ public class PaymentService implements PaymentApi {
         payment.setStatus(PaymentStatus.CAPTURED);
         payment.setCapturedAt(Instant.now());
         payment.setFailureReason(null);
+        // The rider paid the full fare; this records what of it is the
+        // partner's, and at what rate. Both numbers stay on the row rather
+        // than the margin being folded into the price - see
+        // PlatformCommission.
+        payment.recordSettlement(platformCommission.payoutFrom(payment.getAmount()), platformCommission.percent());
         paymentRepository.save(payment);
         return Result.success(toSummary(payment));
     }
@@ -140,6 +148,10 @@ public class PaymentService implements PaymentApi {
         if (captured) {
             payment.setStatus(PaymentStatus.CAPTURED);
             payment.setCapturedAt(Instant.now());
+            // Same settlement on the gateway path as on the cash one. Two
+            // ways to pay must not mean two different answers to what a
+            // partner earned.
+            payment.recordSettlement(platformCommission.payoutFrom(payment.getAmount()), platformCommission.percent());
         } else {
             payment.setStatus(PaymentStatus.FAILED);
             payment.setFailureReason(failureReason);
@@ -187,6 +199,8 @@ public class PaymentService implements PaymentApi {
                 payment.getRazorpayOrderId(),
                 payment.getRazorpayPaymentId(),
                 payment.getFailureReason(),
+                payment.getDriverPayout(),
+                payment.getCommissionPercent(),
                 payment.getCreatedAt(),
                 payment.getUpdatedAt(),
                 payment.getCapturedAt()
