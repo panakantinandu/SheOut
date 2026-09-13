@@ -696,3 +696,44 @@ an SOS call is not an acceptable trade-off at any pre-launch stage.
 - An embedded/Testcontainers substitute for backend tests - the one
   context-load test needs a real local Postgres + Redis running (e.g.
   `docker compose up postgres redis`) to pass.
+
+## Licence and use
+
+**SheOut is proprietary. All rights reserved.** See [LICENSE](LICENSE).
+
+This repository is public so the work can be read and evaluated. That is
+the only thing it grants. Readable source is not public-domain source:
+using, copying, modifying, deploying or selling any part of this requires
+written permission. Ask, and it may well be given -
+nandupanakanti@gmail.com.
+
+**This repository will be made private before launch.** While it is
+public, treat every commit as world-readable forever, including anything
+pasted into a commit message. No credential has ever been committed here
+and none should start now: real values live in the Render and Vercel
+dashboards, and `.env` is gitignored.
+
+[NOTICE](NOTICE) lists the third-party attributions that must be
+preserved. The OpenStreetMap credit on the map is one of them - it is an
+ODbL licence obligation, not decoration, and the Leaflet attribution
+control that renders it must not be removed.
+
+[SECURITY.md](SECURITY.md) is how to report a vulnerability. Privately,
+by email, never as a public issue - this service is live and handles
+women's home addresses, live locations and identity documents.
+
+[CONTRIBUTING.md](CONTRIBUTING.md) explains why pull requests are not
+accepted, and what is genuinely welcome instead.
+
+### Still outstanding before launch
+
+The in-app privacy policy and terms
+(`frontend/design-system/src/legal/content.ts`) are written against what
+the code actually does, but carry visible `[to be completed by SheOut]`
+placeholders for facts only a registered business can supply: the
+registered entity and address, the grievance officer India's DPDP Act
+requires of an intermediary, and the data retention periods the business
+is willing to commit to. They are blank deliberately - inventing them
+would turn an honest draft into a misrepresentation that real users rely
+on. The copyright holder named in `LICENSE` and `NOTICE` should be
+updated to the registered company at the same time.

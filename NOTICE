@@ -1,0 +1,85 @@
+SheOut - Third-Party Notices
+Copyright (c) 2026 Nandu Panakanti. All rights reserved. See LICENSE.
+
+This product includes third-party software, map data and services. Each is
+governed by its own licence and terms, which are NOT superseded by the
+LICENSE file in this repository. The obligations below travel with the
+product: they apply to anyone who builds, deploys or distributes it.
+
+========================================================================
+MAP DATA AND GEOCODING - ATTRIBUTION IS MANDATORY
+========================================================================
+
+OpenStreetMap
+  Map data (c) OpenStreetMap contributors.
+  Licensed under the Open Database Licence (ODbL) 1.0.
+  https://www.openstreetmap.org/copyright
+
+  This is a licence obligation, not a courtesy. The credit
+  "(c) OpenStreetMap contributors" must remain visible on every map the
+  product shows. It is currently rendered by Leaflet's attribution control
+  in the shared LiveMap component.
+
+  DO NOT remove or hide that control to tidy up a screen. Doing so puts
+  the product in breach of ODbL.
+
+OpenStreetMap tile servers
+  Tiles served from tile.openstreetmap.org under the OSM Foundation Tile
+  Usage Policy: https://operations.osmfoundation.org/policies/tiles/
+
+  The policy covers a volunteer-funded service and forbids heavy or
+  commercial bulk use. A launched product at real traffic is expected to
+  move to a paid tile provider or self-host. Treat the current setup as
+  suitable for development and demonstration only.
+
+Nominatim (address search and reverse geocoding)
+  Usage policy: https://operations.osmfoundation.org/policies/nominatim/
+
+  Requires an identifying User-Agent or Referer on every request and no
+  more than one request per second. The client honours both: a shared
+  throttle enforces the rate limit across search and reverse lookups, and
+  requests are debounced so typing does not fire one per keystroke.
+
+  DO NOT raise that rate or remove the throttle. The public endpoint is
+  also not intended for a production product at volume; a launch needs a
+  self-hosted instance or a commercial geocoder.
+
+========================================================================
+LIBRARIES
+========================================================================
+
+Frontend
+  leaflet                 BSD-2-Clause      (c) Vladimir Agafonkin, CloudMade
+  react, react-dom        MIT               (c) Meta Platforms, Inc.
+  react-router-dom        MIT               (c) Remix Software Inc.
+  lucide-react            ISC               (c) Lucide Contributors
+  clsx                    MIT               (c) Luke Edwards
+  tailwindcss             MIT               (c) Tailwind Labs, Inc.
+  vite                    MIT               (c) Evan You and contributors
+
+Backend
+  Spring Boot / Spring Framework    Apache-2.0   (c) VMware, Inc. and
+                                                 Broadcom
+  Hibernate ORM                     LGPL-2.1 or Apache-2.0
+  PostgreSQL JDBC driver            BSD-2-Clause
+  Flyway                            Apache-2.0   (c) Red Gate Software
+  Lettuce / Spring Data Redis       Apache-2.0
+
+Services integrated at runtime, each under its own commercial terms:
+Twilio (SMS), Razorpay (payments), Firebase (push, not yet implemented),
+Amazon S3 (document storage, optional).
+
+The authoritative and complete dependency lists are the manifests
+themselves - backend/pom.xml and the package.json files under frontend/ -
+together with their resolved lock files. This file records the
+attributions a reader or deployer must preserve; it is not a substitute
+for a generated bill of materials, which a launch should produce.
+
+========================================================================
+NOT INCLUDED
+========================================================================
+
+No third-party code has been copied into this repository. Every
+dependency above is fetched by Maven or npm at build time and none is
+vendored, so nothing here carries an inbound copyleft obligation on
+SheOut's own source.
