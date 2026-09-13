@@ -2,6 +2,7 @@ import { ArrowRight, Bike, Clock, MapPinned, Package, ShieldAlert, Wallet as Wal
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { brandIllustration, Card, IconCircle, ListRow, TopHeader } from '@sheout/design-system';
+import { OutOfAreaBanner } from '../components/OutOfAreaBanner';
 import { usersApi } from '../api/client';
 import type { CustomerProfileSummary } from '../api/types';
 import { ThreeWomen } from '../components/ThreeWomen';
@@ -49,6 +50,11 @@ export function Home() {
         // Real notification history - see the Notifications screen.
         onBellClick={() => navigate('/notifications')}
       />
+
+      {/* Said up front rather than after she has chosen a pickup. A
+          notice, not a block: the trip's pickup and drop are what decide
+          whether it can be booked, not where her phone is. */}
+      <OutOfAreaBanner />
 
       {/* The mockup puts a woman-in-helmet graphic on the banner's right.
           Reusing the existing brand illustration (a woman in a helmet on a

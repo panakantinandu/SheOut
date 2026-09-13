@@ -22,6 +22,7 @@ import com.sheout.driververification.VerificationApi;
 import com.sheout.driververification.VerificationStatus;
 import com.sheout.driververification.VerificationSummary;
 import com.sheout.sharedkernel.Result;
+import com.sheout.sharedkernel.geo.ServiceArea;
 import com.sheout.sharedkernel.event.DomainEventPublisher;
 import org.springframework.beans.factory.annotation.Value;
 import com.sheout.booking.BookingQuery;
@@ -91,7 +92,7 @@ public class BookingService implements BookingApi {
      * apart, and so no caller can reach a booking without passing it.
      */
     private boolean withinServiceArea(GeoAddress pickup, GeoAddress drop) {
-        return serviceArea.covers(pickup) && serviceArea.covers(drop);
+        return serviceArea.covers(pickup.lat(), pickup.lng()) && serviceArea.covers(drop.lat(), drop.lng());
     }
 
     @Override

@@ -5,6 +5,7 @@ import com.sheout.auth.CurrentAccount;
 import com.sheout.auth.CurrentAccountContext;
 import com.sheout.sharedkernel.Result;
 import com.sheout.sharedkernel.storage.DocumentUpload;
+import com.sheout.sharedkernel.geo.ServiceArea;
 import com.sheout.sharedkernel.web.ApiException;
 import com.sheout.users.DriverProfileSummary;
 import com.sheout.users.OnlineStatus;
@@ -14,6 +15,8 @@ import com.sheout.users.internal.VehicleRegistrationNumber;
 import com.sheout.users.internal.DriverProfileService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
@@ -33,9 +36,12 @@ import java.io.IOException;
 public class DriverProfileController {
 
     private final DriverProfileService driverProfileService;
+    /** Only to name the boundary in the refusal message - the check itself is in the service. */
+    private final ServiceArea serviceArea;
 
-    public DriverProfileController(DriverProfileService driverProfileService) {
+    public DriverProfileController(DriverProfileService driverProfileService, ServiceArea serviceArea) {
         this.driverProfileService = driverProfileService;
+        this.serviceArea = serviceArea;
     }
 
     @GetMapping("/api/v1/users/driver/me")
@@ -93,12 +99,27 @@ public class DriverProfileController {
         }
     }
 
-    /** The gated write - see DriverProfileService.setOnlineStatus. */
+    /**
+     * The gated write - see DriverProfileService.setOnlineStatus.
+     * <p>
+     * Going ONLINE now carries where she is. It is required for that
+     * direction and ignored for the other: "put me in the queue for trips
+     * near me" is unanswerable without a position, while stopping work is
+     * something she must be able to do from anywhere, always.
+     * <p>
+     * The coordinates come from the app rather than from dispatch's location
+     * store, which would have meant this module depending on dispatch while
+     * dispatch already depends on this one. A modified client could of
+     * course send whatever it likes - but the check that actually costs
+     * anything to evade is dispatch's own radius search, which will never
+     * offer a Hyderabad booking to a phone in Texas no matter what it
+     * claims. This one exists to tell an honest partner the truth.
+     */
     @PostMapping("/api/v1/users/driver/me/status")
     public ResponseEntity<DriverProfileSummary> setStatus(@Valid @RequestBody SetStatusRequest request) {
         CurrentAccount caller = requireDriver();
         Result<DriverProfileSummary, DriverProfileError> result =
-                driverProfileService.setOnlineStatus(caller.accountId(), request.status());
+                driverProfileService.setOnlineStatus(caller.accountId(), request.status(), request.lat(), request.lng());
         if (result.isFailure()) {
             throw toApiException(result.error());
         }
@@ -143,6 +164,16 @@ public class DriverProfileController {
                     HttpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error",
                     "Could not save that photo. Please try again."
             );
+            // Names the city rather than saying "outside our service area",
+            // which tells somebody nothing about where they would have to be.
+            case OUTSIDE_SERVICE_AREA -> new ApiException(
+                    HttpStatus.CONFLICT, "OUTSIDE_SERVICE_AREA",
+                    "You are outside SheOut's service area. We currently operate only within "
+                            + Math.round(serviceArea.radiusKm()) + "km of " + serviceArea.centreName()
+                            + ", so there are no trips to send you here.");
+            case LOCATION_REQUIRED -> new ApiException(
+                    HttpStatus.BAD_REQUEST, "LOCATION_REQUIRED",
+                    "We need your location to send you nearby trips. Allow location access and try again.");
         };
     }
 
@@ -153,6 +184,17 @@ public class DriverProfileController {
     ) {
     }
 
-    public record SetStatusRequest(@NotNull OnlineStatus status) {
+    /**
+     * lat/lng are optional at the wire level and required by the service for
+     * ONLINE only. Left nullable here on purpose: a bean-validation failure
+     * would come back as a generic 400 about a missing field, where the
+     * service answers with LOCATION_REQUIRED and a sentence a partner can
+     * act on.
+     */
+    public record SetStatusRequest(
+            @NotNull OnlineStatus status,
+            @DecimalMin("-90") @DecimalMax("90") Double lat,
+            @DecimalMin("-180") @DecimalMax("180") Double lng
+    ) {
     }
 }

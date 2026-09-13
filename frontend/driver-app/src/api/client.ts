@@ -176,8 +176,26 @@ export const usersApi = {
     return request('/api/v1/users/driver/me/photo', { method: 'POST', body: form });
   },
 
-  setOnlineStatus(status: DriverOnlineStatus): Promise<DriverProfileSummary> {
-    return request('/api/v1/users/driver/me/status', { method: 'POST', body: { status } });
+  /**
+   * Going ONLINE carries where she is; going OFFLINE does not and must not.
+   * <p>
+   * SheOut operates in one city, and "offer me trips near me" cannot be
+   * answered without a position - this used to succeed from anywhere on
+   * earth, leaving a partner reading "Looking for ride requests nearby"
+   * thousands of kilometres from the nearest possible rider. Refused as 409
+   * OUTSIDE_SERVICE_AREA, or 400 LOCATION_REQUIRED when no fix was sent.
+   * <p>
+   * Stopping work asks for nothing. A partner must be able to go offline
+   * anywhere, including with location switched off.
+   */
+  setOnlineStatus(
+    status: DriverOnlineStatus,
+    at?: { lat: number; lng: number }
+  ): Promise<DriverProfileSummary> {
+    return request('/api/v1/users/driver/me/status', {
+      method: 'POST',
+      body: { status, lat: at?.lat, lng: at?.lng },
+    });
   },
 };
 
