@@ -6,8 +6,8 @@ import com.sheout.driververification.AccountVerified;
 import com.sheout.driververification.VerificationApi;
 import com.sheout.driververification.VerificationStatus;
 import com.sheout.driververification.VerificationSummary;
-import com.sheout.driververification.internal.storage.DocumentStorage;
-import com.sheout.driververification.internal.storage.DocumentUpload;
+import com.sheout.sharedkernel.storage.DocumentStorage;
+import com.sheout.sharedkernel.storage.DocumentUpload;
 import com.sheout.sharedkernel.Result;
 import com.sheout.sharedkernel.event.DomainEventPublisher;
 import org.springframework.context.event.EventListener;
@@ -44,22 +44,48 @@ public class VerificationService implements VerificationApi {
         repository.save(new VerificationRecordEntity(event.accountId(), event.role()));
     }
 
+    /**
+     * Takes the identity document, and for a partner the vehicle's
+     * registration certificate alongside it.
+     * <p>
+     * Both land in one call because they are evidence for one decision. Two
+     * separate endpoints would let a partner submit half her case and sit in
+     * the queue as a row an operator cannot action.
+     */
     @Transactional
-    public Result<VerificationSummary, VerificationError> submitDocument(UUID accountId, DocumentUpload upload) {
+    public Result<VerificationSummary, VerificationError> submitDocument(
+            UUID accountId, DocumentUpload upload, DocumentUpload rcUpload) {
         Optional<VerificationRecordEntity> found = repository.findByAccountId(accountId);
         if (found.isEmpty()) {
             return Result.failure(VerificationError.RECORD_NOT_FOUND);
         }
         VerificationRecordEntity record = found.get();
 
+        // Partners submit two documents, riders one, and the difference is
+        // not an inconsistency: an operator reviewing a partner has to check
+        // the registration number she typed against the vehicle she actually
+        // owns, and there is nothing to cross-check for a rider who has no
+        // vehicle. Asking a rider for an RC would be asking for a document
+        // she cannot have.
+        if (record.getRole() == AccountRole.DRIVER && rcUpload == null) {
+            return Result.failure(VerificationError.RC_DOCUMENT_REQUIRED);
+        }
+
         String storageKey;
+        String rcStorageKey = null;
         try {
             storageKey = documentStorage.store(accountId, "aadhaar", upload);
+            if (rcUpload != null) {
+                rcStorageKey = documentStorage.store(accountId, "rc", rcUpload);
+            }
         } catch (RuntimeException ex) {
             return Result.failure(VerificationError.STORAGE_FAILED);
         }
 
         record.setAadhaarDocumentKey(storageKey);
+        if (rcStorageKey != null) {
+            record.setRcDocumentKey(rcStorageKey);
+        }
         if (record.getGenderVerificationStatus() == VerificationStatus.PENDING
                 || record.getGenderVerificationStatus() == VerificationStatus.REJECTED) {
             record.setGenderVerificationStatus(VerificationStatus.UNDER_REVIEW);
@@ -140,6 +166,13 @@ public class VerificationService implements VerificationApi {
     public Optional<String> findDocumentUrl(UUID accountId) {
         return repository.findByAccountId(accountId)
                 .map(VerificationRecordEntity::getAadhaarDocumentKey)
+                .map(documentStorage::resolveUrl);
+    }
+
+    @Override
+    public Optional<String> findRcDocumentUrl(UUID accountId) {
+        return repository.findByAccountId(accountId)
+                .map(VerificationRecordEntity::getRcDocumentKey)
                 .map(documentStorage::resolveUrl);
     }
 

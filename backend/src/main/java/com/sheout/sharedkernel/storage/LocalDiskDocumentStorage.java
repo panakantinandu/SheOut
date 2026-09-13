@@ -1,4 +1,4 @@
-package com.sheout.driververification.internal.storage;
+package com.sheout.sharedkernel.storage;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;

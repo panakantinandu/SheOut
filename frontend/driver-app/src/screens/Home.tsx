@@ -219,6 +219,15 @@ export function Home() {
       const updated = await usersApi.setOnlineStatus(isOnline ? 'OFFLINE' : 'ONLINE');
       setProfile(updated);
     } catch (err) {
+      // A missing photo is the one refusal she can fix herself, in under a
+      // minute, so it goes straight to the screen that fixes it rather than
+      // leaving her reading an error on a page with no way forward. The
+      // backend gives it its own machine code precisely so this is possible.
+      if (err instanceof ApiError && err.body?.error === 'PROFILE_PHOTO_REQUIRED') {
+        navigate('/profile');
+        setError(err.message);
+        return;
+      }
       setError(err instanceof ApiError ? err.message : 'Could not update status');
     } finally {
       setTogglingOnline(false);

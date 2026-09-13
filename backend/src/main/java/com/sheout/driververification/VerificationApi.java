@@ -58,4 +58,15 @@ public interface VerificationApi {
      * nothing with it anyway.
      */
     Optional<String> findDocumentUrl(UUID accountId);
+
+    /**
+     * The vehicle registration certificate photo for this account, or empty
+     * if none was submitted - which is every rider, and every partner whose
+     * account predates the requirement.
+     * <p>
+     * A second method rather than widening the one above, so a caller that
+     * only wants the identity document is not handed the other by accident.
+     * An operator reads them together; nothing else should read either.
+     */
+    Optional<String> findRcDocumentUrl(UUID accountId);
 }

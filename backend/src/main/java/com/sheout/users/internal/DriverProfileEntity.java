@@ -32,6 +32,14 @@ public class DriverProfileEntity extends BaseEntity {
     @Column(length = 20)
     private String vehicleRegistrationNumber;
 
+    /**
+     * Storage key for the photo a rider sees, not a URL - see V12. Null on
+     * accounts that predate the requirement, which both apps render as a
+     * silhouette rather than a broken image.
+     */
+    @Column(length = 500)
+    private String profilePhotoKey;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private OnlineStatus onlineStatus = OnlineStatus.OFFLINE;
@@ -114,6 +122,19 @@ public class DriverProfileEntity extends BaseEntity {
 
     public void setVehicleRegistrationNumber(String vehicleRegistrationNumber) {
         this.vehicleRegistrationNumber = vehicleRegistrationNumber;
+    }
+
+    public String getProfilePhotoKey() {
+        return profilePhotoKey;
+    }
+
+    public void setProfilePhotoKey(String profilePhotoKey) {
+        this.profilePhotoKey = profilePhotoKey;
+    }
+
+    /** Whether this partner has the photo a rider is entitled to see before getting in. */
+    public boolean hasProfilePhoto() {
+        return profilePhotoKey != null && !profilePhotoKey.isBlank();
     }
 
     public OnlineStatus getOnlineStatus() {

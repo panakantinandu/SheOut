@@ -33,6 +33,12 @@ export interface DriverProfileSummary {
   vehicleRegistrationNumber: string | null;
   onlineStatus: DriverOnlineStatus;
   verified: boolean;
+  /**
+   * Null until she uploads one. Required before going online for the first
+   * time, and rendered as a silhouette rather than a broken image until
+   * then.
+   */
+  profilePhotoUrl: string | null;
   updatedAt: string;
 }
 
@@ -173,6 +179,21 @@ export interface Rating {
 
 /** averageStars is null when the account has never been rated - not the same as a low score. */
 export interface AggregateRating {
+  averageStars: number | null;
+  totalRatings: number;
+}
+
+/**
+ * The assigned partner, as a rider is allowed to see her.
+ * Served only from ACCEPTED onwards - never during MATCHED.
+ */
+export interface AssignedDriver {
+  name: string | null;
+  /** Null when she has no photo yet; render a silhouette, never a broken image. */
+  photoUrl: string | null;
+  vehicleType: VehicleType | null;
+  vehicleRegistrationNumber: string | null;
+  /** Null when nobody has rated her - not the same as a low score. */
   averageStars: number | null;
   totalRatings: number;
 }

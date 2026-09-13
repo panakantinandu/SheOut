@@ -1,4 +1,4 @@
-package com.sheout.driververification.internal.storage;
+package com.sheout.sharedkernel.storage;
 
 /**
  * Storage-agnostic representation of an uploaded file - deliberately not

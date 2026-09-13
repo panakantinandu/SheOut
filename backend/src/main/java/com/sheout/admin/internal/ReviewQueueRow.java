@@ -20,6 +20,12 @@ public record ReviewQueueRow(
         VerificationStatus genderVerificationStatus,
         VerificationStatus policeVerificationStatus,
         boolean documentSubmitted,
+        /**
+         * The number the partner typed, so an operator can read it against
+         * the RC photo without leaving the review. Null for riders, who have
+         * no vehicle, and for a partner who has not filled her profile in.
+         */
+        String vehicleRegistrationNumber,
         Instant updatedAt,
         /** Shown as a badge in the queue: reviewing a blocked account is almost always a mistake. */
         boolean blocked

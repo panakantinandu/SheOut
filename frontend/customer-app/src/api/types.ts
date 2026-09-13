@@ -236,3 +236,21 @@ export interface AggregateRating {
 export interface SearchConfig {
   searchTimeoutSeconds: number;
 }
+
+/** The vehicle a partner drives. Mirrors the backend enum. */
+export type VehicleType = 'BIKE' | 'AUTO' | 'CAB';
+
+/**
+ * The assigned partner, as a rider is allowed to see her.
+ * Served only from ACCEPTED onwards - never during MATCHED.
+ */
+export interface AssignedDriver {
+  name: string | null;
+  /** Null when she has no photo yet; render a silhouette, never a broken image. */
+  photoUrl: string | null;
+  vehicleType: VehicleType | null;
+  vehicleRegistrationNumber: string | null;
+  /** Null when nobody has rated her - not the same as a low score. */
+  averageStars: number | null;
+  totalRatings: number;
+}

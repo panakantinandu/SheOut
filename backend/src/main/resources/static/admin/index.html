@@ -257,6 +257,13 @@
   .doc img { display: block; width: 100%; max-height: 330px; object-fit: contain; background: #fff; }
   .doc .fallback { padding: 16px; font-size: 12.5px; color: var(--muted); }
   .doc .fallback code { word-break: break-all; background: #fff; padding: 2px 5px; border-radius: 4px; border: 1px solid var(--line); }
+  /* Side by side, because the whole point is reading one against the other.
+     Stacks on a narrow window rather than squeezing both into unreadable
+     columns. */
+  .docs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 4px; }
+  @media (max-width: 900px) { .docs { grid-template-columns: 1fr; } }
+  .doc-label { font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
+  .doc-hint { font-weight: 400; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 
   /* ---------- toasts ---------- */
   .toasts { position: fixed; right: 18px; bottom: 18px; z-index: 60; display: flex; flex-direction: column; gap: 9px; max-width: 380px; }
@@ -1130,6 +1137,51 @@ function ratingCell(stats) {
  * exposes them as two endpoints and they are genuinely two decisions - an ID
  * can be fine while a police record is still outstanding.
  */
+/**
+ * Draws one stored document into a box, whatever the storage backend hands
+ * back.
+ *
+ * Extracted so both documents render identically. It used to be inline for
+ * the single document, and duplicating it for the second would have meant
+ * two copies of the escaping rules below - which is exactly the kind of
+ * thing that stays right in one copy and drifts in the other.
+ *
+ * Built with DOM calls and a real listener rather than an onerror attribute
+ * containing a JS string containing more markup. That nesting meant the
+ * document URL had to survive three escaping contexts at once, and any one
+ * of them getting it wrong would run whatever the URL said inside a
+ * signed-in admin's session. Nothing is interpolated into markup here.
+ */
+function renderDocument(box, url, alt) {
+  if (!box) return;
+  // Local deployments store documents on disk and hand back a file:// URL,
+  // which a browser will not render from a page. Show the image when it can
+  // be shown and the path when it cannot, rather than an empty frame that
+  // looks broken.
+  if (String(url || '').startsWith('file:')) {
+    box.innerHTML = `<div class="fallback">Stored on the server's local disk, which a browser cannot display directly.<br><code>${esc(url)}</code></div>`;
+    return;
+  }
+  box.textContent = '';
+  const img = document.createElement('img');
+  img.alt = alt;
+  img.addEventListener('error', () => {
+    const fallback = document.createElement('div');
+    fallback.className = 'fallback';
+    fallback.append('Could not load this image. ');
+    const link = document.createElement('a');
+    link.href = url;
+    link.target = '_blank';
+    link.rel = 'noreferrer';
+    link.textContent = 'Open it directly';
+    fallback.append(link, '.');
+    box.textContent = '';
+    box.append(fallback);
+  });
+  img.src = url;
+  box.append(img);
+}
+
 function openDriver(r) {
   const w = waited(r.updatedAt);
   openModal(`
@@ -1145,11 +1197,32 @@ function openDriver(r) {
         ${isCustomer(r) ? '' : `<dt>Police check</dt><dd>${badge(r.policeVerificationStatus)}</dd>`}
       </dl>
 
-      <label>Submitted document</label>
-      <div class="doc" id="docBox">
-        ${r.documentSubmitted
-          ? '<div class="fallback">Loading document…</div>'
-          : '<div class="fallback">This driver has not uploaded a document yet.</div>'}
+      <!-- Both documents together, because this is one decision made from
+           two pieces of evidence: who she is, and whether the registration
+           number on her profile matches the vehicle she actually owns.
+           Making an operator open them one at a time invites approving on
+           the first without ever reading the second. -->
+      <label>Submitted documents</label>
+      <div class="docs">
+        <div>
+          <div class="doc-label">Identity document</div>
+          <div class="doc" id="docBox">
+            ${r.documentSubmitted
+              ? '<div class="fallback">Loading document…</div>'
+              : '<div class="fallback">Nothing uploaded yet.</div>'}
+          </div>
+        </div>
+        ${isCustomer(r) ? '' : `
+        <div>
+          <div class="doc-label">Vehicle RC
+            <span class="doc-hint">must match ${esc(r.vehicleRegistrationNumber || 'the number on file')}</span>
+          </div>
+          <div class="doc" id="rcBox">
+            ${r.documentSubmitted
+              ? '<div class="fallback">Loading document…</div>'
+              : '<div class="fallback">Nothing uploaded yet.</div>'}
+          </div>
+        </div>`}
       </div>
 
       <div class="check">
@@ -1184,46 +1257,24 @@ function openDriver(r) {
   if (r.documentSubmitted) {
     api(`/admin/verification/${r.accountId}/document`)
       .then(out => {
-        const box = root.querySelector('#docBox');
-        if (!box) return;
-        // Local deployments store documents on disk and hand back a file://
-        // URL, which a browser will not render from a page. Show the image
-        // when it can be shown, and the path when it cannot, rather than an
-        // empty frame that looks broken.
-        const isFile = String(out.url || '').startsWith('file:');
-        if (isFile) {
-          box.innerHTML = `<div class="fallback">This document is stored on the server's local disk, which a browser cannot display directly.<br><code>${esc(out.url)}</code></div>`;
-          return;
+        renderDocument(root.querySelector('#docBox'), out.url, 'Submitted identity document');
+        const rcBox = root.querySelector('#rcBox');
+        if (!rcBox) return;
+        if (out.rcUrl) {
+          renderDocument(rcBox, out.rcUrl, 'Vehicle registration certificate');
+        } else {
+          // Says which of the two it is. A partner who submitted before the
+          // RC was required is a different case from one who skipped it, and
+          // an operator deciding whether to chase her needs to know which.
+          rcBox.innerHTML = '<div class="fallback">No RC on file. This partner submitted before it was required — ask her to re-submit both documents before approving.</div>';
         }
-        // Built with DOM calls and a real listener rather than an onerror
-        // attribute containing a JS string containing more markup. That
-        // nesting meant the document URL had to survive three escaping
-        // contexts at once, and any one of them getting it wrong would run
-        // whatever the URL said inside a signed-in admin's session. Nothing
-        // is interpolated into markup here at all.
-        box.textContent = '';
-        const img = document.createElement('img');
-        img.alt = 'Submitted identity document';
-        img.addEventListener('error', () => {
-          const fallback = document.createElement('div');
-          fallback.className = 'fallback';
-          fallback.append('Could not load the document image. ');
-          const link = document.createElement('a');
-          link.href = out.url;
-          link.target = '_blank';
-          link.rel = 'noreferrer';
-          link.textContent = 'Open it directly';
-          fallback.append(link, '.');
-          box.textContent = '';
-          box.append(fallback);
-        });
-        img.src = out.url;
-        box.append(img);
       })
       .catch(err => {
         if (err.message === 'unauthorized') return;
-        const box = root.querySelector('#docBox');
-        if (box) box.innerHTML = `<div class="fallback">Could not load the document: ${esc(err.message)}</div>`;
+        ['#docBox', '#rcBox'].forEach(sel => {
+          const box = root.querySelector(sel);
+          if (box) box.innerHTML = `<div class="fallback">Could not load the document: ${esc(err.message)}</div>`;
+        });
       });
   }
 

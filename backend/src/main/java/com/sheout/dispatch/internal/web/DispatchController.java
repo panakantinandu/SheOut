@@ -7,12 +7,17 @@ import com.sheout.booking.BookingApi;
 import com.sheout.booking.BookingCategory;
 import com.sheout.booking.BookingError;
 import com.sheout.booking.BookingParticipants;
+import com.sheout.booking.BookingStatus;
 import com.sheout.booking.BookingSummary;
 import com.sheout.booking.GeoAddress;
 import com.sheout.dispatch.internal.DispatchError;
 import com.sheout.dispatch.internal.DispatchService;
+import com.sheout.ratings.AggregateRating;
+import com.sheout.ratings.RatingsApi;
 import com.sheout.sharedkernel.Result;
 import com.sheout.sharedkernel.web.ApiException;
+import com.sheout.users.DriverProfileApi;
+import com.sheout.users.VehicleType;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
@@ -28,6 +33,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -46,12 +52,27 @@ import java.util.UUID;
 @RestController
 public class DispatchController {
 
+    /**
+     * The only statuses in which a rider may see who her partner is.
+     * <p>
+     * MATCHED is deliberately absent - see assignedDriver. COMPLETED stays
+     * in, so a rider looking back at a finished trip can still see who drove
+     * her, which she needs to raise anything about it.
+     */
+    private static final Set<BookingStatus> DRIVER_DETAILS_VISIBLE_FROM = Set.of(
+            BookingStatus.ACCEPTED, BookingStatus.IN_PROGRESS, BookingStatus.COMPLETED);
+
     private final DispatchService dispatchService;
     private final BookingApi bookingApi;
+    private final DriverProfileApi driverProfileApi;
+    private final RatingsApi ratingsApi;
 
-    public DispatchController(DispatchService dispatchService, BookingApi bookingApi) {
+    public DispatchController(DispatchService dispatchService, BookingApi bookingApi,
+                              DriverProfileApi driverProfileApi, RatingsApi ratingsApi) {
         this.dispatchService = dispatchService;
         this.bookingApi = bookingApi;
+        this.driverProfileApi = driverProfileApi;
+        this.ratingsApi = ratingsApi;
     }
 
     /**
@@ -200,7 +221,81 @@ public class DispatchController {
                 .orElseThrow(() -> ApiException.notFound("No location reported for this driver yet"));
     }
 
+    /**
+     * Who is coming to collect her: name, photo, vehicle and rating.
+     * <p>
+     * RELEASED ONLY FROM ACCEPTED ONWARDS, and that gate is the entire
+     * point of this endpoint. A booking passes through MATCHED first - a
+     * dispatch-internal state meaning a partner won the race to claim it but
+     * has not confirmed she is coming. Releasing a woman's name, face,
+     * vehicle and registration number at that moment would hand a rider the
+     * identity of somebody who may never arrive, and would do it for every
+     * partner the booking touched on its way to being accepted. The rider
+     * gains nothing from knowing that, and the partner loses something she
+     * cannot get back.
+     * <p>
+     * So the check is on the booking's status, read live, not on whether a
+     * driverId happens to be set. A driverId is set at MATCHED.
+     * <p>
+     * 404 for every refusal - not this rider's booking, no such booking, no
+     * partner assigned, or assigned but not yet accepted. The rider's own
+     * screen already knows which status it is in, so it can say "still
+     * searching" without being told anything about a person; and a caller
+     * who is not on the booking cannot tell any of these apart, which is the
+     * enumeration-safe convention the rest of this codebase follows.
+     */
+    @GetMapping("/api/v1/dispatch/bookings/{bookingId}/driver")
+    public ResponseEntity<AssignedDriverResponse> assignedDriver(@PathVariable UUID bookingId) {
+        CurrentAccount caller = CurrentAccountContext.get()
+                .orElseThrow(() -> ApiException.unauthorized("Authentication required"));
+
+        Result<BookingParticipants, BookingError> participants = bookingApi.getParticipants(bookingId);
+        if (participants.isFailure() || !caller.accountId().equals(participants.value().customerId())) {
+            throw ApiException.notFound("No such booking");
+        }
+        BookingParticipants booking = participants.value();
+        if (!DRIVER_DETAILS_VISIBLE_FROM.contains(booking.status()) || booking.driverId() == null) {
+            throw ApiException.notFound("No driver details available for this booking yet");
+        }
+
+        return driverProfileApi.findByAccountId(booking.driverId())
+                .map(profile -> {
+                    AggregateRating rating = ratingsApi.getAggregateRating(booking.driverId());
+                    return ResponseEntity.ok(new AssignedDriverResponse(
+                            profile.name(),
+                            // Null when she has no photo yet; the app draws a
+                            // silhouette rather than a broken image.
+                            profile.profilePhotoUrl(),
+                            profile.vehicleType(),
+                            profile.vehicleRegistrationNumber(),
+                            rating.averageStars(),
+                            rating.totalRatings()));
+                })
+                .orElseThrow(() -> ApiException.notFound("No driver details available for this booking yet"));
+    }
+
     /** recordedAt lets the client show staleness instead of implying a stale point is live. */
     public record DriverLocationResponse(double lat, double lng, Instant recordedAt) {
+    }
+
+    /**
+     * Everything a rider is entitled to know about her partner, and nothing
+     * more.
+     * <p>
+     * No phone number, no account id, no document, no address. Her name, her
+     * face, the vehicle to look for and how she is rated - which is what
+     * somebody about to get into a stranger's vehicle actually needs.
+     * <p>
+     * averageStars is null when nobody has rated her yet, which is not the
+     * same as a bad score and must not render as one.
+     */
+    public record AssignedDriverResponse(
+            String name,
+            String photoUrl,
+            VehicleType vehicleType,
+            String vehicleRegistrationNumber,
+            Double averageStars,
+            int totalRatings
+    ) {
     }
 }

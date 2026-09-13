@@ -8,6 +8,7 @@ import type {
   CancellationReason,
   ChatMessage,
   ChatThreadResponse,
+  AssignedDriver,
   SearchConfig,
   SupportContact,
   Rating,
@@ -240,6 +241,18 @@ export const dispatchApi = {
    */
   getSearchConfig(): Promise<SearchConfig> {
     return request('/api/v1/dispatch/search-config', { auth: false });
+  },
+
+  /**
+   * Who is coming, once she has actually accepted.
+   * <p>
+   * 404s during REQUESTED and MATCHED, and that is the server enforcing it,
+   * not this app choosing not to ask. A partner's name, face, vehicle and
+   * registration number are never released for a booking she has only been
+   * assigned and might never confirm.
+   */
+  getAssignedDriver(bookingId: string): Promise<AssignedDriver> {
+    return request(`/api/v1/dispatch/bookings/${bookingId}/driver`);
   },
 
   getDriverLocation(bookingId: string): Promise<DriverLocation> {

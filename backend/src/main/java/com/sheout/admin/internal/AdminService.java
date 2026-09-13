@@ -69,6 +69,11 @@ public class AdminService {
         return verificationApi.findDocumentUrl(accountId);
     }
 
+    /** The vehicle registration certificate, read beside the identity document during one review. */
+    public Optional<String> rcDocumentUrl(UUID accountId) {
+        return verificationApi.findRcDocumentUrl(accountId);
+    }
+
     public List<SosAlertRow> activeAlerts() {
         return sosApi.findActiveAlerts().stream()
                 .map(this::toAlertRow)
@@ -101,6 +106,10 @@ public class AdminService {
                 summary.genderVerificationStatus(),
                 summary.policeVerificationStatus(),
                 summary.documentSubmitted(),
+                summary.role() == AccountRole.DRIVER
+                        ? driverProfileApi.findByAccountId(summary.accountId())
+                                .map(p -> p.vehicleRegistrationNumber()).orElse(null)
+                        : null,
                 summary.updatedAt(),
                 isBlocked(summary.accountId())
         );

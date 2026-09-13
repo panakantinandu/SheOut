@@ -1,4 +1,4 @@
-import { CheckCircle2, Clock, FileWarning, ShieldCheck, Upload } from 'lucide-react';
+import { CheckCircle2, Clock, FileWarning, ShieldCheck, Check, Upload } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Card, IconCircle, StatusBadge, TopHeader, verificationStatusLabel } from '@sheout/design-system';
@@ -28,19 +28,33 @@ function statusLabel(status: VerificationStatus | null): string {
  * REAL: status fetched from GET /api/v1/driver-verification/me, document
  * upload posts to POST /api/v1/driver-verification/documents (multipart).
  * <p>
- * FLAGGED GAP: the backend has exactly one generic document slot (always
- * stored server-side as "aadhaar" - see VerificationService), and no
- * submission endpoint at all for police verification (admin-only, no
- * driver action possible). So this screen has one real upload button, not
- * separate ones per document type - a "vehicle documents" upload button
- * would have nothing to call, so it isn't shown as a real action.
+ * Two documents now, submitted together: the identity document and the
+ * vehicle's registration certificate. They go in one request because they
+ * are evidence for one decision - an operator reads the ID to establish who
+ * she is, and the RC to check the registration number she typed matches the
+ * vehicle she actually owns. The second slot did not exist before, which is
+ * why this screen used to have a single upload button.
+ * <p>
+ * STILL A GAP: police verification has no driver-facing submission step at
+ * all. It is admin-only, so the row explaining it is not a real action and
+ * does not pretend to be.
  */
 export function Verification() {
   const navigate = useNavigate();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const idInputRef = useRef<HTMLInputElement>(null);
+  const rcInputRef = useRef<HTMLInputElement>(null);
+  const [idFile, setIdFile] = useState<File | null>(null);
+  const [rcFile, setRcFile] = useState<File | null>(null);
   const [summary, setSummary] = useState<VerificationSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+
+  /** Clears the input so re-picking the same file still fires a change. */
+  function pickFile(e: React.ChangeEvent<HTMLInputElement>, set: (f: File | null) => void) {
+    const file = e.target.files?.[0] ?? null;
+    e.target.value = '';
+    if (file) set(file);
+  }
 
   function load() {
     verificationApi
@@ -51,17 +65,27 @@ export function Verification() {
 
   useEffect(load, []);
 
-  async function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file) return;
+  /**
+   * Both documents go up together, in one request.
+   * <p>
+   * They are picked separately and held here until both are chosen, because
+   * the backend takes them as one submission - the ID and the registration
+   * certificate are evidence for a single review decision. Sending one on
+   * its own would put her in the operator's queue as a row nobody can
+   * action, which looks to her like she has applied and to them like
+   * nothing to do.
+   */
+  async function handleSubmit() {
+    if (!idFile || !rcFile) return;
     setUploading(true);
     setError(null);
     try {
-      const updated = await verificationApi.uploadDocument(file);
+      const updated = await verificationApi.uploadDocuments(idFile, rcFile);
       setSummary(updated);
+      setIdFile(null);
+      setRcFile(null);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not upload document');
+      setError(err instanceof ApiError ? err.message : 'Could not upload your documents');
     } finally {
       setUploading(false);
     }
@@ -122,28 +146,79 @@ export function Verification() {
             </button>
           </Card>
 
-          <Card className="space-y-3">
+          <Card className="space-y-4">
             <p className="text-sm font-medium text-text-primary">
-              {summary.documentSubmitted ? 'Document submitted' : 'Upload your ID document'}
+              {summary.documentSubmitted ? 'Documents submitted' : 'Upload your documents'}
             </p>
             {/* This used to explain the backend's single document slot to
                 the driver, in those words. A partner does not have a
                 backend; they have an ID and a phone. Same fact, said as a
                 person would say it - the constraint is still described in
                 this file's header comment, where it belongs. */}
-            <p className="text-xs text-text-secondary">
-              One government ID, used to confirm your identity. Aadhaar, passport, driving licence or voter ID. Make sure
-              your name and photo are readable.
-            </p>
-            <input ref={fileInputRef} type="file" accept="image/*,.pdf" className="hidden" onChange={handleFileSelected} />
-            <Button
-              fullWidth
-              variant="secondary"
-              icon={<Upload className="h-4 w-4" />}
-              disabled={!canUpload || uploading}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              {uploading ? 'Uploading...' : summary.documentSubmitted ? 'Re-upload document' : 'Upload document'}
+
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-text-primary">1. Your ID</p>
+              <p className="text-xs text-text-secondary">
+                One government ID, used to confirm your identity. Aadhaar, passport, driving licence or voter ID. Make
+                sure your name and photo are readable.
+              </p>
+              <input
+                ref={idInputRef}
+                type="file"
+                accept="image/*,.pdf"
+                className="hidden"
+                onChange={(e) => pickFile(e, setIdFile)}
+              />
+              <Button
+                fullWidth
+                variant="secondary"
+                icon={idFile ? <Check className="h-4 w-4" /> : <Upload className="h-4 w-4" />}
+                disabled={!canUpload || uploading}
+                onClick={() => idInputRef.current?.click()}
+              >
+                {idFile ? idFile.name : 'Choose ID document'}
+              </Button>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-text-primary">2. Your vehicle's RC</p>
+              <p className="text-xs text-text-secondary">
+                A photo of the registration certificate for the vehicle you drive. We check it against the registration
+                number on your profile, so the number plate must be readable.
+              </p>
+              <input
+                ref={rcInputRef}
+                type="file"
+                accept="image/*,.pdf"
+                className="hidden"
+                onChange={(e) => pickFile(e, setRcFile)}
+              />
+              <Button
+                fullWidth
+                variant="secondary"
+                icon={rcFile ? <Check className="h-4 w-4" /> : <Upload className="h-4 w-4" />}
+                disabled={!canUpload || uploading}
+                onClick={() => rcInputRef.current?.click()}
+              >
+                {rcFile ? rcFile.name : 'Choose RC photo'}
+              </Button>
+            </div>
+
+            {/* Disabled until both are chosen. The button says which one is
+                still missing rather than sitting greyed out with no
+                explanation - a dead control is its own dead end. */}
+            <Button fullWidth disabled={!canUpload || uploading || !idFile || !rcFile} onClick={handleSubmit}>
+              {uploading
+                ? 'Uploading...'
+                : !idFile && !rcFile
+                  ? 'Choose both documents'
+                  : !idFile
+                    ? 'Choose your ID to continue'
+                    : !rcFile
+                      ? 'Choose your RC photo to continue'
+                      : summary.documentSubmitted
+                        ? 'Re-submit both documents'
+                        : 'Submit for review'}
             </Button>
           </Card>
         </>

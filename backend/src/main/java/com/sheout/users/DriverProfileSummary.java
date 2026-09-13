@@ -17,6 +17,13 @@ public record DriverProfileSummary(
         String vehicleRegistrationNumber,
         OnlineStatus onlineStatus,
         boolean verified,
+        /**
+         * Resolved at read time from the stored key, never persisted - a
+         * presigned URL is stale within minutes. Null when this partner has
+         * no photo yet, which clients render as a silhouette rather than a
+         * broken image.
+         */
+        String profilePhotoUrl,
         TrustStats trustStats,
         Instant updatedAt
 ) {

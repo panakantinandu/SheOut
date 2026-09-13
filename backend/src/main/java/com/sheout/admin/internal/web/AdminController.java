@@ -74,16 +74,29 @@ public class AdminController {
     }
 
     /**
-     * The document itself is not proxied through this response - this hands
-     * back the storage-resolved URL for the reviewer to open, keeping the
-     * bytes on whatever storage backend driver-verification chose (local
-     * disk or S3) instead of streaming them through the API.
+     * Both documents for one review, in one response.
+     * <p>
+     * Neither image is proxied through here - this hands back
+     * storage-resolved URLs for the reviewer to open, keeping the bytes on
+     * whatever storage backend is configured (local disk or S3) instead of
+     * streaming them through the API.
+     * <p>
+     * One call rather than two, because an operator reads them together:
+     * the identity document to establish who she is, and the registration
+     * certificate to check the number she typed matches the vehicle she
+     * actually owns. Two round trips would let the screen render half a
+     * decision's evidence and look complete.
+     * <p>
+     * rcUrl is null for every rider, who has no vehicle, and for partners
+     * whose submission predates the requirement. The console says which of
+     * those it is rather than showing a gap.
      */
     @GetMapping("/verification/{accountId}/document")
     public ResponseEntity<DocumentResponse> document(@PathVariable UUID accountId) {
         requireAdmin();
         return adminService.documentUrl(accountId)
-                .map(url -> ResponseEntity.ok(new DocumentResponse(accountId, url)))
+                .map(url -> ResponseEntity.ok(
+                        new DocumentResponse(accountId, url, adminService.rcDocumentUrl(accountId).orElse(null))))
                 .orElseThrow(() -> ApiException.notFound("No document submitted for this account"));
     }
 
@@ -249,6 +262,7 @@ public class AdminController {
         return caller;
     }
 
-    public record DocumentResponse(UUID accountId, String url) {
+    /** rcUrl is null for riders and for partners who submitted before the RC was required. */
+    public record DocumentResponse(UUID accountId, String url, String rcUrl) {
     }
 }
