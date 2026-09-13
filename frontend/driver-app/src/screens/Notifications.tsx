@@ -55,8 +55,15 @@ export function Notifications() {
                 <p className="text-xs text-text-secondary">
                   {new Date(n.createdAt).toLocaleString()} &middot; {n.channel}
                 </p>
+                {/* The stored failureReason is a provider diagnostic - things like
+                    "PROVIDER_ERROR: HTTP 401 (Twilio error 20003)", sometimes with raw
+                    JSON from the provider in it, and it was printed straight onto this
+                    screen. Nobody reading it can act on a Twilio error code, and it
+                    should not be shown to them at all: it names our provider and our
+                    failures. It stays in the notification log for whoever can actually
+                    do something about it. */}
                 {n.status === 'FAILED' && (
-                  <p className="mt-1 text-xs text-danger">Delivery failed{n.failureReason ? `: ${n.failureReason}` : ''}</p>
+                  <p className="mt-1 text-xs text-danger">This one could not be delivered.</p>
                 )}
               </div>
               <StatusBadge tone={n.status === 'SENT' ? 'success' : 'danger'}>{humanizeEnum(n.status)}</StatusBadge>

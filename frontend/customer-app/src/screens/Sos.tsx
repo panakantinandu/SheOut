@@ -188,7 +188,7 @@ export function Sos() {
         </button>
         <Card className="space-y-3">
           {SAFETY_FEATURES.map((feature) => (
-            <ListRow key={feature} icon={<IconCircle tone="soft" color="green" size="sm" icon={<CheckCircle2 />} />} label={feature} chevron={false} />
+            <ListRow key={feature} padded={false} icon={<IconCircle tone="soft" color="green" size="sm" icon={<CheckCircle2 />} />} label={feature} chevron={false} />
           ))}
         </Card>
       </div>

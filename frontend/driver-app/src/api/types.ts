@@ -39,6 +39,14 @@ export interface DriverProfileSummary {
    * then.
    */
   profilePhotoUrl: string | null;
+  /**
+   * Whether a photo exists at all - NOT the same as profilePhotoUrl being
+   * set. With local-disk storage the file cannot be served to a browser, so
+   * the URL is null even though she has uploaded one. Ask this when the
+   * question is "does she still need to add one"; use the URL only to draw
+   * it.
+   */
+  hasProfilePhoto: boolean;
   updatedAt: string;
 }
 
