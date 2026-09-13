@@ -244,6 +244,40 @@ public class BookingService implements BookingApi {
      * OTHER additionally requires a note. An "Other" with nothing after it
      * is the same as no reason, dressed up as an answer.
      */
+    /**
+     * Records that dispatch searched, found nobody, and has stopped.
+     * <p>
+     * Called only from DispatchExhaustedListener. It takes no reason and no
+     * actor because there is neither: this is not somebody's decision, it is
+     * the platform failing to find a driver, and the distinction is the
+     * whole reason NO_DRIVERS_AVAILABLE is not CANCELLED. In particular it
+     * publishes no BookingCancelled, so no cancellation is counted against
+     * the rider's trust score for a search she had no part in.
+     * <p>
+     * Only valid from REQUESTED. A booking that has since been cancelled by
+     * the rider, or matched by a driver who accepted in the gap, is left
+     * exactly as it is - the state machine refuses the transition and this
+     * returns that refusal rather than forcing it.
+     */
+    @Transactional
+    public Result<BookingSummary, BookingError> markNoDriversAvailable(UUID bookingId) {
+        Optional<BookingEntity> found = bookingRepository.findById(bookingId);
+        if (found.isEmpty()) {
+            return Result.failure(BookingError.BOOKING_NOT_FOUND);
+        }
+        BookingEntity booking = found.get();
+
+        Result<BookingStatus, BookingError> transition =
+                BookingStateMachine.transition(booking.getStatus(), BookingStatus.NO_DRIVERS_AVAILABLE);
+        if (transition.isFailure()) {
+            return Result.failure(transition.error());
+        }
+
+        booking.setStatus(BookingStatus.NO_DRIVERS_AVAILABLE);
+        bookingRepository.save(booking);
+        return Result.success(toSummary(booking));
+    }
+
     @Transactional
     public Result<BookingSummary, BookingError> cancelBooking(
             UUID bookingId, UUID cancelledBy, CancellationReason reason, String note) {

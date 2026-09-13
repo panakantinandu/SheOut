@@ -54,6 +54,25 @@ public class DispatchController {
         this.bookingApi = bookingApi;
     }
 
+    /**
+     * How long a search is allowed to run, so a waiting rider's screen can
+     * be honest about it.
+     * <p>
+     * Served rather than compiled into the apps. A frontend carrying its own
+     * copy of this number drifts the moment dispatch is retuned, and the
+     * drift is invisible until somebody is shown "no drivers available"
+     * while the search is still running, or is left watching a spinner after
+     * it stopped. Neither failure announces itself.
+     * <p>
+     * Unauthenticated: it is an operational constant, not anybody's data,
+     * and the waiting screen should not lose its bearings because a token
+     * expired mid-search.
+     */
+    @GetMapping("/api/v1/dispatch/search-config")
+    public ResponseEntity<SearchConfigResponse> searchConfig() {
+        return ResponseEntity.ok(new SearchConfigResponse(dispatchService.searchTimeoutSeconds()));
+    }
+
     @PostMapping("/api/v1/dispatch/location")
     public ResponseEntity<Void> recordLocation(@Valid @RequestBody LocationRequest request) {
         CurrentAccount caller = requireDriver();
@@ -126,6 +145,10 @@ public class DispatchController {
             case ASSIGNMENT_FAILED -> new ApiException(
                     HttpStatus.CONFLICT, "Conflict", "This booking is no longer available");
         };
+    }
+
+    /** The total search budget in seconds. See searchConfig above for why this is served, not hardcoded. */
+    public record SearchConfigResponse(long searchTimeoutSeconds) {
     }
 
     public record LocationRequest(

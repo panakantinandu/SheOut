@@ -183,6 +183,24 @@ sheout:
     max-retries: ${DISPATCH_MAX_RETRIES:3}
     sweep-interval-ms: ${DISPATCH_SWEEP_INTERVAL_MS:2000}
 
+    # The TOTAL time dispatch may spend hunting for a driver for one
+    # booking, across every retry round and every radius expansion.
+    #
+    # NOT the same thing as offer-window-seconds above, and the two must
+    # never be merged. The offer window is how long ONE driver has to answer
+    # ONE offer. This is how long the whole search may take. They bound
+    # different failures: a driver who does not look at her phone, versus a
+    # rider left waiting because there is nobody out there.
+    #
+    # 90s is long enough for a few rounds with the radius doubling each
+    # time, and short enough that a rider gets a real answer rather than an
+    # endless spinner. Whichever runs out first - this or max-retries - ends
+    # the search and the booking becomes NO_DRIVERS_AVAILABLE.
+    #
+    # The deadline is stamped onto the search when it starts, so changing
+    # this never moves the deadline of a search already in flight.
+    search-timeout-seconds: ${SEARCH_TIMEOUT_SECONDS:90}
+
   payments:
     razorpay:
       key-id: ${RAZORPAY_KEY_ID:}

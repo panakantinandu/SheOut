@@ -128,11 +128,22 @@ services:
       - key: SUPPORT_PHONE_NUMBER
         sync: false
 
+      # Total time dispatch may spend hunting for a driver for one booking,
+      # across every retry round and radius expansion. NOT the per-offer
+      # accept window - that bounds one driver answering one offer. They
+      # solve different problems and must never be merged.
+      #
+      # Whichever runs out first, this or DISPATCH_MAX_RETRIES, ends the
+      # search and the booking becomes NO_DRIVERS_AVAILABLE instead of
+      # sitting in REQUESTED with a spinner that never stops.
+      - key: SEARCH_TIMEOUT_SECONDS
+        value: "90"
+
       # When a cancellation rate is worth a person's attention, as a
       # fraction: 0.4 means "cancels more than 40% of her trips".
       #
-      # Crossing it puts the account on the console's Cancellation Review
-      # list and does nothing else - no block, no throttle, no fee. That is
+      # Crossing it puts the account on the console's Trust Review list and
+      # does nothing else - no block, no throttle, no fee. That is
       # deliberate and should stay that way: a high rate can mean somebody
       # avoiding fares or somebody repeatedly abandoned by partners who
       # never turned up, and only a person reading the reasons can tell.

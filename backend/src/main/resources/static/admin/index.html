@@ -463,6 +463,11 @@ const STATUS_TEXT = {
   VERIFIED: 'Approved', REJECTED: 'Rejected',
   REQUESTED: 'Requested', MATCHED: 'Driver matched', ACCEPTED: 'Accepted',
   IN_PROGRESS: 'In progress', COMPLETED: 'Completed', CANCELLED: 'Cancelled',
+  // Not 'Cancelled'. Nobody cancelled this one - the search ran out and
+  // found nobody, which is a supply problem to act on, not a rider
+  // changing her mind. Collapsing the two would hide exactly the number an
+  // operator needs to see.
+  NO_DRIVERS_AVAILABLE: 'No drivers found',
   CAPTURED: 'Paid', FAILED: 'Failed', REFUNDED: 'Refunded', RESOLVED: 'Resolved',
 };
 const STATUS_TONE = {
@@ -470,6 +475,8 @@ const STATUS_TONE = {
   ACCEPTED: 'amber', IN_PROGRESS: 'amber',
   VERIFIED: 'green', COMPLETED: 'green', CAPTURED: 'green', RESOLVED: 'green',
   REJECTED: 'red', FAILED: 'red', CANCELLED: 'red', REFUNDED: 'red',
+  // Amber, not red: this is the platform falling short, not misconduct.
+  NO_DRIVERS_AVAILABLE: 'amber',
 };
 /**
  * The same treatment for the other enums the API returns. Status had this
@@ -903,7 +910,7 @@ const VIEWS = {
     filters: [
       { key: 'q', kind: 'text', label: 'Search address', placeholder: 'Pickup or drop contains…', wide: true },
       { key: 'status', kind: 'select', label: 'Status', any: 'Any status', options: () => Object.entries(STATUS_TEXT)
-          .filter(([v]) => ['REQUESTED', 'MATCHED', 'ACCEPTED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'].includes(v))
+          .filter(([v]) => ['REQUESTED', 'MATCHED', 'ACCEPTED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'NO_DRIVERS_AVAILABLE'].includes(v))
           .map(([value, label]) => ({ value, label })) },
       { key: 'category', kind: 'select', label: 'Service', any: 'Any service', options: () => Object.entries(SERVICE_TEXT)
           .map(([value, label]) => ({ value, label })) },

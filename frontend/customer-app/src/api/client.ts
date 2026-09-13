@@ -8,6 +8,7 @@ import type {
   CancellationReason,
   ChatMessage,
   ChatThreadResponse,
+  SearchConfig,
   SupportContact,
   Rating,
   AggregateRating,
@@ -232,6 +233,15 @@ export const dispatchApi = {
    * 404s while no driver is assigned or none has reported a position yet -
    * both normal states the tracking screen polls through, not errors.
    */
+  /**
+   * The total search budget, so the waiting screen's own fallback sits just
+   * behind the server's deadline instead of at a number guessed in this app.
+   * Unauthenticated - see the backend endpoint for why.
+   */
+  getSearchConfig(): Promise<SearchConfig> {
+    return request('/api/v1/dispatch/search-config', { auth: false });
+  },
+
   getDriverLocation(bookingId: string): Promise<DriverLocation> {
     return request(`/api/v1/dispatch/bookings/${bookingId}/driver-location`);
   },

@@ -45,11 +45,19 @@ const STATUS_OPTIONS: { value: BookingStatus; label: string }[] = [
   { value: 'IN_PROGRESS', label: 'In progress' },
   { value: 'COMPLETED', label: 'Completed' },
   { value: 'CANCELLED', label: 'Cancelled' },
+  // NO_DRIVERS_AVAILABLE is deliberately absent. A partner's history only
+  // contains trips she was assigned, and a booking that ended with nobody
+  // found was never assigned to anyone - so this filter could only ever
+  // come back empty, and a permanently-empty filter reads as a broken one.
+  // The tone function below still handles the status, because a status that
+  // cannot appear today is not one to render badly if it ever does.
 ];
 
 function statusTone(status: BookingStatus): StatusTone {
   if (status === 'COMPLETED') return 'success';
   if (status === 'CANCELLED') return 'danger';
+  // Warning, not danger - nothing was anybody's fault here.
+  if (status === 'NO_DRIVERS_AVAILABLE') return 'warning';
   return 'primary';
 }
 
