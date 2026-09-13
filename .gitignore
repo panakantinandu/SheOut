@@ -47,3 +47,14 @@ frontend/*/.vercel
 # because the service worker served index.html for repeat visitors.
 !frontend/customer-app/vercel.json
 !frontend/driver-app/vercel.json
+
+# Redis writes a snapshot into whatever directory it was started from, which
+# on this machine is the repo root. It can hold live OTP codes and rate-limit
+# keys, so it must never be committed - and `git add .` would take it.
+dump.rdb
+*.rdb
+
+# Local scratch space: screenshots, throwaway scripts, captured tokens from
+# verification runs. None of it is project source and some of it is
+# credentials.
+scratchpad/

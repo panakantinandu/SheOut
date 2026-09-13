@@ -1,0 +1,65 @@
+SheOut - Proprietary Software License
+Copyright (c) 2026 Nandu Panakanti. All rights reserved.
+
+NOTE TO THE OWNER: replace the copyright holder above with the registered
+company name once one exists, and keep it in step with the entity named in
+the in-app privacy policy and terms. Until then this notice stands in your
+personal name, which is correct for work you have not yet assigned to a
+company. This file is not legal advice; have a lawyer review it before
+launch, alongside the terms the apps actually show users.
+
+------------------------------------------------------------------------
+
+This software and its source code, design, documentation and associated
+materials (the "Software") are the exclusive property of the copyright
+holder and are protected by copyright law and international treaties.
+
+The Software is published in a public repository for the purposes of
+demonstration, evaluation and portfolio review only. Making source code
+readable does not place it in the public domain and does not grant any
+licence to it. No rights are granted by implication, estoppel, or
+otherwise.
+
+PERMITTED
+
+  - Viewing and reading the source code.
+  - Referencing it in discussion, review, or academic citation with
+    attribution.
+
+NOT PERMITTED without prior written permission from the copyright holder
+
+  - Using the Software, in whole or in part, in any product or service,
+    commercial or otherwise.
+  - Copying, reproducing, publishing, distributing, sublicensing, selling,
+    renting, or leasing the Software or any derivative of it.
+  - Modifying the Software, or creating derivative works from it.
+  - Deploying, hosting or operating the Software or any substantial part
+    of it, including as a hosted or network-accessible service.
+  - Removing or altering this notice, or any copyright, attribution or
+    proprietary marking in the Software.
+  - Using the name "SheOut", its logo, or its visual identity.
+
+THIRD-PARTY COMPONENTS
+
+The Software depends on third-party libraries, map data and services,
+each governed by its own licence and usage terms. Those terms apply to
+those components and are not superseded by this licence. See the NOTICE
+file for attributions that must be preserved.
+
+NO WARRANTY
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR
+OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
+
+GOVERNING LAW
+
+This licence is governed by the laws of India.
+
+PERMISSION REQUESTS
+
+Write to: nandupanakanti@gmail.com
