@@ -146,3 +146,25 @@ export interface ChatThreadResponse {
 export interface SupportContact {
   phoneNumber: string | null;
 }
+
+/**
+ * One rating slot. stars is null while it is still open, which is how a
+ * client tells "not rated yet" from "rated" without a second call.
+ */
+export interface Rating {
+  id: string;
+  bookingId: string;
+  raterAccountId: string;
+  ratedAccountId: string;
+  raterRole: AccountRole;
+  stars: number | null;
+  comment: string | null;
+  submittedAt: string | null;
+  rateableUntil: string;
+}
+
+/** averageStars is null when the account has never been rated - not the same as a low score. */
+export interface AggregateRating {
+  averageStars: number | null;
+  totalRatings: number;
+}

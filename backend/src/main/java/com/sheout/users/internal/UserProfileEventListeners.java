@@ -5,6 +5,8 @@ import com.sheout.booking.BookingCancelled;
 import com.sheout.booking.BookingMatched;
 import com.sheout.booking.BookingRequested;
 import com.sheout.driververification.AccountVerified;
+import com.sheout.ratings.RatingSubmitted;
+import com.sheout.users.TrustStats;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.event.EventListener;
@@ -21,14 +23,14 @@ class UserProfileEventListeners {
 
     private final CustomerProfileRepository customerProfileRepository;
     private final DriverProfileRepository driverProfileRepository;
-    private final CancellationPolicy cancellationPolicy;
+    private final TrustPolicy trustPolicy;
 
     UserProfileEventListeners(CustomerProfileRepository customerProfileRepository,
                                DriverProfileRepository driverProfileRepository,
-                               CancellationPolicy cancellationPolicy) {
+                               TrustPolicy trustPolicy) {
         this.customerProfileRepository = customerProfileRepository;
         this.driverProfileRepository = driverProfileRepository;
-        this.cancellationPolicy = cancellationPolicy;
+        this.trustPolicy = trustPolicy;
     }
 
     /**
@@ -92,11 +94,17 @@ class UserProfileEventListeners {
     }
 
     // -----------------------------------------------------------------------
-    // Cancellation accountability.
+    // Trust signals: how often an account cancels, and how it is rated.
     //
-    // Three listeners maintain two counters per profile. The denominators are
-    // deliberately different on the two sides, because "a booking you were
-    // party to" does not mean the same thing to a rider and to a partner:
+    // Both land here, on the same row, because they feed one flag and one
+    // queue. An account is either waiting for a person to look at it or it is
+    // not; two parallel flags would let it be cleared of one and stay
+    // silently flagged for the other, and nobody working the queue could tell
+    // when they had finished.
+    //
+    // The cancellation denominators are deliberately different on the two
+    // sides, because "a booking you were party to" does not mean the same
+    // thing to a rider and to a partner:
     //
     //   - a rider's denominator is every booking she requested, counted the
     //     moment she requests it;
@@ -154,15 +162,13 @@ class UserProfileEventListeners {
         if (cancelledBy.equals(event.customerId())) {
             customerProfileRepository.findByAccountId(cancelledBy).ifPresent(profile -> {
                 profile.recordCancellation();
-                reviewIfNeeded(profile.getAccountId(), "customer",
-                        profile.getTotalBookings(), profile.getTotalCancellations(), profile::flagForReview);
+                reviewIfNeeded(profile.getAccountId(), "customer", profile.getTrustStats(), profile::flagForReview);
                 customerProfileRepository.save(profile);
             });
         } else if (cancelledBy.equals(event.driverId())) {
             driverProfileRepository.findByAccountId(cancelledBy).ifPresent(profile -> {
                 profile.recordCancellation();
-                reviewIfNeeded(profile.getAccountId(), "driver",
-                        profile.getTotalBookings(), profile.getTotalCancellations(), profile::flagForReview);
+                reviewIfNeeded(profile.getAccountId(), "driver", profile.getTrustStats(), profile::flagForReview);
                 driverProfileRepository.save(profile);
             });
         } else {
@@ -173,23 +179,55 @@ class UserProfileEventListeners {
     }
 
     /**
-     * Raises the review flag if this account has crossed the line - and only
+     * Keeps this account's rating figures in step with what the ratings
+     * module just worked out, and re-checks whether that changes anything.
+     * <p>
+     * The average travels on the event rather than being recomputed here,
+     * so the number an operator reads is the number the ratings module
+     * calculated. Two modules independently averaging the same rows is how
+     * they end up disagreeing about somebody's score.
+     */
+    @EventListener
+    @Transactional
+    public void onRatingSubmitted(RatingSubmitted event) {
+        switch (event.ratedRole()) {
+            case CUSTOMER -> customerProfileRepository.findByAccountId(event.ratedAccountId()).ifPresent(profile -> {
+                profile.recordRatingAggregate(event.averageStars(), event.totalRatings());
+                reviewIfNeeded(profile.getAccountId(), "customer", profile.getTrustStats(), profile::flagForReview);
+                customerProfileRepository.save(profile);
+            });
+            case DRIVER -> driverProfileRepository.findByAccountId(event.ratedAccountId()).ifPresent(profile -> {
+                profile.recordRatingAggregate(event.averageStars(), event.totalRatings());
+                reviewIfNeeded(profile.getAccountId(), "driver", profile.getTrustStats(), profile::flagForReview);
+                driverProfileRepository.save(profile);
+            });
+            case ADMIN -> {
+                // Operators are not on trips, so they are never rated.
+            }
+        }
+    }
+
+    /**
+     * Raises the review flag if this account has crossed a line - and only
      * raises a flag.
      * <p>
+     * One check covering every trust signal, called from wherever any of
+     * them moves, so an account that has become reviewable for a reason
+     * other than the one that just changed still gets picked up. Both
+     * reasons end up in the same sentence when both apply.
+     * <p>
      * No automatic block, deliberately, and consistent with how driver
-     * verification already works here: a person decides. It matters more for
-     * cancellations than for documents, because a high rate has two opposite
-     * explanations - somebody dodging fares, or somebody repeatedly abandoned
-     * by partners who never turned up - and the number on its own cannot tell
-     * them apart. An operator reading the reasons can.
+     * verification already works here: a person decides. It matters more
+     * here than for documents, because both signals have an innocent reading
+     * the number cannot distinguish from the guilty one - somebody dodging
+     * fares, or somebody repeatedly abandoned by partners who never turned
+     * up; a careless partner, or one who had three bad nights. An operator
+     * reading the reasons can tell. Arithmetic cannot.
      */
-    private void reviewIfNeeded(UUID accountId, String role, int totalBookings, int totalCancellations,
-                                Consumer<String> flag) {
-        if (!cancellationPolicy.shouldFlag(totalBookings, totalCancellations)) {
-            return;
-        }
-        String reason = cancellationPolicy.describe(totalBookings, totalCancellations);
-        flag.accept(reason);
-        log.info("Flagged {} account {} for review: {}", role, accountId, reason);
+    private void reviewIfNeeded(UUID accountId, String role, TrustStats stats, Consumer<String> flag) {
+        trustPolicy.reviewReason(stats).ifPresent(reason -> {
+            flag.accept(reason);
+            log.info("Flagged {} account {} for review: {}", role, accountId, reason);
+        });
     }
 }

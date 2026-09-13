@@ -1,9 +1,20 @@
 import { Bell, Bike, CheckCircle2, ClipboardList, CloudOff, IndianRupee, MapPinOff, Navigation2, Power, RefreshCw, ShieldCheck, User } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AmountText, Button, Card, IconCircle, LiveMap, TopHeader, bookingStatusLabel, vehicleLabel } from '@sheout/design-system';
-import { ApiError, bookingApi, dispatchApi, usersApi, verificationApi } from '../api/client';
-import type { BookingSummary, DriverProfileSummary, VerificationSummary } from '../api/types';
+import {
+  AggregateRatingText,
+  AmountText,
+  Button,
+  Card,
+  IconCircle,
+  LiveMap,
+  TopHeader,
+  bookingStatusLabel,
+  vehicleLabel,
+} from '@sheout/design-system';
+import { ApiError, bookingApi, dispatchApi, ratingsApi, usersApi, verificationApi } from '../api/client';
+import type { AggregateRating, BookingSummary, DriverProfileSummary, VerificationSummary } from '../api/types';
+import { RatingPrompt } from '../components/RatingPrompt';
 import { useLocationBroadcast } from '../lib/useLocationBroadcast';
 
 const BOOKINGS_POLL_MS = 5000;
@@ -42,9 +53,14 @@ function LoadError({ title, detail, onRetry }: { title: string; detail: string; 
  * derived from GET /bookings/me, same computation Earnings.tsx uses), and
  * live location broadcasting all hit real endpoints.
  * <p>
- * MOCK: the star rating - no ratings/reviews system exists anywhere on the
- * backend (no rating field on BookingSummary or DriverProfileSummary),
- * clearly labeled rather than fabricated as if real.
+ * The star rating is REAL now, and no longer labelled as mock: it is this
+ * partner's own average from GET /ratings/me, built from what riders
+ * actually submitted after completed trips. It used to be a hardcoded 4.8
+ * with "(mock)" beside it, because no ratings system existed.
+ * <p>
+ * An account nobody has rated yet reads "Not rated yet" rather than a
+ * number. Showing 0.0 to a partner on her first night would tell her the
+ * platform thinks she is the worst driver on it.
  * <p>
  * No push/notifications module exists (see DispatchController's own
  * Javadoc), so "New Request" is implemented as polling GET
@@ -61,6 +77,7 @@ export function Home() {
   const [profileError, setProfileError] = useState<string | null>(null);
   const [verificationError, setVerificationError] = useState<string | null>(null);
   const [togglingOnline, setTogglingOnline] = useState(false);
+  const [rating, setRating] = useState<AggregateRating | null>(null);
   const navigatedToOfferRef = useRef<string | null>(null);
 
   /**
@@ -92,10 +109,23 @@ export function Home() {
       );
   }, []);
 
+  // Reloaded after this partner rates somebody too, because rating a rider
+  // is the moment she is most likely to look at her own score.
+  const loadRating = useCallback(() => {
+    ratingsApi
+      .mine()
+      .then(setRating)
+      .catch(() => {
+        // Leaves the line reading "Not rated yet" rather than breaking the
+        // card. Nothing on this screen depends on it.
+      });
+  }, []);
+
   useEffect(() => {
     loadProfile();
     loadVerification();
-  }, [loadProfile, loadVerification]);
+    loadRating();
+  }, [loadProfile, loadVerification, loadRating]);
 
   const isOnline = profile?.onlineStatus === 'ONLINE';
   const isVerified = verification?.genderVerificationStatus === 'VERIFIED' && verification?.policeVerificationStatus === 'VERIFIED';
@@ -257,8 +287,16 @@ export function Home() {
               />
               {isOnline ? 'Online' : 'Offline'}
             </span>
-            {/* MOCK: no ratings/reviews system exists on the backend - fixed placeholder, clearly labeled, not fabricated as real. */}
-            <span className="text-xs text-text-secondary">&middot; ★ 4.8 (mock) &middot; {vehicleLabel(profile?.vehicleType)}</span>
+            {/* Real, from this partner's own ratings. See the file header. */}
+            <span className="text-xs text-text-secondary">
+              &middot;{' '}
+              <AggregateRatingText
+                averageStars={rating?.averageStars}
+                totalRatings={rating?.totalRatings}
+                emptyLabel="Not rated yet"
+              />{' '}
+              &middot; {vehicleLabel(profile?.vehicleType)}
+            </span>
           </div>
         </div>
       </Card>
@@ -371,6 +409,12 @@ export function Home() {
           </Card>
         </div>
       )}
+
+      {/* The dashboard is where a partner lands after completing a trip, so
+          this is where she is asked. It asks about whatever is actually
+          waiting, decided by the server, not by this screen's idea of what
+          just finished. */}
+      <RatingPrompt counterpartLabel="your rider" onRated={loadRating} />
     </div>
   );
 }

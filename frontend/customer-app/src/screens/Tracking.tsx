@@ -2,6 +2,7 @@ import { CheckCircle2, Headphones, MessageCircle, Radio, ShieldAlert, Star, XCir
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
+  AggregateRatingText,
   AmountText,
   Button,
   CancelReasonDialog,
@@ -14,8 +15,9 @@ import {
   bookingStatusLabel,
 } from '@sheout/design-system';
 import type { CancellationReason as SharedCancellationReason, MapMarker } from '@sheout/design-system';
-import { ApiError, bookingApi, chatApi, dispatchApi } from '../api/client';
-import type { BookingSummary, DriverLocation } from '../api/types';
+import { ApiError, bookingApi, chatApi, dispatchApi, ratingsApi } from '../api/client';
+import type { AggregateRating, BookingSummary, DriverLocation } from '../api/types';
+import { RatingPrompt } from '../components/RatingPrompt';
 import { mockAction } from '../lib/mockAction';
 
 const POLL_INTERVAL_MS = 3000;
@@ -67,6 +69,7 @@ export function Tracking() {
   // Null keeps the support button off the screen rather than offering a
   // button that dials nothing.
   const [supportPhoneNumber, setSupportPhoneNumber] = useState<string | null>(null);
+  const [driverRating, setDriverRating] = useState<AggregateRating | null>(null);
 
   /** Set once the trip reaches a status that can never change again. */
   const terminalStatus = booking?.status === 'CANCELLED' || booking?.status === 'COMPLETED';
@@ -138,6 +141,26 @@ export function Tracking() {
       cancelled = true;
     };
   }, [bookingId]);
+
+  // Fetched once a partner is assigned. Her score does not move during a
+  // trip, so there is nothing to poll for.
+  useEffect(() => {
+    const driverId = booking?.driverId;
+    if (!driverId) return;
+    let cancelled = false;
+    ratingsApi
+      .forAccount(driverId)
+      .then((rating) => {
+        if (!cancelled) setDriverRating(rating);
+      })
+      .catch(() => {
+        // The line falls back to "No ratings yet", which is also what a
+        // genuinely unrated partner shows. Nothing here is worth an error.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [booking?.driverId]);
 
   /**
    * Cancels, with the reason the dialog collected.
@@ -242,9 +265,18 @@ export function Tracking() {
         <Card className="flex items-center gap-3">
           <IconCircle size="lg" tone="soft" icon={<Star />} />
           <div className="flex-1">
-            {/* MOCK from here down - see file header comment */}
+            {/* Name, photo and vehicle are still MOCK - see the file header.
+                The rating is not: it is her real average, from what riders
+                submitted after her completed trips. */}
             <p className="font-heading font-semibold text-text-primary">Driver details unavailable (mock)</p>
-            <p className="text-xs text-text-secondary">★ -- &middot; Bike &middot; Reg. unavailable</p>
+            <p className="text-xs text-text-secondary">
+              <AggregateRatingText
+                averageStars={driverRating?.averageStars}
+                totalRatings={driverRating?.totalRatings}
+                emptyLabel="No ratings yet"
+              />{' '}
+              &middot; Bike (mock) &middot; Reg. unavailable (mock)
+            </p>
           </div>
           {/* The one way to reach her. Not a call, and not a number. */}
           <button
@@ -367,6 +399,15 @@ export function Tracking() {
         onConfirm={handleCancel}
         onCancel={() => setAskingWhy(false)}
       />
+
+      {/* Asked about this trip specifically, and only once it has actually
+          completed. A cancelled trip is never rated - there is nothing to
+          say about a ride that did not happen, and asking would read as
+          blaming somebody for it. The server agrees: no slot is opened for a
+          cancellation. */}
+      {booking?.status === 'COMPLETED' && (
+        <RatingPrompt bookingId={bookingId} counterpartLabel="your partner" />
+      )}
     </div>
   );
 }

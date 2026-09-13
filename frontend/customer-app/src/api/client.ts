@@ -9,6 +9,8 @@ import type {
   ChatMessage,
   ChatThreadResponse,
   SupportContact,
+  Rating,
+  AggregateRating,
   CustomerProfileSummary,
   DriverLocation,
   EmergencyContact,
@@ -356,5 +358,46 @@ export const chatApi = {
 export const supportApi = {
   getContact(): Promise<SupportContact> {
     return request('/api/v1/support/contact', { auth: false });
+  },
+};
+
+/**
+ * Ratings. Who the caller is always comes from the token - there is no call
+ * here that lets this app say whose rating it is or whom it is about.
+ */
+export const ratingsApi = {
+  /** Trips the caller can still rate, soonest to close first. The prompt reads from this. */
+  pending(): Promise<Rating[]> {
+    return request('/api/v1/ratings/pending');
+  },
+
+  /**
+   * Slots for several bookings at once, so a history page marks its rows in
+   * one request rather than one per row. Bookings with nothing to rate are
+   * simply absent from the result.
+   */
+  forBookings(bookingIds: string[]): Promise<Rating[]> {
+    if (bookingIds.length === 0) return Promise.resolve([]);
+    return request(`/api/v1/ratings/bookings${buildQuery({ bookingId: bookingIds })}`);
+  },
+
+  /** The caller's own slot for one booking. 404s when there is nothing to rate. */
+  forBooking(bookingId: string): Promise<Rating> {
+    return request(`/api/v1/ratings/bookings/${bookingId}`);
+  },
+
+  /** 409 ALREADY_RATED on a second attempt, 409 RATING_WINDOW_CLOSED once the window has passed. */
+  submit(bookingId: string, stars: number, comment?: string): Promise<Rating> {
+    return request(`/api/v1/ratings/bookings/${bookingId}`, { method: 'POST', body: { stars, comment } });
+  },
+
+  /** Somebody else's public score. Only the average and the count, never who gave what. */
+  forAccount(accountId: string): Promise<AggregateRating> {
+    return request(`/api/v1/ratings/accounts/${accountId}`);
+  },
+
+  /** The caller's own score, for their dashboard. */
+  mine(): Promise<AggregateRating> {
+    return request('/api/v1/ratings/me');
   },
 };

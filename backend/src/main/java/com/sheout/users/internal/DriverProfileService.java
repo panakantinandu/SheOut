@@ -150,7 +150,7 @@ public class DriverProfileService implements DriverProfileApi {
                 profile.getVehicleRegistrationNumber(),
                 profile.getOnlineStatus(),
                 profile.isVerified(),
-                profile.getCancellationStats(),
+                profile.getTrustStats(),
                 profile.getUpdatedAt()
         );
     }
