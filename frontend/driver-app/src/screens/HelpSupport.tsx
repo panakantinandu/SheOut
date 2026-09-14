@@ -1,9 +1,10 @@
-import { LifeBuoy, Mail, Phone, ShieldCheck } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { LifeBuoy, Mail, Phone, Plus, ShieldCheck } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, FaqList, IconCircle, ListRow, TopHeader } from '@sheout/design-system';
-import type { FaqItem } from '@sheout/design-system';
+import { Button, Card, FaqList, IconCircle, ListRow, SupportTicketList, TopHeader } from '@sheout/design-system';
+import type { FaqItem, SupportTicketFilters } from '@sheout/design-system';
 import { supportApi } from '../api/client';
+import type { SupportTicketCategory, SupportTicketStatus } from '../api/types';
 
 const SUPPORT_EMAIL = 'drivers@sheout.app';
 
@@ -57,9 +58,10 @@ const FAQS: FaqItem[] = [
 ];
 
 /**
- * Static by design - there is no ticketing backend, so this gives real
- * contact routes the device can act on rather than a form that posts
- * nowhere.
+ * Raise an issue, follow the ones already raised, and the direct routes for
+ * anything a ticket is the wrong tool for. This used to be static - there
+ * was no ticketing backend - and tickets are now the main thing here; the
+ * contact rows and FAQ stay below them.
  * <p>
  * The phone number comes from the backend, not from a constant here. It
  * used to be hardcoded in this file and hardcoded differently in the rider
@@ -79,32 +81,51 @@ export function HelpSupport() {
         if (!cancelled) setSupportPhone(contact.phoneNumber);
       })
       .catch(() => {
-        // Email still works, so a failure here costs one row, not the screen.
+        // Tickets and email still work, so a failure here costs one row, not the screen.
       });
     return () => {
       cancelled = true;
     };
   }, []);
 
+  const fetchPage = useCallback(
+    (filters: SupportTicketFilters) =>
+      supportApi.myTickets({
+        page: filters.page,
+        status: filters.status as SupportTicketStatus[] | undefined,
+        category: filters.category as SupportTicketCategory[] | undefined,
+        from: filters.from,
+        to: filters.to,
+      }),
+    []
+  );
+
   return (
     <div className="space-y-6">
       <TopHeader variant="back" title="Help & Support" onBack={() => navigate('/profile')} />
 
-      <Card className="flex items-center gap-3">
-        {/* Was a tall centred block with a large icon and two lines of text,
-            most of which was empty space. The same information on one line
-            leaves the screen to the things a partner came here to use. */}
-        <IconCircle size="lg" tone="soft" icon={<LifeBuoy />} />
-        <div>
-          <p className="font-heading font-semibold text-text-primary">Driver support</p>
-          <p className="text-sm text-text-secondary">We usually reply within a day.</p>
+      <Card className="space-y-3">
+        <div className="flex items-center gap-3">
+          <IconCircle size="lg" tone="soft" icon={<LifeBuoy />} />
+          <div>
+            <p className="font-heading font-semibold text-text-primary">Driver support</p>
+            <p className="text-sm text-text-secondary">Tell us what happened and we will reply here.</p>
+          </div>
         </div>
+        <Button fullWidth size="md" icon={<Plus className="h-4 w-4" />} onClick={() => navigate('/help/new')}>
+          Raise an issue
+        </Button>
       </Card>
+
+      <section>
+        <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">My tickets</h2>
+        <SupportTicketList audience="driver" fetchPage={fetchPage} onOpen={(id) => navigate(`/help/tickets/${id}`)} />
+      </section>
 
       {/* Headed sections over divided cards - the same shape the Profile
           screens use, so a partner meets one convention across the app. */}
       <section>
-        <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">Get in touch</h2>
+        <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">Other ways to reach us</h2>
         <Card className="divide-y divide-border p-0">
           <ListRow
             icon={<IconCircle tone="soft" size="sm" icon={<Mail />} />}

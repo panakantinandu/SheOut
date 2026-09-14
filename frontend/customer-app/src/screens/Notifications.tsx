@@ -12,6 +12,7 @@ const LABELS: Record<NotificationView['type'], string> = {
   BOOKING_CANCELLED: 'Booking cancelled',
   ACCOUNT_VERIFIED: 'Account verified',
   SOS_ALERT: 'SOS alert sent',
+  SUPPORT_REPLY: 'Support replied to your ticket',
 };
 
 /**

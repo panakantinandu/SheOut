@@ -11,6 +11,8 @@ public interface SosAlertRepository extends JpaRepository<SosAlertEntity, UUID> 
 
     List<SosAlertEntity> findByStatusOrderByCreatedAtDesc(SosStatus status);
 
+    List<SosAlertEntity> findByBookingIdOrderByCreatedAtDesc(UUID bookingId);
+
     /** Whether any of her alerts since {@code since} actually reached at least one contact. */
     boolean existsByCustomerAccountIdAndContactsNotifiedGreaterThanAndCreatedAtAfter(
             UUID customerAccountId, int contactsNotified, Instant since);

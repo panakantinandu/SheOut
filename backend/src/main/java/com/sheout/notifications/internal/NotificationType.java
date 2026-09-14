@@ -16,5 +16,7 @@ public enum NotificationType {
     BOOKING_COMPLETED,
     BOOKING_CANCELLED,
     ACCOUNT_VERIFIED,
-    SOS_ALERT
+    SOS_ALERT,
+    /** An operator replied to a support ticket - see support's SupportReplyPosted. */
+    SUPPORT_REPLY
 }

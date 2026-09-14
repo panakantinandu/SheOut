@@ -15,4 +15,18 @@ import java.util.UUID;
  * the status decides whether you may still WRITE to it.
  */
 public record BookingParticipants(UUID customerId, UUID driverId, BookingStatus status) {
+
+    /**
+     * Whether this account is the booking's customer or its assigned driver.
+     * <p>
+     * The one definition of "on this booking", for every module's
+     * enumeration-safe check. Callers answer false exactly as they answer a
+     * booking that does not exist - one 404, one message - so an id cannot be
+     * probed for existence. It used to be written out by hand in chat,
+     * payments and booking separately, which is three places for the rule to
+     * drift.
+     */
+    public boolean includes(UUID accountId) {
+        return accountId != null && (accountId.equals(customerId) || accountId.equals(driverId));
+    }
 }

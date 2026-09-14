@@ -8,6 +8,11 @@ import type {
   ChatMessage,
   ChatThreadResponse,
   SupportContact,
+  SupportTicket,
+  SupportTicketCategory,
+  SupportTicketMessage,
+  SupportTicketStatus,
+  SupportTicketThreadResponse,
   Rating,
   AggregateRating,
   PagedResult,
@@ -359,6 +364,41 @@ export const chatApi = {
 export const supportApi = {
   getContact(): Promise<SupportContact> {
     return request('/api/v1/support/contact', { auth: false });
+  },
+
+  /**
+   * Raises a ticket. Priority is not sent - the server sets it from the
+   * category. A linked trip must be one of the caller's own; anything else
+   * is a 404, the same answer as a trip that does not exist.
+   */
+  raiseTicket(input: {
+    category: SupportTicketCategory;
+    subject: string;
+    description: string;
+    linkedBookingId?: string;
+  }): Promise<SupportTicket> {
+    return request('/api/v1/support/tickets', { method: 'POST', body: input });
+  },
+
+  /** The caller's own tickets, newest activity first, filtered like the other history lists. */
+  myTickets(params: {
+    page?: number;
+    pageSize?: number;
+    status?: SupportTicketStatus[];
+    category?: SupportTicketCategory[];
+    from?: string;
+    to?: string;
+  }): Promise<PagedResult<SupportTicket>> {
+    return request(`/api/v1/support/tickets/me${buildQuery(params)}`);
+  },
+
+  getTicket(ticketId: string): Promise<SupportTicketThreadResponse> {
+    return request(`/api/v1/support/tickets/${ticketId}`);
+  },
+
+  /** 409 TICKET_CLOSED once the ticket is closed - a refusal to show, not a failure to retry. */
+  replyToTicket(ticketId: string, message: string): Promise<SupportTicketMessage> {
+    return request(`/api/v1/support/tickets/${ticketId}/messages`, { method: 'POST', body: { message } });
   },
 };
 

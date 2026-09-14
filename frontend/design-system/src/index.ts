@@ -1,6 +1,7 @@
 export * from './lib/toast';
 export * from './lib/labels';
 export * from './lib/cancellation';
+export * from './lib/support';
 export * from './lib/usePagedList';
 export * from './legal/content';
 export * from './components';
