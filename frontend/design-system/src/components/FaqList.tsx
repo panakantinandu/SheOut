@@ -42,7 +42,7 @@ export function FaqList({ items, heading, className }: FaqListProps) {
         {items.map((item) => (
           <div key={item.question} className="p-4">
             <p className="font-medium text-text-primary">{item.question}</p>
-            <p className="mt-1 text-sm leading-relaxed text-text-secondary">{item.answer}</p>
+            <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-text-secondary">{item.answer}</p>
           </div>
         ))}
       </Card>

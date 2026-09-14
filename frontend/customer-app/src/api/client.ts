@@ -440,6 +440,17 @@ export const privacyApi = {
   },
 };
 
+/**
+ * Editable app copy - see the content module. Unauthenticated: it is the
+ * text on public screens. Screens read it through useContentSection, which
+ * caches it, rather than calling this directly.
+ */
+export const contentApi = {
+  getSection(prefix: string): Promise<Record<string, string>> {
+    return request(`/api/v1/content${buildQuery({ prefix })}`, { auth: false });
+  },
+};
+
 export const supportApi = {
   getContact(): Promise<SupportContact> {
     return request('/api/v1/support/contact', { auth: false });
