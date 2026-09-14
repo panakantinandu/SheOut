@@ -21,6 +21,12 @@ export interface AmountTextProps {
    * than two screens each discovering this separately.
    */
   tone?: 'default' | 'inverse';
+  /**
+   * Show paise. Off by default, where a rounded figure reads better. On
+   * wherever the number is what money actually moves by: a rider's card said
+   * ₹190 while Razorpay Checkout, beside it, charged ₹189.67.
+   */
+  exact?: boolean;
   className?: string;
 }
 
@@ -43,9 +49,10 @@ const prefix: Record<AmountSign, string> = {
 };
 
 const formatter = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 });
+const exactFormatter = new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 /** Formatted ₹ amount - e.g. "+ ₹1,250" (wallet credit) or "- ₹56" (debit). */
-export function AmountText({ amount, sign = 'neutral', size = 'md', tone = 'default', className }: AmountTextProps) {
+export function AmountText({ amount, sign = 'neutral', size = 'md', tone = 'default', exact = false, className }: AmountTextProps) {
   return (
     <span
       className={cn(
@@ -55,7 +62,7 @@ export function AmountText({ amount, sign = 'neutral', size = 'md', tone = 'defa
         className
       )}
     >
-      {prefix[sign]} ₹{formatter.format(Math.abs(amount))}
+      {prefix[sign]} ₹{(exact ? exactFormatter : formatter).format(Math.abs(amount))}
     </span>
   );
 }
