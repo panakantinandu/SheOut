@@ -265,6 +265,39 @@
   .doc-label { font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
   .doc-hint { font-weight: 400; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 
+  /* ---------- support tickets ---------- */
+  /* A sidebar count that needs someone now. Red rather than the brand
+     purple, because it is not "this is the page you are on" - it is "there
+     is a safety or high-priority ticket nobody has resolved". */
+  .nav .count.urgent, .nav button[aria-current="page"] .count.urgent { background: var(--red); color: #fff; }
+  .banner-info { background: var(--amber-bg); border-color: var(--amber-line); color: var(--amber); display: flex; align-items: center; gap: 12px; }
+  .banner-info .btn { margin-left: auto; }
+
+  .thread { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+  .msg { border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; background: #fff; max-width: 88%; }
+  .msg .who { font-size: 11.5px; font-weight: 650; color: var(--muted); margin-bottom: 2px; display: flex; gap: 8px; align-items: center; }
+  .msg .body { white-space: pre-wrap; word-break: break-word; font-size: 13px; }
+  .msg.raiser { align-self: flex-start; background: var(--bg); }
+  .msg.staff { align-self: flex-end; background: var(--brand-tint); border-color: #D9CCF3; }
+  /* Internal notes must never be mistaken for a reply the rider can read,
+     so they look nothing like one: amber, dashed, and labelled. */
+  .msg.internal { align-self: stretch; max-width: none; background: var(--amber-bg); border: 1px dashed var(--amber-line); }
+  .msg.internal .body { color: #5C3D06; }
+
+  .controls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+  @media (max-width: 700px) { .controls-grid { grid-template-columns: 1fr; } }
+  .controls-grid .check { margin-top: 0; }
+  .modal select {
+    width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px;
+    font: inherit; background: #fff; color: var(--text); margin-bottom: 8px;
+  }
+  .modal .toggle { display: flex; align-items: center; gap: 8px; margin: 8px 0 0; font-size: 12.5px; color: var(--text); font-weight: 550; }
+  .modal .toggle input { width: auto; margin: 0; }
+  .reply-row { display: flex; gap: 10px; align-items: center; margin-top: 10px; }
+  .reply-row .hint { font-size: 12px; color: var(--muted); }
+  .reply-row .btn { margin-left: auto; }
+  .sos-link { border: 1px solid var(--red-line); background: var(--red-bg); border-radius: 10px; padding: 10px 12px; margin-top: 12px; font-size: 12.5px; color: var(--red); }
+
   /* ---------- toasts ---------- */
   .toasts { position: fixed; right: 18px; bottom: 18px; z-index: 60; display: flex; flex-direction: column; gap: 9px; max-width: 380px; }
   .toast {
@@ -380,6 +413,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L14.7 3.9a2 2 0 00-3.4 0z"/></svg>
         SOS Alerts <span class="count" id="cSos">–</span>
       </button>
+      <button data-tab="support" aria-current="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><path d="M8 9h8M8 13h5"/></svg>
+        Support Tickets <span class="count" id="cSupport">–</span>
+      </button>
       <button data-tab="bookings" aria-current="false">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7h18M3 12h18M3 17h18"/></svg>
         Bookings <span class="count" id="cBookings">–</span>
@@ -416,6 +453,7 @@
     </div>
 
     <div class="banner banner-err" id="err" hidden></div>
+    <div class="banner banner-info" id="crossLink" hidden></div>
 
     <div class="card">
       <div class="card-head">
@@ -476,6 +514,8 @@ const STATUS_TEXT = {
   // operator needs to see.
   NO_DRIVERS_AVAILABLE: 'No drivers found',
   CAPTURED: 'Paid', FAILED: 'Failed', REFUNDED: 'Refunded', RESOLVED: 'Resolved',
+  // Support tickets. IN_PROGRESS and RESOLVED already read correctly above.
+  OPEN: 'Open', CLOSED: 'Closed',
 };
 const STATUS_TONE = {
   UNDER_REVIEW: 'amber', PENDING: 'amber', REQUESTED: 'amber', MATCHED: 'amber',
@@ -484,7 +524,19 @@ const STATUS_TONE = {
   REJECTED: 'red', FAILED: 'red', CANCELLED: 'red', REFUNDED: 'red',
   // Amber, not red: this is the platform falling short, not misconduct.
   NO_DRIVERS_AVAILABLE: 'amber',
+  OPEN: 'amber', CLOSED: 'grey',
 };
+const TICKET_CATEGORY_TEXT = {
+  SAFETY_CONCERN: 'Safety concern', PAYMENT_DISPUTE: 'Payment dispute',
+  DRIVER_OR_CUSTOMER_BEHAVIOR: 'Behaviour', CANCELLATION_DISPUTE: 'Cancellation dispute',
+  APP_ISSUE: 'App issue', OTHER: 'Other',
+};
+const PRIORITY_TEXT = { HIGH: 'High', MEDIUM: 'Medium', LOW: 'Low' };
+const ticketCategoryText = v => TICKET_CATEGORY_TEXT[v] || humanize(v);
+function priorityBadge(p) {
+  const tone = p === 'HIGH' ? 'b-red' : p === 'MEDIUM' ? 'b-amber' : 'b-grey';
+  return `<span class="badge ${tone}">${esc(PRIORITY_TEXT[p] || humanize(p))}</span>`;
+}
 /**
  * The same treatment for the other enums the API returns. Status had this
  * already, but the Bookings table printed the service as "PARCEL" over
@@ -902,6 +954,69 @@ const VIEWS = {
     },
   },
 
+  /**
+   * Issues raised by riders and partners.
+   *
+   * Its own list, not merged into SOS Alerts. An SOS is someone who may be in
+   * danger this minute; a ticket is something to be worked through, and
+   * putting the two in one list would teach operators to scan past both.
+   * They are linked instead: a safety ticket sorts to the top here, the SOS
+   * page says when open safety tickets exist, and a ticket on a trip that
+   * had an SOS shows that alert inside the ticket.
+   *
+   * The server orders the queue - unresolved before resolved, High before
+   * Medium - so the first row is always the one to pick up next.
+   */
+  support: {
+    title: 'Support Tickets',
+    desc: 'Issues raised from the rider and partner apps. Unresolved tickets come first, and within them safety concerns and other high-priority tickets. Open a ticket to read the full thread, reply, leave an internal note, assign it or change its status.',
+    cardTitle: 'Tickets',
+    hint: 'Click a row to open the ticket',
+    empty: { icon: ICON_EMPTY_QUEUE, title: 'No tickets yet', text: 'Issues raised from Help & Support in either app appear here.' },
+    emptyFiltered: {
+      icon: ICON_EMPTY_SEARCH,
+      title: 'No results match your filters',
+      text: 'Every ticket is still here. Widen the date range, or clear the status, category and priority filters.',
+    },
+    paged: true,
+    filters: [
+      { key: 'status', kind: 'select', label: 'Status', any: 'Any status', options: () =>
+          ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'].map(value => ({ value, label: STATUS_TEXT[value] })) },
+      { key: 'category', kind: 'select', label: 'Category', any: 'Any category', options: () =>
+          Object.entries(TICKET_CATEGORY_TEXT).map(([value, label]) => ({ value, label })) },
+      { key: 'priority', kind: 'select', label: 'Priority', any: 'Any priority', options: () =>
+          Object.entries(PRIORITY_TEXT).map(([value, label]) => ({ value, label })) },
+      { key: 'from', kind: 'date', label: 'Raised from' },
+      { key: 'to', kind: 'date', label: 'Raised to' },
+    ],
+    columns: [
+      { key: 'priority', label: 'Priority', sort: r => ({ HIGH: 0, MEDIUM: 1, LOW: 2 }[r.priority] ?? 3) },
+      { key: 'subject', label: 'Issue', sort: r => (r.subject || '').toLowerCase() },
+      { key: 'raisedBy', label: 'Raised by', sort: r => (r.raisedByName || r.raisedByPhone || '').toLowerCase() },
+      { key: 'status', label: 'Status', sort: r => r.status || '' },
+      { key: 'assigned', label: 'Assigned to', sort: r => r.assignedAdminPhone || '' },
+      { key: 'lastActivityAt', label: 'Last update', sort: r => -new Date(r.lastActivityAt || 0).getTime() },
+      { key: 'waiting', label: 'Open for', sort: r => -new Date(r.createdAt || 0).getTime() },
+    ],
+    load: (state) => api(`/admin/support/tickets${filterQuery(state, { pageSize: PAGE_SIZE })}`),
+    cell: (r, key) => {
+      if (key === 'priority') return priorityBadge(r.priority);
+      if (key === 'subject') return `<span class="strong">${esc(r.subject)}</span><div class="subtle">${esc(ticketCategoryText(r.category))}</div>`;
+      if (key === 'raisedBy') return `${roleBadge(r.role)} <span class="strong">${esc(r.raisedByName || 'Name not set')}</span>${r.raisedByBlocked ? ' <span class="badge b-blocked">Blocked</span>' : ''}
+        <div class="subtle num">${esc(r.raisedByPhone)}</div>`;
+      if (key === 'status') return badge(r.status);
+      if (key === 'assigned') return r.assignedAdminPhone ? `<span class="num">${esc(r.assignedAdminPhone)}</span>` : '<span class="subtle">Unassigned</span>';
+      if (key === 'lastActivityAt') return `<span class="subtle">${time(r.lastActivityAt)}</span>`;
+      if (key === 'waiting') {
+        if (r.status === 'RESOLVED' || r.status === 'CLOSED') return '<span class="subtle">—</span>';
+        const w = waited(r.createdAt);
+        return `<span class="wait ${w.cls}">${w.text}</span>`;
+      }
+      return '—';
+    },
+    onRowClick: r => openTicket(r.id),
+  },
+
   bookings: {
     title: 'Bookings',
     desc: 'Every booking, searchable by pickup or drop address and narrowable by status, service and date. Read-only - there are no actions to take from this page.',
@@ -1315,6 +1430,228 @@ function openDriver(r) {
   });
 }
 
+// ---- support tickets ------------------------------------------------------
+/**
+ * The moves the server allows from each status (SupportTicketStatus.canMoveTo).
+ * Mirrored here only to offer sensible choices - the server is the rule and
+ * refuses anything else regardless.
+ */
+const TICKET_NEXT = {
+  OPEN: ['IN_PROGRESS', 'RESOLVED', 'CLOSED'],
+  IN_PROGRESS: ['OPEN', 'RESOLVED', 'CLOSED'],
+  RESOLVED: ['IN_PROGRESS', 'OPEN', 'CLOSED'],
+  CLOSED: [],
+};
+
+let operatorsCache = null;
+async function operators() {
+  if (!operatorsCache) operatorsCache = await api('/admin/support/operators');
+  return operatorsCache;
+}
+
+/**
+ * The sidebar's alert for tickets, and the SOS page's link to them.
+ *
+ * Read on every render rather than only when the Tickets tab is open: this
+ * badge is how an operator on any other page finds out a ticket is waiting,
+ * which is the same way the verification queue already surfaces new work.
+ * Red when any unresolved ticket is High priority.
+ */
+async function refreshSupportCounts() {
+  try {
+    const c = await api('/admin/support/counts');
+    const el = $('cSupport');
+    el.textContent = c.unresolved;
+    el.classList.toggle('urgent', c.unresolvedHigh > 0);
+    el.title = c.unresolvedHigh > 0
+      ? `${c.unresolved} unresolved, ${c.unresolvedHigh} high priority`
+      : `${c.unresolved} unresolved`;
+    return c;
+  } catch (err) {
+    return null;
+  }
+}
+
+function paintCrossLink(counts) {
+  const host = $('crossLink');
+  if (tab !== 'sos' || !counts || counts.unresolvedSafety === 0) { host.hidden = true; host.innerHTML = ''; return; }
+  const n = counts.unresolvedSafety;
+  host.innerHTML = `<span><strong>${n} unresolved safety ticket${n === 1 ? '' : 's'}.</strong>
+    These are reports, not live alerts — but read them alongside the alerts below.</span>
+    <button class="btn" type="button" data-open-safety>View safety tickets</button>`;
+  host.hidden = false;
+  host.querySelector('[data-open-safety]').addEventListener('click', () => switchTab('support', { page: 0, category: 'SAFETY_CONCERN' }));
+}
+
+function ticketMessage(m) {
+  const kind = m.internalOnly ? 'internal' : m.authorRole === 'ADMIN' ? 'staff' : 'raiser';
+  const label = m.internalOnly
+    ? `<span class="badge b-amber">Internal note</span> ${esc(m.authorLabel)} · operators only`
+    : m.authorRole === 'ADMIN' ? `${esc(m.authorLabel)} · reply` : esc(m.authorLabel);
+  return `<div class="msg ${kind}"><div class="who">${label}<span class="subtle">${time(m.createdAt)}</span></div>
+    <div class="body">${esc(m.message)}</div></div>`;
+}
+
+/**
+ * One ticket: the facts, anything linked, the thread, and the actions.
+ *
+ * Replying is not confirmed - it is the ordinary work of the screen and a
+ * confirmation on every message would be clicked through unread. Status and
+ * assignment are, like every other consequential action in this console.
+ * confirmAction replaces this modal while it asks, so the ticket is reopened
+ * afterwards, with anything half-typed in the reply box put back.
+ */
+async function openTicket(id, keep = {}) {
+  openModal(`<div class="modal-body"><div class="state"><h3>Loading ticket…</h3></div></div>`, { wide: true });
+  let d, ops;
+  try {
+    [d, ops] = await Promise.all([api(`/admin/support/tickets/${id}`), operators()]);
+  } catch (err) {
+    if (err.message === 'unauthorized') return;
+    openModal(`<div class="modal-body"><div class="state"><h3>Could not load this ticket</h3><p>${esc(err.message)}</p></div></div>
+      <div class="modal-foot"><button class="btn" data-cancel type="button">Close</button></div>`, { wide: true });
+    $('modalRoot').querySelector('[data-cancel]').addEventListener('click', closeModal);
+    return;
+  }
+  const t = d.ticket;
+  const who = t.raisedByName || t.raisedByPhone || 'this person';
+  const raiserWord = t.role === 'DRIVER' ? 'partner' : 'rider';
+  const closed = t.status === 'CLOSED';
+  const b = d.linkedBooking;
+
+  openModal(`
+    <div class="modal-head">
+      <h3>${esc(t.subject)}</h3>
+      <p>${priorityBadge(t.priority)} ${badge(t.status)} &middot; ${esc(ticketCategoryText(t.category))} &middot; raised ${time(t.createdAt)}</p>
+    </div>
+    <div class="modal-body">
+      <dl class="kv">
+        <dt>Raised by</dt><dd>${roleBadge(t.role)} ${esc(t.raisedByName || 'Name not set')} <span class="subtle num">${esc(t.raisedByPhone)}</span>${t.raisedByBlocked ? ' <span class="badge b-blocked">Blocked</span>' : ''}</dd>
+        <dt>Assigned to</dt><dd>${t.assignedAdminPhone ? `<span class="num">${esc(t.assignedAdminPhone)}</span>` : '<span class="subtle">Unassigned</span>'}</dd>
+        <dt>Last update</dt><dd>${time(t.lastActivityAt)}</dd>
+        ${t.resolvedAt ? `<dt>Resolved</dt><dd>${time(t.resolvedAt)}${t.resolvedByPhone ? ` by <span class="num">${esc(t.resolvedByPhone)}</span>` : ''}</dd>` : ''}
+        <dt>Linked trip</dt><dd>${b
+          ? `${esc(serviceText(b.category))} · ${badge(b.status)}<div class="subtle">${esc(b.pickupLabel)} → ${esc(b.dropLabel)} · ${time(b.requestedAt)}</div>
+             <div class="subtle">Rider: ${esc(b.customerName || 'Name not set')} · Partner: ${esc(b.driverName || 'Not assigned')}</div>`
+          : t.linkedBookingId ? '<span class="subtle">Trip no longer found</span>' : '<span class="subtle">Not about a specific trip</span>'}</dd>
+      </dl>
+      ${d.sosAlerts.length ? `<div class="sos-link"><strong>SOS was raised on this trip ${d.sosAlerts.length === 1 ? 'once' : d.sosAlerts.length + ' times'}.</strong>
+        ${d.sosAlerts.map(a => `<div>${time(a.createdAt)} · ${a.status === 'ACTIVE' ? '<strong>still active</strong>' : 'resolved ' + time(a.resolvedAt)} · ${a.contactsNotified} contact(s) reached ·
+          <a href="https://maps.google.com/?q=${a.lat},${a.lng}" target="_blank" rel="noreferrer">location</a></div>`).join('')}</div>` : ''}
+
+      <label>What they wrote</label>
+      <div class="thread"><div class="msg raiser"><div class="who">${esc(t.raisedByName || 'Raiser')}<span class="subtle">${time(t.createdAt)}</span></div><div class="body">${esc(t.description)}</div></div>
+        ${d.messages.map(ticketMessage).join('')}
+      </div>
+
+      <label for="replyBox">${closed ? 'Internal note (the ticket is closed, so replies are off)' : 'Reply'}</label>
+      <textarea id="replyBox" maxlength="2000" placeholder="${closed ? 'A note for other operators' : `Write to the ${raiserWord}`}">${keep.draft ? esc(keep.draft) : ''}</textarea>
+      <label class="toggle"><input type="checkbox" id="internalToggle" ${closed || keep.internal ? 'checked' : ''} ${closed ? 'disabled' : ''}>
+        Internal note — only operators can see it, and nobody is notified</label>
+      <div class="reply-row">
+        <span class="hint" id="replyHint"></span>
+        <button class="btn btn-primary" id="sendReply" type="button">Send</button>
+      </div>
+
+      <div class="controls-grid">
+        <div class="check">
+          <div class="top"><h4>Status</h4>${badge(t.status)}</div>
+          ${closed ? '<p>Closed is final. Nothing more can change on this ticket.</p>' : `
+          <select id="statusSelect">${TICKET_NEXT[t.status].map(s => `<option value="${s}">${esc(STATUS_TEXT[s])}</option>`).join('')}</select>
+          <div class="row"><button class="btn" id="changeStatus" type="button">Change status</button></div>`}
+        </div>
+        <div class="check">
+          <div class="top"><h4>Assignment</h4></div>
+          <select id="assignSelect" ${closed ? 'disabled' : ''}>
+            <option value="">Unassigned</option>
+            ${ops.map(o => `<option value="${esc(o.accountId)}" ${o.accountId === t.assignedAdminId ? 'selected' : ''}>${esc(o.phoneNumber)}</option>`).join('')}
+          </select>
+          <div class="row"><button class="btn" id="changeAssign" type="button" ${closed ? 'disabled' : ''}>Save assignment</button></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot"><button class="btn" data-cancel type="button">Close</button></div>
+  `, { wide: true });
+
+  const root = $('modalRoot');
+  root.querySelector('[data-cancel]').addEventListener('click', closeModal);
+  const box = root.querySelector('#replyBox');
+  const toggle = root.querySelector('#internalToggle');
+  const sendBtn = root.querySelector('#sendReply');
+  const paintReplyMode = () => {
+    const internal = toggle.checked;
+    sendBtn.textContent = internal ? 'Add internal note' : 'Send reply';
+    root.querySelector('#replyHint').textContent = internal
+      ? 'Visible to operators only.'
+      : `The ${raiserWord} sees this in the app and is sent a text saying support replied.`;
+  };
+  paintReplyMode();
+  toggle.addEventListener('change', paintReplyMode);
+  const current = () => ({ draft: box.value, internal: toggle.checked });
+
+  sendBtn.addEventListener('click', async () => {
+    const message = box.value.trim();
+    if (!message) { box.focus(); return; }
+    sendBtn.disabled = true;
+    try {
+      await api(`/admin/support/tickets/${id}/messages`, { method: 'POST', body: JSON.stringify({ message, internalOnly: toggle.checked }) });
+      toast('ok', toggle.checked ? 'Internal note added' : 'Reply sent', toggle.checked ? 'Only operators can see it.' : `${who} can read it in the app.`);
+      openTicket(id);
+      render();
+    } catch (err) {
+      sendBtn.disabled = false;
+      if (err.message === 'unauthorized') return;
+      toast('bad', 'Could not send that', err.message);
+    }
+  });
+
+  const statusBtn = root.querySelector('#changeStatus');
+  if (statusBtn) statusBtn.addEventListener('click', async () => {
+    const next = root.querySelector('#statusSelect').value;
+    const keepNow = current();
+    const copy = {
+      RESOLVED: { title: 'Mark this ticket resolved?', message: `${who} will see it as Resolved. If they reply, it reopens automatically.`, label: 'Mark resolved', tone: 'approve' },
+      CLOSED: { title: 'Close this ticket?', message: `Closing is final. ${who} will no longer be able to reply to it and would have to raise a new ticket.`, label: 'Close ticket', tone: 'reject' },
+      IN_PROGRESS: { title: 'Move this ticket to In progress?', message: `${who} will see that it is being looked at.`, label: 'Move to In progress', tone: 'primary' },
+      OPEN: { title: 'Move this ticket back to Open?', message: 'It will read as waiting for someone to pick it up.', label: 'Move to Open', tone: 'primary' },
+    }[next];
+    const ok = await confirmAction({ title: copy.title, message: copy.message, confirmLabel: copy.label, tone: copy.tone });
+    if (!ok) { openTicket(id, keepNow); return; }
+    try {
+      await api(`/admin/support/tickets/${id}/status`, { method: 'POST', body: JSON.stringify({ status: next }) });
+      toast('ok', 'Status changed', `${t.subject} — ${STATUS_TEXT[next]}.`);
+      render();
+    } catch (err) {
+      if (err.message === 'unauthorized') return;
+      toast('bad', 'Could not change the status', err.message);
+    }
+    openTicket(id, keepNow);
+  });
+
+  root.querySelector('#changeAssign').addEventListener('click', async () => {
+    const select = root.querySelector('#assignSelect');
+    const assignee = select.value || null;
+    if ((assignee || null) === (t.assignedAdminId || null)) { toast('bad', 'Nothing to change', 'That is already who it is assigned to.'); return; }
+    const keepNow = current();
+    const label = assignee ? select.options[select.selectedIndex].text : null;
+    const ok = await confirmAction({
+      title: assignee ? 'Assign this ticket?' : 'Unassign this ticket?',
+      message: assignee ? `${label} will be recorded as handling "${t.subject}".` : `Nobody will be recorded as handling "${t.subject}".`,
+      confirmLabel: assignee ? 'Assign' : 'Unassign',
+    });
+    if (!ok) { openTicket(id, keepNow); return; }
+    try {
+      await api(`/admin/support/tickets/${id}/assign`, { method: 'POST', body: JSON.stringify({ assigneeAdminId: assignee }) });
+      toast('ok', assignee ? 'Ticket assigned' : 'Ticket unassigned', assignee ? `Assigned to ${label}.` : '');
+      render();
+    } catch (err) {
+      if (err.message === 'unauthorized') return;
+      toast('bad', 'Could not change the assignment', err.message);
+    }
+    openTicket(id, keepNow);
+  });
+}
+
 // ---- rendering ------------------------------------------------------------
 function skeletonRows(cols) {
   return Array.from({ length: 4 }, () =>
@@ -1388,6 +1725,8 @@ async function render(opts = {}) {
     if (el) { el.focus(); if (el.setSelectionRange) el.setSelectionRange(el.value.length, el.value.length); }
   }
   $('rows').innerHTML = skeletonRows(view.columns.length);
+  $('crossLink').hidden = true;
+  refreshSupportCounts().then(paintCrossLink);
   try {
     const state = stateFor(tab);
     const result = await view.load(state);
@@ -1407,8 +1746,10 @@ async function render(opts = {}) {
 
     const counts = { queue: 'cQueue', sos: 'cSos', bookings: 'cBookings', accounts: 'cAccounts', trust: 'cTrust' };
     // The badge counts everything matching, not the rows on this page -
-    // "25" beside Bookings when there are 400 would be a lie.
-    $(counts[tab]).textContent = paged ? paged.totalItems : rows.length;
+    // "25" beside Bookings when there are 400 would be a lie. Support is
+    // not in this map: its badge counts unresolved tickets whatever the
+    // filters say, and is refreshed on every render - see refreshSupportCounts.
+    if (counts[tab]) $(counts[tab]).textContent = paged ? paged.totalItems : rows.length;
   } catch (err) {
     if (err.message === 'unauthorized') return;
     paintPager(null);
@@ -1419,14 +1760,19 @@ async function render(opts = {}) {
   }
 }
 
+/** Changes section; `state`, when given, replaces that section's filters (e.g. arriving from a cross-link). */
+function switchTab(name, state) {
+  tab = name;
+  sort = { key: null, dir: 'asc' };
+  if (state) filterState[name] = state;
+  $('nav').querySelectorAll('button[data-tab]').forEach(x =>
+    x.setAttribute('aria-current', x.dataset.tab === name ? 'page' : 'false'));
+  render();
+}
 $('nav').addEventListener('click', e => {
   const b = e.target.closest('button[data-tab]');
   if (!b) return;
-  tab = b.dataset.tab;
-  sort = { key: null, dir: 'asc' };
-  $('nav').querySelectorAll('button[data-tab]').forEach(x =>
-    x.setAttribute('aria-current', x === b ? 'page' : 'false'));
-  render();
+  switchTab(b.dataset.tab);
 });
 $('refresh').addEventListener('click', render);
 

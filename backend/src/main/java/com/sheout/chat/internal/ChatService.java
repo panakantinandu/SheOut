@@ -157,9 +157,7 @@ public class ChatService implements ChatApi {
             return Result.failure(ChatError.BOOKING_NOT_FOUND);
         }
         BookingParticipants participants = result.value();
-        boolean onThisTrip = requesterId.equals(participants.customerId())
-                || requesterId.equals(participants.driverId());
-        if (!onThisTrip) {
+        if (!participants.includes(requesterId)) {
             return Result.failure(ChatError.BOOKING_NOT_FOUND);
         }
         return Result.success(participants);

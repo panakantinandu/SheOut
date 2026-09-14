@@ -148,6 +148,13 @@ public class SosService implements SosApi {
                 .toList();
     }
 
+    @Override
+    public List<SosAlertSummary> findByBookingId(UUID bookingId) {
+        return sosAlertRepository.findByBookingIdOrderByCreatedAtDesc(bookingId).stream()
+                .map(SosService::toSummary)
+                .toList();
+    }
+
     /**
      * Transactional, unlike trigger() above - this is a single short write
      * with no external call in it, so the reasoning that kept trigger()

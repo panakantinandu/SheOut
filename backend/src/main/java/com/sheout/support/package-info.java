@@ -18,5 +18,18 @@
  * Nothing to do with SOS. The emergency path - a rider's own emergency
  * contacts, and the 112 dial - is separate, stays separate, and must never
  * be routed through a support queue.
+ * <p>
+ * TICKETS. A rider or a partner raises an issue and the two sides write back
+ * and forth until an operator resolves it. Tickets depend on booking only
+ * through BookingApi (to check a linked booking is the raiser's) and on
+ * auth only through AuthApi (to check an assignee is an operator). Creation
+ * publishes SupportTicketRaised; an operator's visible reply publishes
+ * SupportReplyPosted, which the notifications module turns into an SMS -
+ * this module never sends anything itself.
+ * <p>
+ * A SAFETY_CONCERN ticket is HIGH priority and sorts to the top of the
+ * operator queue, and the console links it to any SOS alert on the same
+ * booking - but it is still a ticket. It is read when someone reaches it,
+ * which is exactly why both apps point a person in danger at SOS instead.
  */
 package com.sheout.support;

@@ -23,6 +23,14 @@ public interface SosApi {
     List<SosAlertSummary> findActiveAlerts();
 
     /**
+     * Every alert raised on one booking, active or resolved, newest first.
+     * For the ops console's support-ticket view, which shows a safety ticket
+     * beside any SOS raised on the same trip rather than as a separate fact
+     * an operator has to go and find.
+     */
+    List<SosAlertSummary> findByBookingId(UUID bookingId);
+
+    /**
      * ACTIVE to RESOLVED, recording which admin account closed it and when.
      * Idempotent in the sense that resolving an already-resolved alert is
      * reported as ALREADY_RESOLVED rather than silently overwriting the

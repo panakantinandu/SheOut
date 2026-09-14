@@ -147,7 +147,8 @@ export interface NotificationView {
     | 'BOOKING_COMPLETED'
     | 'BOOKING_CANCELLED'
     | 'ACCOUNT_VERIFIED'
-    | 'SOS_ALERT';
+    | 'SOS_ALERT'
+    | 'SUPPORT_REPLY';
   channel: 'SMS' | 'PUSH' | 'EMAIL';
   status: 'SENT' | 'FAILED';
   failureReason: string | null;
@@ -191,6 +192,42 @@ export interface ChatThreadResponse {
 /** What GET /support/contact returns. phoneNumber is null when none is configured. */
 export interface SupportContact {
   phoneNumber: string | null;
+}
+
+export type { SupportTicketCategory, SupportTicketStatus } from '@sheout/design-system';
+import type { SupportTicketCategory, SupportTicketStatus } from '@sheout/design-system';
+
+/**
+ * A support ticket as its raiser sees it. There is no assignee or resolver
+ * here: which operator is handling it is not shown to riders or partners.
+ */
+export interface SupportTicket {
+  id: string;
+  category: SupportTicketCategory;
+  subject: string;
+  description: string;
+  linkedBookingId: string | null;
+  status: SupportTicketStatus;
+  priority: 'LOW' | 'MEDIUM' | 'HIGH';
+  createdAt: string;
+  lastActivityAt: string;
+  resolvedAt: string | null;
+}
+
+/** One line of a ticket thread. Operators' internal notes are never sent to the app. */
+export interface SupportTicketMessage {
+  id: string;
+  message: string;
+  mine: boolean;
+  fromSupport: boolean;
+  createdAt: string;
+}
+
+/** open is false once the ticket is CLOSED. */
+export interface SupportTicketThreadResponse {
+  ticket: SupportTicket;
+  messages: SupportTicketMessage[];
+  open: boolean;
 }
 
 /**

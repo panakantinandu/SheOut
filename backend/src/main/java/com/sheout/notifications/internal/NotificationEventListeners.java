@@ -9,6 +9,7 @@ import com.sheout.booking.BookingRequested;
 import com.sheout.driververification.AccountVerified;
 import com.sheout.notifications.internal.channel.NotificationChannel;
 import com.sheout.sharedkernel.Result;
+import com.sheout.support.SupportReplyPosted;
 import com.sheout.users.DriverProfileApi;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
@@ -90,6 +91,22 @@ class NotificationEventListeners {
                 ? "SheOut: Your account is verified! You can now go online and accept rides."
                 : "SheOut: Your account is verified! You can now book rides.";
         notify(event.accountId(), NotificationType.ACCOUNT_VERIFIED, message);
+    }
+
+    /**
+     * An operator answered a ticket. The SMS says a reply is waiting and
+     * where to read it, not what it says: a text is read on a lock screen by
+     * whoever has the phone, and a reply about a safety concern or a dispute
+     * is not something to put there. The subject is left out for the same
+     * reason - the person wrote it, but not for a lock screen.
+     * <p>
+     * Inert until Twilio is configured, like every other message here; the
+     * attempt is still logged, so a failed notification is visible.
+     */
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onSupportReplyPosted(SupportReplyPosted event) {
+        notify(event.recipientAccountId(), NotificationType.SUPPORT_REPLY,
+                "SheOut: Support has replied to your ticket. Open Help & Support in the app to read it.");
     }
 
     private void notify(UUID accountId, NotificationType type, String message) {

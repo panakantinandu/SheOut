@@ -127,9 +127,7 @@ public class PaymentController {
             throw ApiException.notFound("No booking found for this id");
         }
         BookingParticipants participants = result.value();
-        boolean isParticipant = caller.accountId().equals(participants.customerId())
-                || caller.accountId().equals(participants.driverId());
-        if (!isParticipant) {
+        if (!participants.includes(caller.accountId())) {
             throw ApiException.notFound("No booking found for this id");
         }
     }

@@ -6,6 +6,8 @@ import { DeliveryBooking } from './screens/DeliveryBooking'
 import { Home } from './screens/Home'
 import { About } from './screens/About'
 import { HelpSupport } from './screens/HelpSupport'
+import { RaiseIssue } from './screens/RaiseIssue'
+import { SupportTicket } from './screens/SupportTicket'
 import { Login } from './screens/Login'
 import { EmergencyContacts } from './screens/EmergencyContacts'
 import { Privacy } from './screens/Privacy'
@@ -71,6 +73,8 @@ function App() {
       <Route path="/profile/emergency-contacts" element={protectedOnly(<EmergencyContacts />)} />
       <Route path="/verification" element={protectedOnly(<Verification />)} />
       <Route path="/help" element={protectedOnly(<HelpSupport />)} />
+      <Route path="/help/new" element={protectedOnly(<RaiseIssue />)} />
+      <Route path="/help/tickets/:ticketId" element={protectedOnly(<SupportTicket />)} />
       <Route path="/about" element={protectedOnly(<About />)} />
 
       <Route path="/book/ride" element={protectedOnly(<RideBooking />)} />

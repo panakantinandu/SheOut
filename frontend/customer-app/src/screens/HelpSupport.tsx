@@ -1,35 +1,28 @@
-import { LifeBuoy, Mail, Phone, Siren } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { LifeBuoy, Mail, Phone, Plus, Siren } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, FaqList, IconCircle, ListRow, TopHeader } from '@sheout/design-system';
-import type { FaqItem } from '@sheout/design-system';
+import { Button, Card, FaqList, IconCircle, ListRow, SupportTicketList, TopHeader } from '@sheout/design-system';
+import type { FaqItem, SupportTicketFilters } from '@sheout/design-system';
 import { supportApi } from '../api/client';
+import type { SupportTicketCategory, SupportTicketStatus } from '../api/types';
 
 const SUPPORT_EMAIL = 'support@sheout.app';
 
 /**
- * Static by design. There is no ticketing or chat backend, so rather than a
- * contact form that posts nowhere, this hands over real contact routes the
- * device can actually act on (mailto:/tel:) plus answers to the questions
- * this app's own behaviour raises. Replaces a placeholder that just said
- * "no support screen built yet".
+ * Help & Support: raise an issue, follow the ones already raised, and the
+ * direct routes for everything a ticket is the wrong tool for.
  * <p>
- * The SOS row routes to the real SOS screen rather than describing it -
- * that is the one genuinely urgent path on this screen.
+ * This used to be static - contact rows and an FAQ - because there was no
+ * ticketing backend to post to. Tickets are the main thing here now. The
+ * contact rows and the FAQ stay below them rather than going: the SOS row is
+ * the one genuinely urgent path on this screen and must not be removed in
+ * favour of a queue, and a phone call is still how somebody who cannot type
+ * right now reaches a person.
  * <p>
- * The phone number comes from the backend, not from a constant here. It
- * used to be hardcoded in this file and hardcoded differently in the
- * partner app, so support answered on one number from one app and another
- * from the other, and fixing either meant a frontend deploy. The row is
- * hidden outright when none is configured rather than offering a dead dial.
+ * The phone number comes from the backend - see SupportController - and the
+ * row is hidden when none is configured.
  */
 
-/**
- * Answers written against what this app actually does, held as data so the
- * screen below stays about layout. They render through the shared FaqList,
- * which the partner app uses too, so the two cannot drift into presenting
- * the same kind of information two different ways.
- */
 const FAQS: FaqItem[] = [
   {
     question: 'How do I cancel a booking?',
@@ -75,38 +68,56 @@ export function HelpSupport() {
         if (!cancelled) setSupportPhone(contact.phoneNumber);
       })
       .catch(() => {
-        // Email and SOS both still work, so a failure here costs one row
-        // rather than the screen. Nothing urgent depends on it.
+        // Tickets, email and SOS all still work, so a failure here costs one
+        // row rather than the screen.
       });
     return () => {
       cancelled = true;
     };
   }, []);
 
+  const fetchPage = useCallback(
+    (filters: SupportTicketFilters) =>
+      supportApi.myTickets({
+        page: filters.page,
+        status: filters.status as SupportTicketStatus[] | undefined,
+        category: filters.category as SupportTicketCategory[] | undefined,
+        from: filters.from,
+        to: filters.to,
+      }),
+    []
+  );
+
   return (
     <div className="space-y-6">
       <TopHeader variant="back" title="Help & Support" onBack={() => navigate('/profile')} />
 
-      <Card className="flex items-center gap-3">
-        {/* Was a tall centred block that was mostly empty space. The same
-            information on one line leaves the screen to what she came for. */}
-        <IconCircle size="lg" tone="soft" icon={<LifeBuoy />} />
-        <div>
-          <p className="font-heading font-semibold text-text-primary">We are here to help</p>
-          <p className="text-sm text-text-secondary">Reach us any time - we usually reply within a day.</p>
+      <Card className="space-y-3">
+        <div className="flex items-center gap-3">
+          <IconCircle size="lg" tone="soft" icon={<LifeBuoy />} />
+          <div>
+            <p className="font-heading font-semibold text-text-primary">We are here to help</p>
+            <p className="text-sm text-text-secondary">Tell us what happened and we will reply here.</p>
+          </div>
         </div>
+        <Button fullWidth size="md" icon={<Plus className="h-4 w-4" />} onClick={() => navigate('/help/new')}>
+          Raise an issue
+        </Button>
       </Card>
 
-      {/* Headed sections over divided cards - the same shape the Profile
-          screen uses, so one convention holds across the app. */}
       <section>
-        <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">Get in touch</h2>
+        <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">My tickets</h2>
+        <SupportTicketList audience="customer" fetchPage={fetchPage} onOpen={(id) => navigate(`/help/tickets/${id}`)} />
+      </section>
+
+      <section>
+        <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">Other ways to reach us</h2>
         <Card className="divide-y divide-border p-0">
           <ListRow
-            icon={<IconCircle tone="soft" size="sm" icon={<Mail />} />}
-            label="Email us"
-            sublabel={SUPPORT_EMAIL}
-            onClick={() => { window.location.href = `mailto:${SUPPORT_EMAIL}`; }}
+            icon={<IconCircle color="red" tone="soft" size="sm" icon={<Siren />} />}
+            label="Emergency SOS"
+            sublabel="In danger right now? Alert your emergency contacts"
+            onClick={() => navigate('/sos')}
           />
           {supportPhone && (
             <ListRow
@@ -117,10 +128,10 @@ export function HelpSupport() {
             />
           )}
           <ListRow
-            icon={<IconCircle color="red" tone="soft" size="sm" icon={<Siren />} />}
-            label="Emergency SOS"
-            sublabel="Alert your emergency contacts now"
-            onClick={() => navigate('/sos')}
+            icon={<IconCircle tone="soft" size="sm" icon={<Mail />} />}
+            label="Email us"
+            sublabel={SUPPORT_EMAIL}
+            onClick={() => { window.location.href = `mailto:${SUPPORT_EMAIL}`; }}
           />
         </Card>
       </section>

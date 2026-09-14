@@ -5,6 +5,8 @@ import { PageShell } from './layout/PageShell'
 import { Bookings } from './screens/Bookings'
 import { Earnings } from './screens/Earnings'
 import { HelpSupport } from './screens/HelpSupport'
+import { RaiseIssue } from './screens/RaiseIssue'
+import { SupportTicket } from './screens/SupportTicket'
 import { Home } from './screens/Home'
 import { Login } from './screens/Login'
 import { Privacy } from './screens/Privacy'
@@ -60,6 +62,8 @@ function App() {
           destinations - so protectedOnly, no AppShell. */}
       <Route path="/notifications" element={protectedOnly(<Notifications />)} />
       <Route path="/help" element={protectedOnly(<HelpSupport />)} />
+      <Route path="/help/new" element={protectedOnly(<RaiseIssue />)} />
+      <Route path="/help/tickets/:ticketId" element={protectedOnly(<SupportTicket />)} />
       <Route path="/verification" element={protectedOnly(<Verification />)} />
       <Route path="/offer/:bookingId" element={protectedOnly(<Offer />)} />
       <Route path="/trip/:bookingId" element={protectedOnly(<Trip />)} />
