@@ -78,6 +78,14 @@ public interface BookingApi {
     java.util.Set<java.util.UUID> bookingIdsForCustomer(java.util.UUID customerId);
 
     /**
+     * Every booking this account took part in, as customer or as driver,
+     * newest first. For the privacy module's data export and its "no active
+     * trip" check before an account is deleted - both need the whole set,
+     * whichever side of the trip the account was on.
+     */
+    List<BookingSummary> findAllForAccount(UUID accountId);
+
+    /**
      * A page of every booking, narrowed by {@link BookingQuery}. No owner
      * scope - this is the ops console's view.
      * <p>

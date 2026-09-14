@@ -12,4 +12,7 @@ interface AccountRepository extends JpaRepository<AccountEntity, UUID>, JpaSpeci
     Optional<AccountEntity> findByPhoneNumber(String phoneNumber);
 
     Optional<AccountEntity> findByEmail(String email);
+
+    /** True for an account that exists and has not been deleted. See AuthService.isActiveAccount. */
+    boolean existsByIdAndDeletedAtIsNull(UUID id);
 }

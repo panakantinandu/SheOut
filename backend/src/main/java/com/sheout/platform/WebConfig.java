@@ -35,6 +35,12 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addMapping("/api/**")
                 .allowedOrigins(allowedOrigins)
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                .allowedHeaders("*");
+                .allowedHeaders("*")
+                // A browser hides every response header from a cross-origin
+                // page except a short safelist, and neither of these is on it.
+                // Without this the apps could not read the data export's file
+                // name, or how long a 429 says to wait - both arrived, and
+                // fetch() reported them as absent.
+                .exposedHeaders("Content-Disposition", "Retry-After");
     }
 }

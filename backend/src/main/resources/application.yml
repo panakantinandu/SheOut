@@ -112,6 +112,13 @@ sheout:
     # unset rather than showing a button that dials nothing.
     phone-number: ${SUPPORT_PHONE_NUMBER:}
 
+    # The Grievance Officer's email - where a data-rights request or a
+    # grievance goes under India's DPDP Act, and the contact the privacy
+    # policy must name. Shown in both apps' Privacy & Data and Help screens.
+    # Blank by default; the apps then say a grievance contact is not yet
+    # available rather than showing nothing. Must be set before launch.
+    grievance-officer-email: ${GRIEVANCE_OFFICER_EMAIL:}
+
   users:
     # Where the cancellation review line sits.
     #

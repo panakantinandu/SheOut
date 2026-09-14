@@ -9,4 +9,6 @@ interface SupportTicketMessageRepository extends JpaRepository<SupportTicketMess
 
     /** Oldest first: a thread is read in the order it happened. */
     List<SupportTicketMessageEntity> findByTicketIdOrderByCreatedAtAsc(UUID ticketId);
+
+    List<SupportTicketMessageEntity> findByTicketIdAndAuthorAccountId(UUID ticketId, UUID authorAccountId);
 }

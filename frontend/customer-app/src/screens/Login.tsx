@@ -1,6 +1,6 @@
 import { User } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { BrandHeader, Button, LegalConsentNotice, PhoneField, TextField, isCompletePhone, toE164 } from '@sheout/design-system';
 import { ApiError, authApi, usersApi } from '../api/client';
 import type { AuthSession } from '../api/types';
@@ -111,7 +111,9 @@ export function Login() {
   const [submitting, setSubmitting] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   /** Non-error feedback, e.g. 'that number is already registered'. */
-  const [notice, setNotice] = useState<string | null>(null);
+  const location = useLocation();
+  // Set by another screen that sent her here with something to say - account deletion does.
+  const [notice, setNotice] = useState<string | null>((location.state as { notice?: string } | null)?.notice ?? null);
 
   const phoneNumber = toE164(phoneDigits);
 

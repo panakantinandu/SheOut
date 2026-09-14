@@ -103,6 +103,12 @@ public class SupportTicketEntity extends BaseEntity {
         touch();
     }
 
+    /** See SupportService.onAccountDeletionRequested. */
+    void redactRaiserText() {
+        this.subject = com.sheout.privacy.AccountDeletionRequested.REDACTED_TEXT;
+        this.description = com.sheout.privacy.AccountDeletionRequested.REDACTED_TEXT;
+    }
+
     void touch() {
         this.lastActivityAt = Instant.now();
     }

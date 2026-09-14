@@ -64,6 +64,15 @@ public class RatingEntity extends BaseEntity {
      * one once set - a rating is what somebody thought at the time, and a
      * record that can be revised is a record that can be leaned on.
      */
+    /**
+     * Account deletion: the rater's written words go, their stars stay. The
+     * stars are part of another person's average; the comment is only ever
+     * this person's own text, and nothing requires keeping it.
+     */
+    void eraseComment() {
+        this.comment = null;
+    }
+
     public void submit(int stars, String comment, Instant now) {
         this.stars = stars;
         this.comment = comment;

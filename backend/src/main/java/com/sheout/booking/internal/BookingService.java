@@ -428,6 +428,17 @@ public class BookingService implements BookingApi {
                 .collect(java.util.stream.Collectors.toSet());
     }
 
+    @Override
+    public List<BookingSummary> findAllForAccount(UUID accountId) {
+        return java.util.stream.Stream.concat(
+                        bookingRepository.findByCustomerId(accountId).stream(),
+                        bookingRepository.findByDriverId(accountId).stream())
+                .distinct()
+                .sorted(java.util.Comparator.comparing(BookingEntity::getCreatedAt).reversed())
+                .map(this::toSummary)
+                .toList();
+    }
+
     public List<BookingSummary> listForDriver(UUID driverId) {
         return bookingRepository.findByDriverId(driverId).stream().map(this::toSummary).toList();
     }

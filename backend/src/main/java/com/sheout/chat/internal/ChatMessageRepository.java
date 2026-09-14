@@ -9,4 +9,6 @@ interface ChatMessageRepository extends JpaRepository<ChatMessageEntity, UUID> {
 
     /** Oldest first: a conversation is read in the order it happened. */
     List<ChatMessageEntity> findByBookingIdOrderByCreatedAtAsc(UUID bookingId);
+
+    List<ChatMessageEntity> findBySenderAccountId(UUID senderAccountId);
 }

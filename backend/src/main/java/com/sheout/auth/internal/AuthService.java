@@ -8,7 +8,9 @@ import com.sheout.auth.AuthApi;
 import com.sheout.auth.AuthenticatedSession;
 import com.sheout.auth.internal.otp.OtpService;
 import com.sheout.auth.internal.security.JwtService;
+import com.sheout.privacy.AccountDeletionRequested;
 import com.sheout.sharedkernel.Result;
+import org.springframework.context.event.EventListener;
 import com.sheout.sharedkernel.event.DomainEventPublisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -224,6 +226,33 @@ public class AuthService implements AuthApi {
     static AccountSummary toSummary(AccountEntity a) {
         return new AccountSummary(
                 a.getId(), a.getPhoneNumber(), a.getEmail(), a.getRole(), a.getCreatedAt(), a.isBlocked());
+    }
+
+    /**
+     * Whether a token's account may still act. False once deleted.
+     * <p>
+     * Asked on every authenticated request by JwtAuthenticationFilter,
+     * because a token outlives the account it was issued for: tokens are
+     * valid for thirty days and there is no revocation list. Without this, a
+     * deleted account's phone would keep working until the token expired.
+     * One primary-key lookup per request; cheap next to what each endpoint
+     * already reads.
+     */
+    public boolean isActiveAccount(UUID accountId) {
+        return accountRepository.existsByIdAndDeletedAtIsNull(accountId);
+    }
+
+    /**
+     * The auth half of an account deletion. See AccountEntity.markDeleted
+     * for what is removed and why nothing of the phone number is kept.
+     */
+    @EventListener
+    @Transactional
+    public void onAccountDeletionRequested(AccountDeletionRequested event) {
+        accountRepository.findById(event.accountId()).ifPresent(account -> {
+            account.markDeleted();
+            accountRepository.save(account);
+        });
     }
 
     @Override

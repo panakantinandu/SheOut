@@ -135,6 +135,12 @@ services:
       - key: SUPPORT_PHONE_NUMBER
         sync: false
 
+      # The DPDP Grievance Officer's email: where data-rights requests and
+      # grievances go, shown in both apps and named in the privacy policy.
+      # Must be set for production.
+      - key: GRIEVANCE_OFFICER_EMAIL
+        sync: false
+
       # --- Fare engine ---
       #
       # Pricing is entirely configuration: there is not a rupee value in the

@@ -1,4 +1,4 @@
-import { LifeBuoy, Mail, Phone, Plus, ShieldCheck } from 'lucide-react';
+import { LifeBuoy, Mail, Phone, Plus, ShieldCheck, Scale } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Card, FaqList, IconCircle, ListRow, SupportTicketList, TopHeader } from '@sheout/design-system';
@@ -72,13 +72,17 @@ const FAQS: FaqItem[] = [
 export function HelpSupport() {
   const navigate = useNavigate();
   const [supportPhone, setSupportPhone] = useState<string | null>(null);
+  const [grievanceEmail, setGrievanceEmail] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     supportApi
       .getContact()
       .then((contact) => {
-        if (!cancelled) setSupportPhone(contact.phoneNumber);
+        if (!cancelled) {
+          setSupportPhone(contact.phoneNumber);
+          setGrievanceEmail(contact.grievanceOfficerEmail);
+        }
       })
       .catch(() => {
         // Tickets and email still work, so a failure here costs one row, not the screen.
@@ -132,6 +136,15 @@ export function HelpSupport() {
             label="Email us"
             sublabel={SUPPORT_EMAIL}
             onClick={() => { window.location.href = `mailto:${SUPPORT_EMAIL}`; }}
+          />
+          {/* The DPDP Grievance Officer - for complaints about how your data or
+              account is handled, and data-rights requests. */}
+          <ListRow
+            icon={<IconCircle tone="soft" size="sm" icon={<Scale />} />}
+            label="Grievance Officer"
+            sublabel={grievanceEmail ?? 'Contact details are being set up'}
+            onClick={grievanceEmail ? () => { window.location.href = `mailto:${grievanceEmail}`; } : undefined}
+            chevron={Boolean(grievanceEmail)}
           />
           {supportPhone && (
             <ListRow

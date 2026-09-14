@@ -17,6 +17,8 @@ interface RatingRepository extends JpaRepository<RatingEntity, UUID> {
 
     List<RatingEntity> findByRaterAccountIdAndBookingIdIn(UUID raterAccountId, Collection<UUID> bookingIds);
 
+    List<RatingEntity> findByRaterAccountIdAndCommentIsNotNull(UUID raterAccountId);
+
     /** Open slots for one person, soonest to close first - so a prompt asks about the one about to expire. */
     List<RatingEntity> findByRaterAccountIdAndStarsIsNullOrderByRateableUntilAsc(UUID raterAccountId);
 

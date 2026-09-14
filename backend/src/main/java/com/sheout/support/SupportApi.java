@@ -31,6 +31,13 @@ public interface SupportApi {
     Optional<String> supportPhoneNumber();
 
     /**
+     * Where a data-rights request or a grievance goes - the Grievance Officer
+     * the DPDP Act requires, whose contact the privacy policy names. Empty
+     * when not configured, for the same reason as the phone number above.
+     */
+    Optional<String> grievanceOfficerEmail();
+
+    /**
      * Raises a ticket. Priority comes from the category, never from the
      * caller. A linked booking must be one the raiser is on, otherwise
      * BOOKING_NOT_FOUND - the same answer as a booking that does not exist.
@@ -55,6 +62,13 @@ public interface SupportApi {
 
     /** Operator-only. assigneeAdminId must be an ADMIN account, or null to unassign. */
     Result<SupportTicketSummary, SupportError> assignTicket(UUID ticketId, UUID assigneeAdminId, UUID adminAccountId);
+
+    /**
+     * Whether anyone has an OPEN or IN_PROGRESS ticket about this booking -
+     * this codebase's definition of "a dispute is open". Account deletion
+     * uses it to decide what of a trip's record must be kept for the dispute.
+     */
+    boolean hasUnresolvedTicketForBooking(UUID bookingId);
 
     /** Paged, filtered. Pass the caller's id as query.raisedBy for a self-service list. */
     Page<SupportTicketSummary> listTickets(SupportTicketQuery query, Pageable pageable);

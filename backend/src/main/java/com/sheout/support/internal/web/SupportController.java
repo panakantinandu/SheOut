@@ -29,9 +29,12 @@ public class SupportController {
     public ResponseEntity<SupportContactResponse> contact() {
         // Null rather than an empty string when unset, so a client reading
         // this cannot accidentally render "tel:" as a working link.
-        return ResponseEntity.ok(new SupportContactResponse(supportApi.supportPhoneNumber().orElse(null)));
+        return ResponseEntity.ok(new SupportContactResponse(
+                supportApi.supportPhoneNumber().orElse(null),
+                supportApi.grievanceOfficerEmail().orElse(null)));
     }
 
-    public record SupportContactResponse(String phoneNumber) {
+    /** grievanceOfficerEmail is null when unconfigured, like phoneNumber. */
+    public record SupportContactResponse(String phoneNumber, String grievanceOfficerEmail) {
     }
 }

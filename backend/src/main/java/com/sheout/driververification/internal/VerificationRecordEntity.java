@@ -123,6 +123,11 @@ public class VerificationRecordEntity extends BaseEntity {
         return rejectionReason;
     }
 
+    /** For account deletion only - the note is free text about the person. See AccountDeletionDocumentListener. */
+    public void clearRejectionReason() {
+        this.rejectionReason = null;
+    }
+
     public void recordReview(String reviewedByAccountId, String rejectionReason) {
         this.reviewedBy = reviewedByAccountId;
         this.reviewedAt = Instant.now();

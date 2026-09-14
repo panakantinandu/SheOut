@@ -37,6 +37,7 @@ public class SupportService implements SupportApi {
     private static final Logger log = LoggerFactory.getLogger(SupportService.class);
 
     private final String phoneNumber;
+    private final String grievanceEmail;
     private final SupportTicketRepository tickets;
     private final SupportTicketMessageRepository messages;
     private final BookingApi bookingApi;
@@ -44,12 +45,17 @@ public class SupportService implements SupportApi {
     private final DomainEventPublisher eventPublisher;
 
     SupportService(@Value("${sheout.support.phone-number:}") String phoneNumber,
+                   @Value("${sheout.support.grievance-officer-email:}") String grievanceEmail,
                    SupportTicketRepository tickets,
                    SupportTicketMessageRepository messages,
                    BookingApi bookingApi,
                    AuthApi authApi,
                    DomainEventPublisher eventPublisher) {
         this.phoneNumber = phoneNumber == null ? "" : phoneNumber.trim();
+        this.grievanceEmail = grievanceEmail == null ? "" : grievanceEmail.trim();
+        if (this.grievanceEmail.isBlank()) {
+            log.warn("GRIEVANCE_OFFICER_EMAIL is not set - both apps will say a grievance contact is not yet available");
+        }
         this.tickets = tickets;
         this.messages = messages;
         this.bookingApi = bookingApi;
@@ -67,6 +73,11 @@ public class SupportService implements SupportApi {
     @Override
     public Optional<String> supportPhoneNumber() {
         return phoneNumber.isBlank() ? Optional.empty() : Optional.of(phoneNumber);
+    }
+
+    @Override
+    public Optional<String> grievanceOfficerEmail() {
+        return grievanceEmail.isBlank() ? Optional.empty() : Optional.of(grievanceEmail);
     }
 
     @Override
@@ -185,6 +196,36 @@ public class SupportService implements SupportApi {
                 : assigneeAdminId.equals(adminAccountId) ? "Assigned the ticket to themselves." : "Reassigned the ticket.");
         ticket.assignTo(assigneeAdminId);
         return Result.success(toSummary(tickets.save(ticket)));
+    }
+
+    @Override
+    public boolean hasUnresolvedTicketForBooking(UUID bookingId) {
+        return tickets.existsByLinkedBookingIdAndStatusIn(bookingId, SupportTicketStatus.unresolved());
+    }
+
+    /**
+     * What a deleted account wrote to support.
+     * <p>
+     * An unresolved ticket is an open dispute and is kept as written - it is
+     * the reason anyone would need the record. A resolved or closed one keeps
+     * its category, status, dates and the operators' side, but the subject,
+     * description and the person's own messages become [deleted]. The raiser's
+     * name is already "Deleted User" wherever the console shows it.
+     */
+    @org.springframework.context.event.EventListener
+    @Transactional
+    public void onAccountDeletionRequested(com.sheout.privacy.AccountDeletionRequested event) {
+        for (SupportTicketEntity ticket : tickets.findByRaisedByAccountId(event.accountId())) {
+            if (SupportTicketStatus.unresolved().contains(ticket.getStatus())) {
+                continue;
+            }
+            ticket.redactRaiserText();
+            tickets.save(ticket);
+            List<SupportTicketMessageEntity> authored =
+                    messages.findByTicketIdAndAuthorAccountId(ticket.getId(), event.accountId());
+            authored.forEach(SupportTicketMessageEntity::redact);
+            messages.saveAll(authored);
+        }
     }
 
     @Override
