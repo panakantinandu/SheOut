@@ -120,7 +120,10 @@ public class OsrmRouteProvider implements RouteProvider {
             // Rate limiting, a timeout, DNS, a malformed body - all the same
             // to a rider standing on a pavement. Logged at warn because a
             // run of these is the signal that it is time to self-host.
-            log.warn("OSRM routing failed ({}), falling back to an estimate", e.toString());
+            // The exception type only. Its message quotes the request URL,
+            // which carries the pickup and drop coordinates - often somebody's
+            // front door - and this line is logged on every routing blip.
+            log.warn("OSRM routing failed ({}), falling back to an estimate", e.getClass().getSimpleName());
             return estimate(pickup, drop);
         }
     }
@@ -173,7 +176,8 @@ public class OsrmRouteProvider implements RouteProvider {
 
             return new RoutePath(points, route.distance() / 1000.0, route.duration() / 60.0);
         } catch (RuntimeException e) {
-            log.warn("OSRM route geometry failed ({})", e.toString());
+            // Type only - see route() above: the message carries coordinates.
+            log.warn("OSRM route geometry failed ({})", e.getClass().getSimpleName());
             return RoutePath.unavailable();
         }
     }

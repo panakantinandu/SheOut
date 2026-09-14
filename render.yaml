@@ -44,6 +44,13 @@ services:
       - key: CORS_ALLOWED_ORIGINS
         value: https://sheout-customer-app.vercel.app,https://sheout-driver-app.vercel.app
 
+      # The real client address for per-client rate limits. Requests reach
+      # the app from Render's proxy, so the socket address is shared by every
+      # user; Cloudflare, in front of Render, overwrites this header with the
+      # address it accepted the connection from. See ClientAddressResolver.
+      - key: CLIENT_IP_HEADER
+        value: CF-Connecting-IP
+
       # Render hands these back as postgres://user:pass@host:port/db and
       # redis://[user:pass@]host:port respectively. The Postgres one gets
       # automatically reshaped into the jdbc:postgresql://...?user=...

@@ -11,6 +11,7 @@ import com.sheout.users.internal.CustomerProfileError;
 import com.sheout.users.internal.CustomerProfileService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -107,7 +108,12 @@ public class CustomerProfileController {
 
     public record AddContactRequest(
             @NotBlank @Size(max = 150) String name,
-            @NotBlank @Size(max = 20) String phoneNumber,
+            // E.164, the same rule sign-in uses, and what the app already
+            // sends. This number is texted by SOS, so accepting any 20
+            // characters let a contact be something Twilio can only reject -
+            // discovered in the middle of an emergency rather than here.
+            @NotBlank @Size(max = 20)
+            @Pattern(regexp = "^\\+[1-9]\\d{7,14}$", message = "must be a valid E.164 phone number") String phoneNumber,
             @NotBlank @Size(max = 50) String relationship
     ) {
     }

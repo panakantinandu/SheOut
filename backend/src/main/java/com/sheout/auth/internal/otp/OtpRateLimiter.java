@@ -1,15 +1,13 @@
 package com.sheout.auth.internal.otp;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.sheout.sharedkernel.ratelimit.RateLimiter;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 
 /**
- * Caps how often a code can be requested for one phone number.
+ * How often a code may be asked for, and how often one may be guessed.
  * <p>
  * Without this, the OTP endpoint was an SMS cannon. Twelve requests for one
  * number landed in half a second in testing, each one an SMS attempt. That
@@ -17,60 +15,63 @@ import java.time.Duration;
  * Twilio account, and it lets anyone use SheOut to repeatedly text a number
  * they do not own. The victim is not even a user.
  * <p>
- * Two limits, because one is not enough. A short cooldown stops the rapid
- * burst; an hourly cap stops a patient attacker pacing themselves just
- * outside it. Both keyed on the number being texted, since that is who
- * suffers - an IP cap alone protects the bill and not the person.
+ * Requesting a code, per phone number, three limits at once: a short
+ * cooldown stops the rapid burst, 5 per 15 minutes is the ceiling the
+ * security review set, and the hourly cap stops a patient attacker pacing
+ * themselves just inside the other two. Checked shortest first, so somebody
+ * tapping "resend" during the cooldown does not also spend their hourly
+ * allowance on requests that were never going to be sent.
  * <p>
- * Redis-backed, so the limit holds across instances rather than per-process.
- * Deliberately fails OPEN: if Redis is unreachable the request is allowed
- * through. Someone unable to receive a login code is a worse outcome than
- * an unmetered SMS, and Redis being down is already breaking OTP storage
- * itself a moment later.
+ * Verifying a code, per phone number, 5 per 15 minutes. OtpService already
+ * destroys a code after five wrong guesses; this bounds guesses across
+ * codes, which that cannot.
+ * <p>
+ * Keyed on the number, since that is who suffers - an IP cap alone protects
+ * the bill and not the person. The per-IP limits in AuthController are a
+ * second, looser layer against one client spraying many numbers.
+ * <p>
+ * The trade-off, stated plainly: anyone who knows a number can spend that
+ * number's allowance and delay its owner's login by up to the window. That
+ * is inherent to any per-number limit, and it is the lesser harm next to an
+ * unmetered one.
  */
 @Component
 public class OtpRateLimiter {
 
-    private static final Logger log = LoggerFactory.getLogger(OtpRateLimiter.class);
-    private static final String COOLDOWN_PREFIX = "otp:cooldown:";
-    private static final String HOURLY_PREFIX = "otp:hourly:";
-
-    private final StringRedisTemplate redis;
+    private final RateLimiter rateLimiter;
     private final Duration cooldown;
     private final int hourlyLimit;
+    private final int requestLimit;
+    private final int verifyLimit;
+    private final Duration window;
 
-    OtpRateLimiter(StringRedisTemplate redis,
+    OtpRateLimiter(RateLimiter rateLimiter,
                    @Value("${sheout.auth.otp-cooldown-seconds:45}") long cooldownSeconds,
-                   @Value("${sheout.auth.otp-hourly-limit:6}") int hourlyLimit) {
-        this.redis = redis;
+                   @Value("${sheout.auth.otp-hourly-limit:6}") int hourlyLimit,
+                   @Value("${sheout.rate-limit.otp-request-per-phone:5}") int requestLimit,
+                   @Value("${sheout.rate-limit.otp-verify-per-phone:5}") int verifyLimit,
+                   @Value("${sheout.rate-limit.otp-window-minutes:15}") long windowMinutes) {
+        this.rateLimiter = rateLimiter;
         this.cooldown = Duration.ofSeconds(cooldownSeconds);
         this.hourlyLimit = hourlyLimit;
+        this.requestLimit = requestLimit;
+        this.verifyLimit = verifyLimit;
+        this.window = Duration.ofMinutes(windowMinutes);
     }
 
-    /** True when a code may be sent to this number right now. */
-    public boolean allow(String phoneNumber) {
-        try {
-            Boolean firstInWindow = redis.opsForValue()
-                    .setIfAbsent(COOLDOWN_PREFIX + phoneNumber, "1", cooldown);
-            if (!Boolean.TRUE.equals(firstInWindow)) {
-                log.info("OTP request refused - still inside the {}s cooldown for this number", cooldown.toSeconds());
-                return false;
-            }
+    /** Throws TooManyRequestsException when a code may not be sent to this number now. */
+    public void checkRequest(String phoneNumber) {
+        rateLimiter.tryConsume("otp-request-cooldown:" + phoneNumber, 1, cooldown)
+                .orThrow("Please wait before asking for another code.");
+        rateLimiter.tryConsume("otp-request:" + phoneNumber, requestLimit, window)
+                .orThrow("Too many codes requested for this number. Please wait and try again.");
+        rateLimiter.tryConsume("otp-request-hourly:" + phoneNumber, hourlyLimit, Duration.ofHours(1))
+                .orThrow("Too many codes requested for this number. Please wait and try again.");
+    }
 
-            String hourlyKey = HOURLY_PREFIX + phoneNumber;
-            Long used = redis.opsForValue().increment(hourlyKey);
-            if (used != null && used == 1L) {
-                redis.expire(hourlyKey, Duration.ofHours(1));
-            }
-            if (used != null && used > hourlyLimit) {
-                log.warn("OTP request refused - {} requests for one number within the hour", used);
-                return false;
-            }
-            return true;
-        } catch (RuntimeException ex) {
-            // See the class comment: fail open rather than lock people out.
-            log.error("OTP rate limiter unavailable, allowing the request: {}", ex.getMessage());
-            return true;
-        }
+    /** Throws TooManyRequestsException when this number has had too many verification attempts. */
+    public void checkVerify(String phoneNumber) {
+        rateLimiter.tryConsume("otp-verify:" + phoneNumber, verifyLimit, window)
+                .orThrow("Too many attempts for this number. Please wait and try again.");
     }
 }

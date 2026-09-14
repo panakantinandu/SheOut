@@ -57,6 +57,13 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
+        <!-- Response security headers only (see platform.SecurityHeadersConfig).
+             Authentication and authorization are still JwtAuthenticationFilter
+             plus each controller's own checks; every request is permitted here. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
 
         <dependency>
             <groupId>org.postgresql</groupId>

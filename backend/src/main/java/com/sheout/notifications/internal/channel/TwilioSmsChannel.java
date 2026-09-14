@@ -3,6 +3,7 @@ package com.sheout.notifications.internal.channel;
 import com.sheout.notifications.internal.NotificationError;
 import com.sheout.notifications.internal.SendFailure;
 import com.sheout.sharedkernel.Result;
+import com.sheout.sharedkernel.logging.Redact;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -84,7 +85,9 @@ public class TwilioSmsChannel implements NotificationChannel {
         form.add("From", fromNumber);
         form.add("Body", message);
 
-        log.debug("Twilio SMS send attempt - To: [{}], From: [{}], AccountSid: [{}]", recipient, fromNumber, accountSid);
+        // Recipients are masked in every log line here: they are riders'
+        // emergency contacts, people who never signed up to anything.
+        log.debug("Twilio SMS send attempt - To: [{}], From: [{}]", Redact.phone(recipient), fromNumber);
 
         try {
             // exchange(), not retrieve().toBodilessEntity(): the bodiless form
@@ -111,13 +114,15 @@ public class TwilioSmsChannel implements NotificationChannel {
                         String detail = "HTTP " + response.getStatusCode().value()
                                 + (twilioCode == null ? "" : " (Twilio error " + twilioCode + ")")
                                 + (body.isEmpty() ? "" : " " + body);
-                        log.error("Twilio SMS send failed - To: [{}], From: [{}], {}", recipient, fromNumber, detail);
+                        log.error("Twilio SMS send failed - To: [{}], From: [{}], {}",
+                                Redact.phone(recipient), fromNumber, Redact.phoneNumbersIn(detail));
                         return Result.failure(SendFailure.of(NotificationError.PROVIDER_ERROR, detail));
                     });
         } catch (RestClientException e) {
             // Connect/read timeout, DNS, TLS - never reached Twilio at all.
             String detail = "Could not reach Twilio: " + e.getMessage();
-            log.error("Twilio SMS send failed - To: [{}], From: [{}], {}", recipient, fromNumber, detail);
+            log.error("Twilio SMS send failed - To: [{}], From: [{}], {}",
+                    Redact.phone(recipient), fromNumber, Redact.phoneNumbersIn(detail));
             return Result.failure(SendFailure.of(NotificationError.PROVIDER_ERROR, detail));
         }
     }

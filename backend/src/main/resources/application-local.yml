@@ -18,3 +18,5 @@ sheout:
     # Dev-only default so local dev doesn't need a real JWT_SECRET set -
     # this exact value must never be used anywhere but a local machine.
     jwt-secret: ${JWT_SECRET:local-dev-only-secret-do-not-use-in-production-32bytes}
+    # No SMS provider locally, so the log is the only place a code can go.
+    log-otp-codes: ${LOG_OTP_CODES:true}

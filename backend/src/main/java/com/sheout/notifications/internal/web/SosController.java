@@ -99,6 +99,7 @@ public class SosController {
         static SosResponse from(SosService.SosOutcome outcome) {
             String reason = outcome.contactsTotal() == 0
                     ? "NO_EMERGENCY_CONTACTS"
+                    : outcome.contactsRecentlyTexted() ? "CONTACTS_RECENTLY_ALERTED"
                     : outcome.success() ? null : "ALL_SENDS_FAILED";
             return new SosResponse(
                     outcome.alertId(),

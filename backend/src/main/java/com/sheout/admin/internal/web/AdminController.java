@@ -142,7 +142,7 @@ public class AdminController {
             @RequestParam(required = false) Instant from,
             @RequestParam(required = false) Instant to,
             @RequestParam(required = false) Set<BookingCategory> category,
-            @RequestParam(required = false) String q) {
+            @RequestParam(required = false) @Size(max = 100) String q) {
         requireAdmin();
         Pageable pageable = PageRequest.of(
                 PageResponse.normalizePage(page), PageResponse.normalizePageSize(pageSize));
@@ -159,7 +159,7 @@ public class AdminController {
     public ResponseEntity<PageResponse<AccountOpsRow>> accounts(
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer pageSize,
-            @RequestParam(required = false) String q,
+            @RequestParam(required = false) @Size(max = 100) String q,
             @RequestParam(required = false) AccountRole role,
             @RequestParam(required = false) Boolean blocked) {
         requireAdmin();

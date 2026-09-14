@@ -11,6 +11,7 @@ import com.sheout.sharedkernel.Result;
 import com.sheout.sharedkernel.web.ApiException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -97,7 +98,8 @@ public class AdminVerificationController {
         );
     }
 
-    public record ReviewRequest(@NotNull VerificationStatus decision, String reason) {
+    /** reason is stored in rejection_reason, varchar(1000); longer failed at the database as a 500. */
+    public record ReviewRequest(@NotNull VerificationStatus decision, @Size(max = 1000) String reason) {
     }
 
     public record PoliceReviewRequest(@NotNull VerificationStatus decision) {

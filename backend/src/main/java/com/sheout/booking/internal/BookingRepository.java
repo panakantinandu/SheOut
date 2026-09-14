@@ -1,10 +1,13 @@
 package com.sheout.booking.internal;
 
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Lock;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -20,4 +23,17 @@ interface BookingRepository extends JpaRepository<BookingEntity, UUID>, JpaSpeci
 
     /** createdAt is the requestedAt the summary exposes - see BookingEntity's Javadoc. */
     List<BookingEntity> findAllByOrderByCreatedAtDesc(Pageable pageable);
+
+    /**
+     * The row, locked until the calling transaction ends.
+     * <p>
+     * For startTrip's pickup-code check, which reads an attempt count,
+     * compares, and writes it back. Without the lock that is a lost update:
+     * forty parallel wrong guesses against one booking were all read as
+     * attempt zero, ten of them were evaluated as fresh guesses against a
+     * limit of five, and the count saved was five. The lock makes each guess
+     * wait for the previous one's count.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    Optional<BookingEntity> findLockedById(UUID id);
 }

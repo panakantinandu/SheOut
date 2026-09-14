@@ -13,6 +13,7 @@ import com.sheout.notifications.SosError;
 import com.sheout.notifications.SosStatus;
 import com.sheout.notifications.internal.channel.NotificationChannel;
 import com.sheout.sharedkernel.Result;
+import com.sheout.sharedkernel.logging.Redact;
 import com.sheout.users.CustomerProfileApi;
 import com.sheout.users.EmergencyContact;
 import com.sheout.users.EmergencyContactsApi;
@@ -21,6 +22,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -64,10 +66,12 @@ public class SosService implements SosApi {
     private final NotificationChannel smsChannel;
     private final CustomerProfileApi customerProfileApi;
     private final EmergencyContactsApi emergencyContactsApi;
+    private final SosFanOutThrottle fanOutThrottle;
 
     public SosService(SosAlertRepository sosAlertRepository, NotificationLogRepository notificationLogRepository,
                        NotificationChannel smsChannel, CustomerProfileApi customerProfileApi,
-                       EmergencyContactsApi emergencyContactsApi) {
+                       EmergencyContactsApi emergencyContactsApi, SosFanOutThrottle fanOutThrottle) {
+        this.fanOutThrottle = fanOutThrottle;
         this.sosAlertRepository = sosAlertRepository;
         this.notificationLogRepository = notificationLogRepository;
         this.smsChannel = smsChannel;
@@ -87,6 +91,24 @@ public class SosService implements SosApi {
         // every send below fails, or even if there are zero contacts to try.
         SosAlertEntity alert = sosAlertRepository.save(new SosAlertEntity(customerAccountId, bookingId, lat, lng));
 
+        // Never a refusal - see SosFanOutThrottle. The alert above is already
+        // saved; this only decides whether contacts texted moments ago are
+        // texted again right now.
+        //
+        // Held back only if a text really reached somebody within the last
+        // minute. The throttle counts presses, not deliveries, so on its own
+        // it would tell a woman whose every send had failed that her contacts
+        // "were texted less than a minute ago" - and stop retrying. When
+        // nothing has got through, every press tries again.
+        if (!contacts.isEmpty()
+                && !fanOutThrottle.shouldTextContacts(customerAccountId)
+                && sosAlertRepository.existsByCustomerAccountIdAndContactsNotifiedGreaterThanAndCreatedAtAfter(
+                        customerAccountId, 0, Instant.now().minus(SosFanOutThrottle.SPACING))) {
+            log.warn("SOS alert {} recorded; contacts were texted within the last minute after repeated presses, not re-texted",
+                    alert.getId());
+            return new SosOutcome(alert.getId(), contacts.size(), 0, List.of(), true);
+        }
+
         List<SosOutcome.ContactOutcome> outcomes = new ArrayList<>();
         int notified = 0;
         String message = "SOS from SheOut user " + customerName + ". Location: maps.google.com/?q=" + lat + "," + lng;
@@ -97,9 +119,13 @@ public class SosService implements SosApi {
             if (delivered) {
                 notified++;
             } else {
-                // Never silently swallowed - a failed SOS send is logged clearly, at ERROR, with which contact and why.
-                log.error("SOS alert {}: SMS to contact '{}' ({}) failed - {}",
-                        alert.getId(), contact.name(), contact.relationship(), result.error());
+                // Never silently swallowed - a failed SOS send is logged clearly,
+                // at ERROR, with which contact and why. Which contact is its id,
+                // not her name: the log is read far more widely than the
+                // contacts table. The provider's error text can quote the
+                // number, so it is redacted too.
+                log.error("SOS alert {}: SMS to contact {} failed - {}",
+                        alert.getId(), contact.id(), Redact.phoneNumbersIn(String.valueOf(result.error())));
             }
             outcomes.add(new SosOutcome.ContactOutcome(contact.name(), contact.relationship(), delivered));
             notificationLogRepository.save(new NotificationLogEntity(
@@ -112,7 +138,7 @@ public class SosService implements SosApi {
         alert.setContactsFailed(contacts.size() - notified);
         sosAlertRepository.save(alert);
 
-        return new SosOutcome(alert.getId(), contacts.size(), notified, outcomes);
+        return new SosOutcome(alert.getId(), contacts.size(), notified, outcomes, false);
     }
 
     @Override
@@ -168,10 +194,17 @@ public class SosService implements SosApi {
      * safety-critical response. See SosController's Javadoc for the same
      * reasoning applied to the endpoint's HTTP status.
      */
-    public record SosOutcome(UUID alertId, int contactsTotal, int contactsNotified, List<ContactOutcome> contacts) {
+    public record SosOutcome(UUID alertId, int contactsTotal, int contactsNotified, List<ContactOutcome> contacts,
+                             boolean contactsRecentlyTexted) {
 
+        /**
+         * A press whose re-text was spaced out still counts as a success: her
+         * contacts were texted with her location less than a minute ago, and
+         * showing her a red failure in that moment would be false and would
+         * push her to keep pressing.
+         */
         public boolean success() {
-            return contactsNotified > 0;
+            return contactsNotified > 0 || contactsRecentlyTexted;
         }
 
         public record ContactOutcome(String contactName, String relationship, boolean delivered) {

@@ -6,7 +6,6 @@ import com.sheout.auth.AccountRole;
 import com.sheout.auth.AccountSummary;
 import com.sheout.auth.AuthApi;
 import com.sheout.auth.AuthenticatedSession;
-import com.sheout.auth.internal.otp.OtpRateLimiter;
 import com.sheout.auth.internal.otp.OtpService;
 import com.sheout.auth.internal.security.JwtService;
 import com.sheout.sharedkernel.Result;
@@ -28,18 +27,15 @@ public class AuthService implements AuthApi {
 
     private final AccountRepository accountRepository;
     private final OtpService otpService;
-    private final OtpRateLimiter otpRateLimiter;
     private final JwtService jwtService;
     private final DomainEventPublisher eventPublisher;
 
     public AuthService(AccountRepository accountRepository,
                         OtpService otpService,
-                        OtpRateLimiter otpRateLimiter,
                         JwtService jwtService,
                         DomainEventPublisher eventPublisher) {
         this.accountRepository = accountRepository;
         this.otpService = otpService;
-        this.otpRateLimiter = otpRateLimiter;
         this.jwtService = jwtService;
         this.eventPublisher = eventPublisher;
     }
@@ -64,9 +60,10 @@ public class AuthService implements AuthApi {
         // too and was missed. verifyOtp still refuses the role mismatch,
         // which is the right place: by then the caller has proved the number
         // is theirs, so there is nothing left to disclose.
-        if (!otpRateLimiter.allow(phoneNumber)) {
-            return Result.failure(AuthError.OTP_TOO_MANY_REQUESTS);
-        }
+        //
+        // Rate limits are checked by AuthController before this is reached -
+        // see OtpRateLimiter - because a refusal has to carry a Retry-After,
+        // which a Result error cannot.
         boolean delivered = otpService.requestCode(phoneNumber);
         if (!delivered) {
             return Result.failure(AuthError.OTP_DELIVERY_FAILED);

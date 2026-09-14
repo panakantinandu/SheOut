@@ -163,8 +163,13 @@ they're easy to revisit rather than discovered later:
   editing the database row directly, as this note always intended.
 - **Self-service document upload only** - a caller can only submit a
   document for their own account, not on someone else's behalf.
-- **No OTP attempt lockout or resend cooldown** - a wrong code can be
-  retried until the code expires; nothing rate-limits `POST otp/request`.
+- **OTP limits** (this note used to say there were none): a code is
+  destroyed after 5 wrong guesses, and both `otp/request` and `otp/verify`
+  answer `429` with `Retry-After` past 5 per phone number per 15 minutes,
+  plus a 45s resend cooldown, an hourly request cap, and a looser per-client
+  limit. See `OtpRateLimiter`, `sharedkernel.ratelimit` and
+  `sheout.rate-limit.*` in `application.yml`. Per-client limits need
+  `CLIENT_IP_HEADER` set behind a proxy - see `ClientAddressResolver`.
 - **`LocalDiskDocumentStorage.resolveUrl` returns a `file://` path, not
   something an admin can open over HTTP** - the "open the document" part
   of the admin review flow is real only against S3; no file-serving proxy

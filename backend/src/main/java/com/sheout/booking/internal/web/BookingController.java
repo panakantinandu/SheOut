@@ -18,7 +18,9 @@ import com.sheout.booking.GeoAddress;
 import com.sheout.booking.RequestBookingCommand;
 import com.sheout.booking.internal.BookingService;
 import com.sheout.sharedkernel.Result;
+import com.sheout.sharedkernel.ratelimit.RateLimiter;
 import com.sheout.sharedkernel.web.ApiException;
+import org.springframework.beans.factory.annotation.Value;
 import com.sheout.sharedkernel.web.PageResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -41,6 +43,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
@@ -54,14 +57,22 @@ import java.util.UUID;
 @RestController
 public class BookingController {
 
+    private static final Duration PICKUP_WINDOW = Duration.ofMinutes(15);
+
     private final BookingService bookingService;
     private final ServiceArea serviceArea;
     private final RouteProvider routeProvider;
+    private final RateLimiter rateLimiter;
+    private final int pickupAttemptLimit;
 
-    public BookingController(BookingService bookingService, ServiceArea serviceArea, RouteProvider routeProvider) {
+    public BookingController(BookingService bookingService, ServiceArea serviceArea, RouteProvider routeProvider,
+                             RateLimiter rateLimiter,
+                             @Value("${sheout.rate-limit.pickup-code-per-driver:10}") int pickupAttemptLimit) {
         this.bookingService = bookingService;
         this.serviceArea = serviceArea;
         this.routeProvider = routeProvider;
+        this.rateLimiter = rateLimiter;
+        this.pickupAttemptLimit = pickupAttemptLimit;
     }
 
     /** One decimal is all a "2.4 km away" line can use; more would imply a precision the router does not have. */
@@ -168,7 +179,7 @@ public class BookingController {
             @RequestParam(required = false) Instant from,
             @RequestParam(required = false) Instant to,
             @RequestParam(required = false) Set<BookingCategory> category,
-            @RequestParam(required = false) String q) {
+            @RequestParam(required = false) @Size(max = 100) String q) {
         CurrentAccount caller = requireAuthenticated();
         BookingQuery query = new BookingQuery(status, from, to, category, q);
         Pageable pageable = PageRequest.of(
@@ -212,6 +223,14 @@ public class BookingController {
                                                  @Valid @RequestBody StartTripRequest request) {
         CurrentAccount caller = requireRole(AccountRole.DRIVER);
         requireAssignedDriver(caller, bookingId);
+        // Per partner, across every trip she holds, and after the assignment
+        // check so a refusal can never tell anyone a booking exists. The
+        // per-trip lockout in startTrip bounds guesses on one code; this
+        // bounds the rate at which anyone can guess at all, including in a
+        // parallel burst. See PickupCode.MAX_ATTEMPTS for why honest typing
+        // never comes near it.
+        rateLimiter.tryConsume("pickup-code:driver:" + caller.accountId(), pickupAttemptLimit, PICKUP_WINDOW)
+                .orThrow("Too many pickup code attempts. Please wait a few minutes, or call support.");
         return respond(bookingService.startTrip(bookingId, request.pickupCode()));
     }
 
@@ -457,7 +476,9 @@ public class BookingController {
     }
 
     public record GeoAddressRequest(
-            @NotBlank String label,
+            // pickup_label/drop_label are varchar(255). Without this a longer
+            // label reached the insert and failed there, as a 500.
+            @NotBlank @Size(max = 255) String label,
             @NotNull @DecimalMin("-90") @DecimalMax("90") Double lat,
             @NotNull @DecimalMin("-180") @DecimalMax("180") Double lng
     ) {

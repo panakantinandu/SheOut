@@ -98,7 +98,12 @@ export interface SosResponse {
   contactsFailed: number;
   contacts: SosContactOutcome[];
   success: boolean;
-  reason: 'NO_EMERGENCY_CONTACTS' | 'ALL_SENDS_FAILED' | null;
+  /**
+   * CONTACTS_RECENTLY_ALERTED comes with success: true. The alert and its new
+   * location were recorded, but her contacts had already been texted within
+   * the last minute after several presses, so they were not texted again yet.
+   */
+  reason: 'NO_EMERGENCY_CONTACTS' | 'ALL_SENDS_FAILED' | 'CONTACTS_RECENTLY_ALERTED' | null;
 }
 
 /** The shape GlobalExceptionHandler / ApiException always return on failure. */

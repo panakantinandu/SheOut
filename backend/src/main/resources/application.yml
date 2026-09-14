@@ -7,6 +7,13 @@ spring:
   application:
     name: sheout-backend
 
+  # Spring Security is here for response headers only (SecurityHeadersConfig).
+  # Without this exclusion Boot would also create an in-memory user with a
+  # generated password and print it to the log - a credential for nothing,
+  # in a place logs get pasted.
+  autoconfigure:
+    exclude: org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
+
   # No default here on purpose: this is the Render/production profile, and
   # a missing DATABASE_URL should fail startup loudly rather than silently
   # trying to reach a localhost Postgres that doesn't exist in that
@@ -45,6 +52,30 @@ sheout:
     # WebConfig) - defaults cover the frontend apps' local dev ports.
     # Add the deployed frontend's real origin here once one exists.
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:5174,http://localhost:5175}
+
+  rate-limit:
+    # Which request header carries the real client address, for per-client
+    # limits (see ClientAddressResolver). Blank means the socket address,
+    # which is right locally and WRONG behind a proxy: on Render it is the
+    # proxy, shared by every user, so a per-client limit becomes a global one.
+    # render.yaml sets CF-Connecting-IP.
+    client-ip-header: ${CLIENT_IP_HEADER:}
+    # Per phone number, within otp-window-minutes. Requesting a code is also
+    # held to sheout.auth.otp-cooldown-seconds and otp-hourly-limit below.
+    otp-request-per-phone: ${OTP_REQUEST_PER_PHONE:5}
+    otp-verify-per-phone: ${OTP_VERIFY_PER_PHONE:5}
+    otp-window-minutes: ${OTP_WINDOW_MINUTES:15}
+    # Per client address, per sign-in endpoint, within otp-window-minutes.
+    # Looser than per-phone on purpose: many people can share one address.
+    login-per-client: ${LOGIN_PER_CLIENT:30}
+    # Per partner, across all her trips, per 15 minutes. The per-trip
+    # lockout (five wrong codes) still applies underneath.
+    pickup-code-per-driver: ${PICKUP_CODE_PER_DRIVER:10}
+    # SOS is NEVER refused. These only space out re-texting contacts: the
+    # first sos-burst presses in the window all text everyone, then at most
+    # one text round a minute. See SosFanOutThrottle before changing.
+    sos-burst: ${SOS_BURST:5}
+    sos-burst-window-minutes: ${SOS_BURST_WINDOW_MINUTES:10}
 
   booking:
     service-area:
@@ -131,6 +162,10 @@ sheout:
     jwt-secret: ${JWT_SECRET}
     jwt-expiry-minutes: ${JWT_EXPIRY_MINUTES:43200}
     otp-ttl-seconds: ${OTP_TTL_SECONDS:300}
+    # Whether ConsoleOtpSender writes the code itself into the log. Off by
+    # default: a code in a production log is a sign-in for whoever reads it.
+    # application-local.yml turns it on for development.
+    log-otp-codes: ${LOG_OTP_CODES:false}
     # Both blank by default - opt-in only, for demoing a live deploy without
     # a real SMS provider wired up (see ConsoleOtpSender/OtpService). When
     # set, requesting an OTP for exactly this phone number always issues
