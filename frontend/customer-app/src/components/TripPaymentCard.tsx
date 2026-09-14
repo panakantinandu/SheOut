@@ -1,7 +1,7 @@
 import { Banknote, CheckCircle2, CreditCard } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { AmountText, Button, Card, IconCircle, paymentMethodLabel } from '@sheout/design-system';
-import { ApiError, paymentsApi } from '../api/client';
+import { ApiError, paymentsApi, usersApi } from '../api/client';
 import type { BookingSummary, PaymentSummary } from '../api/types';
 import { openRazorpayCheckout } from '../lib/razorpayCheckout';
 
@@ -53,8 +53,16 @@ export function TripPaymentCard({ booking, onPaid }: { booking: BookingSummary; 
     setPaying(true);
     setMessage(null);
     try {
-      const details = await paymentsApi.getCheckout(booking.id);
-      const outcome = await openRazorpayCheckout(details, `${booking.type === 'DELIVERY' ? 'Delivery' : 'Ride'} fare`);
+      const [details, contact] = await Promise.all([
+        paymentsApi.getCheckout(booking.id),
+        // A nicety, not a requirement: without it Checkout just asks.
+        usersApi.getMyProfile().then((p) => p.phoneNumber ?? undefined).catch(() => undefined),
+      ]);
+      const outcome = await openRazorpayCheckout(
+        details,
+        `${booking.type === 'DELIVERY' ? 'Delivery' : 'Ride'} fare`,
+        contact
+      );
       if (outcome.kind === 'dismissed') return;
       if (outcome.kind === 'failed') {
         setMessage(`${outcome.message} Nothing was taken - you can try again or pay cash.`);
@@ -95,7 +103,7 @@ export function TripPaymentCard({ booking, onPaid }: { booking: BookingSummary; 
             {payment.method === 'CASH' ? 'Cash to your partner' : `Online · ${paymentMethodLabel(payment.method)}`}
           </p>
         </div>
-        <AmountText amount={payment.amount} size="lg" />
+        <AmountText amount={payment.amount} size="lg" exact />
       </Card>
     );
   }
@@ -104,7 +112,7 @@ export function TripPaymentCard({ booking, onPaid }: { booking: BookingSummary; 
     <Card data-testid="trip-payment-due">
       <div className="flex items-center justify-between">
         <p className="font-heading font-semibold text-text-primary">Pay for this trip</p>
-        <AmountText amount={payment.amount} size="lg" />
+        <AmountText amount={payment.amount} size="lg" exact />
       </div>
       <Button
         className="mt-3"

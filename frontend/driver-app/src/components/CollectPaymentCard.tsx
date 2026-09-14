@@ -80,7 +80,7 @@ export function CollectPaymentCard({ bookingId }: { bookingId: string }) {
               {payment.method === 'CASH' ? 'Cash, collected by you' : `Online · ${paymentMethodLabel(payment.method)}`}
             </p>
           </div>
-          <AmountText amount={payment.amount} size="lg" />
+          <AmountText amount={payment.amount} size="lg" exact />
         </div>
         {payment.driverPayout != null && (
           <p className="text-sm text-text-secondary">
@@ -98,7 +98,7 @@ export function CollectPaymentCard({ bookingId }: { bookingId: string }) {
     <Card className="space-y-3" data-testid="collect-payment-due">
       <div className="flex items-center justify-between">
         <p className="font-heading font-semibold text-text-primary">Collect payment</p>
-        <AmountText amount={payment.amount} size="lg" />
+        <AmountText amount={payment.amount} size="lg" exact />
       </div>
       <p className="text-sm text-text-secondary">
         Your rider can pay online from her app - this updates on its own. If she pays you in cash, confirm it here once

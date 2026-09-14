@@ -11,6 +11,7 @@ interface RazorpayCheckoutOptions {
   name: string;
   description: string;
   theme?: { color: string };
+  prefill?: { contact?: string };
   handler: (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => void;
   modal?: { ondismiss?: () => void };
 }
@@ -66,7 +67,12 @@ export type CheckoutOutcome =
  * another method inside it - so 'failed' is remembered and reported only if
  * she then closes the window without a later success.
  */
-export async function openRazorpayCheckout(details: CheckoutDetails, description: string): Promise<CheckoutOutcome> {
+export async function openRazorpayCheckout(
+  details: CheckoutDetails,
+  description: string,
+  /** The rider's own number, so Checkout does not make her type it again. */
+  contact?: string
+): Promise<CheckoutOutcome> {
   await loadCheckoutScript();
   const Razorpay = window.Razorpay;
   if (!Razorpay) throw new Error('Could not load the payment window. Please try again.');
@@ -82,6 +88,7 @@ export async function openRazorpayCheckout(details: CheckoutDetails, description
       description,
       // The brand primary from design-system tokens.js.
       theme: { color: '#4A1A9E' },
+      prefill: contact ? { contact } : undefined,
       handler: (response) =>
         resolve({
           kind: 'paid',
