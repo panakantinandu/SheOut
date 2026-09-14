@@ -214,7 +214,10 @@ public class BookingService implements BookingApi {
      */
     @Transactional
     public Result<BookingSummary, BookingError> startTrip(UUID bookingId, String submittedCode) {
-        Optional<BookingEntity> found = bookingRepository.findById(bookingId);
+        // Locked: the attempt count below is read, compared and written back,
+        // and concurrent guesses must see each other's count. See
+        // BookingRepository.findLockedById.
+        Optional<BookingEntity> found = bookingRepository.findLockedById(bookingId);
         if (found.isEmpty()) {
             return Result.failure(BookingError.BOOKING_NOT_FOUND);
         }

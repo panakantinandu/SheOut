@@ -4,18 +4,26 @@ import com.sheout.auth.AccountRole;
 import com.sheout.auth.AuthenticatedSession;
 import com.sheout.auth.internal.AuthError;
 import com.sheout.auth.internal.AuthService;
+import com.sheout.auth.internal.otp.OtpRateLimiter;
 import com.sheout.auth.internal.security.GoogleTokenVerifier;
 import com.sheout.sharedkernel.Result;
+import com.sheout.sharedkernel.ratelimit.RateLimiter;
 import com.sheout.sharedkernel.web.ApiException;
+import com.sheout.sharedkernel.web.ClientAddressResolver;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.time.Duration;
 
 /**
  * Combined signup/login over phone + OTP, or over Google Sign-In. There is
@@ -28,14 +36,44 @@ public class AuthController {
 
     private final AuthService authService;
     private final GoogleTokenVerifier googleTokenVerifier;
+    private final OtpRateLimiter otpRateLimiter;
+    private final RateLimiter rateLimiter;
+    private final ClientAddressResolver clientAddress;
+    private final int perClientLimit;
+    private final Duration perClientWindow;
 
-    public AuthController(AuthService authService, GoogleTokenVerifier googleTokenVerifier) {
+    /**
+     * Per-client limits sit behind the per-number ones as a looser second
+     * layer: they are what stops one client cycling through thousands of
+     * numbers, each of which is individually under its own limit. Looser
+     * because many real people can share one address - a college, an
+     * office, a mobile carrier's NAT.
+     */
+    public AuthController(AuthService authService,
+                          GoogleTokenVerifier googleTokenVerifier,
+                          OtpRateLimiter otpRateLimiter,
+                          RateLimiter rateLimiter,
+                          ClientAddressResolver clientAddress,
+                          @Value("${sheout.rate-limit.login-per-client:30}") int perClientLimit,
+                          @Value("${sheout.rate-limit.otp-window-minutes:15}") long windowMinutes) {
         this.authService = authService;
         this.googleTokenVerifier = googleTokenVerifier;
+        this.otpRateLimiter = otpRateLimiter;
+        this.rateLimiter = rateLimiter;
+        this.clientAddress = clientAddress;
+        this.perClientLimit = perClientLimit;
+        this.perClientWindow = Duration.ofMinutes(windowMinutes);
+    }
+
+    private void checkClient(String bucket, HttpServletRequest http) {
+        rateLimiter.tryConsume(bucket + ":ip:" + clientAddress.resolve(http), perClientLimit, perClientWindow)
+                .orThrow("Too many sign-in attempts from this network. Please wait and try again.");
     }
 
     @PostMapping("/api/v1/auth/otp/request")
-    public ResponseEntity<Void> requestOtp(@Valid @RequestBody RequestOtpRequest request) {
+    public ResponseEntity<Void> requestOtp(@Valid @RequestBody RequestOtpRequest request, HttpServletRequest http) {
+        otpRateLimiter.checkRequest(request.phoneNumber());
+        checkClient("otp-request", http);
         Result<Void, AuthError> result = authService.requestOtp(request.phoneNumber(), request.role());
         if (result.isFailure()) {
             throw toApiException(result.error());
@@ -44,7 +82,9 @@ public class AuthController {
     }
 
     @PostMapping("/api/v1/auth/otp/verify")
-    public ResponseEntity<VerifyOtpResponse> verifyOtp(@Valid @RequestBody VerifyOtpRequest request) {
+    public ResponseEntity<VerifyOtpResponse> verifyOtp(@Valid @RequestBody VerifyOtpRequest request, HttpServletRequest http) {
+        otpRateLimiter.checkVerify(request.phoneNumber());
+        checkClient("otp-verify", http);
         Result<AuthenticatedSession, AuthError> result =
                 authService.verifyOtp(request.phoneNumber(), request.code(), request.role());
         if (result.isFailure()) {
@@ -63,7 +103,10 @@ public class AuthController {
      * is trusted; AuthService only ever sees an already-verified email/name.
      */
     @PostMapping("/api/v1/auth/google/verify")
-    public ResponseEntity<VerifyOtpResponse> verifyGoogle(@Valid @RequestBody GoogleVerifyRequest request) {
+    public ResponseEntity<VerifyOtpResponse> verifyGoogle(@Valid @RequestBody GoogleVerifyRequest request, HttpServletRequest http) {
+        // No per-account key exists before the token is verified, so this
+        // one is per client only. Each attempt costs two calls to Google.
+        checkClient("google-verify", http);
         if (!googleTokenVerifier.isConfigured()) {
             throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "Service Unavailable", "Google sign-in is not configured on this server");
         }
@@ -82,9 +125,6 @@ public class AuthController {
         return switch (error) {
             case OTP_DELIVERY_FAILED ->
                     new ApiException(HttpStatus.BAD_GATEWAY, "Bad Gateway", "Failed to deliver OTP code");
-            case OTP_TOO_MANY_REQUESTS ->
-                    new ApiException(HttpStatus.TOO_MANY_REQUESTS, "Too Many Requests",
-                            "Too many codes requested for this number. Please wait a minute and try again.");
             case OTP_NOT_FOUND_OR_EXPIRED ->
                     new ApiException(HttpStatus.BAD_REQUEST, "Bad Request", "No OTP requested for this number, or it has expired");
             case OTP_CODE_MISMATCH ->
@@ -125,7 +165,9 @@ public class AuthController {
     }
 
     public record GoogleVerifyRequest(
-            @NotBlank String accessToken,
+            // Google access tokens are a few hundred characters. The cap stops
+            // this endpoint forwarding megabytes to Google's tokeninfo.
+            @NotBlank @Size(max = 4096) String accessToken,
             @NotNull AccountRole role
     ) {
     }

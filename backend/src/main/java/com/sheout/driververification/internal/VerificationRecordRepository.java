@@ -16,9 +16,10 @@ interface VerificationRecordRepository extends JpaRepository<VerificationRecordE
     List<VerificationRecordEntity> findByGenderVerificationStatus(VerificationStatus status);
 
     /**
-     * Outstanding review work. The only @Query in this codebase - every
-     * other repository method here is a derived query name, and this one
-     * would be too if it could be: Spring Data derived names have no way to
+     * Outstanding review work. One of only two @Query methods in this
+     * codebase (the other is RatingRepository.aggregateFor), both using
+     * named, bound parameters - never concatenated strings. This one would
+     * be a derived query too if it could be: Spring Data derived names have no way to
      * group terms, so "A or (B and C)" cannot be written as a method name
      * without relying on undefined precedence. Spelling the JPQL out is the
      * boring option, and it stays behind this interface either way.

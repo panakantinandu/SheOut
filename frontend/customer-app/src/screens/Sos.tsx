@@ -44,6 +44,9 @@ function reasonMessage(response: SosResponse): string {
   if (response.reason === 'NO_EMERGENCY_CONTACTS') {
     return 'You have no emergency contacts saved yet, so nobody was told. Add one under Profile, Emergency Contacts, or call for help directly.';
   }
+  if (response.reason === 'CONTACTS_RECENTLY_ALERTED') {
+    return `Alert recorded with your latest location. Your ${response.contactsTotal} emergency contact(s) were texted less than a minute ago, so they were not texted again yet - press SOS again after a minute to send them this location. If you need help right now, call 112.`;
+  }
   if (response.reason === 'ALL_SENDS_FAILED') {
     return `We recorded your alert but could not reach any of your ${response.contactsTotal} emergency contact(s). Please call for help directly.`;
   }
