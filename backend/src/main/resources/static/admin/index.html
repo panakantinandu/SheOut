@@ -436,6 +436,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><path d="M8 9h8M8 13h5"/></svg>
         Support Tickets <span class="count" id="cSupport">–</span>
       </button>
+      <button data-tab="payouts" aria-current="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="6" width="20" height="13" rx="2"/><path d="M2 10h20M6 15h4"/></svg>
+        Payouts <span class="count" id="cPayouts">–</span>
+      </button>
       <button data-tab="bookings" aria-current="false">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7h18M3 12h18M3 17h18"/></svg>
         Bookings <span class="count" id="cBookings">–</span>
@@ -598,6 +602,13 @@ function roleBadge(role) {
   return `<span class="badge b-grey">${esc(role || 'Unknown')}</span>`;
 }
 
+/** A rupee amount from the API's decimal, always with paise: "₹1,250.00". */
+function rupees(amount) {
+  const n = Number(amount);
+  if (!Number.isFinite(n)) return '—';
+  return (n < 0 ? '-' : '') + '₹' + Math.abs(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 function badge(v) {
   if (!v) return '<span class="badge b-grey">—</span>';
   return `<span class="badge b-${STATUS_TONE[v] || 'grey'}">${esc(STATUS_TEXT[v] || v)}</span>`;
@@ -669,14 +680,17 @@ function confirmAction({
   reasonRequired = false,
   reasonLabel = 'Reason (optional, shared with the driver)',
   reasonPlaceholder = 'e.g. Document is blurred and the name cannot be read',
+  /** What to say when a required reason is left blank. */
+  reasonMissing = 'Please say why. This is kept as the record of the decision.',
+  reasonMaxLength = null,
 }) {
   return new Promise(resolve => {
     openModal(`
       <div class="modal-head"><h3>${esc(title)}</h3><p>${esc(message)}</p></div>
       <div class="modal-body">
         ${withReason ? `<label for="reasonInput">${esc(reasonLabel)}</label>
-        <textarea id="reasonInput" placeholder="${esc(reasonPlaceholder)}"></textarea>
-        <p class="field-err" id="reasonErr" hidden>Please say why. This is kept as the record of the decision.</p>` : ''}
+        <textarea id="reasonInput" placeholder="${esc(reasonPlaceholder)}"${reasonMaxLength ? ` maxlength="${Number(reasonMaxLength)}"` : ''}></textarea>
+        <p class="field-err" id="reasonErr" hidden>${esc(reasonMissing)}</p>` : ''}
       </div>
       <div class="modal-foot">
         <button class="btn" data-cancel type="button">Cancel</button>
@@ -1039,6 +1053,56 @@ const VIEWS = {
       return '—';
     },
     onRowClick: r => openTicket(r.id),
+  },
+
+  /**
+   * Partner payout requests, paid by hand.
+   *
+   * Nothing here moves money. An operator sends the transfer from the bank or
+   * UPI app, then marks the request paid with that transfer's reference -
+   * which is why the reference is required: it is the only link between this
+   * row and the money actually leaving. The full account number is shown
+   * because it is what gets typed into the bank; the partner's own app only
+   * ever shows it masked. Oldest first, so nobody waits longest.
+   */
+  payouts: {
+    title: 'Payouts',
+    desc: 'Payout requests from partners. Send the money from the bank or UPI app first, then mark the request paid with the transfer reference. Nothing on this page sends money by itself.',
+    cardTitle: 'Payout requests',
+    hint: 'Oldest request first',
+    empty: { icon: ICON_EMPTY_QUEUE, title: 'No payouts waiting', text: 'When a partner requests a payout from her wallet it appears here.' },
+    emptyFiltered: { icon: ICON_EMPTY_LIST, title: 'No paid payouts yet', text: 'Payouts marked paid are listed here with their reference.' },
+    paged: true,
+    filters: [
+      { key: 'status', kind: 'select', label: 'Show', any: 'Waiting to be paid', options: () => [{ value: 'PAID', label: 'Paid' }] },
+    ],
+    columns: [
+      { key: 'driver', label: 'Partner', sort: r => (r.driverName || '').toLowerCase() },
+      { key: 'amount', label: 'Amount', sort: r => -Number(r.amount) },
+      { key: 'bank', label: 'Bank account', sort: r => r.accountNumber || '' },
+      { key: 'upi', label: 'UPI ID', sort: r => r.upiVpa || '' },
+      { key: 'requested', label: 'Requested', sort: r => new Date(r.requestedAt || 0).getTime() },
+      { key: 'act', label: '', sort: null },
+    ],
+    load: (state) => api(`/admin/payouts${filterQuery(state, { pageSize: PAGE_SIZE })}`),
+    cell: (r, key) => {
+      if (key === 'driver') return `<span class="strong">${esc(r.driverName || 'Name not set')}</span><div class="subtle num">${esc(r.driverPhone || '')}</div>`;
+      if (key === 'amount') return `<span class="num strong">${rupees(r.amount)}</span>`
+        + (r.status === 'PENDING' ? `<div class="subtle">Balance left: <span class="num">${rupees(r.driverAvailableBalance)}</span></div>` : '');
+      if (key === 'bank') return r.accountNumber
+        ? `<span class="strong">${esc(r.accountHolderName)}</span><div class="num">A/c ${esc(r.accountNumber)}</div><div class="subtle num">IFSC ${esc(r.ifsc)}</div>`
+        : '<span class="subtle">None</span>';
+      if (key === 'upi') return r.upiVpa ? `<span class="num">${esc(r.upiVpa)}</span>` : '<span class="subtle">None</span>';
+      if (key === 'requested') {
+        if (r.status === 'PAID') return `<span class="subtle">${time(r.requestedAt)}</span>`;
+        const w = waited(r.requestedAt);
+        return `<span class="subtle">${time(r.requestedAt)}</span><div class="wait ${w.cls}">${w.text} ago</div>`;
+      }
+      if (key === 'act') return r.status === 'PAID'
+        ? `<span class="badge b-green">Paid</span><div class="subtle">${time(r.paidAt)}</div><div class="subtle">Ref <span class="num">${esc(r.paymentReference)}</span></div><div class="subtle">by <span class="num">${esc(r.paidByPhone || '—')}</span></div>`
+        : `<button class="btn btn-approve" data-markpaid="${esc(r.id)}" type="button">Mark paid</button>`;
+      return '—';
+    },
   },
 
   /**
@@ -1898,6 +1962,8 @@ async function render(opts = {}) {
     // not in this map: its badge counts unresolved tickets whatever the
     // filters say, and is refreshed on every render - see refreshSupportCounts.
     if (counts[tab]) $(counts[tab]).textContent = paged ? paged.totalItems : rows.length;
+    // Only the waiting list sets the Payouts badge; paid history is not work to do.
+    if (tab === 'payouts' && state.status !== 'PAID') $('cPayouts').textContent = paged.totalItems;
   } catch (err) {
     if (err.message === 'unauthorized') return;
     paintPager(null);
@@ -1944,6 +2010,42 @@ $('rows').addEventListener('click', async e => {
     }
     return;
   }
+  const markPaidBtn = e.target.closest('[data-markpaid]');
+  if (markPaidBtn) {
+    const row = lastRows[Number(markPaidBtn.closest('tr[data-i]').dataset.i)];
+    const who = row.driverName || row.driverPhone;
+    const where = [
+      row.accountNumber ? `bank account ${row.accountNumber} (IFSC ${row.ifsc}, ${row.accountHolderName})` : null,
+      row.upiVpa ? `UPI ${row.upiVpa}` : null,
+    ].filter(Boolean).join(' or ');
+    const ok = await confirmAction({
+      title: `Mark ${rupees(row.amount)} to ${who} as paid?`,
+      message: `Only once the money has actually been sent to ${where}. This does not send anything - it records that you did, and it cannot be undone from the console.`,
+      confirmLabel: 'Mark paid',
+      tone: 'approve',
+      withReason: true,
+      reasonRequired: true,
+      reasonLabel: 'Transfer reference (required) - the UTR or UPI reference from the bank',
+      reasonPlaceholder: 'e.g. UTR 412345678901',
+      reasonMissing: 'Enter the transfer reference. It is the only record tying this payout to the money sent.',
+      reasonMaxLength: 100,
+    });
+    if (!ok) return;
+    try {
+      await api(`/admin/payouts/${row.id}/mark-paid`, {
+        method: 'POST',
+        body: JSON.stringify({ paymentReference: ok.reason }),
+      });
+      toast('ok', 'Payout marked paid', `${rupees(row.amount)} to ${who}.`);
+      render();
+    } catch (err) {
+      if (err.message === 'unauthorized') return;
+      toast('bad', 'Could not mark that payout paid', err.message);
+      render();
+    }
+    return;
+  }
+
   const blockBtn = e.target.closest('[data-block]');
   if (blockBtn) {
     const row = lastRows[Number(blockBtn.closest('tr[data-i]').dataset.i)];

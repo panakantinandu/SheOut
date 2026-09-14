@@ -137,11 +137,33 @@ export interface NotificationView {
 /** Named so filter controls can enumerate it without repeating the union. */
 export type PaymentStatus = 'PENDING' | 'CAPTURED' | 'FAILED' | 'REFUNDED';
 
+export type PaymentMethod = 'UPI' | 'CASH' | 'CARD' | 'NETBANKING' | 'WALLET' | 'ONLINE';
+
+/** What Razorpay Checkout is opened with. amountPaise is the fare in paise, as Razorpay counts it. */
+export interface CheckoutDetails {
+  keyId: string;
+  orderId: string;
+  amountPaise: number;
+  currency: string;
+}
+
+/** What Checkout hands its success handler, sent back to the server to verify. */
+export interface CheckoutResult {
+  razorpayOrderId: string;
+  razorpayPaymentId: string;
+  razorpaySignature: string;
+}
+
 export interface PaymentSummary {
   id: string;
   bookingId: string;
   amount: number;
-  method: 'UPI' | 'CASH';
+  /**
+   * How it was paid, recorded at capture. Before capture it is a placeholder
+   * (UPI) and means nothing - read it only when status is CAPTURED. ONLINE is
+   * a Checkout method Razorpay reported that none of the others name.
+   */
+  method: PaymentMethod;
   status: PaymentStatus;
   razorpayOrderId: string | null;
   razorpayPaymentId: string | null;

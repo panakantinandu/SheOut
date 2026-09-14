@@ -13,6 +13,7 @@ import { Privacy } from './screens/Privacy'
 import { Terms } from './screens/Terms'
 import { Notifications } from './screens/Notifications'
 import { Offer } from './screens/Offer'
+import { Payouts } from './screens/Payouts'
 import { Profile } from './screens/Profile'
 import { Splash } from './screens/Splash'
 import { Trip } from './screens/Trip'
@@ -65,6 +66,7 @@ function App() {
       <Route path="/help/new" element={protectedOnly(<RaiseIssue />)} />
       <Route path="/help/tickets/:ticketId" element={protectedOnly(<SupportTicket />)} />
       <Route path="/verification" element={protectedOnly(<Verification />)} />
+      <Route path="/payouts" element={protectedOnly(<Payouts />)} />
       <Route path="/offer/:bookingId" element={protectedOnly(<Offer />)} />
       <Route path="/trip/:bookingId" element={protectedOnly(<Trip />)} />
       <Route path="/chat/:bookingId" element={protectedOnly(<Chat />)} />

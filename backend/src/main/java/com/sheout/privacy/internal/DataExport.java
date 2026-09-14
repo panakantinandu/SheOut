@@ -31,8 +31,22 @@ public record DataExport(
         Verification verification,
         List<Trip> trips,
         RatingsReceived ratingsReceived,
-        List<SupportTicket> supportTickets
+        List<SupportTicket> supportTickets,
+        Payouts payouts
 ) {
+
+    /**
+     * A partner's wallet, where she is paid, and her payout requests - null
+     * for a rider. Her own financial data, so her account number is given in
+     * full here, unlike on the in-app screen.
+     */
+    public record Payouts(com.sheout.payouts.WalletSummary wallet, com.sheout.payouts.PayoutAccount payoutAccount,
+                          List<PayoutRequest> requests) {
+    }
+
+    public record PayoutRequest(java.math.BigDecimal amount, String status, String accountNumber, String upiVpa,
+                                Instant requestedAt, Instant paidAt, String paymentReference) {
+    }
 
     public record Account(UUID accountId, AccountRole role, String phoneNumber, String email, Instant createdAt) {
     }

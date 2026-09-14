@@ -1,5 +1,6 @@
 package com.sheout.payments.internal.web;
 
+import com.sheout.payments.PaymentMethod;
 import com.sheout.payments.internal.PaymentService;
 import com.sheout.payments.internal.gateway.PaymentGateway;
 import com.sheout.sharedkernel.web.ApiException;
@@ -67,14 +68,26 @@ public class RazorpayWebhookController {
         String razorpayPaymentId = entity.optString("id", null);
 
         switch (eventType) {
-            case "payment.captured" -> paymentService.applyWebhookUpdate(orderId, razorpayPaymentId, true, null);
+            case "payment.captured" -> paymentService.applyWebhookUpdate(orderId, razorpayPaymentId, true, null,
+                    methodOf(entity.optString("method", "")));
             case "payment.failed" -> {
                 String reason = entity.optString("error_description", "Payment failed");
-                paymentService.applyWebhookUpdate(orderId, razorpayPaymentId, false, reason);
+                paymentService.applyWebhookUpdate(orderId, razorpayPaymentId, false, reason, null);
             }
             default -> log.debug("Ignoring unhandled Razorpay webhook event {}", eventType);
         }
 
         return ResponseEntity.ok().build();
+    }
+
+    /** Razorpay's method name to ours - the same mapping the Checkout path uses. */
+    private static PaymentMethod methodOf(String razorpayMethod) {
+        return switch (razorpayMethod) {
+            case "upi" -> PaymentMethod.UPI;
+            case "card" -> PaymentMethod.CARD;
+            case "netbanking" -> PaymentMethod.NETBANKING;
+            case "wallet" -> PaymentMethod.WALLET;
+            default -> PaymentMethod.ONLINE;
+        };
     }
 }

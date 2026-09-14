@@ -2,6 +2,7 @@ package com.sheout.privacy.internal;
 
 import com.sheout.auth.AccountRole;
 import com.sheout.booking.BookingApi;
+import com.sheout.payouts.PayoutApi;
 import com.sheout.booking.BookingStatus;
 import com.sheout.privacy.AccountDeletionRequested;
 import com.sheout.sharedkernel.event.DomainEventPublisher;
@@ -42,16 +43,18 @@ class AccountDeletionService {
 
     private final AccountDeletionLogRepository deletionLog;
     private final BookingApi bookingApi;
+    private final PayoutApi payoutApi;
     private final DomainEventPublisher eventPublisher;
 
-    AccountDeletionService(AccountDeletionLogRepository deletionLog, BookingApi bookingApi,
+    AccountDeletionService(AccountDeletionLogRepository deletionLog, BookingApi bookingApi, PayoutApi payoutApi,
                            DomainEventPublisher eventPublisher) {
         this.deletionLog = deletionLog;
         this.bookingApi = bookingApi;
+        this.payoutApi = payoutApi;
         this.eventPublisher = eventPublisher;
     }
 
-    public enum Outcome { DELETED, ACTIVE_TRIP }
+    public enum Outcome { DELETED, ACTIVE_TRIP, PENDING_PAYOUT }
 
     public record Result(Outcome outcome, Instant requestedAt, Instant completedAt) {
     }
@@ -62,6 +65,12 @@ class AccountDeletionService {
                 .anyMatch(b -> ACTIVE.contains(b.status()));
         if (tripUnderWay) {
             return new Result(Outcome.ACTIVE_TRIP, null, null);
+        }
+        // Refused while SheOut still owes her money she asked for: deleting
+        // the account would delete where to send it, and the operator paying
+        // it would have nowhere to pay.
+        if (role == AccountRole.DRIVER && payoutApi.hasPendingPayout(accountId)) {
+            return new Result(Outcome.PENDING_PAYOUT, null, null);
         }
 
         AccountDeletionLogEntity entry = deletionLog.save(new AccountDeletionLogEntity(accountId, role, accountId));

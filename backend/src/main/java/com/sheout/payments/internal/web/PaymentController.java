@@ -21,6 +21,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -91,10 +95,65 @@ public class PaymentController {
         return ResponseEntity.ok(PageResponse.from(result, summary -> summary));
     }
 
+    /**
+     * The partner confirms she has the rider's cash in hand.
+     * <p>
+     * Hers alone to confirm. It used to be open to either person on the
+     * trip, which let a rider mark her own fare "paid in cash" and walk off
+     * having paid nothing - and it matters more now that confirming cash
+     * also records the platform's commission as owed by the partner: a
+     * rider could have put that debt on her by tapping a button. Anyone not
+     * on the booking still gets the same 404 as a booking that does not
+     * exist; the rider, who is on it, gets a 403 that reveals nothing new.
+     */
     @PostMapping("/bookings/{bookingId}/cash")
     public ResponseEntity<PaymentSummary> initiateCash(@PathVariable UUID bookingId) {
-        requireParticipant(bookingId);
+        CurrentAccount caller = CurrentAccountContext.get()
+                .orElseThrow(() -> ApiException.unauthorized("Authentication required"));
+        BookingParticipants participants = requireParticipant(bookingId);
+        if (!caller.accountId().equals(participants.driverId())) {
+            throw ApiException.forbidden("Only the partner who received the cash can confirm it");
+        }
         return respond(paymentService.initiateCashPayment(bookingId));
+    }
+
+    /** What the rider's app opens Razorpay Checkout with. The rider on the booking only. */
+    @GetMapping("/bookings/{bookingId}/checkout")
+    public ResponseEntity<PaymentService.CheckoutDetails> checkout(@PathVariable UUID bookingId) {
+        requireCustomerOf(bookingId);
+        Result<PaymentService.CheckoutDetails, PaymentError> result = paymentService.prepareCheckout(bookingId);
+        if (result.isFailure()) {
+            throw toApiException(result.error());
+        }
+        return ResponseEntity.ok(result.value());
+    }
+
+    /**
+     * Checkout reported success. The server verifies it with Razorpay before
+     * anything is recorded - see PaymentService.confirmCheckout.
+     */
+    @PostMapping("/bookings/{bookingId}/checkout/verify")
+    public ResponseEntity<PaymentSummary> verifyCheckout(@PathVariable UUID bookingId,
+                                                         @Valid @RequestBody CheckoutResult request) {
+        requireCustomerOf(bookingId);
+        return respond(paymentService.confirmCheckout(
+                bookingId, request.razorpayOrderId(), request.razorpayPaymentId(), request.razorpaySignature()));
+    }
+
+    /** Only the rider pays online. The partner is on the booking, so her refusal is a 403 that reveals nothing. */
+    private void requireCustomerOf(UUID bookingId) {
+        CurrentAccount caller = CurrentAccountContext.get()
+                .orElseThrow(() -> ApiException.unauthorized("Authentication required"));
+        BookingParticipants participants = requireParticipant(bookingId);
+        if (!caller.accountId().equals(participants.customerId())) {
+            throw ApiException.forbidden("Only the rider pays for a trip");
+        }
+    }
+
+    public record CheckoutResult(
+            @NotBlank @Size(max = 100) String razorpayOrderId,
+            @NotBlank @Size(max = 100) String razorpayPaymentId,
+            @NotBlank @Size(max = 256) String razorpaySignature) {
     }
 
     private ResponseEntity<PaymentSummary> respond(Result<PaymentSummary, PaymentError> result) {
@@ -118,7 +177,7 @@ public class PaymentController {
      * messages below identical - letting them drift reopens the same gap
      * the status codes close.
      */
-    private void requireParticipant(UUID bookingId) {
+    private BookingParticipants requireParticipant(UUID bookingId) {
         CurrentAccount caller = CurrentAccountContext.get()
                 .orElseThrow(() -> ApiException.unauthorized("Authentication required"));
 
@@ -130,6 +189,7 @@ public class PaymentController {
         if (!participants.includes(caller.accountId())) {
             throw ApiException.notFound("No booking found for this id");
         }
+        return participants;
     }
 
     private ApiException toApiException(PaymentError error) {
@@ -137,6 +197,10 @@ public class PaymentController {
             case PAYMENT_NOT_FOUND -> ApiException.notFound("No payment found for this booking");
             case ALREADY_CAPTURED -> new ApiException(HttpStatus.CONFLICT, "Conflict", "Payment already captured");
             case GATEWAY_ERROR -> new ApiException(HttpStatus.BAD_GATEWAY, "Bad Gateway", "Payment gateway error");
+            case SIGNATURE_INVALID -> new ApiException(HttpStatus.BAD_REQUEST, "PAYMENT_NOT_VERIFIED",
+                    "This payment could not be verified. If money left your account, contact support with your trip.");
+            case NOT_CAPTURED -> new ApiException(HttpStatus.CONFLICT, "PAYMENT_NOT_CAPTURED",
+                    "The payment did not go through. You can try again.");
         };
     }
 }

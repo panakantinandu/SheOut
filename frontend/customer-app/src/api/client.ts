@@ -26,6 +26,8 @@ import type {
   GeoAddress,
   NotificationView,
   PagedResult,
+  CheckoutDetails,
+  CheckoutResult,
   PaymentStatus,
   PaymentSummary,
   SosResponse,
@@ -209,6 +211,20 @@ export const paymentsApi = {
   /** 404s until a payment row exists, which only happens once a trip completes. */
   getForBooking(bookingId: string): Promise<PaymentSummary> {
     return request(`/api/v1/payments/bookings/${bookingId}`);
+  },
+
+  /** Creates the Razorpay order if the trip has none yet. 409 once the trip is already paid. */
+  getCheckout(bookingId: string): Promise<CheckoutDetails> {
+    return request(`/api/v1/payments/bookings/${bookingId}/checkout`);
+  },
+
+  /**
+   * Hands Checkout's success result to the server, which checks the signature
+   * and confirms the capture with Razorpay itself before recording anything.
+   * Checkout saying "paid" is not trusted on its own.
+   */
+  verifyCheckout(bookingId: string, result: CheckoutResult): Promise<PaymentSummary> {
+    return request(`/api/v1/payments/bookings/${bookingId}/checkout/verify`, { method: 'POST', body: result });
   },
 
   /**

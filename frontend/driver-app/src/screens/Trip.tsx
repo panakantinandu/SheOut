@@ -19,6 +19,7 @@ import {
 import type { CancellationReason, MapMarker } from '@sheout/design-system';
 import { ApiError, bookingApi, chatApi } from '../api/client';
 import type { BookingSummary, TripRoute } from '../api/types';
+import { CollectPaymentCard } from '../components/CollectPaymentCard';
 import { useShareLocation } from '../lib/LocationBroadcastContext';
 
 const POLL_INTERVAL_MS = 4000;
@@ -248,8 +249,9 @@ export function Trip() {
     setError(null);
     try {
       const updated = await bookingApi.complete(bookingId);
+      // Stays on this screen: the fare still has to be collected, and the
+      // payment card below appears in place of the trip controls.
       setBooking(updated);
-      if (updated.status === 'COMPLETED') navigate('/home', { replace: true });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not complete trip');
     } finally {
@@ -306,6 +308,9 @@ export function Trip() {
 
       {booking && (
         <>
+          {/* Once the trip is over, getting paid is the job in front of her. */}
+          {booking.status === 'COMPLETED' && bookingId && <CollectPaymentCard bookingId={bookingId} />}
+
           {/* Where she is going NEXT, on its own and stated first. The
               two-address list below is the whole trip; this is the job in
               front of her. */}
@@ -411,6 +416,11 @@ export function Trip() {
           </Card>
 
           <div className="space-y-3">
+            {booking.status === 'COMPLETED' && (
+              <Button fullWidth variant="secondary" onClick={() => navigate('/home', { replace: true })}>
+                Done
+              </Button>
+            )}
             {booking.status === 'IN_PROGRESS' && (
               <Button fullWidth variant="success" disabled={busy} onClick={handleComplete}>
                 {busy ? 'Completing...' : 'Complete Trip'}

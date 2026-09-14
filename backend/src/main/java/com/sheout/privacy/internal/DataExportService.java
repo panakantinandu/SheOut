@@ -48,10 +48,13 @@ class DataExportService {
     private final PaymentApi paymentApi;
     private final RatingsApi ratingsApi;
     private final SupportApi supportApi;
+    private final com.sheout.payouts.PayoutApi payoutApi;
 
     DataExportService(AuthApi authApi, CustomerProfileApi customerProfileApi, DriverProfileApi driverProfileApi,
                       EmergencyContactsApi emergencyContactsApi, VerificationApi verificationApi, BookingApi bookingApi,
-                      PaymentApi paymentApi, RatingsApi ratingsApi, SupportApi supportApi) {
+                      PaymentApi paymentApi, RatingsApi ratingsApi, SupportApi supportApi,
+                      com.sheout.payouts.PayoutApi payoutApi) {
+        this.payoutApi = payoutApi;
         this.authApi = authApi;
         this.customerProfileApi = customerProfileApi;
         this.driverProfileApi = driverProfileApi;
@@ -93,7 +96,15 @@ class DataExportService {
                         .orElse(null),
                 bookings.stream().map(b -> trip(b, id, given.get(b.id()))).toList(),
                 new DataExport.RatingsReceived(received.averageStars(), received.totalRatings()),
-                tickets(id, role));
+                tickets(id, role),
+                driver ? new DataExport.Payouts(
+                        payoutApi.getWallet(id),
+                        payoutApi.getPayoutAccount(id).orElse(null),
+                        payoutApi.listForDriver(id).stream()
+                                .map(r -> new DataExport.PayoutRequest(r.amount(), r.status().name(), r.accountNumber(),
+                                        r.upiVpa(), r.requestedAt(), r.paidAt(), r.paymentReference()))
+                                .toList())
+                        : null);
     }
 
     private DataExport.Profile profile(UUID id, boolean driver) {
