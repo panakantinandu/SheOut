@@ -31,3 +31,4 @@ export * from './LegalConsentNotice';
 export * from './SupportTicketThread';
 export * from './RaiseIssueForm';
 export * from './SupportTicketList';
+export * from './PrivacyDataSection';

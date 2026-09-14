@@ -1,6 +1,7 @@
 package com.sheout.auth.internal.security;
 
 import com.sheout.auth.CurrentAccountContext;
+import com.sheout.auth.internal.AuthService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.ServletRequest;
@@ -25,17 +26,23 @@ public class JwtAuthenticationFilter implements jakarta.servlet.Filter {
     private static final String BEARER_PREFIX = "Bearer ";
 
     private final JwtService jwtService;
+    private final AuthService authService;
 
-    public JwtAuthenticationFilter(JwtService jwtService) {
+    public JwtAuthenticationFilter(JwtService jwtService, AuthService authService) {
         this.jwtService = jwtService;
+        this.authService = authService;
     }
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
             throws IOException, ServletException {
         try {
+            // A valid signature is not enough once the account is deleted:
+            // the token is treated as absent, so every endpoint answers as it
+            // does for a signed-out caller. See AuthService.isActiveAccount.
             extractToken((HttpServletRequest) request)
                     .flatMap(jwtService::parse)
+                    .filter(caller -> authService.isActiveAccount(caller.accountId()))
                     .ifPresent(CurrentAccountContext::set);
             chain.doFilter(request, response);
         } finally {

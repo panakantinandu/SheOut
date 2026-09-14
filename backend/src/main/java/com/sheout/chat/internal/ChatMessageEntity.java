@@ -54,6 +54,16 @@ public class ChatMessageEntity extends BaseEntity {
         return body;
     }
 
+    /**
+     * The one way a body changes: its author deleted their account while a
+     * dispute about the trip is still open. The line stays so the thread
+     * still shows that something was said and when; what was said goes.
+     * Not an edit - it can only ever become [deleted].
+     */
+    void redact() {
+        this.body = com.sheout.privacy.AccountDeletionRequested.REDACTED_TEXT;
+    }
+
     // No setter for body, deliberately. A message that can be edited after
     // the fact is worthless as a record of what was said, which is the only
     // reason a closed thread is kept at all.

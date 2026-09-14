@@ -1,8 +1,8 @@
 import { BadgeCheck, FileText, HelpCircle, Info, Lock, LogOut, MapPin, Receipt, ShieldAlert, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, ConfirmDialog, IconCircle, ListRow, TopHeader } from '@sheout/design-system';
-import { ApiError, usersApi } from '../api/client';
+import { Card, ConfirmDialog, PrivacyDataSection, IconCircle, ListRow, TopHeader } from '@sheout/design-system';
+import { ApiError, privacyApi, supportApi, usersApi } from '../api/client';
 import type { CustomerProfileSummary } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 
@@ -19,6 +19,11 @@ export function Profile() {
   const navigate = useNavigate();
   const { logout } = useAuth();
   const [confirmingLogout, setConfirmingLogout] = useState(false);
+  const [grievanceEmail, setGrievanceEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    supportApi.getContact().then((c) => setGrievanceEmail(c.grievanceOfficerEmail)).catch(() => {});
+  }, []);
   const [profile, setProfile] = useState<CustomerProfileSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -86,6 +91,22 @@ export function Profile() {
           <ListRow icon={<IconCircle tone="soft" size="sm" icon={<FileText />} />} label="Terms of Service" onClick={() => navigate('/terms')} />
         </Card>
       </section>
+
+      <PrivacyDataSection
+        audience="customer"
+        grievanceOfficerEmail={grievanceEmail}
+        onDownload={() => privacyApi.downloadMyData()}
+        onDelete={async () => {
+          await privacyApi.deleteAccount();
+        }}
+        onDeleted={() => {
+          logout();
+          navigate('/login', {
+            replace: true,
+            state: { notice: 'Your account has been deleted. Your personal details have been removed.' },
+          });
+        }}
+      />
 
       <Card className="p-0">
         <ListRow

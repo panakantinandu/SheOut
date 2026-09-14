@@ -249,6 +249,8 @@ export interface ChatThreadResponse {
 /** What GET /support/contact returns. phoneNumber is null when none is configured. */
 export interface SupportContact {
   phoneNumber: string | null;
+  /** The DPDP Grievance Officer's email, or null when not yet configured. */
+  grievanceOfficerEmail: string | null;
 }
 
 export type { SupportTicketCategory, SupportTicketStatus } from '@sheout/design-system';

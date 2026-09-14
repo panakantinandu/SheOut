@@ -49,4 +49,20 @@ public class LocalDiskDocumentStorage implements DocumentStorage {
     public String resolveUrl(String storageKey) {
         return root.resolve(storageKey).toUri().toString();
     }
+
+    @Override
+    public void delete(String storageKey) {
+        try {
+            Path target = root.resolve(storageKey).normalize();
+            // Keys are built by DocumentKeys, never by a caller, but a
+            // delete is the one operation where resolving outside the root
+            // would destroy something - so it is checked, not assumed.
+            if (!target.startsWith(root.normalize())) {
+                throw new IllegalArgumentException("Storage key resolves outside the document root");
+            }
+            Files.deleteIfExists(target);
+        } catch (IOException ex) {
+            throw new UncheckedIOException(ex);
+        }
+    }
 }

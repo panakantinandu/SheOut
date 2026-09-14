@@ -63,6 +63,11 @@ public class SupportTicketMessageEntity extends BaseEntity {
         return internalOnly;
     }
 
-    // No setters. Same reason ChatMessageEntity has none: a thread that can
-    // be edited afterwards is worthless as a record of what was said.
+    /** Only for a deleted account's own messages on a finished ticket - see SupportService.onAccountDeletionRequested. */
+    void redact() {
+        this.message = com.sheout.privacy.AccountDeletionRequested.REDACTED_TEXT;
+    }
+
+    // No other setters. Same reason ChatMessageEntity has none: a thread that
+    // can be edited afterwards is worthless as a record of what was said.
 }

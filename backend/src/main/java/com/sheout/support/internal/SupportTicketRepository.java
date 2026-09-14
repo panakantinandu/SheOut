@@ -1,5 +1,6 @@
 package com.sheout.support.internal;
 
+import com.sheout.support.SupportTicketStatus;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -21,4 +22,8 @@ interface SupportTicketRepository extends JpaRepository<SupportTicketEntity, UUI
      */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<SupportTicketEntity> findLockedById(UUID id);
+
+    boolean existsByLinkedBookingIdAndStatusIn(UUID linkedBookingId, java.util.Collection<SupportTicketStatus> statuses);
+
+    java.util.List<SupportTicketEntity> findByRaisedByAccountId(UUID raisedByAccountId);
 }

@@ -400,6 +400,46 @@ export const chatApi = {
  * person most likely to need it, so the way to reach a human must not
  * depend on a working session.
  */
+/**
+ * The account holder's data rights.
+ * <p>
+ * Download goes through fetch rather than a plain link because the endpoint
+ * needs the bearer token, which a link cannot carry; the file is then handed
+ * to the browser to save.
+ */
+export const privacyApi = {
+  async downloadMyData(): Promise<void> {
+    const token = getStoredToken();
+    const response = await fetch(`${API_BASE}/api/v1/privacy/export`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!response.ok) {
+      const body = (await response.json().catch(() => null)) as ApiErrorResponse | null;
+      throw new ApiError(body?.message ?? `Request failed (${response.status})`, response.status, body);
+    }
+    const disposition = response.headers.get('Content-Disposition') ?? '';
+    const filename = /filename="([^"]+)"/.exec(disposition)?.[1] ?? 'sheout-my-data.json';
+    const url = URL.createObjectURL(await response.blob());
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    // Revoked after the click has been handled, not before.
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  },
+
+  /**
+   * Deletes the account. 409 ACTIVE_TRIP while a trip is under way. After
+   * success the stored token is useless - the server no longer accepts it -
+   * so the caller signs out.
+   */
+  deleteAccount(): Promise<{ requestedAt: string; completedAt: string }> {
+    return request('/api/v1/privacy/delete-account', { method: 'POST', body: { confirmation: 'DELETE' } });
+  },
+};
+
 export const supportApi = {
   getContact(): Promise<SupportContact> {
     return request('/api/v1/support/contact', { auth: false });

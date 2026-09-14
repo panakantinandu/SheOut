@@ -46,6 +46,15 @@ public class NotificationLogEntity extends BaseEntity {
         // JPA
     }
 
+    /**
+     * Account deletion. The address is a phone number - the account holder's
+     * own, or for an SOS send, one of their emergency contacts'. The log line
+     * stays as a record that a message was attempted and how it went.
+     */
+    void eraseRecipientAddress() {
+        this.recipientAddress = null;
+    }
+
     public NotificationLogEntity(UUID recipientAccountId, String recipientAddress, NotificationType type,
                                   NotificationChannelType channel, NotificationStatus status, String failureReason) {
         this.recipientAccountId = recipientAccountId;

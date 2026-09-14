@@ -41,6 +41,10 @@ public class AccountEntity extends BaseEntity {
     @Column(length = 500)
     private String blockReason;
 
+    /** Set once when the account holder deletes the account; see markDeleted. */
+    @Column
+    private Instant deletedAt;
+
     protected AccountEntity() {
         // JPA
     }
@@ -116,6 +120,33 @@ public class AccountEntity extends BaseEntity {
     void unblock() {
         this.blockedAt = null;
         this.blockedBy = null;
+        this.blockReason = null;
+    }
+
+    public boolean isDeleted() {
+        return deletedAt != null;
+    }
+
+    /**
+     * The account holder's deletion. The row stays - bookings and payments
+     * that are retained for tax and disputes reference this id - but the
+     * person is unlinked from it: phone number and email are removed, not
+     * hashed or kept aside.
+     * <p>
+     * No reference to the old number is retained. Nothing in the product
+     * uses one today, and a hash of a ten-digit Indian mobile number is
+     * reversible by trying every number, so keeping one "non-reversibly"
+     * would be a claim rather than a fact. If fraud work later needs to
+     * recognise a returning number, that is a decision to make then, with a
+     * keyed hash and its own justification.
+     * <p>
+     * The block reason is cleared too: it is free text an operator wrote
+     * about this person.
+     */
+    void markDeleted() {
+        this.deletedAt = Instant.now();
+        this.phoneNumber = null;
+        this.email = null;
         this.blockReason = null;
     }
 }

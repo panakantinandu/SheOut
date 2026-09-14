@@ -10,4 +10,6 @@ public interface NotificationLogRepository extends JpaRepository<NotificationLog
 
     /** Newest first, capped by the caller - see NotificationLogController. */
     List<NotificationLogEntity> findByRecipientAccountIdOrderByCreatedAtDesc(UUID recipientAccountId, Pageable pageable);
+
+    List<NotificationLogEntity> findByRecipientAccountIdAndRecipientAddressIsNotNull(UUID recipientAccountId);
 }
