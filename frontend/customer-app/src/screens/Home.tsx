@@ -1,9 +1,9 @@
 import { ArrowRight, Bike, Clock, MapPinned, Package, ShieldAlert, Wallet as WalletIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { brandIllustration, Card, IconCircle, ListRow, TopHeader } from '@sheout/design-system';
+import { brandIllustration, Card, IconCircle, ListRow, TopHeader, contentText, useContentSection } from '@sheout/design-system';
 import { OutOfAreaBanner } from '../components/OutOfAreaBanner';
-import { usersApi } from '../api/client';
+import { contentApi, usersApi } from '../api/client';
 import type { CustomerProfileSummary } from '../api/types';
 import { ThreeWomen } from '../components/ThreeWomen';
 
@@ -17,11 +17,17 @@ const SERVICES = [
   { key: 'parcel', label: 'Parcel Delivery', to: '/book/parcel', bg: 'bg-accent-orange', icon: <Package className="h-8 w-8" strokeWidth={1.5} /> },
 ];
 
-/** Real data: the greeting name comes from users' live GET /me. Everything else on this screen (banner copy, category icons, quick access) is static UI, same as the mockup - there's no "featured banner" or "quick access config" backend endpoint to fetch. */
+/**
+ * Real data: the greeting name comes from users' live GET /me. The banner and
+ * the community card are editable copy from the content module - operators
+ * change them in the ops console - with the text they were seeded with as the
+ * fallback. Service tiles and quick access are still static UI.
+ */
 export function Home() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<CustomerProfileSummary | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
+  const copy = useContentSection('home.', contentApi.getSection);
 
   useEffect(() => {
     usersApi
@@ -62,8 +68,8 @@ export function Home() {
           cropped by the card's overflow so the rider fills the corner. */}
       <Card variant="primary" className="relative overflow-hidden">
         <div className="relative z-10 max-w-[62%]">
-          <p className="font-heading text-lg font-semibold">Ride with confidence</p>
-          <p className="mt-1 text-sm opacity-90">Safe rides, verified women partners</p>
+          <p className="font-heading text-lg font-semibold">{contentText(copy, 'home.banner.title', 'Ride with confidence')}</p>
+          <p className="mt-1 text-sm opacity-90">{contentText(copy, 'home.banner.subtitle', 'Safe rides, verified women partners')}</p>
         </div>
         <img
           src={brandIllustration}
@@ -107,8 +113,8 @@ export function Home() {
 
       <Card tone="brand" className="relative flex items-center gap-3 overflow-hidden">
         <div className="flex-1">
-          <p className="text-sm font-semibold text-primary">Women Supporting Women</p>
-          <p className="mt-1 text-xs text-text-secondary">Safe &middot; Empowered &middot; Together</p>
+          <p className="text-sm font-semibold text-primary">{contentText(copy, 'home.community.title', 'Women Supporting Women')}</p>
+          <p className="mt-1 text-xs text-text-secondary">{contentText(copy, 'home.community.subtitle', 'Safe · Empowered · Together')}</p>
         </div>
         <ThreeWomen className="h-16 w-24 shrink-0" />
       </Card>

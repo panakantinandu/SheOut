@@ -1,9 +1,20 @@
 import { LifeBuoy, Mail, Phone, Plus, Siren, Scale } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Card, FaqList, IconCircle, ListRow, SupportTicketList, TopHeader } from '@sheout/design-system';
+import {
+  Button,
+  Card,
+  FaqList,
+  IconCircle,
+  ListRow,
+  SupportTicketList,
+  TopHeader,
+  contentText,
+  faqItemsFromContent,
+  useContentSection,
+} from '@sheout/design-system';
 import type { FaqItem, SupportTicketFilters } from '@sheout/design-system';
-import { supportApi } from '../api/client';
+import { contentApi, supportApi } from '../api/client';
 import type { SupportTicketCategory, SupportTicketStatus } from '../api/types';
 
 const SUPPORT_EMAIL = 'support@sheout.app';
@@ -23,7 +34,12 @@ const SUPPORT_EMAIL = 'support@sheout.app';
  * row is hidden when none is configured.
  */
 
-const FAQS: FaqItem[] = [
+/**
+ * The FAQs as they were seeded into the content module (faq.customer.*), kept
+ * as the fallback for a first open with no network. Operators edit the live
+ * copy in the ops console; this list is not where to change an answer.
+ */
+const FAQS_FALLBACK: FaqItem[] = [
   {
     question: 'How do I cancel a booking?',
     answer:
@@ -60,6 +76,8 @@ export function HelpSupport() {
   const navigate = useNavigate();
   const [supportPhone, setSupportPhone] = useState<string | null>(null);
   const [grievanceEmail, setGrievanceEmail] = useState<string | null>(null);
+  const intro = useContentSection('help.customer.', contentApi.getSection);
+  const faqCopy = useContentSection('faq.customer.', contentApi.getSection);
 
   useEffect(() => {
     let cancelled = false;
@@ -100,8 +118,8 @@ export function HelpSupport() {
         <div className="flex items-center gap-3">
           <IconCircle size="lg" tone="soft" icon={<LifeBuoy />} />
           <div>
-            <p className="font-heading font-semibold text-text-primary">We are here to help</p>
-            <p className="text-sm text-text-secondary">Tell us what happened and we will reply here.</p>
+            <p className="font-heading font-semibold text-text-primary">{contentText(intro, 'help.customer.intro.title', 'We are here to help')}</p>
+            <p className="text-sm text-text-secondary">{contentText(intro, 'help.customer.intro.subtitle', 'Tell us what happened and we will reply here.')}</p>
           </div>
         </div>
         <Button fullWidth size="md" icon={<Plus className="h-4 w-4" />} onClick={() => navigate('/help/new')}>
@@ -149,7 +167,7 @@ export function HelpSupport() {
         </Card>
       </section>
 
-      <FaqList heading="Common questions" items={FAQS} />
+      <FaqList heading="Common questions" items={faqItemsFromContent(faqCopy, 'faq.customer.', FAQS_FALLBACK)} />
     </div>
   );
 }

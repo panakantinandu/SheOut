@@ -10,6 +10,7 @@ import org.springframework.web.method.annotation.HandlerMethodValidationExceptio
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -134,6 +135,25 @@ public class GlobalExceptionHandler {
         ApiErrorResponse body = ApiErrorResponse.of(
                 HttpStatus.NOT_FOUND.value(), "Not Found", "No such endpoint", request.getRequestURI());
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
+    }
+
+    /**
+     * A real path called with a verb it does not support - a POST to a
+     * read-only endpoint. Was a 500 through the catch-all, for every endpoint
+     * in the app, which reported a caller's mistake as a server fault and
+     * logged a stack trace for it.
+     */
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ApiErrorResponse> handleMethodNotAllowed(HttpRequestMethodNotSupportedException ex,
+                                                                   HttpServletRequest request) {
+        ApiErrorResponse body = ApiErrorResponse.of(
+                HttpStatus.METHOD_NOT_ALLOWED.value(), "Method Not Allowed",
+                "This endpoint does not accept " + ex.getMethod() + " requests", request.getRequestURI());
+        ResponseEntity.BodyBuilder response = ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED);
+        if (ex.getSupportedHttpMethods() != null) {
+            response.allow(ex.getSupportedHttpMethods().toArray(new org.springframework.http.HttpMethod[0]));
+        }
+        return response.body(body);
     }
 
     /** A 429 always says how long to wait, in the standard header as well as the body. */

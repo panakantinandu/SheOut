@@ -298,6 +298,25 @@
   .reply-row .btn { margin-left: auto; }
   .sos-link { border: 1px solid var(--red-line); background: var(--red-bg); border-radius: 10px; padding: 10px 12px; margin-top: 12px; font-size: 12.5px; color: var(--red); }
 
+  /* ---------- content ---------- */
+  /* One cell holds the whole editor: the card and its filters are reused, the table rows are not. */
+  .content-cell { padding: 0; }
+  .content-wrap { padding: 4px 16px 16px; }
+  .content-group { margin-top: 18px; }
+  .content-group > h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 700; margin: 0 0 8px; }
+  .cb { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; background: #fff; }
+  .cb.dirty { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-tint); }
+  .cb .where { font-weight: 600; font-size: 13px; }
+  .cb .key { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; color: var(--muted-soft); }
+  .cb textarea {
+    width: 100%; margin-top: 8px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px;
+    font: inherit; font-size: 13.5px; line-height: 1.5; resize: vertical; min-height: 40px; color: var(--text);
+  }
+  .cb textarea:focus { outline: none; border-color: var(--brand); }
+  .cb .foot { display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+  .cb .foot .meta { font-size: 12px; color: var(--muted); }
+  .cb .foot .chars { font-size: 11.5px; color: var(--muted-soft); margin-left: auto; font-variant-numeric: tabular-nums; }
+
   /* ---------- toasts ---------- */
   .toasts { position: fixed; right: 18px; bottom: 18px; z-index: 60; display: flex; flex-direction: column; gap: 9px; max-width: 380px; }
   .toast {
@@ -429,6 +448,11 @@
       <button data-tab="trust" aria-current="false">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
         Trust Review <span class="count" id="cTrust">–</span>
+      </button>
+      <div class="label">App</div>
+      <button data-tab="content" aria-current="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
+        Content <span class="count" id="cContent">–</span>
       </button>
     </nav>
 
@@ -1015,6 +1039,29 @@ const VIEWS = {
       return '—';
     },
     onRowClick: r => openTicket(r.id),
+  },
+
+  /**
+   * App copy an operator can change without a release.
+   *
+   * Not a table: each block is a text box, saved on its own. No confirmation
+   * modal, deliberately - unlike approving a driver or blocking an account,
+   * a wording change is reversed by typing it back, every save records who
+   * made it, and the version check means a save can never silently overwrite
+   * someone else's. A modal on every edit would be clicked through unread.
+   */
+  content: {
+    title: 'Content',
+    desc: 'Text shown in the rider and partner apps. Edit a block and save it; the apps pick up the change within about five minutes. Plain text only - line breaks are kept, nothing else is formatted.',
+    cardTitle: 'Editable text',
+    hint: 'Changes are live in the apps within ~5 minutes',
+    custom: true,
+    filters: [
+      { key: 'area', kind: 'select', label: 'Area', any: 'All areas', options: () =>
+          Object.entries(CONTENT_AREAS).map(([value, label]) => ({ value, label })) },
+    ],
+    columns: [],
+    load: () => api('/admin/content'),
   },
 
   bookings: {
@@ -1652,6 +1699,93 @@ async function openTicket(id, keep = {}) {
   });
 }
 
+// ---- content --------------------------------------------------------------
+/** The first segment of a key is its area. Order here is the order on screen. */
+const CONTENT_AREAS = { home: 'Home', help: 'Help & Support', faq: 'FAQ', about: 'About' };
+
+/**
+ * Reading order, not alphabetical. Sorted by key, "subtitle" came before
+ * "title" and every FAQ answer before its question, so an editor met the
+ * second half of each pair first. Numbers compare as numbers (item 10 after 9).
+ */
+const CONTENT_PART_ORDER = { title: 0, question: 0, body: 1, subtitle: 1, answer: 1 };
+function compareContentKeys(a, b) {
+  const pa = a.split('.'), pb = b.split('.');
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const x = pa[i], y = pb[i];
+    if (x === y) continue;
+    if (x === undefined) return -1;
+    if (y === undefined) return 1;
+    if (i === pa.length - 1 && i === pb.length - 1 && x in CONTENT_PART_ORDER && y in CONTENT_PART_ORDER) {
+      return CONTENT_PART_ORDER[x] - CONTENT_PART_ORDER[y];
+    }
+    if (/^\d+$/.test(x) && /^\d+$/.test(y)) return Number(x) - Number(y);
+    return x < y ? -1 : 1;
+  }
+  return 0;
+}
+
+function paintContent(blocks) {
+  const area = stateFor('content').area || '';
+  const shown = blocks.filter(b => !area || b.key.startsWith(area + '.')).sort((a, b) => compareContentKeys(a.key, b.key));
+  const groups = Object.entries(CONTENT_AREAS)
+    .map(([prefix, label]) => ({ label, items: shown.filter(b => b.key.startsWith(prefix + '.')) }))
+    .filter(g => g.items.length);
+  $('rows').innerHTML = `<tr><td class="content-cell">
+    <div class="content-wrap">${groups.map(g => `
+      <div class="content-group"><h3>${esc(g.label)}</h3>
+        ${g.items.map(b => `
+          <div class="cb" data-key="${esc(b.key)}" data-version="${b.version}">
+            <div class="where">${esc(b.description)}</div>
+            <div class="key">${esc(b.key)}</div>
+            <textarea maxlength="2000" rows="${Math.min(6, Math.max(1, Math.ceil(b.value.length / 90)))}">${esc(b.value)}</textarea>
+            <div class="foot">
+              <button class="btn btn-primary" data-save type="button" disabled>Save</button>
+              <button class="btn" data-revert type="button" hidden>Undo changes</button>
+              <span class="meta">${b.updatedByPhone ? `Last edited ${time(b.updatedAt)} by <span class="num">${esc(b.updatedByPhone)}</span>` : 'Original text'}</span>
+              <span class="chars">${b.value.length}/2000</span>
+            </div>
+          </div>`).join('')}
+      </div>`).join('')}
+    </div></td></tr>`;
+  $('rows').querySelectorAll('.cb').forEach(el => bindContentBlock(el, blocks.find(b => b.key === el.dataset.key)));
+}
+
+function bindContentBlock(el, block) {
+  const box = el.querySelector('textarea');
+  const save = el.querySelector('[data-save]');
+  const revert = el.querySelector('[data-revert]');
+  let saved = block.value;
+  const sync = () => {
+    const dirty = box.value !== saved;
+    el.classList.toggle('dirty', dirty);
+    save.disabled = !dirty || !box.value.trim();
+    revert.hidden = !dirty;
+    el.querySelector('.chars').textContent = `${box.value.length}/2000`;
+  };
+  box.addEventListener('input', sync);
+  revert.addEventListener('click', () => { box.value = saved; sync(); });
+  save.addEventListener('click', async () => {
+    save.disabled = true;
+    try {
+      const row = await api(`/admin/content/${encodeURIComponent(block.key)}`, {
+        method: 'PUT',
+        body: JSON.stringify({ value: box.value, version: Number(el.dataset.version) }),
+      });
+      saved = row.value;
+      box.value = row.value;
+      el.dataset.version = row.version;
+      el.querySelector('.meta').innerHTML = `Last edited ${time(row.updatedAt)} by <span class="num">${esc(row.updatedByPhone)}</span>`;
+      sync();
+      toast('ok', 'Saved', `${block.description} — live in the apps within about five minutes.`);
+    } catch (err) {
+      sync();
+      if (err.message === 'unauthorized') return;
+      toast('bad', 'Could not save that', err.message);
+    }
+  });
+}
+
 // ---- rendering ------------------------------------------------------------
 function skeletonRows(cols) {
   return Array.from({ length: 4 }, () =>
@@ -1724,9 +1858,23 @@ async function render(opts = {}) {
     const el = $('filters').querySelector(`[data-filter="${opts.keepFocus}"]`);
     if (el) { el.focus(); if (el.setSelectionRange) el.setSelectionRange(el.value.length, el.value.length); }
   }
-  $('rows').innerHTML = skeletonRows(view.columns.length);
   $('crossLink').hidden = true;
   refreshSupportCounts().then(paintCrossLink);
+  if (view.custom) {
+    $('head').innerHTML = '';
+    paintPager(null);
+    $('rows').innerHTML = skeletonRows(1);
+    try {
+      const blocks = await view.load(stateFor(tab));
+      paintContent(blocks);
+      $('cContent').textContent = blocks.length;
+    } catch (err) {
+      if (err.message === 'unauthorized') return;
+      $('rows').innerHTML = `<tr><td><div class="state"><h3>Could not load this section</h3><p>${esc(err.message)}</p></div></td></tr>`;
+    }
+    return;
+  }
+  $('rows').innerHTML = skeletonRows(view.columns.length);
   try {
     const state = stateFor(tab);
     const result = await view.load(state);
