@@ -23,6 +23,11 @@ import type {
   VehicleType,
   VerificationSummary,
   NotificationView,
+  PaymentSummary,
+  PayoutAccountView,
+  PayoutOverview,
+  PayoutRequestView,
+  SavePayoutAccount,
 } from './types';
 
 // VITE_API_BASE_URL lets each deployment point at its own backend (Vercel
@@ -491,5 +496,37 @@ export const ratingsApi = {
   /** The caller's own score, for their dashboard. */
   mine(): Promise<AggregateRating> {
     return request('/api/v1/ratings/me');
+  },
+};
+
+export const paymentsApi = {
+  /** 404s until the payment row exists, a moment after the trip completes. */
+  getForBooking(bookingId: string): Promise<PaymentSummary> {
+    return request(`/api/v1/payments/bookings/${bookingId}`);
+  },
+
+  /**
+   * She confirms the rider handed her the fare in cash. Only the partner on
+   * the trip may - the rider cannot mark her own fare paid. 409 once it is
+   * already paid, online or otherwise.
+   */
+  confirmCash(bookingId: string): Promise<PaymentSummary> {
+    return request(`/api/v1/payments/bookings/${bookingId}/cash`, { method: 'POST' });
+  },
+};
+
+export const payoutsApi = {
+  overview(): Promise<PayoutOverview> {
+    return request('/api/v1/payouts/me');
+  },
+
+  /** 400 INVALID_DETAILS for a malformed IFSC, account number or UPI ID, or a half-filled bank account. */
+  saveAccount(account: SavePayoutAccount): Promise<PayoutAccountView> {
+    return request('/api/v1/payouts/me/account', { method: 'PUT', body: account });
+  },
+
+  /** 409 NO_PAYOUT_DETAILS before details are saved, 409 INSUFFICIENT_BALANCE above the available balance. */
+  requestPayout(amount: number): Promise<PayoutRequestView> {
+    return request('/api/v1/payouts/me/requests', { method: 'POST', body: { amount } });
   },
 };

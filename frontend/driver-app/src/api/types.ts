@@ -268,3 +268,71 @@ export interface AssignedDriver {
   averageStars: number | null;
   totalRatings: number;
 }
+
+export type PaymentStatus = 'PENDING' | 'CAPTURED' | 'FAILED' | 'REFUNDED';
+
+/** Recorded at capture. Before capture it is a placeholder - read it only when status is CAPTURED. */
+export type PaymentMethod = 'UPI' | 'CASH' | 'CARD' | 'NETBANKING' | 'WALLET' | 'ONLINE';
+
+/** A trip's payment as the partner sees it. driverPayout is her share, null until the rider has paid. */
+export interface PaymentSummary {
+  id: string;
+  bookingId: string;
+  amount: number;
+  method: PaymentMethod;
+  status: PaymentStatus;
+  driverPayout: number | null;
+  commissionPercent: number | null;
+  capturedAt: string | null;
+}
+
+/**
+ * Her wallet. availableBalance = totalEarned - cashCollected - totalPaidOut -
+ * pendingPayouts, and it can be negative: on a cash trip she already holds the
+ * whole fare, so what she owes is SheOut's commission.
+ */
+export interface WalletSummary {
+  totalEarned: number;
+  cashCollected: number;
+  totalPaidOut: number;
+  pendingPayouts: number;
+  availableBalance: number;
+}
+
+/** Where she is paid. The account number arrives masked; the full number is never sent back to the app. */
+export interface PayoutAccountView {
+  accountHolderName: string | null;
+  accountNumberMasked: string | null;
+  ifsc: string | null;
+  upiVpa: string | null;
+  updatedAt: string | null;
+}
+
+export type PayoutStatus = 'PENDING' | 'PAID';
+
+export interface PayoutRequestView {
+  id: string;
+  amount: number;
+  status: PayoutStatus;
+  /** Where it goes, already worded for display: "UPI name@bank" or "Bank a/c ending 1234". */
+  destination: string;
+  requestedAt: string;
+  paidAt: string | null;
+  paymentReference: string | null;
+}
+
+export interface PayoutOverview {
+  wallet: WalletSummary;
+  account: PayoutAccountView | null;
+  requests: PayoutRequestView[];
+}
+
+/** A bank account, a UPI ID, or both. Never a card. */
+export interface SavePayoutAccount {
+  accountHolderName: string | null;
+  accountNumber: string | null;
+  ifsc: string | null;
+  upiVpa: string | null;
+  /** Keep the bank account on file and ignore the three bank fields - the app cannot resend a number it only sees masked. */
+  keepSavedBankAccount?: boolean;
+}

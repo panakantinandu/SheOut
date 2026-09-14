@@ -4,7 +4,9 @@ import com.razorpay.Order;
 import com.razorpay.RazorpayClient;
 import com.razorpay.RazorpayException;
 import com.razorpay.Utils;
+import com.razorpay.Payment;
 import com.sheout.payments.PaymentError;
+import com.sheout.payments.PaymentMethod;
 import com.sheout.sharedkernel.Result;
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -31,6 +33,8 @@ public class RazorpayPaymentGateway implements PaymentGateway {
 
     private final RazorpayClient client;
     private final String webhookSecret;
+    private final String keyId;
+    private final String keySecret;
 
     public RazorpayPaymentGateway(
             @Value("${sheout.payments.razorpay.key-id}") String keyId,
@@ -44,6 +48,8 @@ public class RazorpayPaymentGateway implements PaymentGateway {
             throw new IllegalStateException("Failed to initialize Razorpay client", e);
         }
         this.webhookSecret = webhookSecret;
+        this.keyId = keyId;
+        this.keySecret = keySecret;
     }
 
     /**
@@ -71,6 +77,70 @@ public class RazorpayPaymentGateway implements PaymentGateway {
             log.error("Unexpected error creating Razorpay order - bookingId: {}, amount: {}", bookingId, amount, e);
             return Result.failure(PaymentError.GATEWAY_ERROR);
         }
+    }
+
+    @Override
+    public String publicKeyId() {
+        return keyId;
+    }
+
+    @Override
+    public boolean verifyCheckoutSignature(String orderId, String paymentId, String signature) {
+        if (keySecret == null || keySecret.isBlank() || orderId == null || paymentId == null || signature == null) {
+            return false;
+        }
+        try {
+            JSONObject attributes = new JSONObject();
+            attributes.put("razorpay_order_id", orderId);
+            attributes.put("razorpay_payment_id", paymentId);
+            attributes.put("razorpay_signature", signature);
+            return Utils.verifyPaymentSignature(attributes, keySecret);
+        } catch (RazorpayException e) {
+            return false;
+        }
+    }
+
+    /**
+     * Reads the payment back from Razorpay and captures it if it is only
+     * authorised. With automatic capture on - the default for orders - it
+     * arrives already captured; this still asks rather than assuming.
+     */
+    @Override
+    public Result<GatewayPayment, PaymentError> confirmCapture(String paymentId, String expectedOrderId, BigDecimal expectedAmount) {
+        long expectedPaise = expectedAmount.multiply(BigDecimal.valueOf(100)).setScale(0, RoundingMode.HALF_UP).longValueExact();
+        try {
+            Payment payment = client.payments.fetch(paymentId);
+            JSONObject json = payment.toJson();
+            if (!expectedOrderId.equals(json.optString("order_id")) || json.optLong("amount") != expectedPaise) {
+                log.error("Razorpay payment {} does not match order {} / {} paise", paymentId, expectedOrderId, expectedPaise);
+                return Result.failure(PaymentError.SIGNATURE_INVALID);
+            }
+            String status = json.optString("status");
+            if ("authorized".equals(status)) {
+                JSONObject capture = new JSONObject();
+                capture.put("amount", expectedPaise);
+                capture.put("currency", "INR");
+                status = client.payments.capture(paymentId, capture).toJson().optString("status");
+            }
+            if (!"captured".equals(status)) {
+                log.warn("Razorpay payment {} is {}, not captured", paymentId, status);
+                return Result.failure(PaymentError.NOT_CAPTURED);
+            }
+            return Result.success(new GatewayPayment(paymentId, methodOf(json.optString("method"))));
+        } catch (RazorpayException e) {
+            log.error("Razorpay payment {} could not be confirmed: {}", paymentId, e.getMessage());
+            return Result.failure(PaymentError.GATEWAY_ERROR);
+        }
+    }
+
+    private static PaymentMethod methodOf(String razorpayMethod) {
+        return switch (razorpayMethod == null ? "" : razorpayMethod) {
+            case "upi" -> PaymentMethod.UPI;
+            case "card" -> PaymentMethod.CARD;
+            case "netbanking" -> PaymentMethod.NETBANKING;
+            case "wallet" -> PaymentMethod.WALLET;
+            default -> PaymentMethod.ONLINE;
+        };
     }
 
     @Override

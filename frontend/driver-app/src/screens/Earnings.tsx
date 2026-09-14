@@ -1,4 +1,4 @@
-import { Bike, Calendar, ChevronDown, Package, TrendingUp, UtensilsCrossed } from 'lucide-react';
+import { Bike, Calendar, ChevronDown, Package, TrendingUp, UtensilsCrossed, Wallet } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -231,6 +231,12 @@ export function Earnings() {
               </div>
             )}
           </Card>
+
+          {/* The totals here are fares; what she can actually withdraw is the
+              wallet, which nets out commission and cash she already holds. */}
+          <Button fullWidth variant="secondary" icon={<Wallet className="h-4 w-4" />} onClick={() => navigate('/payouts')}>
+            Wallet &amp; payouts
+          </Button>
 
           <div className="grid grid-cols-2 gap-3">
             <Card className="flex items-center gap-3">

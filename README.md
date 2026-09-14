@@ -51,7 +51,8 @@ the build on a cross-module `internal` import - not a rewrite.
 | `driver-verification` **(implemented)** | `com.sheout.driververification`   | Gender verification (all accounts) + police verification (drivers only): document submission, admin review queue, `AccountVerified` event. See "Auth & driver-verification" below. |
 | `booking` **(implemented)** | `com.sheout.booking`               | The RIDE/DELIVERY state machine, fare estimate, `GeoAddress` (pickup/drop coordinates). See "Booking" below. |
 | `dispatch` **(implemented)** | `com.sheout.dispatch`              | Matches a REQUESTED booking to a nearby ONLINE driver via Redis geo + an offer/accept race. No public API (nothing calls into it yet) - only `com.sheout.dispatch.internal`, no Postgres tables. See "Dispatch" below. |
-| `payments`              | `com.sheout.payments`              | Fare charging, refunds, driver payouts (Razorpay). |
+| `payments` **(implemented)** | `com.sheout.payments`              | Charging a trip's fare: Razorpay order at completion, Checkout verification, webhook capture, cash confirmed by the partner. The single capture path publishes `PaymentCaptured`. |
+| `payouts` **(implemented)** | `com.sheout.payouts`               | What a partner is owed and how she is paid: wallet (credited from `PaymentCaptured`, never polled), bank/UPI payout details, payout requests. Payouts are sent by hand and marked paid in the console - no payout API. |
 | `notifications`         | `com.sheout.notifications`         | Push/SMS/email, triggered by domain events (Firebase). |
 | `admin`                 | `com.sheout.admin`                 | Internal operator tooling, composes other modules' public APIs. |
 
@@ -534,9 +535,16 @@ pattern - `JWT_SECRET` (required on Render, dev-only default in
 `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`, not a SheOut-specific var.
 See `.env.example` for the full list.
 
-`RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` / `FIREBASE_PROJECT_ID` /
-`FIREBASE_CREDENTIALS_JSON` are placeholders in both profiles - payments
-and notifications aren't implemented yet.
+`RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` / `RAZORPAY_WEBHOOK_SECRET` are
+blank by default. Without them trips still complete and cash still works,
+but online payment reports itself unavailable. With test-mode keys, point a
+Razorpay webhook at `/api/v1/payments/webhooks/razorpay` for the
+`payment.captured` and `payment.failed` events, using the same webhook secret:
+Checkout's own success callback is verified too, but the webhook is what
+catches a rider who closes the page before it returns.
+
+`FIREBASE_PROJECT_ID` / `FIREBASE_CREDENTIALS_JSON` are placeholders in both
+profiles.
 
 Copy `.env.example` to `.env` (gitignored) for local dev and fill in
 values as each integration gets implemented.

@@ -22,6 +22,7 @@ import type { CancellationReason as SharedCancellationReason, MapMarker } from '
 import { ApiError, bookingApi, chatApi, dispatchApi } from '../api/client';
 import type { AssignedDriver, BookingStatus, BookingSummary, DriverLocation } from '../api/types';
 import { RatingPrompt } from '../components/RatingPrompt';
+import { TripPaymentCard } from '../components/TripPaymentCard';
 import { mockAction } from '../lib/mockAction';
 
 const POLL_INTERVAL_MS = 3000;
@@ -143,6 +144,8 @@ export function Tracking() {
   const [error, setError] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
+  /** Set by the payment card once the fare is captured; the rating prompt waits for it. */
+  const [tripPaid, setTripPaid] = useState(false);
   const [askingWhy, setAskingWhy] = useState(false);
   const [driverLocation, setDriverLocation] = useState<DriverLocation | null>(null);
   // Fetched from the chat endpoint, which serves it alongside the thread.
@@ -702,16 +705,16 @@ export function Tracking() {
           file comments) - this is the first place it's actually shown.
           Sits under the map, where the mockup puts its arriving/distance
           strip - this app has no ETA to show there. */}
-      {booking && (
+      {/* A completed trip shows what is owed and how to pay it; the payment
+          card carries the final fare, so the plain fare row would repeat it. */}
+      {booking?.status === 'COMPLETED' && <TripPaymentCard booking={booking} onPaid={() => setTripPaid(true)} />}
+
+      {booking && booking.status !== 'COMPLETED' && (
         <Card className="flex items-center justify-between">
           {/* A cancelled trip was never charged. Showing a rupee figure
               with no qualifier reads as a bill. */}
           <span className="text-sm text-text-secondary">
-            {booking.status === 'COMPLETED'
-              ? 'Final Fare'
-              : booking.status === 'CANCELLED' || searchFailed
-                ? 'Estimated fare - not charged'
-                : 'Estimated Fare'}
+            {booking.status === 'CANCELLED' || searchFailed ? 'Estimated fare - not charged' : 'Estimated Fare'}
           </span>
           <AmountText amount={booking.finalFare ?? booking.fareEstimate} size="lg" />
         </Card>
@@ -797,7 +800,11 @@ export function Tracking() {
           say about a ride that did not happen, and asking would read as
           blaming somebody for it. The server agrees: no slot is opened for a
           cancellation. */}
-      {booking?.status === 'COMPLETED' && (
+      {/* And only once the fare is settled: asked the moment the trip ends,
+          the rating dialog sat on top of the payment card and the rider had
+          to deal with it before she could pay. My Bookings still offers to
+          rate a trip that is left unpaid here. */}
+      {booking?.status === 'COMPLETED' && tripPaid && (
         <RatingPrompt bookingId={bookingId} counterpartLabel="your partner" />
       )}
     </div>

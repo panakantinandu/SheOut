@@ -1,4 +1,4 @@
-import { Bike, Camera, Car, FileText, HelpCircle, Lock, LogOut, ShieldCheck, Truck, User } from 'lucide-react';
+import { Bike, Camera, Car, FileText, HelpCircle, Landmark, Lock, LogOut, ShieldCheck, Truck, User } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -225,6 +225,11 @@ export function Profile() {
           icon={<IconCircle tone="soft" size="sm" icon={<ShieldCheck />} />}
           label="Verification"
           onClick={() => navigate('/verification')}
+        />
+        <ListRow
+          icon={<IconCircle tone="soft" size="sm" icon={<Landmark />} />}
+          label="Payouts & bank details"
+          onClick={() => navigate('/payouts')}
         />
         <ListRow
           icon={<IconCircle tone="soft" size="sm" icon={<HelpCircle />} />}
