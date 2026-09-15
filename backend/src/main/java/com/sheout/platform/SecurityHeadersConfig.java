@@ -10,6 +10,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.header.writers.CacheControlHeadersWriter;
 import org.springframework.security.web.header.writers.DelegatingRequestMatcherHeaderWriter;
 import org.springframework.security.web.header.writers.StaticHeadersWriter;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
@@ -70,6 +71,11 @@ public class SecurityHeadersConfig {
     @Bean
     SecurityFilterChain securityHeaders(HttpSecurity http) throws Exception {
         RequestMatcher admin = new AntPathRequestMatcher("/admin/**");
+        // Signed photo and document links set their own private, time-limited
+        // Cache-Control. The default no-store written in front of it (headers
+        // are written eagerly, see below) made browsers re-download every
+        // photo on every screen.
+        RequestMatcher signedDocuments = new AntPathRequestMatcher("/api/v1/documents");
 
         http
                 .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
@@ -98,6 +104,9 @@ public class SecurityHeadersConfig {
                         }
                     });
                     headers
+                            .cacheControl(cache -> cache.disable())
+                            .addHeaderWriter(new DelegatingRequestMatcherHeaderWriter(
+                                    new NegatedRequestMatcher(signedDocuments), new CacheControlHeadersWriter()))
                             .contentTypeOptions(Customizer.withDefaults())
                             .frameOptions(frame -> frame.deny())
                             .httpStrictTransportSecurity(hsts -> hsts

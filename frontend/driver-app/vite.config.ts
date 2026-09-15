@@ -3,8 +3,6 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import { pushWorkerImport, sheoutPushWorker } from '@sheout/design-system/push-worker-plugin'
 
-// TODO: replace icons/icon-192.png and icons/icon-512.png with real
-// generated app icons before shipping - placeholders only for now.
 export default defineConfig({
   plugins: [
     react(),
@@ -35,12 +33,16 @@ export default defineConfig({
         name: 'SheOut Driver',
         short_name: 'SheOut Driver',
         description: 'SheOut driver app - Hyderabad',
-        theme_color: '#ffffff',
+        theme_color: '#4A1A9E',
+        start_url: '/home',
         background_color: '#ffffff',
         display: 'standalone',
         icons: [
           { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+          // Android masks installed icons to its own shape; this one keeps the
+          // artwork inside the safe zone so the pin and wheels are not cut off.
+          { src: '/icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
     }),

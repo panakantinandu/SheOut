@@ -1,5 +1,6 @@
 import { Camera } from 'lucide-react';
 import { useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { shrinkPhoto } from '../lib/photo';
 import { dateOfBirthProblem, emailProblem, latestAdultBirthDate } from '../lib/profile';
 import { Avatar } from './Avatar';
 import { Button } from './Button';
@@ -62,14 +63,14 @@ export function ProfileCompletionForm({
   async function choosePhoto(file: File | undefined) {
     if (!file) return;
     setPhotoError(null);
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-      setPhotoError('Choose a JPEG, PNG or WebP photo.');
+    if (file.type && !file.type.startsWith('image/')) {
+      setPhotoError('Choose a photo.');
       return;
     }
     setUploading(true);
     const localUrl = URL.createObjectURL(file);
     try {
-      await onUploadPhoto(file);
+      await onUploadPhoto(await shrinkPhoto(file));
       setPreview(localUrl);
     } catch (err) {
       URL.revokeObjectURL(localUrl);
@@ -106,7 +107,7 @@ export function ProfileCompletionForm({
         <input
           ref={fileInput}
           type="file"
-          accept="image/jpeg,image/png,image/webp"
+          accept="image/*"
           className="hidden"
           aria-label="Profile photo"
           data-testid="photo-input"

@@ -13,6 +13,7 @@ import {
   TopHeader,
   vehicleLabel,
   ProfileCompletionForm,
+  shrinkPhoto,
 } from '@sheout/design-system';
 import { ApiError, privacyApi, supportApi, usersApi } from '../api/client';
 import type { DriverProfileSummary, VehicleType } from '../api/types';
@@ -53,9 +54,9 @@ export function Profile() {
     setUploadingPhoto(true);
     setError(null);
     try {
-      setProfile(await usersApi.uploadMyPhoto(file));
+      setProfile(await usersApi.uploadMyPhoto(await shrinkPhoto(file)));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not upload that photo');
+      setError(err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Could not upload that photo');
     } finally {
       setUploadingPhoto(false);
     }

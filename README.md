@@ -53,7 +53,7 @@ the build on a cross-module `internal` import - not a rewrite.
 | `dispatch` **(implemented)** | `com.sheout.dispatch`              | Matches a REQUESTED booking to a nearby ONLINE driver via Redis geo + an offer/accept race. No public API (nothing calls into it yet) - only `com.sheout.dispatch.internal`, no Postgres tables. See "Dispatch" below. |
 | `payments` **(implemented)** | `com.sheout.payments`              | Charging a trip's fare: Razorpay order at completion, Checkout verification, webhook capture, cash confirmed by the partner. The single capture path publishes `PaymentCaptured`. |
 | `payouts` **(implemented)** | `com.sheout.payouts`               | What a partner is owed and how she is paid: wallet (credited from `PaymentCaptured`, never polled), bank/UPI payout details, payout requests. Payouts are sent by hand and marked paid in the console - no payout API. |
-| `notifications`         | `com.sheout.notifications`         | Push/SMS/email, triggered by domain events (Firebase). |
+| `notifications` **(implemented)** | `com.sheout.notifications`         | The in-app inbox, push (Firebase Cloud Messaging), SMS (Twilio) and email (SMTP), all triggered by domain events; SOS alerts to emergency contacts and operators. |
 | `admin`                 | `com.sheout.admin`                 | Internal operator tooling, composes other modules' public APIs. |
 
 `com.sheout.platform` is **not** a domain module - it's cross-cutting
@@ -117,9 +117,11 @@ module's business logic.
   `FirebaseOtpSender` wasn't built - Firebase Phone Auth is a client-driven
   flow, not a backend "send this code" API like MSG91/Twilio are. Wiring
   MSG91 or Twilio in behind this interface is a drop-in follow-up.
-- **`DocumentStorage`** (`driververification.internal.storage`) -
-  `LocalDiskDocumentStorage` (default, dev-only) or `S3DocumentStorage`
-  (`DOCUMENT_STORAGE_PROVIDER=s3`), selected purely by config. Swapping
+- **`DocumentStorage`** (`sharedkernel.storage`) - `DatabaseDocumentStorage`
+  (default: stored in Postgres, served through signed expiring links),
+  `S3DocumentStorage` (`DOCUMENT_STORAGE_PROVIDER=s3`) or
+  `LocalDiskDocumentStorage` (`local`, never on Render - its disk is wiped on
+  every deploy), selected purely by config. Swapping
   Aadhaar review for a third-party KYC API later means adding a new
   implementation here (or replacing the manual-review call sites in
   `VerificationService` with a call to the KYC API) - the workflow/state
@@ -734,8 +736,6 @@ live deployment. What is deliberately left for later:
   which has no uptime guarantee; self-host once traffic justifies it.
 - `users`' saved addresses using the `GeoAddress` shape `booking`
   introduced - home and work addresses are still plain text.
-- Real PWA icons (`vite.config.ts` in both frontend apps references
-  `/icons/icon-192.png` and `/icons/icon-512.png` as placeholders).
 - CI/CD.
 - An embedded/Testcontainers substitute for backend tests - the one
   context-load test needs a real local Postgres + Redis running (e.g.
