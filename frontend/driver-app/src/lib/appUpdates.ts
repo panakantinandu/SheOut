@@ -29,6 +29,23 @@ export function registerAppUpdates() {
   if (!('serviceWorker' in navigator)) return;
   const openedAt = Date.now();
   let updateReady = false;
+  // A page with no controller is a first install, not an update: the new
+  // worker claiming it must not reload somebody typing her phone number.
+  const hadController = Boolean(navigator.serviceWorker.controller);
+
+  // The worker activates itself as soon as it is installed (skipWaiting in
+  // vite.config.ts) - it does not wait for this page to say so. It used to,
+  // and a device still running a build with no update code never said so:
+  // measured, three refreshes of an open tab all served the old build while
+  // the new worker sat waiting. Now it takes over at once, and this page
+  // decides only when to reload onto it.
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController) return;
+    updateReady = true;
+    if (Date.now() - openedAt < FRESH_OPEN_MS) {
+      window.location.reload();
+    }
+  });
 
   const updateSW = registerSW({
     immediate: true,
@@ -47,7 +64,8 @@ export function registerAppUpdates() {
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState !== 'visible') return;
         if (updateReady) {
-          void updateSW(true);
+          // Already controlled by the new worker: a plain reload is all it takes.
+          window.location.reload();
         } else {
           check();
         }
