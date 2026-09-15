@@ -1,9 +1,8 @@
-import { Bike, Car, Truck, User } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { BrandHeader, Button, LegalConsentNotice, PhoneField, TextField, isCompletePhone, toE164 } from '@sheout/design-system';
 import { ApiError, authApi, usersApi } from '../api/client';
-import type { AuthSession, VehicleType } from '../api/types';
+import type { AuthSession } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 
 
@@ -34,12 +33,6 @@ const AUTH_MODE_COPY: Record<AuthMode, { tab: string; heading: string; subtitle:
   },
 };
 
-const VEHICLE_OPTIONS: { key: VehicleType; label: string; icon: JSX.Element }[] = [
-  { key: 'BIKE', label: 'Bike', icon: <Bike className="h-4 w-4" /> },
-  { key: 'AUTO', label: 'Auto', icon: <Truck className="h-4 w-4" /> },
-  { key: 'CAB', label: 'Cab', icon: <Car className="h-4 w-4" /> },
-];
-
 /**
  * Same phone -> OTP flow as customer-app's Login, wired to role: DRIVER.
  * <p>
@@ -58,7 +51,7 @@ export function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  const [step, setStep] = useState<'phone' | 'otp' | 'complete-profile'>('phone');
+  const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [mode, setMode] = useState<AuthMode>('login');
   /** Non-error feedback, e.g. 'that number is already registered'. */
   const location = useLocation();
@@ -66,9 +59,6 @@ export function Login() {
   const [notice, setNotice] = useState<string | null>((location.state as { notice?: string } | null)?.notice ?? null);
   const [phoneDigits, setPhoneDigits] = useState('');
   const [code, setCode] = useState('');
-  const [name, setName] = useState('');
-  const [vehicleType, setVehicleType] = useState<VehicleType>('BIKE');
-  const [vehicleReg, setVehicleReg] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -96,12 +86,12 @@ export function Login() {
     let needsProfile = session.newAccount;
     try {
       const profile = await usersApi.getMyProfile();
-      needsProfile = !profile.name;
+      needsProfile = !profile.profileComplete;
     } catch {
       // Profile fetch failed - fall back to the session's own signal rather than stranding the driver here.
     }
     if (needsProfile) {
-      setStep('complete-profile');
+      navigate('/complete-profile', { replace: true });
     } else {
       // Long enough to read the notice before the screen changes; skipped
       // entirely when there is nothing to say.
@@ -143,24 +133,6 @@ export function Login() {
     }
   }
 
-  async function handleCompleteProfile(e: FormEvent) {
-    e.preventDefault();
-    setError(null);
-    if (!name.trim() || !vehicleReg.trim()) {
-      setError('Enter your name and vehicle registration number');
-      return;
-    }
-    setSubmitting(true);
-    try {
-      await usersApi.updateMyProfile({ name: name.trim(), vehicleType, vehicleRegistrationNumber: vehicleReg.trim() });
-      navigate('/home', { replace: true });
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not save your profile');
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
   return (
     <div className="flex min-h-screen flex-col justify-center bg-gradient-to-br from-[#FEF8F8] via-[#FBF1F6] to-[#E9DEF5] px-screen py-10">
       {/* Same lockup customer-app's Login uses, from the shared package -
@@ -168,50 +140,7 @@ export function Login() {
           heading, which read as a different product to the rider app. */}
       <BrandHeader size="md" className="mb-6" />
 
-      {step === 'complete-profile' ? (
-        <>
-          <h1 className="text-center font-heading text-2xl font-bold text-text-primary">Complete Your Profile</h1>
-          <p className="mb-8 text-center text-sm text-text-secondary">Tell us about you and your vehicle</p>
-          <form onSubmit={handleCompleteProfile} className="space-y-4">
-            <TextField
-              icon={<User className="h-4 w-4 text-text-secondary" />}
-              type="text"
-              placeholder="Your Name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-            <div>
-              <span className="mb-1.5 block text-sm font-medium text-text-primary">Vehicle Type</span>
-              <div className="flex gap-2">
-                {VEHICLE_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.key}
-                    type="button"
-                    onClick={() => setVehicleType(opt.key)}
-                    className={
-                      vehicleType === opt.key
-                        ? 'flex flex-1 items-center justify-center gap-1.5 rounded-full bg-primary py-2 text-sm font-semibold text-text-inverse'
-                        : 'flex flex-1 items-center justify-center gap-1.5 rounded-full border border-border py-2 text-sm font-medium text-text-secondary'
-                    }
-                  >
-                    {opt.icon} {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <TextField
-              type="text"
-              placeholder="Vehicle Registration Number"
-              value={vehicleReg}
-              onChange={(e) => setVehicleReg(e.target.value)}
-              error={error ?? undefined}
-            />
-            <Button type="submit" fullWidth disabled={submitting}>
-              {submitting ? 'Saving...' : 'Continue'}
-            </Button>
-          </form>
-        </>
-      ) : (
+      {(
         <>
           {step === 'phone' && (
             <div className="mb-5 flex gap-2" role="tablist" aria-label="Login or register">

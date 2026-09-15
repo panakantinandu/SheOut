@@ -107,6 +107,26 @@
             <artifactId>s3</artifactId>
         </dependency>
 
+        <!-- Push notifications through Firebase Cloud Messaging (notifications' FcmPushChannel) -->
+        <dependency>
+            <groupId>com.google.firebase</groupId>
+            <artifactId>firebase-admin</artifactId>
+            <version>9.10.0</version>
+            <exclusions>
+                <!-- Spring's spring-jcl already bridges commons-logging; a second copy only warns at startup. -->
+                <exclusion>
+                    <groupId>commons-logging</groupId>
+                    <artifactId>commons-logging</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <!-- Email notifications over SMTP (receipts, support replies without push) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+
         <!-- UPI payment capture + webhook signature verification for the payments module -->
         <dependency>
             <groupId>com.razorpay</groupId>

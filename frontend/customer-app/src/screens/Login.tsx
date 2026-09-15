@@ -1,4 +1,3 @@
-import { User } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { BrandHeader, Button, LegalConsentNotice, PhoneField, TextField, isCompletePhone, toE164 } from '@sheout/design-system';
@@ -94,7 +93,7 @@ export function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  const [step, setStep] = useState<'phone' | 'otp' | 'complete-profile'>('phone');
+  const [step, setStep] = useState<'phone' | 'otp'>('phone');
   /**
    * Purely a copy switch for the headings below - see AUTH_MODE_COPY. It is
    * never sent anywhere and never decides what happens after verification:
@@ -106,7 +105,6 @@ export function Login() {
   const [mode, setMode] = useState<AuthMode>('login');
   const [phoneDigits, setPhoneDigits] = useState('');
   const [code, setCode] = useState('');
-  const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -144,12 +142,12 @@ export function Login() {
     let needsProfile = session.newAccount;
     try {
       const profile = await usersApi.getMyProfile();
-      needsProfile = !profile.name;
+      needsProfile = !profile.profileComplete;
     } catch {
       // Profile fetch failed - fall back to the session's own signal rather than stranding the user here.
     }
     if (needsProfile) {
-      setStep('complete-profile');
+      navigate('/complete-profile', { replace: true });
     } else {
       // Long enough to read the notice before the screen changes; skipped
       // entirely when there is nothing to say.
@@ -191,24 +189,6 @@ export function Login() {
     }
   }
 
-  async function handleCompleteProfile(e: FormEvent) {
-    e.preventDefault();
-    setError(null);
-    if (!name.trim()) {
-      setError('Enter your name');
-      return;
-    }
-    setSubmitting(true);
-    try {
-      await usersApi.updateMyProfile({ name: name.trim() });
-      navigate('/home', { replace: true });
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not save your name');
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
   async function handleGoogleSignIn() {
     setError(null);
     if (!GOOGLE_CLIENT_ID) {
@@ -231,25 +211,7 @@ export function Login() {
     <div className="flex min-h-screen flex-col justify-center bg-gradient-to-br from-[#FEF8F8] via-[#FBF1F6] to-[#E9DEF5] px-screen py-10">
       <BrandHeader size="md" className="mb-6" />
 
-      {step === 'complete-profile' ? (
-        <>
-          <h1 className="text-center font-heading text-2xl font-bold text-text-primary">Complete Your Profile</h1>
-          <p className="mb-6 text-center text-sm text-text-secondary">Just your name, and you're in</p>
-          <form onSubmit={handleCompleteProfile} className="space-y-4">
-            <TextField
-              icon={<User className="h-4 w-4 text-text-secondary" />}
-              type="text"
-              placeholder="Your Name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              error={error ?? undefined}
-            />
-            <Button type="submit" fullWidth disabled={submitting}>
-              {submitting ? 'Saving...' : 'Continue'}
-            </Button>
-          </form>
-        </>
-      ) : (
+      {(
         <>
           {/* Only on phone entry: once an OTP is out, the choice is made and
               a live toggle would just invite a mid-flow tab switch that

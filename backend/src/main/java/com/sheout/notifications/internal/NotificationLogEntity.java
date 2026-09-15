@@ -7,14 +7,19 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 
+import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Debugging/audit trail only - nothing reads this back to decide behavior
- * (contrast payments' PaymentEntity, which other logic depends on). One row
- * per delivery attempt, success or failure - see NotificationLogService's
- * Javadoc for why writing this row is safe even from an AFTER_COMMIT
- * listener.
+ * One notification to one account - what the in-app Notifications screen
+ * lists. It records what SheOut told somebody, whether or not any copy of it
+ * reached a phone: a partner with push switched off still finds the offer
+ * she missed here.
+ * <p>
+ * How each copy was delivered (push to each device, email, SMS, each SOS
+ * contact) is NotificationDeliveryEntity, one row per attempt. Until V19 this
+ * table WAS the delivery attempts, which is why the screen used to show
+ * nothing but "SMS - Failed".
  */
 @Entity
 @Table(name = "notification_log")
@@ -23,69 +28,62 @@ public class NotificationLogEntity extends BaseEntity {
     @Column(name = "recipient_account_id", nullable = false)
     private UUID recipientAccountId;
 
-    /** Phone number for SMS, device token for push - null if send was never attempted (e.g. NO_RECIPIENT_ADDRESS). */
-    @Column(name = "recipient_address")
-    private String recipientAddress;
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private NotificationType type;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    private NotificationChannelType channel;
+    @Column(nullable = false, length = 120)
+    private String title;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    private NotificationStatus status;
+    @Column(length = 500)
+    private String body;
 
-    @Column(name = "failure_reason", length = 500)
-    private String failureReason;
+    /** A path inside the app the notification opens. Null for none. */
+    @Column(length = 200)
+    private String link;
+
+    @Column(name = "read_at")
+    private Instant readAt;
 
     protected NotificationLogEntity() {
         // JPA
     }
 
-    /**
-     * Account deletion. The address is a phone number - the account holder's
-     * own, or for an SOS send, one of their emergency contacts'. The log line
-     * stays as a record that a message was attempted and how it went.
-     */
-    void eraseRecipientAddress() {
-        this.recipientAddress = null;
+    public NotificationLogEntity(UUID recipientAccountId, NotificationType type, String title, String body, String link) {
+        this.recipientAccountId = recipientAccountId;
+        this.type = type;
+        this.title = title;
+        this.body = body;
+        this.link = link;
     }
 
-    public NotificationLogEntity(UUID recipientAccountId, String recipientAddress, NotificationType type,
-                                  NotificationChannelType channel, NotificationStatus status, String failureReason) {
-        this.recipientAccountId = recipientAccountId;
-        this.recipientAddress = recipientAddress;
-        this.type = type;
-        this.channel = channel;
-        this.status = status;
-        this.failureReason = failureReason;
+    void markRead(Instant at) {
+        if (readAt == null) {
+            readAt = at;
+        }
     }
 
     public UUID getRecipientAccountId() {
         return recipientAccountId;
     }
 
-    public String getRecipientAddress() {
-        return recipientAddress;
-    }
-
     public NotificationType getType() {
         return type;
     }
 
-    public NotificationChannelType getChannel() {
-        return channel;
+    public String getTitle() {
+        return title;
     }
 
-    public NotificationStatus getStatus() {
-        return status;
+    public String getBody() {
+        return body;
     }
 
-    public String getFailureReason() {
-        return failureReason;
+    public String getLink() {
+        return link;
+    }
+
+    public Instant getReadAt() {
+        return readAt;
     }
 }

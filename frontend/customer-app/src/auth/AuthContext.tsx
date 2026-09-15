@@ -1,5 +1,6 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
-import { authApi, getStoredToken } from '../api/client';
+import { disablePushOnSignOut } from '@sheout/design-system';
+import { PUSH_TOKEN_KEY, authApi, pushApi, getStoredToken } from '../api/client';
 import type { AuthSession } from '../api/types';
 
 interface AuthState {
@@ -45,6 +46,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setAccountId(session.accountId);
       },
       logout() {
+        // Unregister this device while the session is still valid: the
+        // request reads the token when it is sent, which is before the line
+        // below clears it. Fire-and-forget - signing out never waits on it.
+        void disablePushOnSignOut(pushApi, PUSH_TOKEN_KEY);
         authApi.logout();
         try {
           localStorage.removeItem(ACCOUNT_ID_KEY);

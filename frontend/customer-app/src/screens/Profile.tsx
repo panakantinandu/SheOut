@@ -1,7 +1,7 @@
 import { BadgeCheck, FileText, HelpCircle, Info, Lock, LogOut, MapPin, Receipt, ShieldAlert, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, ConfirmDialog, PrivacyDataSection, IconCircle, ListRow, TopHeader } from '@sheout/design-system';
+import { Avatar, Card, ConfirmDialog, IconCircle, ListRow, PrivacyDataSection, TopHeader } from '@sheout/design-system';
 import { ApiError, privacyApi, supportApi, usersApi } from '../api/client';
 import type { CustomerProfileSummary } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
@@ -44,7 +44,7 @@ export function Profile() {
       <TopHeader variant="back" title="My Profile" onBack={() => navigate('/home')} />
 
       <Card className="flex items-center gap-3">
-        <IconCircle size="lg" tone="soft" icon={<User />} />
+        <Avatar url={profile?.profilePhotoUrl} name={profile?.name} size="lg" />
         <div>
           <p className="font-heading font-semibold text-text-primary">{profile?.name || 'Add your name'}</p>
           <p className="text-sm text-text-secondary">

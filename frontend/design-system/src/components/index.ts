@@ -32,3 +32,6 @@ export * from './SupportTicketThread';
 export * from './RaiseIssueForm';
 export * from './SupportTicketList';
 export * from './PrivacyDataSection';
+export * from './PushPromptCard';
+export * from './NotificationInbox';
+export * from './ProfileCompletionForm';

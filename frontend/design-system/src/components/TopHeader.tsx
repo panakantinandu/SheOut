@@ -27,6 +27,8 @@ interface GreetingHeaderProps {
   subtitle?: string;
   onMenuClick?: () => void;
   onBellClick?: () => void;
+  /** Unread notifications; the bell shows a count above zero. */
+  unreadCount?: number;
   className?: string;
 }
 
@@ -92,11 +94,25 @@ export function TopHeader(props: TopHeaderProps) {
       <button
         type="button"
         onClick={props.onBellClick}
-        aria-label="Notifications"
-        className="flex h-9 w-9 items-center justify-center rounded-full text-text-primary hover:bg-background"
+        aria-label={props.unreadCount ? `Notifications, ${props.unreadCount} unread` : 'Notifications'}
+        className="relative flex h-9 w-9 items-center justify-center rounded-full text-text-primary hover:bg-background"
       >
         <Bell className="h-5 w-5" />
+        {props.unreadCount ? <BellBadge count={props.unreadCount} /> : null}
       </button>
     </header>
+  );
+}
+
+/** The unread count on a bell. Also used by the partner app, which draws its own header. */
+export function BellBadge({ count }: { count: number }) {
+  return (
+    <span
+      data-testid="bell-badge"
+      className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-bold leading-none text-text-inverse"
+      aria-hidden="true"
+    >
+      {count > 99 ? '99+' : count}
+    </span>
   );
 }

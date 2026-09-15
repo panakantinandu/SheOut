@@ -103,6 +103,10 @@
     border: 1px solid var(--line); background: #fff; color: var(--text); cursor: pointer;
   }
   .me button:hover { border-color: var(--muted-soft); }
+  .me .push-row { display: flex; align-items: center; gap: 8px; margin: 10px 0 2px; font-size: 12px; color: var(--muted); }
+  .me .push-row span { flex: 1; min-width: 0; }
+  .me .push-row button { width: auto; margin-top: 0; padding: 4px 10px; font-size: 12px; }
+  .me .push-row.on span { color: var(--green); }
 
   /* ---------- content ---------- */
   .content { padding: 26px 28px 60px; max-width: 1400px; }
@@ -465,6 +469,10 @@
         <div class="who">Logged in as</div>
         <div class="phone" id="who">—</div>
       </div>
+      <div class="push-row" id="pushRow" hidden>
+        <span id="pushText">SOS alerts on this device are off</span>
+        <button id="pushBtn" type="button" hidden>Turn on</button>
+      </div>
       <button id="logout" type="button">Log out</button>
     </div>
   </aside>
@@ -776,6 +784,8 @@ $('login').addEventListener('submit', async e => {
 });
 
 function signOut(message) {
+  // Before the token is cleared: the unregister request needs it.
+  dropPushDevice();
   token = '';
   localStorage.removeItem('sheout.admin.token');
   awaitingCode = false;
@@ -2146,11 +2156,114 @@ $('rows').addEventListener('click', async e => {
   view.onRowClick(lastRows[Number(tr.dataset.i)]);
 });
 
+// ---- SOS alerts on this device (push) --------------------------------------
+/**
+ * An operator can have SOS alerts pushed to this browser, so an alert raised
+ * while nobody is looking at the console still reaches someone - as a system
+ * notification, even with the tab in the background. The sidebar count stays
+ * the always-on signal; this is the one that interrupts.
+ *
+ * Firebase's messaging SDK is loaded only when push is switched on, from
+ * Google's CDN at one pinned version - the only script origin the console's
+ * CSP allows besides its own hashed block, and only that version's path (see
+ * SecurityHeadersConfig). The notification itself is shown by /admin/push-sw.js,
+ * the same handler the two apps use.
+ */
+const PUSH_KEY = 'sheout.admin.pushToken';
+const FIREBASE_BASE = 'https://www.gstatic.com/firebasejs/12.19.0/';
+
+function paintPush(state) {
+  const row = $('pushRow');
+  const text = {
+    on: 'SOS alerts on this device are on',
+    off: 'SOS alerts on this device are off',
+    blocked: 'Notifications are blocked for this site in the browser',
+    unsupported: 'This browser cannot show SOS alerts',
+    working: 'Turning on SOS alerts…',
+  }[state];
+  row.hidden = state === 'unavailable';
+  row.classList.toggle('on', state === 'on');
+  $('pushText').textContent = text || '';
+  $('pushBtn').hidden = state !== 'off';
+}
+
+async function setUpPush(ask) {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+    return paintPush('unsupported');
+  }
+  let config;
+  try {
+    config = await (await fetch(API + '/notifications/push-config')).json();
+  } catch (e) {
+    return paintPush('unavailable');
+  }
+  if (!config || !config.enabled) return paintPush('unavailable');
+  if (Notification.permission === 'denied') return paintPush('blocked');
+  if (Notification.permission === 'default') {
+    if (!ask) return paintPush('off');
+    const answer = await Notification.requestPermission();
+    if (answer !== 'granted') return paintPush(answer === 'denied' ? 'blocked' : 'off');
+  }
+  paintPush('working');
+  try {
+    await navigator.serviceWorker.register('/admin/push-sw.js', { scope: '/admin/' });
+    const registration = await navigator.serviceWorker.ready;
+    const firebaseApp = await import(FIREBASE_BASE + 'firebase-app.js');
+    const messaging = await import(FIREBASE_BASE + 'firebase-messaging.js');
+    const app = firebaseApp.getApps().find(a => a.name === 'sheout-console') || firebaseApp.initializeApp(config.firebase, 'sheout-console');
+    const pushToken = await messaging.getToken(messaging.getMessaging(app), {
+      vapidKey: config.vapidKey,
+      serviceWorkerRegistration: registration,
+    });
+    await api('/notifications/devices', { method: 'POST', body: JSON.stringify({ token: pushToken }) });
+    localStorage.setItem(PUSH_KEY, pushToken);
+    paintPush('on');
+  } catch (err) {
+    if (err.message === 'unauthorized') return;
+    paintPush('off');
+    if (ask) toast('bad', 'Could not turn on SOS alerts', err.message);
+  }
+}
+
+/** Signing out: this browser stops receiving the next operator's SOS alerts. */
+function dropPushDevice() {
+  const pushToken = localStorage.getItem(PUSH_KEY);
+  localStorage.removeItem(PUSH_KEY);
+  if (!pushToken || !token) return;
+  fetch(API + '/notifications/devices/unregister', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+    body: JSON.stringify({ token: pushToken }),
+  }).catch(() => {});
+}
+
+$('pushBtn').addEventListener('click', () => setUpPush(true));
+
+async function refreshSosCount() {
+  try {
+    const alerts = await api('/admin/sos/active');
+    $('cSos').textContent = alerts.length;
+  } catch (e) {
+    // The next render sets it.
+  }
+}
+
+if ('serviceWorker' in navigator) {
+  // A push arrived while the console is open: the count and, if it is on
+  // screen, the SOS list change now rather than on the next manual refresh.
+  navigator.serviceWorker.addEventListener('message', event => {
+    if (!event.data || event.data.type !== 'sheout-push' || !token) return;
+    refreshSosCount();
+    if (tab === 'sos') render();
+  });
+}
+
 function start() {
   $('loginWrap').hidden = true;
   $('app').hidden = false;
   $('who').textContent = localStorage.getItem('sheout.admin.phone') || '—';
   render();
+  setUpPush(false);
 }
 
 if (token) start();

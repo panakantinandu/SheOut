@@ -24,6 +24,7 @@ import { Sos } from './screens/Sos'
 import { Splash } from './screens/Splash'
 import { Tracking } from './screens/Tracking'
 import { Chat } from './screens/Chat'
+import { CompleteProfile } from './screens/CompleteProfile'
 import { Wallet } from './screens/Wallet'
 
 // Screens with the bottom tab bar (Home/Bookings/Wallet/Profile/SOS) get
@@ -67,6 +68,7 @@ function App() {
       {/* Pushed on top of Profile with a back arrow, like the booking flow -
           they are drill-downs, not tab destinations, so no AppShell. */}
       <Route path="/notifications" element={protectedOnly(<Notifications />)} />
+      <Route path="/complete-profile" element={protectedOnly(<CompleteProfile />)} />
       <Route path="/profile/details" element={protectedOnly(<PersonalDetails />)} />
       <Route path="/profile/addresses" element={protectedOnly(<SavedAddresses />)} />
       <Route path="/profile/payments" element={protectedOnly(<PaymentMethods />)} />

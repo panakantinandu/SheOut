@@ -1,9 +1,20 @@
 import { ArrowRight, Bike, Clock, MapPinned, Package, ShieldAlert, Wallet as WalletIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { brandIllustration, Card, IconCircle, ListRow, TopHeader, contentText, useContentSection } from '@sheout/design-system';
+import {
+  brandIllustration,
+  Card,
+  IconCircle,
+  ListRow,
+  PushPromptCard,
+  TopHeader,
+  contentText,
+  useContentSection,
+  usePushNotifications,
+  useUnreadNotifications,
+} from '@sheout/design-system';
 import { OutOfAreaBanner } from '../components/OutOfAreaBanner';
-import { contentApi, usersApi } from '../api/client';
+import { PUSH_TOKEN_KEY, contentApi, notificationsApi, pushApi, usersApi } from '../api/client';
 import type { CustomerProfileSummary } from '../api/types';
 import { ThreeWomen } from '../components/ThreeWomen';
 
@@ -43,6 +54,10 @@ export function Home() {
   // missing, not while we simply don't know yet (was flashing briefly for
   // every user, including ones with a saved name, before the fetch resolved).
   const greeting = profileLoading ? '' : `Hello, ${firstName || 'there'} 👋`;
+  // Straight after sign-in this is the first screen she sees, so this is
+  // where the one notification-permission prompt appears.
+  const push = usePushNotifications(pushApi, PUSH_TOKEN_KEY, true);
+  const unreadCount = useUnreadNotifications(notificationsApi.unreadCount, true);
 
   return (
     <div className="space-y-6">
@@ -55,7 +70,12 @@ export function Home() {
         onMenuClick={() => navigate('/profile')}
         // Real notification history - see the Notifications screen.
         onBellClick={() => navigate('/notifications')}
+        unreadCount={unreadCount}
       />
+
+      {push.shouldPrompt && (
+        <PushPromptCard audience="rider" busy={push.busy} onTurnOn={push.turnOn} onDismiss={push.dismiss} />
+      )}
 
       {/* Said up front rather than after she has chosen a pickup. A
           notice, not a block: the trip's pickup and drop are what decide

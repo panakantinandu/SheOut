@@ -41,6 +41,12 @@ class AccountDeletionProfileListener {
             profile.setName(AccountDeletionRequested.DELETED_NAME);
             profile.setHomeAddress(null);
             profile.setWorkAddress(null);
+            profile.setDateOfBirth(null);
+            profile.setEmail(null);
+            if (profile.getProfilePhotoKey() != null) {
+                documentStorage.delete(profile.getProfilePhotoKey());
+                profile.setProfilePhotoKey(null);
+            }
             // Deleted outright, not anonymised. They are other people's names
             // and numbers, held only so this person's SOS could reach them.
             emergencyContacts.deleteAll(emergencyContacts.findByCustomerProfileId(profile.getId()));
@@ -51,6 +57,8 @@ class AccountDeletionProfileListener {
             profile.setName(AccountDeletionRequested.DELETED_NAME);
             // A registration number identifies a person as surely as a name.
             profile.setVehicleRegistrationNumber(null);
+            profile.setDateOfBirth(null);
+            profile.setEmail(null);
             // Permanently: nothing can set her ONLINE again, because the
             // account's token no longer authenticates.
             profile.setOnlineStatus(OnlineStatus.OFFLINE);

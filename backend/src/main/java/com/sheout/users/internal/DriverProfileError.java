@@ -48,5 +48,13 @@ public enum DriverProfileError {
      * the result was a partner sitting on a screen reading "Looking for ride
      * requests nearby" while dispatch had no idea where nearby was.
      */
-    LOCATION_REQUIRED
+    LOCATION_REQUIRED,
+
+    DATE_OF_BIRTH_REQUIRED,
+
+    INVALID_DATE_OF_BIRTH,
+
+    UNDER_MINIMUM_AGE,
+
+    INVALID_EMAIL
 }

@@ -1,3 +1,4 @@
+import type { PushApi } from '@sheout/design-system';
 import type {
   ApiErrorResponse,
   AuthSession,
@@ -28,6 +29,8 @@ import type {
   PagedResult,
   CheckoutDetails,
   CheckoutResult,
+  InboxPage,
+  PushConfig,
   PaymentStatus,
   PaymentSummary,
   SosResponse,
@@ -113,7 +116,8 @@ interface RequestOptions {
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { method = 'GET', body, auth = true } = options;
   const headers: Record<string, string> = {};
-  if (body !== undefined) headers['Content-Type'] = 'application/json';
+  const isFormData = body instanceof FormData;
+  if (body !== undefined && !isFormData) headers['Content-Type'] = 'application/json';
   if (auth) {
     const token = getStoredToken();
     if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -122,7 +126,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   const response = await fetch(`${API_BASE}${path}`, {
     method,
     headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
+    body: body === undefined ? undefined : isFormData ? (body as FormData) : JSON.stringify(body),
   });
 
   if (response.status === 204 || response.status === 202) {
@@ -180,8 +184,25 @@ export const usersApi = {
     return request('/api/v1/users/customer/me');
   },
 
-  updateMyProfile(update: { name: string; homeAddress?: string; workAddress?: string }): Promise<CustomerProfileSummary> {
+  /**
+   * PUT replaces the whole profile, so callers pass every field back. 400
+   * UNDER_MINIMUM_AGE / INVALID_DATE_OF_BIRTH / INVALID_EMAIL, 409
+   * PROFILE_PHOTO_REQUIRED until a photo has been uploaded.
+   */
+  updateMyProfile(update: {
+    name: string;
+    homeAddress?: string;
+    workAddress?: string;
+    dateOfBirth: string;
+    email?: string;
+  }): Promise<CustomerProfileSummary> {
     return request('/api/v1/users/customer/me', { method: 'PUT', body: update });
+  },
+
+  uploadMyPhoto(file: File): Promise<CustomerProfileSummary> {
+    const form = new FormData();
+    form.append('file', file);
+    return request('/api/v1/users/customer/me/photo', { method: 'POST', body: form });
   },
 
   getMyEmergencyContacts(): Promise<EmergencyContact[]> {
@@ -198,12 +219,40 @@ export const usersApi = {
 };
 
 export const notificationsApi = {
-  listMine(): Promise<NotificationView[]> {
-    return request('/api/v1/notifications/me');
+  inbox(page: number): Promise<InboxPage> {
+    return request(`/api/v1/notifications/me${buildQuery({ page, pageSize: 20 })}`);
+  },
+
+  unreadCount(): Promise<number> {
+    return request<{ unreadCount: number }>('/api/v1/notifications/me/unread-count').then((r) => r.unreadCount);
+  },
+
+  markRead(notificationId: string): Promise<NotificationView> {
+    return request(`/api/v1/notifications/${notificationId}/read`, { method: 'POST' });
+  },
+
+  markAllRead(): Promise<void> {
+    return request('/api/v1/notifications/me/read-all', { method: 'POST' });
   },
 
   triggerSos(input: { lat: number; lng: number; bookingId?: string }): Promise<SosResponse> {
     return request('/api/v1/notifications/sos', { method: 'POST', body: input });
+  },
+};
+
+/** Where this device's FCM token is remembered, so sign-out can unregister it. */
+export const PUSH_TOKEN_KEY = 'sheout_push_token';
+
+/** What the shared push code needs - see @sheout/design-system's lib/push. */
+export const pushApi: PushApi = {
+  getConfig(): Promise<PushConfig> {
+    return request('/api/v1/notifications/push-config', { auth: false });
+  },
+  registerDevice(token: string): Promise<void> {
+    return request('/api/v1/notifications/devices', { method: 'POST', body: { token } });
+  },
+  unregisterDevice(token: string): Promise<void> {
+    return request('/api/v1/notifications/devices/unregister', { method: 'POST', body: { token } });
   },
 };
 

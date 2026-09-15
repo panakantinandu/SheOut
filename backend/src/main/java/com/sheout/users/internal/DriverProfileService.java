@@ -17,6 +17,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -81,7 +82,8 @@ public class DriverProfileService implements DriverProfileApi {
      */
     @Transactional
     public Result<DriverProfileSummary, DriverProfileError> updateProfile(
-            UUID accountId, String name, VehicleType vehicleType, String vehicleRegistrationNumber) {
+            UUID accountId, String name, VehicleType vehicleType, String vehicleRegistrationNumber,
+            LocalDate dateOfBirth, String email) {
         if (!VehicleRegistrationNumber.isValid(vehicleRegistrationNumber)) {
             return Result.failure(DriverProfileError.INVALID_REGISTRATION_NUMBER);
         }
@@ -89,7 +91,26 @@ public class DriverProfileService implements DriverProfileApi {
         if (found.isEmpty()) {
             return Result.failure(DriverProfileError.PROFILE_NOT_FOUND);
         }
+        // The same rules as a rider's profile - see CustomerProfileService.updateProfile.
+        Optional<ProfileRules.BirthDateProblem> birthDateProblem =
+                ProfileRules.checkDateOfBirth(dateOfBirth, ProfileRules.todayInIndia());
+        if (birthDateProblem.isPresent()) {
+            return Result.failure(switch (birthDateProblem.get()) {
+                case MISSING -> DriverProfileError.DATE_OF_BIRTH_REQUIRED;
+                case IMPLAUSIBLE -> DriverProfileError.INVALID_DATE_OF_BIRTH;
+                case UNDER_MINIMUM_AGE -> DriverProfileError.UNDER_MINIMUM_AGE;
+            });
+        }
+        Optional<String> normalisedEmail = ProfileRules.normaliseEmail(email);
+        if (normalisedEmail.isEmpty()) {
+            return Result.failure(DriverProfileError.INVALID_EMAIL);
+        }
         DriverProfileEntity profile = found.get();
+        if (!profile.hasProfilePhoto()) {
+            return Result.failure(DriverProfileError.PROFILE_PHOTO_REQUIRED);
+        }
+        profile.setDateOfBirth(dateOfBirth);
+        profile.setEmail(normalisedEmail.get().isEmpty() ? null : normalisedEmail.get());
         profile.setName(name);
         profile.setVehicleType(vehicleType);
         profile.setVehicleRegistrationNumber(VehicleRegistrationNumber.normalize(vehicleRegistrationNumber));
@@ -196,6 +217,12 @@ public class DriverProfileService implements DriverProfileApi {
         if (requested == OnlineStatus.ONLINE && !profile.hasProfilePhoto()) {
             return Result.failure(DriverProfileError.PROFILE_PHOTO_REQUIRED);
         }
+        // An account from before dates of birth were required has never
+        // shown she is 18. Not bypassable, for the same reason the photo is
+        // not: stating a date needs nobody's approval.
+        if (requested == OnlineStatus.ONLINE && profile.getDateOfBirth() == null) {
+            return Result.failure(DriverProfileError.DATE_OF_BIRTH_REQUIRED);
+        }
 
         profile.setOnlineStatus(requested);
         driverProfileRepository.save(profile);
@@ -271,6 +298,9 @@ public class DriverProfileService implements DriverProfileApi {
                 // almost immediately.
                 displayablePhotoUrl(profile),
                 profile.hasProfilePhoto(),
+                profile.getDateOfBirth(),
+                profile.getEmail(),
+                profile.isProfileComplete(),
                 profile.getTrustStats(),
                 profile.getUpdatedAt()
         );

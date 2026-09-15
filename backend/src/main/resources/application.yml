@@ -289,9 +289,18 @@ sheout:
       # webhook calls (see RazorpayPaymentGateway/RazorpayWebhookController).
       # Same blank-by-default treatment as key-id/key-secret above.
       webhook-secret: ${RAZORPAY_WEBHOOK_SECRET:}
+  # Push notifications (Firebase Cloud Messaging) - all blank by default; push
+  # is off until they are set, and nothing else depends on it.
+  #   FIREBASE_PROJECT_ID / FIREBASE_CREDENTIALS_JSON: the service-account key
+  #     the server sends with (a secret).
+  #   FIREBASE_WEB_CONFIG_JSON / FIREBASE_VAPID_KEY: the web app config and Web
+  #     Push certificate public key the apps register with (public values,
+  #     served to them by GET /api/v1/notifications/push-config).
   firebase:
     project-id: ${FIREBASE_PROJECT_ID:}
     credentials-json: ${FIREBASE_CREDENTIALS_JSON:}
+    web-config-json: ${FIREBASE_WEB_CONFIG_JSON:}
+    vapid-key: ${FIREBASE_VAPID_KEY:}
 
   notifications:
     sms:
@@ -302,6 +311,13 @@ sheout:
         account-sid: ${TWILIO_ACCOUNT_SID:}
         auth-token: ${TWILIO_AUTH_TOKEN:}
         from-number: ${TWILIO_FROM_NUMBER:}
+    email:
+      # Email is off until an SMTP server is configured through Spring Boot's
+      # own variables - SPRING_MAIL_HOST, SPRING_MAIL_PORT,
+      # SPRING_MAIL_USERNAME, SPRING_MAIL_PASSWORD - plus this sender address.
+      # spring.mail.host is deliberately not defaulted in this file: even an
+      # empty value switches mail on, pointing at nothing.
+      from: ${MAIL_FROM:}
 
   testing:
     # TESTING AID ONLY, NOT A PRODUCT FEATURE - blank/unset by default,
@@ -330,6 +346,11 @@ sheout:
     bootstrap-phone: ${ADMIN_BOOTSTRAP_PHONE:}
 
 management:
+  health:
+    mail:
+      # An SMTP provider being slow or down must not mark the whole service
+      # unhealthy: email is a fallback channel, and failed sends are recorded.
+      enabled: false
   endpoints:
     web:
       exposure:

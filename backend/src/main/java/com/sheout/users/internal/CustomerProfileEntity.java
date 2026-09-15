@@ -7,6 +7,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.UUID;
@@ -25,6 +26,22 @@ public class CustomerProfileEntity extends BaseEntity {
 
     @Column(length = 150)
     private String name;
+
+    /** Required to complete a profile, and 18 or over - see ProfileRules. Null only for accounts from before V20. */
+    @Column(name = "date_of_birth")
+    private LocalDate dateOfBirth;
+
+    /** Optional contact address: receipts, and support replies on a device without push. */
+    @Column(length = 254)
+    private String email;
+
+    /**
+     * Storage key for her profile photo, not a URL - the same DocumentStorage
+     * the partner photo and identity documents use. Null until she adds one.
+     */
+    @Column(name = "profile_photo_key", length = 500)
+    private String profilePhotoKey;
+
 
     @Column(length = 500)
     private String homeAddress;
@@ -178,6 +195,39 @@ public class CustomerProfileEntity extends BaseEntity {
     }
 
     /** An operator has looked and is satisfied. */
+    public LocalDate getDateOfBirth() {
+        return dateOfBirth;
+    }
+
+    public void setDateOfBirth(LocalDate dateOfBirth) {
+        this.dateOfBirth = dateOfBirth;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getProfilePhotoKey() {
+        return profilePhotoKey;
+    }
+
+    public void setProfilePhotoKey(String profilePhotoKey) {
+        this.profilePhotoKey = profilePhotoKey;
+    }
+
+    public boolean hasProfilePhoto() {
+        return profilePhotoKey != null && !profilePhotoKey.isBlank();
+    }
+
+    /** Everything the completion screen asks for is on file. */
+    public boolean isProfileComplete() {
+        return name != null && !name.isBlank() && dateOfBirth != null && hasProfilePhoto();
+    }
+
     public void clearReviewFlag() {
         this.flaggedAt = null;
         this.flaggedReason = null;

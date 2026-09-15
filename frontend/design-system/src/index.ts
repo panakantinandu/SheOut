@@ -4,6 +4,8 @@ export * from './lib/cancellation';
 export * from './lib/support';
 export * from './lib/usePagedList';
 export * from './lib/useContentSection';
+export * from './lib/push';
+export * from './lib/profile';
 export * from './legal/content';
 export * from './components';
 export * from './tokens';
