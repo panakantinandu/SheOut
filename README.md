@@ -719,25 +719,38 @@ an SOS call is not an acceptable trade-off at any pre-launch stage.
 
 ## What's intentionally not here yet
 
-- Any business logic in `payments`, `notifications`, or `admin` - only
-  `auth`, `driver-verification`, `users`, `booking`, and `dispatch` are
-  implemented (see their sections above, including flagged-assumptions
-  lists).
-- A bridge from dispatch's own offer-accept race to booking's ACCEPTED
-  status (only as far as MATCHED) - see "Dispatch" above's flagged gap.
-- Real-time offer delivery to a driver's phone (push/FCM) - dispatch's
-  offers are poll-only until `notifications` exists.
-- `booking` reading `users` at all, or vice versa - neither depends on the
-  other. `dispatch` is what composes both, via `DriverProfileApi` and
-  `BookingApi`.
+As of v1.0.0 every module in the table above is implemented and the core
+loop - book, dispatch, pickup code, trip, payment, payout - runs on the
+live deployment. What is deliberately left for later:
+
+- Push notifications (FCM). Offers reach a partner because the partner app
+  polls; SMS through Twilio is the only outbound channel, and it sends
+  nothing until Twilio is configured.
+- Automated payouts. Operators send the money themselves and mark the
+  request paid in the console - there is no payout API integration.
+- Lunch Box. The backend still accepts the `LUNCHBOX` category, but the
+  apps do not offer it.
+- Self-hosted routing. Fares and routes use the public OSRM demo server,
+  which has no uptime guarantee; self-host once traffic justifies it.
 - `users`' saved addresses using the `GeoAddress` shape `booking`
-  introduced - see "Booking" above's flagged note.
+  introduced - home and work addresses are still plain text.
 - Real PWA icons (`vite.config.ts` in both frontend apps references
   `/icons/icon-192.png` and `/icons/icon-512.png` as placeholders).
 - CI/CD.
 - An embedded/Testcontainers substitute for backend tests - the one
   context-load test needs a real local Postgres + Redis running (e.g.
   `docker compose up postgres redis`) to pass.
+
+## Releases
+
+Releases are tagged on GitHub when a meaningful batch of work has landed
+**and been verified on the live deployment** - not per commit. One tag
+covers the backend and both apps, because they ship together from this
+repository. Versions follow semver: a new capability is a minor release
+(`v1.1.0`), a fix to something already released is a patch (`v1.0.1`),
+and a change that breaks existing API clients or the apps' contract with
+the backend is a major one. Release notes describe what the app can do,
+by area; the commit list is linked beneath them.
 
 ## Licence and use
 
