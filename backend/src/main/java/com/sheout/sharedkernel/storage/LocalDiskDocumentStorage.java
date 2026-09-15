@@ -11,8 +11,9 @@ import java.nio.file.Path;
 import java.util.UUID;
 
 /**
- * Dev-only implementation - writes to a local directory. Active unless
- * SHEOUT_DOCUMENT_STORAGE_PROVIDER=s3.
+ * Writes to a local directory. Only when DOCUMENT_STORAGE_PROVIDER=local -
+ * never in production: see DatabaseDocumentStorage for why a container disk
+ * is no place for uploads.
  * <p>
  * ASSUMPTION FLAGGED: {@link #resolveUrl} returns a local file:// path, not
  * an HTTP URL - there is no endpoint in this scaffold that serves files
@@ -23,7 +24,7 @@ import java.util.UUID;
  * proxy endpoint wasn't asked for.
  */
 @Component
-@ConditionalOnProperty(name = "sheout.document-storage.provider", havingValue = "local", matchIfMissing = true)
+@ConditionalOnProperty(name = "sheout.document-storage.provider", havingValue = "local")
 public class LocalDiskDocumentStorage implements DocumentStorage {
 
     private final Path root;

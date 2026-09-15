@@ -289,13 +289,13 @@ services:
       - key: TWILIO_FROM_NUMBER
         sync: false
 
-      # driver-verification document storage: not declared here, so it
-      # defaults to LocalDiskDocumentStorage - which writes to Render's
-      # container filesystem, wiped on every restart/redeploy. Fine while
-      # no real documents are being collected yet; before that changes,
-      # set DOCUMENT_STORAGE_PROVIDER=s3 plus DOCUMENT_STORAGE_S3_BUCKET,
-      # AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY in the dashboard (see
-      # README) so uploads persist.
+      # Uploaded photos and documents: not declared here, so they default to
+      # DatabaseDocumentStorage - stored in the Postgres above and served
+      # through signed links built from RENDER_EXTERNAL_URL, which Render
+      # sets itself. Never DOCUMENT_STORAGE_PROVIDER=local on Render: the
+      # container disk is wiped on every restart and redeploy. For a bucket
+      # instead, set DOCUMENT_STORAGE_PROVIDER=s3 plus
+      # DOCUMENT_STORAGE_S3_BUCKET, AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY.
 
       # Not declared: PORT. Render injects it automatically (defaults to
       # 10000) for every web service, Docker-based ones included - the app

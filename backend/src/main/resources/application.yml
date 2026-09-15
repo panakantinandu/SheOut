@@ -200,8 +200,12 @@ sheout:
     google-client-id: ${GOOGLE_OAUTH_CLIENT_ID:}
 
   document-storage:
-    # local | s3 - see DocumentStorage/LocalDiskDocumentStorage/S3DocumentStorage.
-    provider: ${DOCUMENT_STORAGE_PROVIDER:local}
+    # database | s3 | local - see DatabaseDocumentStorage (the default, stored in
+    # Postgres), S3DocumentStorage and LocalDiskDocumentStorage.
+    provider: ${DOCUMENT_STORAGE_PROVIDER:database}
+    # Where signed document links point - this server as the apps reach it.
+    # Render sets RENDER_EXTERNAL_URL itself; PUBLIC_BASE_URL overrides it.
+    public-base-url: ${PUBLIC_BASE_URL:${RENDER_EXTERNAL_URL:http://localhost:8080}}
     local:
       path: ${DOCUMENT_STORAGE_LOCAL_PATH:./data/documents}
     s3:
