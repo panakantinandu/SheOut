@@ -24,6 +24,12 @@ export default defineConfig({
         // installed and applied - appUpdates.ts makes that happen on the
         // next open. Old caches are dropped as soon as it is.
         cleanupOutdatedCaches: true,
+        // Take over as soon as installed instead of waiting for every open
+        // tab to close. Waiting stranded devices already running a build with
+        // no update code: an open tab refreshed three times kept the old app.
+        // src/lib/appUpdates.ts decides when the page reloads onto it.
+        skipWaiting: true,
+        clientsClaim: true,
       },
       manifest: {
         name: 'SheOut Driver',
