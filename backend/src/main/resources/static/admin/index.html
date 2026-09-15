@@ -1907,7 +1907,19 @@ function paintHead(view) {
   }));
 }
 
+/**
+ * Bumped on every render. A response that comes back after the operator has
+ * moved on - to another section, page or filter - belongs to a render that is
+ * no longer current and is thrown away. Without this, a slow Verification
+ * Queue load that landed after switching to Payouts painted queue rows under
+ * the Payouts heading, and lastRows (which every row button reads) pointed at
+ * the wrong records.
+ */
+let renderGeneration = 0;
+
 async function render(opts = {}) {
+  const generation = ++renderGeneration;
+  const isStale = () => generation !== renderGeneration;
   const view = VIEWS[tab];
   $('pageTitle').textContent = view.title;
   $('pageDesc').textContent = view.desc;
@@ -1930,10 +1942,11 @@ async function render(opts = {}) {
     $('rows').innerHTML = skeletonRows(1);
     try {
       const blocks = await view.load(stateFor(tab));
+      if (isStale()) return;
       paintContent(blocks);
       $('cContent').textContent = blocks.length;
     } catch (err) {
-      if (err.message === 'unauthorized') return;
+      if (err.message === 'unauthorized' || isStale()) return;
       $('rows').innerHTML = `<tr><td><div class="state"><h3>Could not load this section</h3><p>${esc(err.message)}</p></div></td></tr>`;
     }
     return;
@@ -1942,6 +1955,7 @@ async function render(opts = {}) {
   try {
     const state = stateFor(tab);
     const result = await view.load(state);
+    if (isStale()) return;
     // A paged endpoint answers with items and totals; the unpaged ones
     // still answer with a bare array. Normalise so the rest does not care.
     const paged = Array.isArray(result)
@@ -1965,7 +1979,7 @@ async function render(opts = {}) {
     // Only the waiting list sets the Payouts badge; paid history is not work to do.
     if (tab === 'payouts' && state.status !== 'PAID') $('cPayouts').textContent = paged.totalItems;
   } catch (err) {
-    if (err.message === 'unauthorized') return;
+    if (err.message === 'unauthorized' || isStale()) return;
     paintPager(null);
     $('rows').innerHTML = `<tr><td colspan="${view.columns.length}">
       <div class="state"><h3>Could not load this section</h3><p>${esc(err.message)}</p></div></td></tr>`;
