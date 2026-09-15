@@ -40,16 +40,24 @@ export function pushSupported(): boolean {
 /**
  * The service worker the app already runs. Push rides on it - a second
  * worker just for Firebase would fight the PWA worker for the same scope.
- * Resolves to null rather than waiting forever where there is none (the dev
- * server does not register one).
+ * <p>
+ * On an app's very first open the worker is still installing - downloading
+ * the whole app to cache - when this runs. That took ~20 seconds on the live
+ * site from a desktop connection, and longer on a phone. An earlier version
+ * gave up after 10 seconds, so a brand-new user's first session silently got
+ * no push prompt. Once a registration exists, this now waits for it however
+ * long it takes; it only gives up when none appears at all (the dev server
+ * registers none).
  */
 async function appServiceWorker(): Promise<ServiceWorkerRegistration | null> {
-  const existing = await navigator.serviceWorker.getRegistration();
-  if (!existing) return null;
-  return Promise.race([
-    navigator.serviceWorker.ready,
-    new Promise<null>((resolve) => setTimeout(() => resolve(null), 10000)),
-  ]);
+  for (let attempt = 0; attempt < 20; attempt++) {
+    // registerAppUpdates registers the worker as the app starts; give that a moment.
+    if (await navigator.serviceWorker.getRegistration()) {
+      return navigator.serviceWorker.ready;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  return null;
 }
 
 /**
