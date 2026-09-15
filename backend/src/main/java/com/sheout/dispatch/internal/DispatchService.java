@@ -2,18 +2,26 @@ package com.sheout.dispatch.internal;
 
 import com.sheout.auth.AccountSummary;
 import com.sheout.auth.AuthApi;
+import com.sheout.booking.BookingAccepted;
 import com.sheout.booking.BookingApi;
+import com.sheout.booking.BookingCancelled;
 import com.sheout.booking.BookingCategory;
+import com.sheout.booking.BookingCompleted;
 import com.sheout.booking.BookingError;
 import com.sheout.booking.BookingRequested;
+import com.sheout.booking.BookingStarted;
 import com.sheout.booking.BookingSummary;
 import com.sheout.dispatch.DispatchExhausted;
+import com.sheout.dispatch.DriverArriving;
+import com.sheout.dispatch.DriverOffered;
+import com.sheout.dispatch.internal.redis.ApproachStore;
 import com.sheout.dispatch.internal.matching.MatchingStrategy;
 import com.sheout.dispatch.internal.redis.DriverLocationStore;
 import com.sheout.dispatch.internal.redis.OfferStore;
 import com.sheout.dispatch.internal.redis.RoundState;
 import com.sheout.sharedkernel.Result;
 import com.sheout.sharedkernel.event.DomainEventPublisher;
+import com.sheout.sharedkernel.geo.GeoDistance;
 import com.sheout.users.DriverProfileApi;
 import com.sheout.users.DriverProfileSummary;
 import com.sheout.users.OnlineStatus;
@@ -23,6 +31,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -50,6 +60,7 @@ public class DispatchService {
     private final AuthApi authApi;
     private final BookingApi bookingApi;
     private final DomainEventPublisher eventPublisher;
+    private final ApproachStore approachStore;
 
     private final double initialRadiusKm;
     private final double radiusExpansionFactor;
@@ -57,6 +68,7 @@ public class DispatchService {
     private final long offerWindowSeconds;
     private final int maxRetries;
     private final long searchTimeoutSeconds;
+    private final double arrivingRadiusMetres;
 
     public DispatchService(
             DriverLocationStore locationStore,
@@ -66,6 +78,7 @@ public class DispatchService {
             BookingApi bookingApi,
             AuthApi authApi,
             DomainEventPublisher eventPublisher,
+            ApproachStore approachStore,
             @Value("${sheout.dispatch.initial-radius-km:3.0}") double initialRadiusKm,
             @Value("${sheout.dispatch.radius-expansion-factor:2.0}") double radiusExpansionFactor,
             @Value("${sheout.dispatch.candidate-count:5}") int candidateCount,
@@ -75,7 +88,10 @@ public class DispatchService {
             // radius expansion. NOT the per-offer accept window above, which
             // bounds one driver answering one offer - the two solve different
             // problems and must never be collapsed into each other.
-            @Value("${sheout.dispatch.search-timeout-seconds:90}") long searchTimeoutSeconds
+            @Value("${sheout.dispatch.search-timeout-seconds:90}") long searchTimeoutSeconds,
+            // How close to the pickup counts as arriving. Close enough that
+            // "look up now" is true; far enough that the rider has time to.
+            @Value("${sheout.dispatch.arriving-radius-metres:300}") double arrivingRadiusMetres
     ) {
         this.locationStore = locationStore;
         this.offerStore = offerStore;
@@ -84,6 +100,8 @@ public class DispatchService {
         this.authApi = authApi;
         this.bookingApi = bookingApi;
         this.eventPublisher = eventPublisher;
+        this.approachStore = approachStore;
+        this.arrivingRadiusMetres = arrivingRadiusMetres;
         this.initialRadiusKm = initialRadiusKm;
         this.radiusExpansionFactor = radiusExpansionFactor;
         this.candidateCount = candidateCount;
@@ -96,6 +114,44 @@ public class DispatchService {
 
     public void recordLocation(UUID driverId, double lat, double lng) {
         locationStore.recordLocation(driverId, lat, lng);
+        // Arriving is read off the reports she already sends, not polled for.
+        approachStore.find(driverId).ifPresent(approach -> {
+            double metres = GeoDistance.haversineKm(lat, lng, approach.pickupLat(), approach.pickupLng()) * 1000;
+            if (metres <= arrivingRadiusMetres && approachStore.finish(driverId)) {
+                eventPublisher.publish(new DriverArriving(approach.bookingId(), approach.customerId(), driverId));
+            }
+        });
+    }
+
+    /**
+     * She has accepted: from now until she is near the pickup, her location
+     * reports are checked against it. After commit, so an accept that rolled
+     * back never starts an approach.
+     */
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void onBookingAccepted(BookingAccepted event) {
+        bookingApi.findById(event.bookingId()).ifPresent(booking -> approachStore.start(
+                event.driverId(), booking.id(), booking.customerId(), booking.pickup().lat(), booking.pickup().lng()));
+    }
+
+    /** Starting the trip, finishing it or cancelling it all end an approach that never reached "arriving". */
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void onBookingStarted(BookingStarted event) {
+        approachStore.finish(event.driverId());
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void onBookingCompleted(BookingCompleted event) {
+        approachStore.finish(event.driverId());
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void onBookingCancelled(BookingCancelled event) {
+        if (event.driverId() != null) {
+            approachStore.find(event.driverId())
+                    .filter(approach -> approach.bookingId().equals(event.bookingId()))
+                    .ifPresent(approach -> approachStore.finish(event.driverId()));
+        }
     }
 
     /** Last reported position for a driver, or empty if they have never reported one. */
@@ -279,6 +335,9 @@ public class DispatchService {
         if (!offered.isEmpty()) {
             for (CandidateDriver candidate : offered) {
                 offerStore.createOffer(bookingId, candidate.driverId(), window);
+                // After the offer exists, so a partner alerted by this can accept it.
+                eventPublisher.publish(new DriverOffered(
+                        bookingId, candidate.driverId(), state.category(), candidate.distanceKm(), expiresAt));
             }
             offerStore.markTried(bookingId, offered.stream().map(CandidateDriver::driverId).collect(Collectors.toSet()));
         }

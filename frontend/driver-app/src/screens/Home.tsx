@@ -4,18 +4,34 @@ import { useNavigate } from 'react-router-dom';
 import {
   AggregateRatingText,
   AmountText,
+  BellBadge,
   Button,
   Card,
   IconCircle,
   LiveMap,
+  PushPromptCard,
   TopHeader,
   bookingStatusLabel,
+  usePushMessages,
+  usePushNotifications,
+  useUnreadNotifications,
   vehicleLabel,
 } from '@sheout/design-system';
-import { ApiError, bookingApi, dispatchApi, ratingsApi, usersApi, verificationApi } from '../api/client';
+import {
+  ApiError,
+  PUSH_TOKEN_KEY,
+  bookingApi,
+  dispatchApi,
+  notificationsApi,
+  pushApi,
+  ratingsApi,
+  usersApi,
+  verificationApi,
+} from '../api/client';
 import type { AggregateRating, BookingSummary, DriverProfileSummary, VerificationSummary } from '../api/types';
 import { RatingPrompt } from '../components/RatingPrompt';
 import { readPositionOnce, useShareLocation } from '../lib/LocationBroadcastContext';
+import { playOfferChime, unlockChime } from '../lib/offerChime';
 
 const BOOKINGS_POLL_MS = 5000;
 const OFFER_POLL_MS = 4000;
@@ -196,6 +212,7 @@ export function Home() {
         if (cancelled || !offer) return;
         if (navigatedToOfferRef.current !== offer.bookingId) {
           navigatedToOfferRef.current = offer.bookingId;
+          playOfferChime();
           navigate(`/offer/${offer.bookingId}`);
         }
       } catch {
@@ -217,8 +234,31 @@ export function Home() {
   // unmounts into an offer or a trip; see LocationBroadcastContext.
   const location = useShareLocation(isOnline || Boolean(activeTrip));
 
+  // Straight after sign-in the dashboard is the first screen, so this is
+  // where she is asked to turn alerts on - offers only last 15 seconds.
+  const push = usePushNotifications(pushApi, PUSH_TOKEN_KEY, true);
+  const unreadCount = useUnreadNotifications(notificationsApi.unreadCount, true);
+
+  // An offer push arriving while the dashboard is open: go to it now rather
+  // than waiting for the next poll.
+  usePushMessages(
+    useCallback(
+      (message: { urgency: string; link: string | null }) => {
+        if (message.urgency !== 'ALERT' || !message.link?.startsWith('/offer/')) return;
+        const bookingId = message.link.slice('/offer/'.length);
+        if (navigatedToOfferRef.current === bookingId) return;
+        navigatedToOfferRef.current = bookingId;
+        playOfferChime();
+        navigate(message.link);
+      },
+      [navigate]
+    )
+  );
+
   async function handleToggleOnline() {
     if (!profile) return;
+    // This tap is what lets the offer chime play later - see offerChime.ts.
+    unlockChime();
     setTogglingOnline(true);
     setError(null);
     setOutOfArea(null);
@@ -244,7 +284,10 @@ export function Home() {
       // minute, so it goes straight to the screen that fixes it rather than
       // leaving her reading an error on a page with no way forward. The
       // backend gives it its own machine code precisely so this is possible.
-      if (err instanceof ApiError && err.body?.error === 'PROFILE_PHOTO_REQUIRED') {
+      if (
+        err instanceof ApiError &&
+        (err.body?.error === 'PROFILE_PHOTO_REQUIRED' || err.body?.error === 'DATE_OF_BIRTH_REQUIRED')
+      ) {
         navigate('/profile');
         setError(err.message);
         return;
@@ -281,14 +324,19 @@ export function Home() {
         rightSlot={
           <button
             type="button"
-            aria-label="Notifications"
+            aria-label={unreadCount ? `Notifications, ${unreadCount} unread` : 'Notifications'}
             onClick={() => navigate('/notifications')}
-            className="flex h-9 w-9 items-center justify-center rounded-full text-text-primary hover:bg-background"
+            className="relative flex h-9 w-9 items-center justify-center rounded-full text-text-primary hover:bg-background"
           >
             <Bell className="h-5 w-5" />
+            {unreadCount ? <BellBadge count={unreadCount} /> : null}
           </button>
         }
       />
+
+      {push.shouldPrompt && (
+        <PushPromptCard audience="partner" busy={push.busy} onTurnOn={push.turnOn} onDismiss={push.dismiss} />
+      )}
 
       {error && <p className="text-sm text-danger">{error}</p>}
 

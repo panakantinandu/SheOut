@@ -18,6 +18,7 @@ import { Profile } from './screens/Profile'
 import { Splash } from './screens/Splash'
 import { Trip } from './screens/Trip'
 import { Chat } from './screens/Chat'
+import { CompleteProfile } from './screens/CompleteProfile'
 import { Verification } from './screens/Verification'
 
 // Dashboard-level screens (Home/Earnings/Bookings/Profile) get the bottom
@@ -62,6 +63,7 @@ function App() {
       {/* Drill-downs pushed over the tabs with a back arrow, not tab
           destinations - so protectedOnly, no AppShell. */}
       <Route path="/notifications" element={protectedOnly(<Notifications />)} />
+      <Route path="/complete-profile" element={protectedOnly(<CompleteProfile />)} />
       <Route path="/help" element={protectedOnly(<HelpSupport />)} />
       <Route path="/help/new" element={protectedOnly(<RaiseIssue />)} />
       <Route path="/help/tickets/:ticketId" element={protectedOnly(<SupportTicket />)} />

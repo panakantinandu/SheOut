@@ -1,5 +1,6 @@
 package com.sheout.notifications.internal;
 
+import com.sheout.notifications.internal.channel.OutboundMessage;
 import com.sheout.sharedkernel.Result;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -8,40 +9,47 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.UUID;
 
 /**
- * Exists as its own bean, separate from NotificationEventListeners, purely
- * so its write can be REQUIRES_NEW - and REQUIRES_NEW only actually takes
- * effect when reached through the Spring proxy, i.e. only when a DIFFERENT
- * bean calls this injected NotificationLogService, never via {@code this.}
- * from inside the listener itself.
+ * Writes notifications and their delivery attempts.
  * <p>
- * This matters here for the exact reason it mattered for payments'
- * BookingCompletedListener bug: NotificationEventListeners reacts via
- * {@code @TransactionalEventListener(phase = AFTER_COMMIT)}, which runs
- * while Spring still considers transaction synchronization "active" on the
- * thread even though the triggering transaction (e.g. BookingService.
- * completeTrip's) already committed. A save reached any other way - no
- * annotation, a plain @Transactional, or REQUIRES_NEW self-invoked via
- * {@code this.} - silently joins that stale synchronization instead of
- * opening a real one: it would return normally with a generated id, but
- * nothing would actually be committed (confirmed against Postgres for the
- * exact same shape of bug in PaymentService.createPendingPayment). See that
- * class's Javadoc for the full account of how this was found.
+ * Its own bean, with REQUIRES_NEW, so each write commits on its own no matter
+ * where the caller is: an AFTER_COMMIT listener still has transaction
+ * synchronization active on its thread, and a save that merely joined it
+ * would return an id and commit nothing - the bug payments'
+ * BookingCompletedListener hit, confirmed against Postgres. REQUIRES_NEW only
+ * takes effect through the Spring proxy, which is why the writes live here
+ * and not in the dispatcher that calls them.
+ * <p>
+ * A delivery row is written per attempt, immediately, so a notification whose
+ * later sends hang or fail still shows every attempt made before that.
  */
 @Service
 public class NotificationLogService {
 
-    private final NotificationLogRepository notificationLogRepository;
+    private final NotificationLogRepository notifications;
+    private final NotificationDeliveryRepository deliveries;
 
-    public NotificationLogService(NotificationLogRepository notificationLogRepository) {
-        this.notificationLogRepository = notificationLogRepository;
+    public NotificationLogService(NotificationLogRepository notifications, NotificationDeliveryRepository deliveries) {
+        this.notifications = notifications;
+        this.deliveries = deliveries;
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void recordLog(UUID recipientAccountId, String recipientAddress, NotificationType type,
-                           NotificationChannelType channel, Result<Void, SendFailure> outcome) {
-        NotificationStatus status = outcome.isSuccess() ? NotificationStatus.SENT : NotificationStatus.FAILED;
-        String failureReason = outcome.isFailure() ? outcome.error().toString() : null;
-        notificationLogRepository.save(
-                new NotificationLogEntity(recipientAccountId, recipientAddress, type, channel, status, failureReason));
+    public UUID recordNotification(UUID recipientAccountId, NotificationType type, OutboundMessage message) {
+        return notifications.save(new NotificationLogEntity(
+                recipientAccountId, type, truncate(message.title(), 120), truncate(message.body(), 500), message.link()))
+                .getId();
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void recordDelivery(UUID notificationId, NotificationChannelType channel, String recipientAddress,
+                               Result<Void, SendFailure> outcome) {
+        deliveries.save(new NotificationDeliveryEntity(
+                notificationId, channel, recipientAddress,
+                outcome.isSuccess() ? NotificationStatus.SENT : NotificationStatus.FAILED,
+                outcome.isFailure() ? outcome.error().toString() : null));
+    }
+
+    private static String truncate(String value, int max) {
+        return value == null || value.length() <= max ? value : value.substring(0, max - 1) + "…";
     }
 }

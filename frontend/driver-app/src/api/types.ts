@@ -47,6 +47,11 @@ export interface DriverProfileSummary {
    * it.
    */
   hasProfilePhoto: boolean;
+  /** YYYY-MM-DD. Null for an account that has not completed its profile since dates of birth were required. */
+  dateOfBirth: string | null;
+  email: string | null;
+  /** Name, date of birth and photo are all on file. Until then the app sends her to /complete-profile. */
+  profileComplete: boolean;
   updatedAt: string;
 }
 
@@ -139,21 +144,8 @@ export interface ApiErrorResponse {
 }
 
 /** One entry from the caller's own notification history (GET /notifications/me). */
-export interface NotificationView {
-  id: string;
-  type:
-    | 'BOOKING_REQUESTED'
-    | 'BOOKING_ACCEPTED'
-    | 'BOOKING_COMPLETED'
-    | 'BOOKING_CANCELLED'
-    | 'ACCOUNT_VERIFIED'
-    | 'SOS_ALERT'
-    | 'SUPPORT_REPLY';
-  channel: 'SMS' | 'PUSH' | 'EMAIL';
-  status: 'SENT' | 'FAILED';
-  failureReason: string | null;
-  createdAt: string;
-}
+/** An inbox entry - what SheOut told her, not how it was delivered. See the shared NotificationInbox. */
+export type { InboxItem as NotificationView, InboxPage, PushConfig } from '@sheout/design-system';
 
 /** One page of a list - mirrors PageResponse on the backend. */
 export interface PagedResult<T> {

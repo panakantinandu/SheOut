@@ -4,6 +4,7 @@ import com.sheout.auth.AccountRole;
 import com.sheout.auth.CurrentAccount;
 import com.sheout.auth.CurrentAccountContext;
 import com.sheout.sharedkernel.Result;
+import com.sheout.sharedkernel.storage.DocumentUpload;
 import com.sheout.sharedkernel.web.ApiException;
 import com.sheout.users.CustomerProfileSummary;
 import com.sheout.users.EmergencyContact;
@@ -11,6 +12,7 @@ import com.sheout.users.internal.CustomerProfileError;
 import com.sheout.users.internal.CustomerProfileService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
@@ -21,8 +23,12 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -48,7 +54,20 @@ public class CustomerProfileController {
     public ResponseEntity<CustomerProfileSummary> updateMyProfile(@Valid @RequestBody UpdateProfileRequest request) {
         CurrentAccount caller = requireCustomer();
         Result<CustomerProfileSummary, CustomerProfileError> result = customerProfileService.updateProfile(
-                caller.accountId(), request.name(), request.homeAddress(), request.workAddress());
+                caller.accountId(), request.name(), request.homeAddress(), request.workAddress(),
+                request.dateOfBirth(), request.email());
+        if (result.isFailure()) {
+            throw toApiException(result.error());
+        }
+        return ResponseEntity.ok(result.value());
+    }
+
+    /** Her profile photo - uploaded before the profile is saved, which requires one. */
+    @PostMapping(value = "/api/v1/users/customer/me/photo", consumes = "multipart/form-data")
+    public ResponseEntity<CustomerProfileSummary> uploadMyPhoto(@RequestParam("file") MultipartFile file) {
+        CurrentAccount caller = requireCustomer();
+        Result<CustomerProfileSummary, CustomerProfileError> result =
+                customerProfileService.updateProfilePhoto(caller.accountId(), ProfilePhotoUploads.toUpload(file));
         if (result.isFailure()) {
             throw toApiException(result.error());
         }
@@ -96,13 +115,34 @@ public class CustomerProfileController {
         return switch (error) {
             case PROFILE_NOT_FOUND -> ApiException.notFound("No customer profile found for this account");
             case CONTACT_NOT_FOUND -> ApiException.notFound("No such emergency contact for this account");
+            case PHOTO_STORAGE_FAILED -> new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error",
+                    "Could not save that photo. Please try again.");
+            case PROFILE_PHOTO_REQUIRED -> new ApiException(HttpStatus.CONFLICT, "PROFILE_PHOTO_REQUIRED",
+                    "Add a profile photo to finish your profile. Your partner uses it to check she is picking up the right person.");
+            case DATE_OF_BIRTH_REQUIRED -> new ApiException(HttpStatus.BAD_REQUEST, "DATE_OF_BIRTH_REQUIRED",
+                    "Enter your date of birth.");
+            case INVALID_DATE_OF_BIRTH -> new ApiException(HttpStatus.BAD_REQUEST, "INVALID_DATE_OF_BIRTH",
+                    "That date of birth does not look right. Check the year.");
+            // Said plainly and without a way round it: this is the Terms'
+            // age limit, not a formatting problem to retry.
+            case UNDER_MINIMUM_AGE -> new ApiException(HttpStatus.BAD_REQUEST, "UNDER_MINIMUM_AGE",
+                    "You must be 18 or older to use SheOut.");
+            case INVALID_EMAIL -> new ApiException(HttpStatus.BAD_REQUEST, "INVALID_EMAIL",
+                    "That email address does not look right. Leave it empty if you would rather not add one.");
         };
     }
 
+    /**
+     * dateOfBirth is @NotNull at the wire, but a missing one still reaches the
+     * service's own check if a client sends an explicit null past this - the
+     * rule lives there, not here. email is optional; blank clears it.
+     */
     public record UpdateProfileRequest(
             @NotBlank @Size(max = 150) String name,
             @Size(max = 500) String homeAddress,
-            @Size(max = 500) String workAddress
+            @Size(max = 500) String workAddress,
+            @NotNull LocalDate dateOfBirth,
+            @Size(max = 254) String email
     ) {
     }
 

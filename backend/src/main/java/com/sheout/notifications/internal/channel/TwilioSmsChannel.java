@@ -1,5 +1,6 @@
 package com.sheout.notifications.internal.channel;
 
+import com.sheout.notifications.internal.NotificationChannelType;
 import com.sheout.notifications.internal.NotificationError;
 import com.sheout.notifications.internal.SendFailure;
 import com.sheout.sharedkernel.Result;
@@ -68,7 +69,12 @@ public class TwilioSmsChannel implements NotificationChannel {
     }
 
     @Override
-    public Result<Void, SendFailure> send(String recipient, String message) {
+    public NotificationChannelType type() {
+        return NotificationChannelType.SMS;
+    }
+
+    @Override
+    public Result<Void, SendFailure> send(String recipient, OutboundMessage message) {
         // Credentials missing entirely is worth saying plainly rather than
         // letting it surface as an opaque 401 from Twilio.
         if (accountSid.isBlank() || authToken.isBlank() || fromNumber.isBlank()) {
@@ -76,14 +82,14 @@ public class TwilioSmsChannel implements NotificationChannel {
                     + (authToken.isBlank() ? "auth-token " : "")
                     + (fromNumber.isBlank() ? "from-number" : "");
             log.error("Twilio SMS not attempted - unset config: {}", missing.trim());
-            return Result.failure(SendFailure.of(NotificationError.PROVIDER_ERROR,
+            return Result.failure(SendFailure.of(NotificationError.NOT_CONFIGURED,
                     "Twilio is not configured on this deployment (missing: " + missing.trim() + ")"));
         }
 
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
         form.add("To", recipient);
         form.add("From", fromNumber);
-        form.add("Body", message);
+        form.add("Body", message.smsText());
 
         // Recipients are masked in every log line here: they are riders'
         // emergency contacts, people who never signed up to anything.

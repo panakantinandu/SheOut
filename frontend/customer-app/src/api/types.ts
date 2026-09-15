@@ -29,6 +29,15 @@ export interface CustomerProfileSummary {
   phoneNumber: string | null;
   homeAddress: string | null;
   workAddress: string | null;
+  /** YYYY-MM-DD. Null for an account that has not completed its profile since dates of birth were required. */
+  dateOfBirth: string | null;
+  email: string | null;
+  /** Null when there is no photo, or when storage cannot serve one to a browser - render a silhouette. */
+  profilePhotoUrl: string | null;
+  /** Whether a photo is on file - ask this, not the URL, when deciding whether she still needs to add one. */
+  hasProfilePhoto: boolean;
+  /** Name, date of birth and photo are all on file. Until then the app sends her to /complete-profile. */
+  profileComplete: boolean;
   verified: boolean;
   updatedAt: string;
 }
@@ -116,22 +125,8 @@ export interface ApiErrorResponse {
   details: string[];
 }
 
-/** One entry from the caller's own notification history (GET /notifications/me). */
-export interface NotificationView {
-  id: string;
-  type:
-    | 'BOOKING_REQUESTED'
-    | 'BOOKING_ACCEPTED'
-    | 'BOOKING_COMPLETED'
-    | 'BOOKING_CANCELLED'
-    | 'ACCOUNT_VERIFIED'
-    | 'SOS_ALERT'
-    | 'SUPPORT_REPLY';
-  channel: 'SMS' | 'PUSH' | 'EMAIL';
-  status: 'SENT' | 'FAILED';
-  failureReason: string | null;
-  createdAt: string;
-}
+/** An inbox entry - what SheOut told her, not how it was delivered. See the shared NotificationInbox. */
+export type { InboxItem as NotificationView, InboxPage, PushConfig } from '@sheout/design-system';
 
 /** A booking's payment. razorpayOrderId/paymentId are null for a CASH payment. */
 /** Named so filter controls can enumerate it without repeating the union. */

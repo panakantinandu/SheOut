@@ -1,6 +1,7 @@
 package com.sheout.users;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 
 /**
@@ -35,6 +36,12 @@ public record DriverProfileSummary(
          * who has already done it.
          */
         boolean hasProfilePhoto,
+        /** Null for an account that has not completed its profile since dates of birth were required. */
+        LocalDate dateOfBirth,
+        /** Optional; null when none is set. */
+        String email,
+        /** Name, date of birth and photo are all on file - what the apps' completion screen checks. */
+        boolean profileComplete,
         TrustStats trustStats,
         Instant updatedAt
 ) {

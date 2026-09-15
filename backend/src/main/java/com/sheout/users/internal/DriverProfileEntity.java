@@ -11,6 +11,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.UUID;
@@ -24,6 +25,14 @@ public class DriverProfileEntity extends BaseEntity {
 
     @Column(length = 150)
     private String name;
+
+    /** Required to complete a profile, and 18 or over - see ProfileRules. Null only for accounts from before V20. */
+    @Column(name = "date_of_birth")
+    private LocalDate dateOfBirth;
+
+    /** Optional contact address: receipts, and support replies on a device without push. */
+    @Column(length = 254)
+    private String email;
 
     @Enumerated(EnumType.STRING)
     @Column(length = 20)
@@ -211,6 +220,27 @@ public class DriverProfileEntity extends BaseEntity {
     }
 
     /** An operator has looked and is satisfied. */
+    public LocalDate getDateOfBirth() {
+        return dateOfBirth;
+    }
+
+    public void setDateOfBirth(LocalDate dateOfBirth) {
+        this.dateOfBirth = dateOfBirth;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    /** Everything the completion screen asks for is on file. */
+    public boolean isProfileComplete() {
+        return name != null && !name.isBlank() && dateOfBirth != null && hasProfilePhoto();
+    }
+
     public void clearReviewFlag() {
         this.flaggedAt = null;
         this.flaggedReason = null;

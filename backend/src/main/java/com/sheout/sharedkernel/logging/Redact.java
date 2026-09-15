@@ -32,6 +32,18 @@ public final class Redact {
         return digits.substring(0, 3) + "*".repeat(digits.length() - 5) + digits.substring(digits.length() - 2);
     }
 
+    /** "priya.sharma@gmail.com" becomes "p***@gmail.com" - the provider stays, the person goes. Null-safe. */
+    public static String email(String emailAddress) {
+        if (emailAddress == null) {
+            return "null";
+        }
+        int at = emailAddress.indexOf('@');
+        if (at <= 0) {
+            return "***";
+        }
+        return emailAddress.charAt(0) + "***" + emailAddress.substring(at);
+    }
+
     /** Masks every phone-number-shaped run inside free text, e.g. a provider's error message. */
     public static String phoneNumbersIn(String text) {
         if (text == null) {

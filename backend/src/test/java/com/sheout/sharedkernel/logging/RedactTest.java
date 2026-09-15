@@ -31,6 +31,14 @@ class RedactTest {
     }
 
     @Test
+    @DisplayName("an email keeps its provider and loses the person")
+    void masksEmail() {
+        assertEquals("p***@gmail.com", Redact.email("priya.sharma@gmail.com"));
+        assertEquals("***", Redact.email("not-an-email"));
+        assertEquals("null", Redact.email(null));
+    }
+
+    @Test
     @DisplayName("short numbers like status and error codes are left alone")
     void leavesShortNumbers() {
         assertEquals("HTTP 401 (Twilio error 20003)", Redact.phoneNumbersIn("HTTP 401 (Twilio error 20003)"));

@@ -1,18 +1,18 @@
 package com.sheout.notifications.internal.sos;
 
+import com.sheout.notifications.SosAlertRaised;
 import com.sheout.notifications.internal.NotificationChannelType;
-import com.sheout.notifications.internal.NotificationError;
-import com.sheout.notifications.internal.SendFailure;
-import com.sheout.notifications.internal.NotificationLogEntity;
-import com.sheout.notifications.internal.NotificationLogRepository;
-import com.sheout.notifications.internal.NotificationStatus;
+import com.sheout.notifications.internal.NotificationLogService;
 import com.sheout.notifications.internal.NotificationType;
+import com.sheout.notifications.internal.SendFailure;
+import com.sheout.notifications.internal.channel.OutboundMessage;
 import com.sheout.notifications.SosAlertSummary;
 import com.sheout.notifications.SosApi;
 import com.sheout.notifications.SosError;
 import com.sheout.notifications.SosStatus;
 import com.sheout.notifications.internal.channel.NotificationChannel;
 import com.sheout.sharedkernel.Result;
+import com.sheout.sharedkernel.event.DomainEventPublisher;
 import com.sheout.sharedkernel.logging.Redact;
 import com.sheout.users.CustomerProfileApi;
 import com.sheout.users.EmergencyContact;
@@ -29,11 +29,13 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Deliberately NOT routed through domain events, unlike the rest of this
- * module (see NotificationEventListeners) - the spec calls for SOS to be a
- * fast, direct, synchronous call with no retry/backoff, since an alert
- * cannot be allowed to sit in a queue. trigger() runs entirely on the
- * caller's (SosController's) request thread.
+ * Texting her emergency contacts is deliberately NOT routed through domain
+ * events, unlike the rest of this module (see NotificationEventListeners) -
+ * the spec calls for SOS to be a fast, direct, synchronous call with no
+ * retry/backoff, since an alert cannot be allowed to sit in a queue. The
+ * contact texts run entirely on the caller's (SosController's) request
+ * thread. Operators are the exception: they are told through SosAlertRaised,
+ * so a slow push to their devices never delays her contacts' texts.
  * <p>
  * ALSO NOT using the REQUIRES_NEW-via-injected-proxy dance NotificationLogService
  * needs - and that's a deliberate distinction, not an oversight. That
@@ -62,19 +64,27 @@ public class SosService implements SosApi {
     private static final Logger log = LoggerFactory.getLogger(SosService.class);
 
     private final SosAlertRepository sosAlertRepository;
-    private final NotificationLogRepository notificationLogRepository;
+    private final NotificationLogService notificationLogService;
     private final NotificationChannel smsChannel;
+    private final DomainEventPublisher eventPublisher;
     private final CustomerProfileApi customerProfileApi;
     private final EmergencyContactsApi emergencyContactsApi;
     private final SosFanOutThrottle fanOutThrottle;
 
-    public SosService(SosAlertRepository sosAlertRepository, NotificationLogRepository notificationLogRepository,
-                       NotificationChannel smsChannel, CustomerProfileApi customerProfileApi,
-                       EmergencyContactsApi emergencyContactsApi, SosFanOutThrottle fanOutThrottle) {
+    public SosService(SosAlertRepository sosAlertRepository, NotificationLogService notificationLogService,
+                       List<NotificationChannel> channels, CustomerProfileApi customerProfileApi,
+                       EmergencyContactsApi emergencyContactsApi, SosFanOutThrottle fanOutThrottle,
+                       DomainEventPublisher eventPublisher) {
         this.fanOutThrottle = fanOutThrottle;
         this.sosAlertRepository = sosAlertRepository;
-        this.notificationLogRepository = notificationLogRepository;
-        this.smsChannel = smsChannel;
+        this.notificationLogService = notificationLogService;
+        // Contacts are texted: they are not SheOut users and have no device
+        // to push to, and SMS is the one channel that reaches any phone.
+        this.smsChannel = channels.stream()
+                .filter(channel -> channel.type() == NotificationChannelType.SMS)
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("SOS needs an SMS channel"));
+        this.eventPublisher = eventPublisher;
         this.customerProfileApi = customerProfileApi;
         this.emergencyContactsApi = emergencyContactsApi;
     }
@@ -90,6 +100,11 @@ public class SosService implements SosApi {
         // trigger itself is recorded (and visible via GET /active) even if
         // every send below fails, or even if there are zero contacts to try.
         SosAlertEntity alert = sosAlertRepository.save(new SosAlertEntity(customerAccountId, bookingId, lat, lng));
+
+        // Operators hear about every press, before any throttling decision
+        // below - a throttle on re-texting contacts is not a throttle on
+        // telling the people whose job is to respond.
+        eventPublisher.publish(new SosAlertRaised(alert.getId(), customerAccountId, bookingId));
 
         // Never a refusal - see SosFanOutThrottle. The alert above is already
         // saved; this only decides whether contacts texted moments ago are
@@ -111,7 +126,9 @@ public class SosService implements SosApi {
 
         List<SosOutcome.ContactOutcome> outcomes = new ArrayList<>();
         int notified = 0;
-        String message = "SOS from SheOut user " + customerName + ". Location: maps.google.com/?q=" + lat + "," + lng;
+        OutboundMessage message = OutboundMessage.of(
+                "SOS from " + customerName, "Location: maps.google.com/?q=" + lat + "," + lng, null);
+        List<ContactDelivery> attempts = new ArrayList<>();
 
         for (EmergencyContact contact : contacts) {
             Result<Void, SendFailure> result = smsChannel.send(contact.phoneNumber(), message);
@@ -128,11 +145,15 @@ public class SosService implements SosApi {
                         alert.getId(), contact.id(), Redact.phoneNumbersIn(String.valueOf(result.error())));
             }
             outcomes.add(new SosOutcome.ContactOutcome(contact.name(), contact.relationship(), delivered));
-            notificationLogRepository.save(new NotificationLogEntity(
-                    customerAccountId, contact.phoneNumber(), NotificationType.SOS_ALERT, NotificationChannelType.SMS,
-                    delivered ? NotificationStatus.SENT : NotificationStatus.FAILED,
-                    delivered ? null : result.error().toString()));
+            attempts.add(new ContactDelivery(contact.phoneNumber(), result));
         }
+
+        // Her own record of the alert, in her inbox, with one delivery per
+        // contact - written after the sends so it can say how many got it.
+        UUID notificationId = notificationLogService.recordNotification(customerAccountId, NotificationType.SOS_ALERT,
+                OutboundMessage.of("SOS alert sent", sosSummary(contacts.size(), notified), "/sos"));
+        attempts.forEach(attempt -> notificationLogService.recordDelivery(
+                notificationId, NotificationChannelType.SMS, attempt.phoneNumber(), attempt.result()));
 
         alert.setContactsNotified(notified);
         alert.setContactsFailed(contacts.size() - notified);
@@ -201,6 +222,20 @@ public class SosService implements SosApi {
      * safety-critical response. See SosController's Javadoc for the same
      * reasoning applied to the endpoint's HTTP status.
      */
+    private static String sosSummary(int contacts, int notified) {
+        if (contacts == 0) {
+            return "You have no emergency contacts saved, so nobody was texted. Add one from your profile.";
+        }
+        if (notified == 0) {
+            return "We could not text any of your emergency contacts. Call 112 if you are in danger.";
+        }
+        return "Your location was texted to " + notified + " of " + contacts + " emergency contact"
+                + (contacts == 1 ? "" : "s") + ".";
+    }
+
+    private record ContactDelivery(String phoneNumber, Result<Void, SendFailure> result) {
+    }
+
     public record SosOutcome(UUID alertId, int contactsTotal, int contactsNotified, List<ContactOutcome> contacts,
                              boolean contactsRecentlyTexted) {
 

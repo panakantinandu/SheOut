@@ -1,25 +1,26 @@
 package com.sheout.notifications.internal.channel;
 
+import com.sheout.notifications.internal.NotificationChannelType;
 import com.sheout.notifications.internal.SendFailure;
 import com.sheout.sharedkernel.Result;
 
 /**
- * The swap point for notification delivery - NotificationEventListeners and
- * SosService depend only on this interface, never on a specific provider,
- * same pattern as auth's OtpSender. {@code recipient} is a phone number for
- * an SMS implementation, or a device token for a push implementation - an
- * opaque address as far as this interface is concerned.
+ * The swap point for notification delivery. Nothing that decides WHAT to
+ * send knows which provider sends it - NotificationDispatcher asks for a
+ * channel by type, same pattern as auth's OtpSender.
  * <p>
- * ONLY AN SMS IMPLEMENTATION EXISTS (see TwilioSmsChannel) - there is no
- * FcmPushChannel yet, and that's a real gap, not an oversight: nowhere in
- * this codebase does a client ever register a device/FCM token anywhere on
- * the backend, so there is no recipient address a push implementation could
- * actually send to. Adding one is a drop-in follow-up behind this same
- * interface (matching sheout.firebase.project-id/credentials-json, already
- * reserved in application.yml) once device-token registration exists - it
- * would not require touching NotificationEventListeners or SosService.
+ * {@code recipient} is an opaque address: a phone number for SMS
+ * (TwilioSmsChannel), an FCM device token for push (FcmPushChannel), an
+ * email address for email (SmtpEmailChannel).
+ * <p>
+ * Implementations never throw for a failed delivery. A provider error, a
+ * missing credential and an unreachable host all come back as a SendFailure,
+ * because every attempt is recorded and a thrown exception would lose the
+ * record of it.
  */
 public interface NotificationChannel {
 
-    Result<Void, SendFailure> send(String recipient, String message);
+    NotificationChannelType type();
+
+    Result<Void, SendFailure> send(String recipient, OutboundMessage message);
 }

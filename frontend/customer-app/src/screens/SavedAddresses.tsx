@@ -46,6 +46,8 @@ export function SavedAddresses() {
         name: profile?.name ?? '',
         homeAddress: home.trim() || undefined,
         workAddress: work.trim() || undefined,
+        dateOfBirth: profile?.dateOfBirth ?? '',
+        email: profile?.email ?? undefined,
       });
       setProfile(updated);
       setSaved(true);

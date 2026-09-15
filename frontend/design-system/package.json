@@ -8,10 +8,12 @@
   "exports": {
     ".": "./src/index.ts",
     "./preview": "./src/preview/DesignSystemPreview.tsx",
-    "./tailwind-preset": "./tailwind-preset.js"
+    "./tailwind-preset": "./tailwind-preset.js",
+    "./push-worker-plugin": "./push/vite-plugin.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
+    "firebase": "^12.19.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.460.0"
   },

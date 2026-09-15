@@ -114,19 +114,32 @@ public class SecurityHeadersConfig {
     }
 
     /**
+     * Firebase's messaging SDK, at one pinned version. The path, not just the
+     * host, is what is allowed: nothing else Google serves from gstatic can
+     * run on the page that holds an operator's token. Bump together with the
+     * version in the console's FIREBASE_BASE.
+     */
+    static final String FIREBASE_SCRIPTS = "https://www.gstatic.com/firebasejs/12.19.0/";
+
+    /** The two endpoints Firebase calls to issue and register a push token. */
+    static final String FIREBASE_CONNECT = "https://firebaseinstallations.googleapis.com https://fcmregistrations.googleapis.com";
+
+    /**
      * img-src allows https: because a document under review is opened from
      * wherever storage presigns it (an S3 host this code does not know in
-     * advance). Everything the page fetches is same-origin.
+     * advance). Apart from Firebase's two token endpoints, everything the
+     * page fetches is same-origin; the push service worker is too.
      */
     static String adminCsp() {
         String html = readAdminPage();
         String scripts = hashes(html, "script");
         String styles = hashes(html, "style");
         return "default-src 'none'"
-                + "; script-src " + scripts
+                + "; script-src " + scripts + " " + FIREBASE_SCRIPTS
                 + "; style-src " + styles
                 + "; img-src 'self' https: data: blob:"
-                + "; connect-src 'self'"
+                + "; connect-src 'self' " + FIREBASE_CONNECT
+                + "; worker-src 'self'"
                 + "; frame-ancestors 'none'"
                 + "; base-uri 'none'"
                 + "; form-action 'self'";

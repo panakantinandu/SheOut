@@ -1,3 +1,4 @@
+import type { PushApi } from '@sheout/design-system';
 import type {
   ApiErrorResponse,
   AuthSession,
@@ -23,6 +24,8 @@ import type {
   VehicleType,
   VerificationSummary,
   NotificationView,
+  InboxPage,
+  PushConfig,
   PaymentSummary,
   PayoutAccountView,
   PayoutOverview,
@@ -170,7 +173,18 @@ export const usersApi = {
     return request('/api/v1/users/driver/me');
   },
 
-  updateMyProfile(update: { name: string; vehicleType: VehicleType; vehicleRegistrationNumber: string }): Promise<DriverProfileSummary> {
+  /**
+   * PUT replaces the whole profile. 400 UNDER_MINIMUM_AGE /
+   * INVALID_DATE_OF_BIRTH / INVALID_EMAIL / INVALID_REGISTRATION_NUMBER, 409
+   * PROFILE_PHOTO_REQUIRED until a photo has been uploaded.
+   */
+  updateMyProfile(update: {
+    name: string;
+    vehicleType: VehicleType;
+    vehicleRegistrationNumber: string;
+    dateOfBirth: string;
+    email?: string;
+  }): Promise<DriverProfileSummary> {
     return request('/api/v1/users/driver/me', { method: 'PUT', body: update });
   },
 
@@ -210,8 +224,36 @@ export const usersApi = {
 };
 
 export const notificationsApi = {
-  listMine(): Promise<NotificationView[]> {
-    return request('/api/v1/notifications/me');
+  inbox(page: number): Promise<InboxPage> {
+    return request(`/api/v1/notifications/me${buildQuery({ page, pageSize: 20 })}`);
+  },
+
+  unreadCount(): Promise<number> {
+    return request<{ unreadCount: number }>('/api/v1/notifications/me/unread-count').then((r) => r.unreadCount);
+  },
+
+  markRead(notificationId: string): Promise<NotificationView> {
+    return request(`/api/v1/notifications/${notificationId}/read`, { method: 'POST' });
+  },
+
+  markAllRead(): Promise<void> {
+    return request('/api/v1/notifications/me/read-all', { method: 'POST' });
+  },
+};
+
+/** Where this device's FCM token is remembered, so sign-out can unregister it. */
+export const PUSH_TOKEN_KEY = 'sheout_driver_push_token';
+
+/** What the shared push code needs - see @sheout/design-system's lib/push. */
+export const pushApi: PushApi = {
+  getConfig(): Promise<PushConfig> {
+    return request('/api/v1/notifications/push-config', { auth: false });
+  },
+  registerDevice(token: string): Promise<void> {
+    return request('/api/v1/notifications/devices', { method: 'POST', body: { token } });
+  },
+  unregisterDevice(token: string): Promise<void> {
+    return request('/api/v1/notifications/devices/unregister', { method: 'POST', body: { token } });
   },
 };
 

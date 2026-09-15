@@ -110,13 +110,16 @@ class DataExportService {
     private DataExport.Profile profile(UUID id, boolean driver) {
         if (driver) {
             return driverProfileApi.findByAccountId(id)
-                    .map(p -> new DataExport.Profile(p.name(), null, null,
+                    .map(p -> new DataExport.Profile(p.name(), p.dateOfBirth(), p.email(), null, null,
                             p.vehicleType() == null ? null : p.vehicleType().name(),
-                            p.vehicleRegistrationNumber(), p.profilePhotoUrl() != null))
+                            // hasProfilePhoto, not the URL: on local-disk storage the
+                            // URL is null even though a photo is on file.
+                            p.vehicleRegistrationNumber(), p.hasProfilePhoto()))
                     .orElse(null);
         }
         return customerProfileApi.findByAccountId(id)
-                .map(p -> new DataExport.Profile(p.name(), p.homeAddress(), p.workAddress(), null, null, null))
+                .map(p -> new DataExport.Profile(p.name(), p.dateOfBirth(), p.email(), p.homeAddress(), p.workAddress(),
+                        null, null, p.hasProfilePhoto()))
                 .orElse(null);
     }
 

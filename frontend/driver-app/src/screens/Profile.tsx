@@ -1,4 +1,4 @@
-import { Bike, Camera, Car, FileText, HelpCircle, Landmark, Lock, LogOut, ShieldCheck, Truck, User } from 'lucide-react';
+import { Camera, FileText, HelpCircle, Landmark, Lock, LogOut, ShieldCheck, User } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -6,23 +6,18 @@ import {
   Button,
   Card,
   ConfirmDialog,
-  PrivacyDataSection,
   IconCircle,
   ListRow,
+  PrivacyDataSection,
   StatusBadge,
-  TextField,
   TopHeader,
   vehicleLabel,
+  ProfileCompletionForm,
 } from '@sheout/design-system';
 import { ApiError, privacyApi, supportApi, usersApi } from '../api/client';
 import type { DriverProfileSummary, VehicleType } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
-
-const VEHICLE_OPTIONS: { key: VehicleType; label: string; icon: JSX.Element }[] = [
-  { key: 'BIKE', label: 'Bike', icon: <Bike className="h-4 w-4" /> },
-  { key: 'AUTO', label: 'Auto', icon: <Truck className="h-4 w-4" /> },
-  { key: 'CAB', label: 'Cab', icon: <Car className="h-4 w-4" /> },
-];
+import { VehicleFields } from '../components/VehicleFields';
 
 /**
  * REAL: profile fetched from GET /api/v1/users/driver/me, edits saved via
@@ -42,10 +37,11 @@ export function Profile() {
   const [profile, setProfile] = useState<DriverProfileSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
-  const [name, setName] = useState('');
-  const [vehicleType, setVehicleType] = useState<VehicleType>('BIKE');
-  const [vehicleReg, setVehicleReg] = useState('');
-  const [saving, setSaving] = useState(false);
+  const [vehicle, setVehicle] = useState<{ vehicleType: VehicleType; registration: string }>({
+    vehicleType: 'BIKE',
+    registration: '',
+  });
+  const [showVehicleErrors, setShowVehicleErrors] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
@@ -70,26 +66,10 @@ export function Profile() {
       .getMyProfile()
       .then((p) => {
         setProfile(p);
-        setName(p.name ?? '');
-        setVehicleType(p.vehicleType ?? 'BIKE');
-        setVehicleReg(p.vehicleRegistrationNumber ?? '');
+        setVehicle({ vehicleType: p.vehicleType ?? 'BIKE', registration: p.vehicleRegistrationNumber ?? '' });
       })
       .catch((err) => setError(err instanceof ApiError ? err.message : 'Could not load profile'));
   }, []);
-
-  async function handleSave() {
-    setSaving(true);
-    setError(null);
-    try {
-      const updated = await usersApi.updateMyProfile({ name, vehicleType, vehicleRegistrationNumber: vehicleReg });
-      setProfile(updated);
-      setEditing(false);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not save profile');
-    } finally {
-      setSaving(false);
-    }
-  }
 
   function handleLogout() {
     logout();
@@ -119,7 +99,7 @@ export function Profile() {
           it is what stands between her and her first booking. Riders check
           the face on their screen against the person at the kerb; it is the
           one thing that tells her she has the right vehicle. */}
-      {profile && (
+      {profile && !editing && (
         <Card tone={profile.hasProfilePhoto ? 'default' : 'warning'} className="space-y-3">
           <div className="flex items-start gap-3">
             <IconCircle
@@ -185,38 +165,48 @@ export function Profile() {
 
       {profile && editing && (
         <Card className="space-y-4">
-          <TextField label="Name" value={name} onChange={(e) => setName(e.target.value)} />
-
-          <div>
-            <span className="mb-1.5 block text-sm font-medium text-text-primary">Vehicle Type</span>
-            <div className="flex gap-2">
-              {VEHICLE_OPTIONS.map((opt) => (
-                <button
-                  key={opt.key}
-                  type="button"
-                  onClick={() => setVehicleType(opt.key)}
-                  className={
-                    vehicleType === opt.key
-                      ? 'flex flex-1 items-center justify-center gap-1.5 rounded-full bg-primary py-2 text-sm font-semibold text-text-inverse'
-                      : 'flex flex-1 items-center justify-center gap-1.5 rounded-full border border-border py-2 text-sm font-medium text-text-secondary'
-                  }
-                >
-                  {opt.icon} {opt.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <TextField label="Registration Number" value={vehicleReg} onChange={(e) => setVehicleReg(e.target.value)} />
-
-          <div className="flex gap-3">
-            <Button variant="secondary" fullWidth disabled={saving} onClick={() => setEditing(false)}>
-              Cancel
-            </Button>
-            <Button fullWidth disabled={saving} onClick={handleSave}>
-              {saving ? 'Saving...' : 'Save'}
-            </Button>
-          </div>
+          <ProfileCompletionForm
+            initial={{ name: profile.name ?? '', dateOfBirth: profile.dateOfBirth ?? '', email: profile.email ?? '' }}
+            photoUrl={profile.profilePhotoUrl}
+            hasPhoto={profile.hasProfilePhoto}
+            photoReason="Riders see your photo when you are on your way, so they know they have the right vehicle."
+            submitLabel="Save"
+            extraFieldsValid={vehicle.registration.trim().length > 0}
+            onUploadPhoto={async (file) => {
+              try {
+                setProfile(await usersApi.uploadMyPhoto(file));
+              } catch (err) {
+                throw new Error(err instanceof ApiError ? err.message : 'Could not upload that photo');
+              }
+            }}
+            onSubmit={async (values) => {
+              setShowVehicleErrors(true);
+              try {
+                setProfile(
+                  await usersApi.updateMyProfile({
+                    name: values.name,
+                    dateOfBirth: values.dateOfBirth,
+                    email: values.email || undefined,
+                    vehicleType: vehicle.vehicleType,
+                    vehicleRegistrationNumber: vehicle.registration.trim(),
+                  })
+                );
+                setEditing(false);
+              } catch (err) {
+                throw new Error(err instanceof ApiError ? err.message : 'Could not save profile');
+              }
+            }}
+          >
+            <VehicleFields
+              vehicleType={vehicle.vehicleType}
+              registration={vehicle.registration}
+              onChange={setVehicle}
+              showErrors={showVehicleErrors}
+            />
+          </ProfileCompletionForm>
+          <Button variant="secondary" fullWidth onClick={() => setEditing(false)}>
+            Cancel
+          </Button>
         </Card>
       )}
 

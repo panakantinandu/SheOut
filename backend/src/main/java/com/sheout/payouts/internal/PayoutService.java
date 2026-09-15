@@ -1,6 +1,8 @@
 package com.sheout.payouts.internal;
 
 import com.sheout.booking.BookingApi;
+import com.sheout.payouts.PayoutMarkedPaid;
+import com.sheout.sharedkernel.event.DomainEventPublisher;
 import com.sheout.booking.BookingError;
 import com.sheout.booking.BookingParticipants;
 import com.sheout.payments.PaymentCaptured;
@@ -48,8 +50,11 @@ public class PayoutService implements PayoutApi {
     private final PayoutRequestRepository requests;
     private final BookingApi bookingApi;
 
+    private final DomainEventPublisher eventPublisher;
+
     PayoutService(DriverWalletRepository wallets, WalletEntryRepository entries, PayoutAccountRepository accounts,
-                  PayoutRequestRepository requests, BookingApi bookingApi) {
+                  PayoutRequestRepository requests, BookingApi bookingApi, DomainEventPublisher eventPublisher) {
+        this.eventPublisher = eventPublisher;
         this.wallets = wallets;
         this.entries = entries;
         this.accounts = accounts;
@@ -193,7 +198,9 @@ public class PayoutService implements PayoutApi {
         wallet.settlePayout(request.getAmount());
         wallets.save(wallet);
         log.info("Payout request {} of {} marked paid by admin {}", requestId, request.getAmount(), adminAccountId);
-        return Result.success(toSummary(requests.save(request)));
+        PayoutRequestEntity saved = requests.save(request);
+        eventPublisher.publish(new PayoutMarkedPaid(saved.getId(), saved.getDriverAccountId(), saved.getAmount(), reference));
+        return Result.success(toSummary(saved));
     }
 
     @Override

@@ -30,6 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.time.LocalDate;
 
 /** Self-service only - a caller only ever reads/writes their own profile. */
 @RestController
@@ -56,7 +57,8 @@ public class DriverProfileController {
     public ResponseEntity<DriverProfileSummary> updateMyProfile(@Valid @RequestBody UpdateProfileRequest request) {
         CurrentAccount caller = requireDriver();
         Result<DriverProfileSummary, DriverProfileError> result = driverProfileService.updateProfile(
-                caller.accountId(), request.name(), request.vehicleType(), request.vehicleRegistrationNumber());
+                caller.accountId(), request.name(), request.vehicleType(), request.vehicleRegistrationNumber(),
+                request.dateOfBirth(), request.email());
         if (result.isFailure()) {
             // This one error needs the number the caller sent to explain
             // itself, so it is answered here where that is still in scope
@@ -84,20 +86,13 @@ public class DriverProfileController {
     public ResponseEntity<DriverProfileSummary> uploadMyPhoto(@RequestParam("file") MultipartFile file) {
         CurrentAccount caller = requireDriver();
         Result<DriverProfileSummary, DriverProfileError> result =
-                driverProfileService.updateProfilePhoto(caller.accountId(), toUpload(file));
+                driverProfileService.updateProfilePhoto(caller.accountId(), ProfilePhotoUploads.toUpload(file));
         if (result.isFailure()) {
             throw toApiException(result.error());
         }
         return ResponseEntity.ok(result.value());
     }
 
-    private static DocumentUpload toUpload(MultipartFile file) {
-        try {
-            return new DocumentUpload(file.getOriginalFilename(), file.getContentType(), file.getBytes());
-        } catch (IOException e) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "Bad Request", "Could not read the uploaded photo");
-        }
-    }
 
     /**
      * The gated write - see DriverProfileService.setOnlineStatus.
@@ -171,6 +166,19 @@ public class DriverProfileController {
                     "You are outside SheOut's service area. We currently operate only within "
                             + Math.round(serviceArea.radiusKm()) + "km of " + serviceArea.centreName()
                             + ", so there are no trips to send you here.");
+            // Only reached from going online - saving a profile without one is
+            // already refused by validation. A conflict with her profile, like
+            // the missing photo: she completes it, then goes online.
+            case DATE_OF_BIRTH_REQUIRED -> new ApiException(HttpStatus.CONFLICT, "DATE_OF_BIRTH_REQUIRED",
+                    "Add your date of birth to your profile before going online.");
+            case INVALID_DATE_OF_BIRTH -> new ApiException(HttpStatus.BAD_REQUEST, "INVALID_DATE_OF_BIRTH",
+                    "That date of birth does not look right. Check the year.");
+            // Said plainly and without a way round it: this is the Terms'
+            // age limit, not a formatting problem to retry.
+            case UNDER_MINIMUM_AGE -> new ApiException(HttpStatus.BAD_REQUEST, "UNDER_MINIMUM_AGE",
+                    "You must be 18 or older to use SheOut.");
+            case INVALID_EMAIL -> new ApiException(HttpStatus.BAD_REQUEST, "INVALID_EMAIL",
+                    "That email address does not look right. Leave it empty if you would rather not add one.");
             case LOCATION_REQUIRED -> new ApiException(
                     HttpStatus.BAD_REQUEST, "LOCATION_REQUIRED",
                     "We need your location to send you nearby trips. Allow location access and try again.");
@@ -180,7 +188,9 @@ public class DriverProfileController {
     public record UpdateProfileRequest(
             @NotBlank @Size(max = 150) String name,
             @NotNull VehicleType vehicleType,
-            @NotBlank @Size(max = 20) String vehicleRegistrationNumber
+            @NotBlank @Size(max = 20) String vehicleRegistrationNumber,
+            @NotNull LocalDate dateOfBirth,
+            @Size(max = 254) String email
     ) {
     }
 
