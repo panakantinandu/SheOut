@@ -82,7 +82,9 @@ class NotificationEventListeners {
     public void onDriverOffered(DriverOffered event) {
         // No countdown in the text: the same words are her inbox history,
         // where "in 14 seconds" would be wrong a minute later.
-        long windowSeconds = Math.max(1, Duration.between(event.occurredAt(), event.expiresAt()).toSeconds());
+        // Rounded up: the offer is created a few milliseconds before this event,
+        // and a 15-second window must not read as 14.
+        long windowSeconds = Math.max(1, (Duration.between(event.occurredAt(), event.expiresAt()).toMillis() + 999) / 1000);
         dispatcher.deliver(event.driverId(), NotificationType.DRIVER_OFFER, new OutboundMessage(
                 "New " + categoryName(event.category()) + " trip request",
                 String.format(Locale.ENGLISH, "%.1f km from you. Offers last %d seconds - open SheOut to accept.",
