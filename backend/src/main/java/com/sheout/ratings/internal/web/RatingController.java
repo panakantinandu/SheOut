@@ -5,6 +5,7 @@ import com.sheout.auth.CurrentAccountContext;
 import com.sheout.ratings.AggregateRating;
 import com.sheout.ratings.Rating;
 import com.sheout.ratings.RatingError;
+import com.sheout.ratings.RatingTag;
 import com.sheout.ratings.RatingsApi;
 import com.sheout.sharedkernel.Result;
 import com.sheout.sharedkernel.web.ApiException;
@@ -24,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -77,6 +79,25 @@ public class RatingController {
                 ratingsApi.findForBookings(bookingIds, caller.accountId()).values()));
     }
 
+    /**
+     * The quick reasons this caller may be offered, by star rating.
+     * <p>
+     * Served rather than built into each app, so the words a rider taps, the
+     * words a partner taps and the words an operator reads in the console are
+     * one list in one place. A rider is never sent the partner's list: they
+     * are different questions, and the wrong one reads as nonsense.
+     * <p>
+     * An app that cannot reach this simply shows no tags. Rating is a tap on
+     * a star and must never depend on a second request succeeding.
+     */
+    @GetMapping("/tags")
+    public ResponseEntity<TagCatalogue> tags() {
+        CurrentAccount caller = requireAuthenticated();
+        return ResponseEntity.ok(new TagCatalogue(
+                toOptions(RatingTag.offeredTo(caller.role(), 5)),
+                toOptions(RatingTag.offeredTo(caller.role(), 1))));
+    }
+
     /** The caller's own slot for one booking: whether they can rate it, and what they said if they have. */
     @GetMapping("/bookings/{bookingId}")
     public ResponseEntity<Rating> forBooking(@PathVariable UUID bookingId) {
@@ -90,8 +111,8 @@ public class RatingController {
     public ResponseEntity<Rating> submit(@PathVariable UUID bookingId,
                                           @Valid @RequestBody SubmitRatingRequest request) {
         CurrentAccount caller = requireAuthenticated();
-        Result<Rating, RatingError> result =
-                ratingsApi.submitRating(bookingId, caller.accountId(), request.stars(), request.comment());
+        Result<Rating, RatingError> result = ratingsApi.submitRating(
+                bookingId, caller.accountId(), request.stars(), request.comment(), request.tags());
         if (result.isFailure()) {
             throw toApiException(result.error());
         }
@@ -135,7 +156,23 @@ public class RatingController {
                     "This trip is too old to rate now.");
             case INVALID_RATING -> new ApiException(HttpStatus.BAD_REQUEST, "Bad Request",
                     "Choose between 1 and 5 stars.");
+            // Only reachable from a client out of step with the catalogue, or
+            // a request made by hand - see RatingError.INVALID_RATING_TAG.
+            case INVALID_RATING_TAG -> new ApiException(HttpStatus.BAD_REQUEST, "INVALID_RATING_TAG",
+                    "Those quick reasons do not go with this rating.");
         };
+    }
+
+    private static List<TagOption> toOptions(List<RatingTag> tags) {
+        return tags.stream().map(tag -> new TagOption(tag, tag.label())).toList();
+    }
+
+    /** What to offer for a high rating, and what to offer for a low one. */
+    public record TagCatalogue(List<TagOption> positive, List<TagOption> negative) {
+    }
+
+    /** The stored code and the words shown beside it. */
+    public record TagOption(RatingTag code, String label) {
     }
 
     /**
@@ -145,7 +182,9 @@ public class RatingController {
      */
     public record SubmitRatingRequest(
             @NotNull @Min(1) @Max(5) Integer stars,
-            @Size(max = 500) String comment
+            @Size(max = 500) String comment,
+            /** Optional, and absent for most ratings. An unknown name here is a 400 from Jackson, not a silent drop. */
+            Set<RatingTag> tags
     ) {
     }
 }

@@ -12,6 +12,7 @@
     "./push-worker-plugin": "./push/vite-plugin.mjs"
   },
   "dependencies": {
+    "@sentry/react": "^10.74.0",
     "clsx": "^2.1.1",
     "firebase": "^12.19.0",
     "leaflet": "^1.9.4",

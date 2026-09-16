@@ -2,6 +2,21 @@ import { useEffect, useState } from 'react';
 import { Button } from './Button';
 import { StarRating } from './StarRating';
 
+/** One tappable reason, as the server's catalogue describes it. */
+export interface RatingTagOption {
+  code: string;
+  label: string;
+}
+
+/** What to offer for a good rating, and what to offer for a poor one. */
+export interface RatingTagCatalogue {
+  positive: RatingTagOption[];
+  negative: RatingTagOption[];
+}
+
+/** Four stars and up is a good trip. The same line the server draws - see RatingTag. */
+const POSITIVE_FROM_STARS = 4;
+
 export interface RatingDialogProps {
   open: boolean;
   title?: string;
@@ -10,7 +25,13 @@ export interface RatingDialogProps {
   counterpartLabel?: string;
   busy?: boolean;
   error?: string | null;
-  onSubmit: (stars: number, comment?: string) => void;
+  /**
+   * The quick reasons to offer, fetched from the server so both apps and the
+   * console read the same words. Omit, or leave empty, and no tags are shown
+   * - rating must never depend on a second request having succeeded.
+   */
+  tagOptions?: RatingTagCatalogue | null;
+  onSubmit: (stars: number, comment?: string, tags?: string[]) => void;
   /** Closes without rating. Rating is optional and must stay that way. */
   onSkip: () => void;
 }
@@ -42,11 +63,26 @@ export function RatingDialog({
   counterpartLabel = 'them',
   busy = false,
   error = null,
+  tagOptions = null,
   onSubmit,
   onSkip,
 }: RatingDialogProps) {
   const [stars, setStars] = useState<number | null>(null);
   const [comment, setComment] = useState('');
+  const [tags, setTags] = useState<string[]>([]);
+
+  // Which half of the catalogue fits the stars just chosen. Null until she
+  // has chosen any, because there is nothing to ask about yet.
+  const band = stars === null ? null : stars >= POSITIVE_FROM_STARS ? 'positive' : 'negative';
+  const offered = band && tagOptions ? tagOptions[band] : [];
+
+  // Changing four stars to two has to drop what was tapped under the old
+  // half: the server refuses a complaint sent with five stars, and silently
+  // keeping them would turn a rating she meant to soften into a rejected
+  // submission she cannot see the cause of.
+  useEffect(() => {
+    setTags([]);
+  }, [band]);
 
   useEffect(() => {
     if (!open) return;
@@ -66,6 +102,7 @@ export function RatingDialog({
     if (open) {
       setStars(null);
       setComment('');
+      setTags([]);
     }
   }, [open]);
 
@@ -89,6 +126,41 @@ export function RatingDialog({
         <div className="mt-5 flex justify-center">
           <StarRating value={stars} onChange={setStars} size="lg" disabled={busy} label={title} />
         </div>
+
+        {/* One tap each, and none of them required. Almost nobody writes a
+            comment, so without these a middling rating says nothing anybody
+            can act on - and a question that costs a tap gets answered where
+            a textarea does not. */}
+        {offered.length > 0 && (
+          <div className="mt-4 flex flex-wrap justify-center gap-2">
+            {offered.map((option) => {
+              const chosen = tags.includes(option.code);
+              return (
+                <button
+                  key={option.code}
+                  type="button"
+                  disabled={busy}
+                  aria-pressed={chosen}
+                  onClick={() =>
+                    setTags((current) =>
+                      current.includes(option.code)
+                        ? current.filter((code) => code !== option.code)
+                        : [...current, option.code]
+                    )
+                  }
+                  className={
+                    'rounded-full border px-3 py-1.5 text-sm transition-colors ' +
+                    (chosen
+                      ? 'border-primary bg-primary text-white'
+                      : 'border-border bg-surface text-text-primary')
+                  }
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {stars !== null && (
           <label className="mt-4 block">
@@ -115,7 +187,7 @@ export function RatingDialog({
           <Button
             fullWidth
             disabled={stars === null || busy}
-            onClick={() => stars !== null && onSubmit(stars, comment.trim() || undefined)}
+            onClick={() => stars !== null && onSubmit(stars, comment.trim() || undefined, tags)}
           >
             {busy ? 'Sending...' : 'Submit'}
           </Button>

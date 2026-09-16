@@ -1,7 +1,7 @@
 import { CheckCircle2, Clock, FileWarning, ShieldCheck, Check, Upload } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Card, IconCircle, StatusBadge, TopHeader, verificationStatusLabel } from '@sheout/design-system';
+import { Button, Card, IconCircle, StatusBadge, TextField, TopHeader, verificationStatusLabel } from '@sheout/design-system';
 import type { StatusTone } from '@sheout/design-system';
 import { ApiError, usersApi, verificationApi } from '../api/client';
 import type { DriverProfileSummary, VerificationStatus, VerificationSummary } from '../api/types';
@@ -51,6 +51,11 @@ export function Verification() {
   // Going online needs a photo as well as both checks, so this screen has
   // to know about it to tell the truth about what is still outstanding.
   const [profile, setProfile] = useState<DriverProfileSummary | null>(null);
+  // PAN, saved on its own - see savePan.
+  const [pan, setPan] = useState('');
+  const [savingPan, setSavingPan] = useState(false);
+  const [panError, setPanError] = useState<string | null>(null);
+  const [panSaved, setPanSaved] = useState(false);
 
   /** Clears the input so re-picking the same file still fires a change. */
   function pickFile(e: React.ChangeEvent<HTMLInputElement>, set: (f: File | null) => void) {
@@ -71,7 +76,10 @@ export function Verification() {
   useEffect(() => {
     usersApi
       .getMyProfile()
-      .then(setProfile)
+      .then((p) => {
+        setProfile(p);
+        setPan(p.panNumber ?? '');
+      })
       .catch(() => {
         // The verification rows still render. Worst case the banner is a
         // little less specific, which is better than the screen failing.
@@ -103,6 +111,36 @@ export function Verification() {
       setUploading(false);
     }
   }
+
+  /**
+   * Saves the PAN on its own, not with the documents.
+   * <p>
+   * It goes to the profile rather than to this review: an operator deciding
+   * whether she is who she says she is has no use for it, and it is needed
+   * later, when a payout is processed and tax has to be deducted against a
+   * number. Saving it separately also means a failed upload does not lose
+   * it, and re-submitting documents does not re-ask for it.
+   */
+  async function savePan() {
+    setSavingPan(true);
+    setPanError(null);
+    setPanSaved(false);
+    try {
+      const updated = await usersApi.updateMyPan(pan.trim());
+      setProfile(updated);
+      setPan(updated.panNumber ?? '');
+      setPanSaved(true);
+    } catch (err) {
+      setPanError(err instanceof ApiError ? err.message : 'Could not save your PAN');
+    } finally {
+      setSavingPan(false);
+    }
+  }
+
+  const panOnFile = Boolean(profile?.panNumber);
+  const panChanged = pan.trim().toUpperCase() !== (profile?.panNumber ?? '');
+  // Ten characters in the PAN shape, or empty to remove one already saved.
+  const panUsable = pan.trim() === '' ? panOnFile : /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(pan.trim().toUpperCase());
 
   const bothVerified = summary?.genderVerificationStatus === 'VERIFIED' && summary?.policeVerificationStatus === 'VERIFIED';
   const hasPhoto = Boolean(profile?.hasProfilePhoto);
@@ -258,6 +296,53 @@ export function Verification() {
                       : summary.documentSubmitted
                         ? 'Re-submit both documents'
                         : 'Submit for review'}
+            </Button>
+          </Card>
+
+          {/* PAN, and deliberately nothing to do with the review above.
+              It is asked for here because this is the screen where she is
+              already dealing with paperwork, and asking at payout time
+              means somebody waiting on documents for money she has already
+              earned. It is optional, it is not an identity check, and no
+              part of the app withholds anything for its absence. */}
+          <Card className="space-y-3">
+            <div>
+              <p className="text-sm font-medium text-text-primary">Your PAN (optional)</p>
+              <p className="mt-1 text-xs text-text-secondary">
+                For tax on your payouts. Tax is deducted and reported against a PAN when we pay you, so adding it now
+                keeps that from holding up money you have earned. It is not part of your verification, and you can add
+                it later.
+              </p>
+            </div>
+            <TextField
+              label="PAN"
+              name="panNumber"
+              value={pan}
+              maxLength={10}
+              autoCapitalize="characters"
+              autoComplete="off"
+              placeholder="ABCDE1234F"
+              onChange={(e) => {
+                setPan(e.target.value.toUpperCase());
+                setPanSaved(false);
+                setPanError(null);
+              }}
+              error={panError ?? undefined}
+            />
+            {panSaved && !panChanged && <p className="text-xs text-success">Saved.</p>}
+            <Button
+              fullWidth
+              variant="secondary"
+              disabled={savingPan || !panChanged || !panUsable}
+              onClick={savePan}
+            >
+              {savingPan
+                ? 'Saving...'
+                : pan.trim() === ''
+                  ? 'Remove PAN'
+                  : panOnFile
+                    ? 'Update PAN'
+                    : 'Save PAN'}
             </Button>
           </Card>
         </>

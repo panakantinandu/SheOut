@@ -31,6 +31,11 @@ export interface DriverProfileSummary {
   phoneNumber: string;
   vehicleType: VehicleType | null;
   vehicleRegistrationNumber: string | null;
+  /**
+   * Her PAN, for payout tax compliance. Null when she has not given one -
+   * it is optional, and nothing is withheld for its absence.
+   */
+  panNumber: string | null;
   onlineStatus: DriverOnlineStatus;
   verified: boolean;
   /**
@@ -236,8 +241,26 @@ export interface Rating {
   raterRole: AccountRole;
   stars: number | null;
   comment: string | null;
+  /** The quick reasons tapped with the stars; empty for most ratings. */
+  tags: string[];
   submittedAt: string | null;
   rateableUntil: string;
+}
+
+/** One tappable reason, as the server's catalogue describes it. */
+export interface RatingTagOption {
+  code: string;
+  label: string;
+}
+
+/**
+ * What to offer for a good rating and what to offer for a poor one, served
+ * by the backend so this app never keeps its own copy of the wording - and
+ * so a rider is never shown the partner's list, which would read as nonsense.
+ */
+export interface RatingTagCatalogue {
+  positive: RatingTagOption[];
+  negative: RatingTagOption[];
 }
 
 /** averageStars is null when the account has never been rated - not the same as a low score. */

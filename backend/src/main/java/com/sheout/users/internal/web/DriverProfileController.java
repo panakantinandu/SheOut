@@ -75,6 +75,24 @@ public class DriverProfileController {
     }
 
     /**
+     * Her PAN, for payout tax compliance.
+     * <p>
+     * Collected with her documents rather than on the profile screen, and so
+     * saved on its own: a profile save that did not happen to carry it would
+     * otherwise clear it. Sending an empty string removes it.
+     */
+    @PutMapping("/api/v1/users/driver/me/pan")
+    public ResponseEntity<DriverProfileSummary> updateMyPan(@Valid @RequestBody UpdatePanRequest request) {
+        CurrentAccount caller = requireDriver();
+        Result<DriverProfileSummary, DriverProfileError> result =
+                driverProfileService.updatePanNumber(caller.accountId(), request.panNumber());
+        if (result.isFailure()) {
+            throw toApiException(result.error());
+        }
+        return ResponseEntity.ok(result.value());
+    }
+
+    /**
      * The photo a rider sees on the tracking screen.
      * <p>
      * Multipart, so it bypasses the JSON body handling the rest of this
@@ -179,6 +197,8 @@ public class DriverProfileController {
                     "You must be 18 or older to use SheOut.");
             case INVALID_EMAIL -> new ApiException(HttpStatus.BAD_REQUEST, "INVALID_EMAIL",
                     "That email address does not look right. Leave it empty if you would rather not add one.");
+            case INVALID_PAN -> new ApiException(HttpStatus.BAD_REQUEST, "INVALID_PAN",
+                    "That PAN does not look right. It is ten characters: five letters, four digits, then a letter.");
             case LOCATION_REQUIRED -> new ApiException(
                     HttpStatus.BAD_REQUEST, "LOCATION_REQUIRED",
                     "We need your location to send you nearby trips. Allow location access and try again.");
@@ -192,6 +212,10 @@ public class DriverProfileController {
             @NotNull LocalDate dateOfBirth,
             @Size(max = 254) String email
     ) {
+    }
+
+    /** Optional at the wire level too - an empty value removes a PAN already on file. */
+    public record UpdatePanRequest(@Size(max = 20) String panNumber) {
     }
 
     /**

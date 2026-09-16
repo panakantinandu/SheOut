@@ -719,17 +719,96 @@ render.yaml) before any real user or driver testing that involves live
 booking, tracking, or SOS - not just before "launch."** A 30-60s hang on
 an SOS call is not an acceptable trade-off at any pre-launch stage.
 
+## Monitoring, alerting and backups
+
+### Crash reporting (Sentry)
+
+Both apps and the backend report unhandled exceptions to Sentry, and are
+silent about it until a DSN is set:
+
+| Where | Variable | Set it in |
+| --- | --- | --- |
+| Backend | `SENTRY_DSN` | Render dashboard |
+| Rider app | `VITE_SENTRY_DSN` | Vercel project env (build time) |
+| Partner app | `VITE_SENTRY_DSN` | Vercel project env (build time) |
+
+Unset means no client is created and nothing leaves the process, which is
+what local runs get. The frontends read theirs at **build** time, so a
+newly set DSN needs a redeploy, not a restart.
+
+What is deliberately not sent: performance tracing and session replay are
+both off. Replay records what somebody types and sees, which on these apps
+is her home address, her live location and her chat with a stranger.
+Phone numbers are masked out of messages, exception text and breadcrumbs
+before an event is sent (`platform.SentryConfig`, `lib/errorReporting.ts`),
+and `send-default-pii` is off, so no IP addresses travel either.
+
+### Uptime monitoring - set this up, it is not code
+
+Nothing in this repository notices that the service is down; Sentry only
+reports crashes the service is alive enough to report. Point a free
+external monitor at all three URLs:
+
+| Check | URL | Expect |
+| --- | --- | --- |
+| Backend | `https://sheout-backend.onrender.com/actuator/health` | 200, body contains `"status":"UP"` |
+| Rider app | `https://sheout-customer-app.vercel.app/` | 200 |
+| Partner app | `https://sheout-driver-app.vercel.app/` | 200 |
+
+UptimeRobot's free plan covers this (50 monitors, 5-minute interval,
+email alerts; SMS costs extra). Any equivalent - Better Stack, Healthchecks.io,
+Pingdom's free tier - does the same job. Two notes specific to this
+deployment: a 5-minute ping also keeps Render's free instance from
+spinning down, so cold starts mostly stop happening; and the alert should
+go somewhere that wakes somebody, because the thing being monitored is how
+a woman gets home at night.
+
+### Database backups - the free plan has none
+
+The live database is **Render's own free Postgres** (see `render.yaml`) -
+not Neon, not Supabase. Render's documented free-plan terms, which are the
+operative fact here:
+
+- **No backups at all.** "Render does not provide recovery capabilities
+  for databases on the Free compute plan", and no logical backups are
+  created either. There is nothing to restore from.
+- **It expires 30 days after creation.** After that there are 14 days to
+  upgrade before Render permanently deletes the database and everything in
+  it.
+- 1 GB of storage, one free database per workspace.
+
+That now includes every uploaded photo and identity document, which live
+in this database (see `DatabaseDocumentStorage`). **Move to a paid plan
+before real users depend on this.** On a paid plan Render keeps continuous
+backups: restore is Dashboard -> the database -> Recovery -> Restore
+Database, picking a timestamp at least ten minutes old, which provisions a
+new instance at that point in time. The window is 3 days on Hobby and 7
+days on Pro or higher.
+
+Until then, the only backup that exists is one taken by hand, and it
+should be taken before anything risky:
+
+```bash
+# External connection string from the Render dashboard.
+pg_dump "$DATABASE_URL" -Fc -f sheout-$(date +%F).dump   # outside the repo
+pg_restore -d "$NEW_DATABASE_URL" sheout-2026-09-15.dump # to restore
+```
+
+Paid plans also allow exporting a logical backup from the dashboard;
+those exports are kept for seven days.
+
 ## What's intentionally not here yet
 
 As of v1.0.0 every module in the table above is implemented and the core
 loop - book, dispatch, pickup code, trip, payment, payout - runs on the
 live deployment. What is deliberately left for later:
 
-- Push notifications (FCM). Offers reach a partner because the partner app
-  polls; SMS through Twilio is the only outbound channel, and it sends
-  nothing until Twilio is configured.
 - Automated payouts. Operators send the money themselves and mark the
-  request paid in the console - there is no payout API integration.
+  request paid in the console - there is no payout API integration. TDS is
+  not calculated or deducted either; a partner's PAN is collected and the
+  console says whether one is on file, which is as far as it goes.
+- Automated identity or face matching. Verification is a person reading a
+  document, deliberately, and that is not changing.
 - Lunch Box. The backend still accepts the `LUNCHBOX` category, but the
   apps do not offer it.
 - Self-hosted routing. Fares and routes use the public OSRM demo server,

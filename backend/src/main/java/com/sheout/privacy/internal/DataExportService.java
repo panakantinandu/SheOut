@@ -112,14 +112,18 @@ class DataExportService {
             return driverProfileApi.findByAccountId(id)
                     .map(p -> new DataExport.Profile(p.name(), p.dateOfBirth(), p.email(), null, null,
                             p.vehicleType() == null ? null : p.vehicleType().name(),
-                            // hasProfilePhoto, not the URL: on local-disk storage the
-                            // URL is null even though a photo is on file.
-                            p.vehicleRegistrationNumber(), p.hasProfilePhoto()))
+                            p.vehicleRegistrationNumber(),
+                            // In full, unlike anywhere else it appears: this
+                            // file is her own copy of what is held about her.
+                            p.panNumber(),
+                            // hasProfilePhoto, not the URL: a photo can be on
+                            // file without a link anyone can open.
+                            p.hasProfilePhoto()))
                     .orElse(null);
         }
         return customerProfileApi.findByAccountId(id)
                 .map(p -> new DataExport.Profile(p.name(), p.dateOfBirth(), p.email(), p.homeAddress(), p.workAddress(),
-                        null, null, p.hasProfilePhoto()))
+                        null, null, null, p.hasProfilePhoto()))
                 .orElse(null);
     }
 

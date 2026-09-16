@@ -42,6 +42,13 @@ public class DriverProfileEntity extends BaseEntity {
     private String vehicleRegistrationNumber;
 
     /**
+     * Her PAN, for deducting and reporting TDS on payouts. Optional, and
+     * nothing to do with whether she is verified - see PanNumber.
+     */
+    @Column(name = "pan_number", length = 10)
+    private String panNumber;
+
+    /**
      * Storage key for the photo a rider sees, not a URL - see V12. Null on
      * accounts that predate the requirement, which both apps render as a
      * silhouette rather than a broken image.
@@ -131,6 +138,20 @@ public class DriverProfileEntity extends BaseEntity {
 
     public void setVehicleRegistrationNumber(String vehicleRegistrationNumber) {
         this.vehicleRegistrationNumber = vehicleRegistrationNumber;
+    }
+
+    public String getPanNumber() {
+        return panNumber;
+    }
+
+    /** Null clears it. Normalised by the service, which is the only caller. */
+    public void setPanNumber(String panNumber) {
+        this.panNumber = panNumber;
+    }
+
+    /** Whether there is a number to deduct TDS against - what the payouts view asks. */
+    public boolean hasPanNumber() {
+        return panNumber != null && !panNumber.isBlank();
     }
 
     public String getProfilePhotoKey() {

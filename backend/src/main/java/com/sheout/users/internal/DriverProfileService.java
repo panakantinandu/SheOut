@@ -119,6 +119,32 @@ public class DriverProfileService implements DriverProfileApi {
     }
 
     /**
+     * Records her PAN, for deducting TDS on payouts.
+     * <p>
+     * Its own call rather than a field on updateProfile, because it is
+     * collected on a different screen at a different time - with her
+     * documents, when she is already dealing with paperwork - and because a
+     * profile save that happened not to include it would otherwise wipe it.
+     * <p>
+     * Blank clears it. She gave it voluntarily and must be able to take it
+     * back; there is nothing here that needs it to stay.
+     */
+    @Transactional
+    public Result<DriverProfileSummary, DriverProfileError> updatePanNumber(UUID accountId, String panNumber) {
+        if (!PanNumber.isValidOrBlank(panNumber)) {
+            return Result.failure(DriverProfileError.INVALID_PAN);
+        }
+        Optional<DriverProfileEntity> found = driverProfileRepository.findByAccountId(accountId);
+        if (found.isEmpty()) {
+            return Result.failure(DriverProfileError.PROFILE_NOT_FOUND);
+        }
+        DriverProfileEntity profile = found.get();
+        profile.setPanNumber(PanNumber.normalize(panNumber));
+        driverProfileRepository.save(profile);
+        return Result.success(toSummary(profile));
+    }
+
+    /**
      * Stores the photo a rider sees, and hands back the updated profile.
      * <p>
      * Goes through the same DocumentStorage the identity documents use.
@@ -291,6 +317,7 @@ public class DriverProfileService implements DriverProfileApi {
                 phoneNumber,
                 profile.getVehicleType(),
                 profile.getVehicleRegistrationNumber(),
+                profile.getPanNumber(),
                 profile.getOnlineStatus(),
                 profile.isVerified(),
                 // Resolved at read time, never stored. A presigned S3 URL is

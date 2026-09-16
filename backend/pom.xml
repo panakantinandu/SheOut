@@ -107,6 +107,15 @@
             <artifactId>s3</artifactId>
         </dependency>
 
+        <!-- Error reporting (platform.SentryConfig). Inert until SENTRY_DSN is
+             set: with no DSN the SDK initialises disabled and sends nothing,
+             so local runs and forks of this repo are unaffected. -->
+        <dependency>
+            <groupId>io.sentry</groupId>
+            <artifactId>sentry-spring-boot-starter-jakarta</artifactId>
+            <version>8.16.0</version>
+        </dependency>
+
         <!-- Push notifications through Firebase Cloud Messaging (notifications' FcmPushChannel) -->
         <dependency>
             <groupId>com.google.firebase</groupId>

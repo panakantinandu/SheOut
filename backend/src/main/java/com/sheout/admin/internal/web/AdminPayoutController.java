@@ -14,6 +14,7 @@ import com.sheout.sharedkernel.Result;
 import com.sheout.sharedkernel.web.ApiException;
 import com.sheout.sharedkernel.web.PageResponse;
 import com.sheout.users.DriverProfileApi;
+import com.sheout.users.DriverProfileSummary;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -30,6 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -86,10 +88,17 @@ public class AdminPayoutController {
 
     private PayoutRow toRow(PayoutRequestSummary r) {
         WalletSummary wallet = payoutApi.getWallet(r.driverAccountId());
+        Optional<DriverProfileSummary> driver = driverProfileApi.findByAccountId(r.driverAccountId());
         return new PayoutRow(
                 r.id(), r.driverAccountId(),
-                driverProfileApi.findByAccountId(r.driverAccountId()).map(p -> p.name()).orElse(null),
+                driver.map(DriverProfileSummary::name).orElse(null),
                 authApi.findAccount(r.driverAccountId()).map(AccountSummary::phoneNumber).orElse(null),
+                // Whether there is a PAN, not the PAN itself. TDS is deducted
+                // against it when payouts are processed, and an operator
+                // paying by hand today needs to know it is missing - but
+                // nothing on this screen is typed into a bank, so the number
+                // itself has no business being on it.
+                driver.map(DriverProfileSummary::panNumber).filter(pan -> !pan.isBlank()).isPresent(),
                 r.amount(), r.status(), r.accountHolderName(), r.accountNumber(), r.ifsc(), r.upiVpa(),
                 r.requestedAt(), r.paidAt(),
                 r.paidBy() == null ? null : authApi.findAccount(r.paidBy()).map(AccountSummary::phoneNumber).orElse(null),
@@ -108,8 +117,14 @@ public class AdminPayoutController {
     public record MarkPaidRequest(@NotBlank @Size(max = 100) String paymentReference) {
     }
 
-    /** driverAvailableBalance is her balance now, after this request's hold - context for the operator, not part of the request. */
-    public record PayoutRow(UUID id, UUID driverAccountId, String driverName, String driverPhone, BigDecimal amount,
+    /**
+     * driverAvailableBalance is her balance now, after this request's hold -
+     * context for the operator, not part of the request. driverPanOnFile says
+     * whether TDS can be deducted and reported against a PAN when payouts
+     * are processed; the number itself is deliberately not here.
+     */
+    public record PayoutRow(UUID id, UUID driverAccountId, String driverName, String driverPhone,
+                            boolean driverPanOnFile, BigDecimal amount,
                             PayoutStatus status, String accountHolderName, String accountNumber, String ifsc, String upiVpa,
                             Instant requestedAt, Instant paidAt, String paidByPhone, String paymentReference,
                             BigDecimal driverAvailableBalance) {

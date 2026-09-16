@@ -3,6 +3,7 @@ package com.sheout.ratings;
 import com.sheout.auth.AccountRole;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -22,6 +23,8 @@ public record Rating(
         AccountRole raterRole,
         Integer stars,
         String comment,
+        /** The quick reasons tapped with the stars; empty when none were, which is most of the time. */
+        List<RatingTag> tags,
         Instant submittedAt,
         Instant rateableUntil
 ) {

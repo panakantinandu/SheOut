@@ -54,7 +54,7 @@ public record DataExport(
     /** Customer fields or driver fields, whichever this account is; the other half is null. */
     public record Profile(String name, java.time.LocalDate dateOfBirth, String email, String homeAddress,
                           String workAddress, String vehicleType, String vehicleRegistrationNumber,
-                          boolean profilePhotoOnFile) {
+                          String panNumber, boolean profilePhotoOnFile) {
     }
 
     /** Names and numbers this person saved for SOS. Theirs to see, because they entered them. */

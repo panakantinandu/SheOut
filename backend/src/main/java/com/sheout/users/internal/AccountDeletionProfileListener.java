@@ -57,6 +57,9 @@ class AccountDeletionProfileListener {
             profile.setName(AccountDeletionRequested.DELETED_NAME);
             // A registration number identifies a person as surely as a name.
             profile.setVehicleRegistrationNumber(null);
+            // A PAN more so - it is a tax identity, and nothing that stays
+            // behind needs it. Payouts already made keep their own record.
+            profile.setPanNumber(null);
             profile.setDateOfBirth(null);
             profile.setEmail(null);
             // Permanently: nothing can set her ONLINE again, because the

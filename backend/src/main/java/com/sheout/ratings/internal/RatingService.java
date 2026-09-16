@@ -5,6 +5,8 @@ import com.sheout.ratings.AggregateRating;
 import com.sheout.ratings.Rating;
 import com.sheout.ratings.RatingError;
 import com.sheout.ratings.RatingSubmitted;
+import com.sheout.ratings.RatingTag;
+import com.sheout.ratings.RatingTagCount;
 import com.sheout.ratings.RatingsApi;
 import com.sheout.sharedkernel.Result;
 import com.sheout.sharedkernel.event.DomainEventPublisher;
@@ -16,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,6 +44,9 @@ public class RatingService implements RatingsApi {
     private static final int MIN_STARS = 1;
     private static final int MAX_STARS = 5;
     private static final int MAX_COMMENT = 500;
+
+    /** Every list offered is shorter than this; the cap is only here so a hand-made request cannot write hundreds of rows. */
+    private static final int MAX_TAGS = 8;
 
     private final RatingRepository repository;
     private final RatingWindow window;
@@ -88,7 +94,8 @@ public class RatingService implements RatingsApi {
 
     @Override
     @Transactional
-    public Result<Rating, RatingError> submitRating(UUID bookingId, UUID raterAccountId, int stars, String comment) {
+    public Result<Rating, RatingError> submitRating(UUID bookingId, UUID raterAccountId, int stars, String comment,
+                                                     Collection<RatingTag> tags) {
         if (stars < MIN_STARS || stars > MAX_STARS) {
             return Result.failure(RatingError.INVALID_RATING);
         }
@@ -113,12 +120,24 @@ public class RatingService implements RatingsApi {
         if (slot.isSubmitted()) {
             return Result.failure(RatingError.ALREADY_RATED);
         }
+        // Checked against the slot's own rater role and the stars just given,
+        // not against anything the caller said about itself.
+        Collection<RatingTag> chosen = tags == null ? List.of() : new LinkedHashSet<>(tags);
+        if (chosen.size() > MAX_TAGS) {
+            return Result.failure(RatingError.INVALID_RATING_TAG);
+        }
+        for (RatingTag tag : chosen) {
+            if (!tag.allowedWith(slot.getRaterRole(), stars)) {
+                return Result.failure(RatingError.INVALID_RATING_TAG);
+            }
+        }
+
         Instant now = Instant.now();
         if (!now.isBefore(slot.getRateableUntil())) {
             return Result.failure(RatingError.RATING_WINDOW_CLOSED);
         }
 
-        slot.submit(stars, trimmed, now);
+        slot.submit(stars, trimmed, chosen, now);
         repository.save(slot);
 
         // Read back after the write so the average includes what was just
@@ -136,6 +155,18 @@ public class RatingService implements RatingsApi {
                     aggregate.totalRatings()));
         }
         return Result.success(toRating(slot));
+    }
+
+    @Override
+    public List<RatingTagCount> countTagsSince(Instant since, Collection<AccountRole> raterRoles) {
+        if (raterRoles == null || raterRoles.isEmpty()) {
+            // An empty IN list is a SQL error on Postgres, not an empty
+            // result - the same reason the aggregate query guards its own.
+            return List.of();
+        }
+        return repository.countTagsSince(since, raterRoles).stream()
+                .map(row -> new RatingTagCount(row.getAccountId(), row.getTag(), row.getTotal()))
+                .toList();
     }
 
     @Override
@@ -204,6 +235,7 @@ public class RatingService implements RatingsApi {
                 entity.getRaterRole(),
                 entity.getStars(),
                 entity.getComment(),
+                List.copyOf(entity.getTags()),
                 entity.getSubmittedAt(),
                 entity.getRateableUntil());
     }
