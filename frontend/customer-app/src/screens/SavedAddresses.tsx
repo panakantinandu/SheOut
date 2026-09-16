@@ -1,7 +1,7 @@
 import { Briefcase, House } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Card, IconCircle, TextField, TopHeader } from '@sheout/design-system';
+import { Button, Card, IconCircle, SkeletonCard, TextField, TopHeader } from '@sheout/design-system';
 import { ApiError, usersApi } from '../api/client';
 import type { CustomerProfileSummary } from '../api/types';
 
@@ -65,7 +65,7 @@ export function SavedAddresses() {
       {saved && <p className="text-sm text-success">Saved.</p>}
 
       {!profile ? (
-        <p className="text-center text-sm text-text-secondary">Loading...</p>
+        <SkeletonCard lines={3} label="Loading your addresses" />
       ) : (
         <Card className="space-y-4">
           <div className="flex items-center gap-2">

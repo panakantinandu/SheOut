@@ -1,8 +1,10 @@
 import { Bike, Calendar, ChevronDown, Package, TrendingUp, UtensilsCrossed, Wallet } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   AmountText,
+  PullToRefresh,
+  SkeletonCard,
   Button,
   Card,
   DateRangeFields,
@@ -107,12 +109,18 @@ export function Earnings() {
   /** How many detail rows are on screen. See DETAIL_PAGE_SIZE. */
   const [detailShown, setDetailShown] = useState(DETAIL_PAGE_SIZE);
 
+  const load = useCallback(
+    () =>
+      bookingApi
+        .listMine()
+        .then(setBookings)
+        .catch((err) => setError(err instanceof ApiError ? err.message : 'Could not load earnings')),
+    []
+  );
+
   useEffect(() => {
-    bookingApi
-      .listMine()
-      .then(setBookings)
-      .catch((err) => setError(err instanceof ApiError ? err.message : 'Could not load earnings'));
-  }, []);
+    void load();
+  }, [load]);
 
   const { periodTotal, allTimeTotal, completedTrips, byGroup, trips } = useMemo(() => {
     const completed = (bookings ?? []).filter((b) => b.status === 'COMPLETED' && b.completedAt);
@@ -163,11 +171,13 @@ export function Earnings() {
   }
 
   return (
-    <div className="space-y-6">
+    // Pull down to reload: a trip completed on this phone minutes ago should
+    // be one gesture away from showing up in the total.
+    <PullToRefresh onRefresh={load} disabled={!bookings} className="space-y-6">
       <TopHeader variant="back" title="Earnings" onBack={() => navigate('/home')} />
 
       {error && <p className="text-sm text-danger">{error}</p>}
-      {!bookings && !error && <p className="text-center text-sm text-text-secondary">Loading...</p>}
+      {!bookings && !error && <SkeletonCard lines={4} label="Loading your earnings" />}
 
       {bookings && (
         <>
@@ -196,7 +206,7 @@ export function Earnings() {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-sm opacity-90">Total Earnings</p>
-                <AmountText amount={periodTotal} size="lg" tone="inverse" />
+                <AmountText amount={periodTotal} size="lg" tone="inverse" animate />
               </div>
               <button
                 type="button"
@@ -243,7 +253,7 @@ export function Earnings() {
               <IconCircle tone="soft" icon={<TrendingUp />} />
               <div>
                 <p className="text-xs text-text-secondary">All-Time</p>
-                <AmountText amount={allTimeTotal} />
+                <AmountText amount={allTimeTotal} animate />
               </div>
             </Card>
             <Card className="flex items-center gap-3">
@@ -319,6 +329,6 @@ export function Earnings() {
           </p>
         </>
       )}
-    </div>
+    </PullToRefresh>
   );
 }

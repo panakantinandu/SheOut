@@ -5,17 +5,18 @@ import {
   AmountText,
   Card,
   DateRangeFields,
+  endOfDayIso,
   ListEmptyState,
   ListFilterBar,
   LoadMore,
+  paymentMethodLabel,
+  paymentStatusLabel,
   SelectField,
+  SkeletonList,
+  startOfDayIso,
   StatusBadge,
   TextField,
   TopHeader,
-  paymentMethodLabel,
-  paymentStatusLabel,
-  endOfDayIso,
-  startOfDayIso,
   usePagedList,
 } from '@sheout/design-system';
 import type { DateRangeValue, StatusTone } from '@sheout/design-system';
@@ -140,7 +141,7 @@ export function PaymentMethods() {
       </ListFilterBar>
 
       {list.error && <p className="text-sm text-danger">{list.error}</p>}
-      {list.loading && <p className="text-center text-sm text-text-secondary">Loading...</p>}
+      {list.loading && <SkeletonList rows={4} label="Loading your payment history" />}
 
       {!list.loading && list.items.length === 0 && !list.error && (
         activeFilters > 0 ? (
@@ -152,6 +153,7 @@ export function PaymentMethods() {
           />
         ) : (
           <ListEmptyState
+            illustrated
             icon={<ReceiptText />}
             title="No payments yet"
             message="Payments appear here once a trip is completed."

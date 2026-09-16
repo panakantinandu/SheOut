@@ -1,4 +1,6 @@
 import type { ReactNode } from 'react';
+import { PageTransition } from '@sheout/design-system';
+import { useLocation } from 'react-router-dom';
 
 /**
  * The frame for every screen pushed on top of the tab bar rather than
@@ -17,7 +19,11 @@ import type { ReactNode } from 'react';
  * tab bar these screens do not have.
  */
 export function PageShell({ children }: { children: ReactNode }) {
+  const location = useLocation();
   return (
-    <div className="mx-auto min-h-screen max-w-md bg-background px-screen pb-12 pt-6">{children}</div>
+    <div className="mx-auto min-h-screen max-w-md bg-background px-screen pb-12 pt-6">
+      {/* The same arrival animation the tab screens get - see PageTransition. */}
+      <PageTransition transitionKey={location.pathname}>{children}</PageTransition>
+    </div>
   );
 }

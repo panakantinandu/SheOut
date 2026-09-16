@@ -6,6 +6,7 @@ import { ListEmptyState } from './ListEmptyState';
 import { ListFilterBar } from './ListFilterBar';
 import { LoadMore } from './LoadMore';
 import { SelectField } from './SelectField';
+import { SkeletonList } from './Skeleton';
 import { StatusBadge } from './StatusBadge';
 import { usePagedList, type PagedResult } from '../lib/usePagedList';
 import {
@@ -93,7 +94,7 @@ export function SupportTicketList({ audience, fetchPage, onOpen }: SupportTicket
       </ListFilterBar>
 
       {list.error && <p className="text-sm text-danger">{list.error}</p>}
-      {list.loading && <p className="text-center text-sm text-text-secondary">Loading...</p>}
+      {list.loading && <SkeletonList rows={3} label="Loading your tickets" />}
 
       {!list.loading && !list.error && list.items.length === 0 && (
         activeCount > 0 ? (
@@ -112,6 +113,7 @@ export function SupportTicketList({ audience, fetchPage, onOpen }: SupportTicket
           />
         ) : (
           <ListEmptyState
+            illustrated
             icon={<LifeBuoy />}
             title="No tickets yet"
             message="When you raise an issue, it appears here with every reply from support."

@@ -6,4 +6,24 @@
   body {
     @apply bg-background text-text-primary font-sans;
   }
+
+  /*
+   * Somebody who has asked their device for less movement gets none of it.
+   * Not "faster": none. Vestibular disorders are not a preference about
+   * taste, and this setting is how a person says so - so every animation and
+   * transition in the app, including any added later without thinking about
+   * it, is reduced to an instant state change here rather than one component
+   * at a time. The JavaScript-driven pieces honour the same setting through
+   * usePrefersReducedMotion.
+   */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }

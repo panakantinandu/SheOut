@@ -17,6 +17,13 @@ const SIZES = {
   xl: 'h-24 w-24',
 } as const;
 
+const INITIAL_SIZES = {
+  sm: 'text-xs',
+  md: 'text-sm',
+  lg: 'text-lg',
+  xl: 'text-2xl',
+} as const;
+
 const ICON_SIZES = {
   sm: 'h-4 w-4',
   md: 'h-6 w-6',
@@ -35,19 +42,32 @@ const ICON_SIZES = {
  * that includes a state that merely looks broken.
  * <p>
  * It also falls back when a URL is present but fails to load, which is not
- * hypothetical here: photos are served from presigned storage URLs that
- * expire, so a screen left open long enough will eventually hold a dead
- * link.
+ * hypothetical here: photos are served from signed storage URLs that expire,
+ * so a screen left open long enough will eventually hold a dead link.
+ * <p>
+ * The fallback is her initials in the brand palette, not a grey silhouette.
+ * The silhouette read as an absence - a missing person, a broken record -
+ * on screens a partner sees every day before she has got round to taking a
+ * photo. Initials on brand lilac read as somebody whose photo is not here
+ * yet, which is the truth, and they also tell two people apart at a glance
+ * in a list. The old glyph remains for accounts with no name either.
  */
 export function Avatar({ url, name, size = 'md', className }: AvatarProps) {
   const [failed, setFailed] = useState(false);
   const showPhoto = Boolean(url) && !failed;
+  const initials = (name ?? '')
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('');
 
   return (
     <span
       className={[
         SIZES[size],
-        'inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-background',
+        'inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full',
+        showPhoto ? 'bg-background' : 'bg-primary-light',
         className ?? '',
       ].join(' ')}
     >
@@ -58,8 +78,12 @@ export function Avatar({ url, name, size = 'md', className }: AvatarProps) {
           className="h-full w-full object-cover"
           onError={() => setFailed(true)}
         />
+      ) : initials ? (
+        <span className={['font-heading font-semibold text-primary', INITIAL_SIZES[size]].join(' ')} aria-hidden="true">
+          {initials}
+        </span>
       ) : (
-        <User className={[ICON_SIZES[size], 'text-text-secondary'].join(' ')} aria-hidden="true" />
+        <User className={[ICON_SIZES[size], 'text-primary'].join(' ')} aria-hidden="true" />
       )}
     </span>
   );

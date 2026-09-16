@@ -3,9 +3,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { PagedResult } from '../lib/usePagedList';
 import { cn } from '../lib/cn';
 import { Button } from './Button';
-import { Card } from './Card';
-import { IconCircle } from './IconCircle';
+import { ListEmptyState } from './ListEmptyState';
 import { LoadMore } from './LoadMore';
+import { PullToRefresh } from './PullToRefresh';
+import { SkeletonList } from './Skeleton';
 
 export interface InboxItem {
   id: string;
@@ -96,20 +97,24 @@ export function NotificationInbox({ fetchPage, markRead, markAllRead, onOpen, re
   }
 
   if (error && !items) return <p className="text-sm text-danger">{error}</p>;
-  if (!items) return <p className="text-center text-sm text-text-secondary">Loading...</p>;
+  // The shape of the notifications about to arrive, rather than the word
+  // "Loading" - see Skeleton.
+  if (!items) return <SkeletonList rows={4} label="Loading your notifications" />;
 
   if (items.length === 0) {
     return (
-      <Card className="text-center" data-testid="inbox-empty">
-        <IconCircle size="lg" tone="soft" icon={<Bell />} className="mx-auto" />
-        <p className="mt-3 font-heading font-semibold text-text-primary">Nothing yet</p>
-        <p className="mt-1 text-sm text-text-secondary">Updates about your trips and account will appear here.</p>
-      </Card>
+      <ListEmptyState
+        illustrated
+        icon={<Bell />}
+        title="Nothing yet"
+        message="Updates about your trips and account will appear here."
+      />
     );
   }
 
   return (
-    <div className="space-y-3" data-testid="inbox">
+    <PullToRefresh onRefresh={() => load(0)}>
+      <div className="space-y-3" data-testid="inbox">
       {unread > 0 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-text-secondary">{unread} unread</p>
@@ -155,6 +160,7 @@ export function NotificationInbox({ fetchPage, markRead, markAllRead, onOpen, re
           setLoadingMore(false);
         }}
       />
-    </div>
+      </div>
+    </PullToRefresh>
   );
 }

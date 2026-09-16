@@ -1,7 +1,7 @@
 import { BadgeCheck, ShieldCheck, Upload } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Card, IconCircle, StatusBadge, TopHeader } from '@sheout/design-system';
+import { Button, Card, IconCircle, SkeletonCard, StatusBadge, TopHeader } from '@sheout/design-system';
 import { ApiError, verificationApi } from '../api/client';
 import type { VerificationSummary } from '../api/types';
 
@@ -77,7 +77,7 @@ export function Verification() {
       )}
 
       {!status ? (
-        <p className="text-center text-sm text-text-secondary">Loading...</p>
+        <SkeletonCard lines={3} label="Loading your verification" />
       ) : (
         <>
           <Card className="flex items-start gap-3">

@@ -34,7 +34,12 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       <button
         ref={ref}
         className={cn(
-          'inline-flex items-center justify-center rounded-full font-heading font-semibold transition-colors',
+          'inline-flex items-center justify-center rounded-full font-heading font-semibold',
+          // The press. CSS on :active, so the tap handler has already fired
+          // by the time anything moves - this can never delay an action,
+          // only acknowledge one. Three per cent: felt rather than seen.
+          // motion-safe, so somebody who asked for less movement gets none.
+          'transition-[color,background-color,transform] duration-100 motion-safe:active:scale-[0.97]',
           'disabled:opacity-50 disabled:pointer-events-none',
           variantClasses[variant],
           sizeClasses[size],

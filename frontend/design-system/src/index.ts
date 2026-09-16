@@ -8,6 +8,7 @@ export * from './lib/push';
 export * from './lib/profile';
 export * from './lib/photo';
 export * from './lib/errorReporting';
+export * from './lib/motion';
 export * from './legal/content';
 export * from './components';
 export * from './tokens';
