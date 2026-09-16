@@ -273,6 +273,14 @@ services:
       - key: GOOGLE_OAUTH_CLIENT_ID
         sync: false
 
+      # Crash reporting. Blank means the SDK never starts and nothing is
+      # sent - see platform.SentryConfig for what is stripped from an event
+      # before it leaves. The two frontends have their own DSN, set in
+      # Vercel as VITE_SENTRY_DSN (a build-time variable, so changing it
+      # needs a redeploy).
+      - key: SENTRY_DSN
+        sync: false
+
       # Not implemented yet - leave blank until they are.
       - key: RAZORPAY_KEY_ID
         sync: false

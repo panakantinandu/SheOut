@@ -56,5 +56,11 @@ public enum DriverProfileError {
 
     UNDER_MINIMUM_AGE,
 
-    INVALID_EMAIL
+    INVALID_EMAIL,
+
+    /**
+     * The PAN is not a well-formed one. Shape only - see PanNumber for why
+     * that is as far as this goes.
+     */
+    INVALID_PAN
 }

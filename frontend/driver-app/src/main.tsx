@@ -5,7 +5,12 @@ import App from './App'
 import { AuthProvider } from './auth/AuthContext'
 import { LocationBroadcastProvider } from './lib/LocationBroadcastContext'
 import './index.css'
+import { initErrorReporting } from '@sheout/design-system'
 import { registerAppUpdates } from './lib/appUpdates'
+
+// First, so a crash in anything below is still reported. Does nothing at all
+// unless VITE_SENTRY_DSN was set at build time.
+initErrorReporting({ dsn: import.meta.env.VITE_SENTRY_DSN, environment: import.meta.env.MODE })
 
 registerAppUpdates()
 

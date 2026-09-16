@@ -30,5 +30,16 @@ public enum RatingError {
     RATING_WINDOW_CLOSED,
 
     /** Stars outside 1-5, or a comment past the length the column allows. */
-    INVALID_RATING
+    INVALID_RATING,
+
+    /**
+     * A tag that does not belong with this rating: one from the other side of
+     * the trip, or a complaint tag sent with five stars.
+     * <p>
+     * Its own value rather than INVALID_RATING, because it is the one thing
+     * here a person cannot cause by hand - every app only ever offers the
+     * tags that fit - so seeing it means a client is out of step or somebody
+     * is posting by hand, and that is worth being able to tell apart.
+     */
+    INVALID_RATING_TAG
 }

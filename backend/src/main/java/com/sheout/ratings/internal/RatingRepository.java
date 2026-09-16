@@ -1,9 +1,12 @@
 package com.sheout.ratings.internal;
 
+import com.sheout.auth.AccountRole;
+import com.sheout.ratings.RatingTag;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -43,6 +46,37 @@ interface RatingRepository extends JpaRepository<RatingEntity, UUID> {
             group by r.ratedAccountId
             """)
     List<AggregateRow> aggregateFor(@Param("accountIds") Collection<UUID> accountIds);
+
+    /**
+     * How often each tag has been chosen about each account since a given
+     * moment, most-chosen first.
+     * <p>
+     * Filtered on the RATER's role, which is what picks the side being rated:
+     * rows written by customers are about partners. Grouped in the database
+     * rather than counted in Java, because the console asks this across every
+     * account at once and the alternative is reading a month of ratings into
+     * memory to count them.
+     */
+    @Query("""
+            select r.ratedAccountId as accountId,
+                   t as tag,
+                   count(t) as total
+            from RatingEntity r join r.tags t
+            where r.submittedAt >= :since and r.raterRole in :raterRoles
+            group by r.ratedAccountId, t
+            order by count(t) desc
+            """)
+    List<TagCountRow> countTagsSince(@Param("since") Instant since,
+                                     @Param("raterRoles") Collection<AccountRole> raterRoles);
+
+    /** Projection for the tag count query - names must match its aliases. */
+    interface TagCountRow {
+        UUID getAccountId();
+
+        RatingTag getTag();
+
+        long getTotal();
+    }
 
     /** Projection for the aggregate query - names must match its aliases. */
     interface AggregateRow {

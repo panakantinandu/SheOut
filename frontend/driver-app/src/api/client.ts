@@ -15,6 +15,7 @@ import type {
   SupportTicketStatus,
   SupportTicketThreadResponse,
   Rating,
+  RatingTagCatalogue,
   AggregateRating,
   PagedResult,
   DriverOnlineStatus,
@@ -186,6 +187,18 @@ export const usersApi = {
     email?: string;
   }): Promise<DriverProfileSummary> {
     return request('/api/v1/users/driver/me', { method: 'PUT', body: update });
+  },
+
+  /**
+   * Saves her PAN, for deducting TDS on payouts.
+   * <p>
+   * Its own call rather than a field on updateMyProfile: it is collected
+   * with her documents, and a profile save that did not carry it would
+   * otherwise wipe it. An empty string removes it. 400 INVALID_PAN when the
+   * shape is wrong.
+   */
+  updateMyPan(panNumber: string): Promise<DriverProfileSummary> {
+    return request('/api/v1/users/driver/me/pan', { method: 'PUT', body: { panNumber } });
   },
 
   /**
@@ -525,9 +538,25 @@ export const ratingsApi = {
     return request(`/api/v1/ratings/bookings/${bookingId}`);
   },
 
-  /** 409 ALREADY_RATED on a second attempt, 409 RATING_WINDOW_CLOSED once the window has passed. */
-  submit(bookingId: string, stars: number, comment?: string): Promise<Rating> {
-    return request(`/api/v1/ratings/bookings/${bookingId}`, { method: 'POST', body: { stars, comment } });
+  /**
+   * The quick reasons this caller may be offered, by star rating.
+   * <p>
+   * Served rather than built in, so the words tapped here, the words the
+   * other app tapped and the words an operator reads are one list. A failure
+   * here shows no tags and changes nothing else - rating is a tap on a star
+   * and must not depend on this having succeeded.
+   */
+  tags(): Promise<RatingTagCatalogue> {
+    return request('/api/v1/ratings/tags');
+  },
+
+  /**
+   * 409 ALREADY_RATED on a second attempt, 409 RATING_WINDOW_CLOSED once the
+   * window has passed, 400 INVALID_RATING_TAG for a tag that does not go with
+   * these stars - which the dialog prevents by clearing them when the stars change.
+   */
+  submit(bookingId: string, stars: number, comment?: string, tags?: string[]): Promise<Rating> {
+    return request(`/api/v1/ratings/bookings/${bookingId}`, { method: 'POST', body: { stars, comment, tags } });
   },
 
   /** Somebody else's public score. Only the average and the count, never who gave what. */

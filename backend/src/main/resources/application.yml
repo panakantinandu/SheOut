@@ -349,6 +349,27 @@ sheout:
     # be set in a real environment - it is how the operator gets access.
     bootstrap-phone: ${ADMIN_BOOTSTRAP_PHONE:}
 
+# Error reporting. Blank DSN means the SDK starts disabled and sends nothing,
+# which is what every local run and every fork of this repo gets; set
+# SENTRY_DSN on the deployed service to turn it on. Personal data is scrubbed
+# from outgoing events in platform.SentryConfig.
+sentry:
+  dsn: ${SENTRY_DSN:}
+  environment: ${SENTRY_ENVIRONMENT:${SPRING_PROFILES_ACTIVE:local}}
+  # No request headers, cookies, bodies or client IPs on events. This service
+  # holds women's phone numbers and home addresses; an error report is not a
+  # place any of that needs to travel to.
+  send-default-pii: false
+  # Errors only. Performance tracing samples ordinary successful requests,
+  # which is a different product costing a different amount of quota, and the
+  # free tier's transaction budget is spent in a day by a health check.
+  traces-sample-rate: 0.0
+  logging:
+    # WARN and above become breadcrumbs, ERROR becomes an event - so a
+    # handled failure that only ever got logged still surfaces.
+    minimum-breadcrumb-level: warn
+    minimum-event-level: error
+
 management:
   health:
     mail:

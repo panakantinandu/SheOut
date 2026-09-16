@@ -16,6 +16,16 @@ public record DriverProfileSummary(
         String phoneNumber,
         VehicleType vehicleType,
         String vehicleRegistrationNumber,
+        /**
+         * Her PAN, for payout tax compliance, or null if she has not given
+         * one. Optional, and never an identity check.
+         *
+         * Returned to the partner herself and to an operator, and to nobody
+         * else - the rider-facing driver card is built field by field in
+         * dispatch and does not include it. Anything new that hands a
+         * DriverProfileSummary to a customer has to leave this out.
+         */
+        String panNumber,
         OnlineStatus onlineStatus,
         boolean verified,
         /**

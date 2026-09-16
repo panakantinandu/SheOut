@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { RatingDialog } from '@sheout/design-system';
 import { ApiError, ratingsApi } from '../api/client';
-import type { Rating } from '../api/types';
+import type { Rating, RatingTagCatalogue } from '../api/types';
 
 export interface RatingPromptProps {
   /**
@@ -35,6 +35,13 @@ export function RatingPrompt({ bookingId, counterpartLabel = 'your rider', onRat
   const [dismissed, setDismissed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [tagOptions, setTagOptions] = useState<RatingTagCatalogue | null>(null);
+
+  // Fetched once, and its failure is ignored on purpose: no tags is a
+  // smaller loss than a prompt that will not open.
+  useEffect(() => {
+    ratingsApi.tags().then(setTagOptions).catch(() => {});
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -56,12 +63,12 @@ export function RatingPrompt({ bookingId, counterpartLabel = 'your rider', onRat
     void load();
   }, [load]);
 
-  async function submit(stars: number, comment?: string) {
+  async function submit(stars: number, comment?: string, tags?: string[]) {
     if (!slot) return;
     setBusy(true);
     setError(null);
     try {
-      const rating = await ratingsApi.submit(slot.bookingId, stars, comment);
+      const rating = await ratingsApi.submit(slot.bookingId, stars, comment, tags);
       setSlot(null);
       onRated?.(rating);
     } catch (err) {
@@ -82,6 +89,7 @@ export function RatingPrompt({ bookingId, counterpartLabel = 'your rider', onRat
       counterpartLabel={counterpartLabel}
       busy={busy}
       error={error}
+      tagOptions={tagOptions}
       onSubmit={submit}
       onSkip={() => setDismissed(true)}
     />
