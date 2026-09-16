@@ -1,17 +1,22 @@
-import { Bell, Bike, CheckCircle2, ClipboardList, CloudOff, Globe2, IndianRupee, MapPinOff, Navigation2, Power, RefreshCw, ShieldCheck, User } from 'lucide-react';
+import { Bell, Bike, CheckCircle2, ClipboardList, CloudOff, Globe2, IndianRupee, MapPinOff, Navigation2, Power, RefreshCw, ShieldCheck } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   AggregateRatingText,
   AmountText,
+  Avatar,
   BellBadge,
   Button,
   Card,
   IconCircle,
   LiveMap,
   PushPromptCard,
+  SkeletonCard,
+  StatusDot,
   TopHeader,
   bookingStatusLabel,
+  brandIllustration,
+  useCountUp,
   usePushMessages,
   usePushNotifications,
   useUnreadNotifications,
@@ -196,6 +201,11 @@ export function Home() {
     };
   }, [bookings]);
 
+  // The two counts beside the money, counting up with it so the row settles
+  // as one. Rounded, because a ride and a half is not a thing.
+  const ridesShown = Math.round(useCountUp(completedRides, true));
+  const activeTripsShown = Math.round(useCountUp(activeTripsCount, true));
+
   // Offer polling - only while online and with no active trip already in
   // hand. Navigates to the dedicated Offer screen rather than showing an
   // inline card, since a real offer needs to show pickup/drop/fare/
@@ -334,6 +344,29 @@ export function Home() {
         }
       />
 
+      {/* The rider app opens on an illustrated banner and this screen opened
+          on white space above an alert card. Same treatment, her side of it:
+          she is not being sold a safe ride, she is the person providing one,
+          so it greets her by name and says what the day looks like. Same
+          brand illustration the rider app uses - one asset, downloaded once,
+          rather than a second drawing for one banner. */}
+      <Card variant="primary" className="relative overflow-hidden">
+        <div className="relative z-10 max-w-[64%]">
+          <p className="font-heading text-lg font-semibold">
+            {profile?.name ? `Welcome back, ${profile.name.split(' ')[0]}` : 'Welcome back'}
+          </p>
+          <p className="mt-1 text-sm opacity-90">
+            {isOnline ? 'You are online and taking requests' : 'Go online when you are ready to drive'}
+          </p>
+        </div>
+        <img
+          src={brandIllustration}
+          alt=""
+          aria-hidden="true"
+          className="pointer-events-none absolute -bottom-3 -right-3 h-28 w-28 object-contain opacity-95"
+        />
+      </Card>
+
       {push.shouldPrompt && (
         <PushPromptCard audience="partner" busy={push.busy} onTurnOn={push.turnOn} onDismiss={push.dismiss} />
       )}
@@ -372,19 +405,22 @@ export function Home() {
 
       {profileError ? (
         <LoadError title="Could not load your profile" detail={profileError} onRetry={loadProfile} />
+      ) : !profile ? (
+        <SkeletonCard lines={2} label="Loading your profile" />
       ) : (
       <Card className="flex items-center gap-3">
-        <IconCircle size="lg" tone="soft" icon={<User />} />
+        {/* Her own photo, the one riders see. It used to be a generic person
+            glyph even for partners who had uploaded one. */}
+        <Avatar url={profile.profilePhotoUrl} name={profile.name} size="lg" />
         <div className="flex-1">
-          <p className="font-heading font-semibold text-text-primary">{profile?.name || 'Loading your profile...'}</p>
+          <p className="font-heading font-semibold text-text-primary">{profile.name || 'Add your name'}</p>
           <div className="flex items-center gap-2">
             {/* Online/offline dot, as the mockup shows beside the name. Real
-                state from the profile, not decoration. */}
+                state from the profile, not decoration - and it breathes while
+                she is online, which is the one place this screen says "the
+                app is awake and listening" without words. */}
             <span className="flex items-center gap-1.5 text-xs text-text-secondary">
-              <span
-                className={`h-2 w-2 rounded-full ${isOnline ? 'bg-accent-green' : 'bg-text-secondary/40'}`}
-                aria-hidden="true"
-              />
+              <StatusDot live={isOnline} />
               {isOnline ? 'Online' : 'Offline'}
             </span>
             {/* Real, from this partner's own ratings. See the file header. */}
@@ -395,7 +431,7 @@ export function Home() {
                 totalRatings={rating?.totalRatings}
                 emptyLabel="Not rated yet"
               />{' '}
-              &middot; {vehicleLabel(profile?.vehicleType)}
+              &middot; {vehicleLabel(profile.vehicleType)}
             </span>
           </div>
         </div>
@@ -403,27 +439,29 @@ export function Home() {
       )}
 
       {/* One card split by dividers, matching the mockup, rather than three
-          separate cards with gaps between them. */}
+          separate cards with gaps between them.
+          <p>
+          Each figure now sits under a coloured IconCircle, the same pattern
+          the rider app uses for Quick Access - bare monochrome glyphs made
+          three different facts read as one undifferentiated row of numbers.
+          The money counts up when it first lands; the counts beside it do
+          too, so the row settles together rather than one figure moving. */}
       <Card className="flex items-stretch p-0">
-        {/* Icon, then figure, then label - the same order as the two
-            columns beside it. This one used to run label-then-figure with
-            no icon, so its number sat a line lower than its neighbours and
-            the row read as misaligned. */}
-        <div className="flex flex-1 flex-col items-center gap-1 p-3 text-center">
-          <IndianRupee className="h-4 w-4 text-primary" />
-          <AmountText amount={todayEarnings} size="sm" />
+        <div className="flex flex-1 flex-col items-center gap-1.5 p-3 text-center">
+          <IconCircle size="sm" tone="soft" color="primary" icon={<IndianRupee />} />
+          <AmountText amount={todayEarnings} size="sm" animate />
           <p className="text-xs text-text-secondary">Earned Today</p>
         </div>
         <div className="w-px self-stretch bg-border" aria-hidden="true" />
-        <div className="flex flex-1 flex-col items-center gap-1 p-3 text-center">
-          <CheckCircle2 className="h-4 w-4 text-accent-green" />
-          <p className="font-heading text-sm font-semibold text-text-primary">{completedRides}</p>
+        <div className="flex flex-1 flex-col items-center gap-1.5 p-3 text-center">
+          <IconCircle size="sm" tone="soft" color="green" icon={<CheckCircle2 />} />
+          <p className="font-heading text-sm font-semibold tabular-nums text-text-primary">{ridesShown}</p>
           <p className="text-xs text-text-secondary">Rides Today</p>
         </div>
         <div className="w-px self-stretch bg-border" aria-hidden="true" />
-        <div className="flex flex-1 flex-col items-center gap-1 p-3 text-center">
-          <ClipboardList className="h-4 w-4 text-primary" />
-          <p className="font-heading text-sm font-semibold text-text-primary">{activeTripsCount}</p>
+        <div className="flex flex-1 flex-col items-center gap-1.5 p-3 text-center">
+          <IconCircle size="sm" tone="soft" color="orange" icon={<ClipboardList />} />
+          <p className="font-heading text-sm font-semibold tabular-nums text-text-primary">{activeTripsShown}</p>
           <p className="text-xs text-text-secondary">Active Trips</p>
         </div>
       </Card>
@@ -431,7 +469,7 @@ export function Home() {
       {verificationError ? (
         <LoadError title="Could not check your verification" detail={verificationError} onRetry={loadVerification} />
       ) : !verification ? (
-        <p className="text-center text-sm text-text-secondary">Checking your verification...</p>
+        <SkeletonCard lines={2} label="Checking your verification" />
       ) : !isVerified ? (
         <Card tone="warning" className="flex items-center gap-3">
           <IconCircle color="orange" tone="soft" icon={<ShieldCheck />} />

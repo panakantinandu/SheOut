@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, ProfileCompletionForm, TopHeader } from '@sheout/design-system';
+import { Card, ProfileCompletionForm, SkeletonCard, TopHeader } from '@sheout/design-system';
 import { ApiError, usersApi } from '../api/client';
 import type { CustomerProfileSummary } from '../api/types';
 
@@ -35,7 +35,7 @@ export function PersonalDetails() {
       {saved && <p className="text-sm text-success">Saved.</p>}
 
       {!profile ? (
-        !error && <p className="text-center text-sm text-text-secondary">Loading...</p>
+        !error && <SkeletonCard lines={3} label="Loading your details" />
       ) : (
         <Card className="space-y-4">
           <ProfileCompletionForm

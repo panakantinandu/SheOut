@@ -2,12 +2,13 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Card,
+  SkeletonCard,
   StatusBadge,
-  SupportTicketThread,
-  TopHeader,
   supportCategoryLabel,
   supportStatusLabel,
   supportStatusTone,
+  SupportTicketThread,
+  TopHeader,
 } from '@sheout/design-system';
 import { ApiError, supportApi } from '../api/client';
 import type { SupportTicketThreadResponse } from '../api/types';
@@ -63,7 +64,7 @@ export function SupportTicket() {
     <div className="space-y-4">
       <TopHeader variant="back" title="Your ticket" onBack={() => navigate('/help')} />
       {loadError && <p className="text-sm text-danger">{loadError}</p>}
-      {!thread && !loadError && <p className="text-center text-sm text-text-secondary">Loading...</p>}
+      {!thread && !loadError && <SkeletonCard lines={3} label="Loading this ticket" />}
       {ticket && thread && (
         <>
           <Card className="space-y-1">

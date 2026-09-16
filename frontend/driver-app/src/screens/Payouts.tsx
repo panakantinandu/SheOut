@@ -6,6 +6,7 @@ import {
   Card,
   ConfirmDialog,
   IconCircle,
+  SkeletonCard,
   StatusBadge,
   TextField,
   TopHeader,
@@ -185,7 +186,7 @@ export function Payouts() {
       <TopHeader variant="back" title="Payouts" onBack={() => navigate(-1)} />
 
       {loadError && <p className="text-sm text-danger">{loadError}</p>}
-      {!overview && !loadError && <p className="text-center text-sm text-text-secondary">Loading...</p>}
+      {!overview && !loadError && <SkeletonCard lines={4} label="Loading your payouts" />}
 
       {wallet && (
         <>
@@ -383,7 +384,9 @@ export function Payouts() {
           <div>
             <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">Payout history</h2>
             {overview.requests.length === 0 ? (
-              <p className="text-center text-sm text-text-secondary">No payouts requested yet.</p>
+              <p className="text-center text-sm text-text-secondary">
+                No payouts requested yet. When you ask for one, it appears here with its reference.
+              </p>
             ) : (
               <Card className="divide-y divide-border p-0" data-testid="payout-history">
                 {overview.requests.map((r) => (

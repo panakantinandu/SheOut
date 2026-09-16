@@ -13,7 +13,9 @@ import {
   LiveMap,
   OpenInMapsButton,
   PickupCodeCard,
+  SkeletonCard,
   StatusBadge,
+  SuccessCheck,
   TopHeader,
   bookingStatusLabel,
   vehicleLabel,
@@ -491,7 +493,7 @@ export function Tracking() {
       {error && <p className="text-sm text-danger">{error}</p>}
 
       {!booking ? (
-        <p className="text-center text-sm text-text-secondary">Loading...</p>
+        <SkeletonCard lines={4} label="Loading your trip" />
       ) : searchFailed ? (
         /* The search is over and found nobody. Two ways forward and no
            spinner - which is the entire point of the status existing. */

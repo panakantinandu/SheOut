@@ -1,7 +1,7 @@
-import { Clock, Navigation } from 'lucide-react';
+import { Navigation } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { AmountText, Button, Card, LiveMap, TopHeader } from '@sheout/design-system';
+import { AmountText, Button, Card, CountdownRing, LiveMap, SkeletonCard, TopHeader } from '@sheout/design-system';
 import type { MapMarker } from '@sheout/design-system';
 import { ApiError, bookingApi, dispatchApi } from '../api/client';
 import type { OfferSummary } from '../api/types';
@@ -143,17 +143,25 @@ export function Offer() {
     <div className="space-y-6">
       <TopHeader variant="back" title="New Request" onBack={() => navigate('/home')} />
 
-      {!offer && !error && !unavailable && <p className="text-center text-sm text-text-secondary">Loading...</p>}
+      {!offer && !error && !unavailable && <SkeletonCard lines={3} label="Loading this request" />}
       {error && <p className="text-sm text-danger">{error}</p>}
 
       {offer && !unavailable && (
         <>
           {markers.length > 0 && <LiveMap markers={markers} className="h-52" />}
 
+          {/* The clock, as a ring that empties. This is the tensest moment
+              in the whole app - a fare, two place names, fifteen seconds -
+              and a number ticking down has to be read and subtracted from.
+              A ring is answered at a glance, which is all the attention
+              there is to spare here. The fare is NOT animated: a price that
+              moves while she decides is a price she cannot trust. */}
           <Card tone="brand" className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-primary">
-              <Clock className="h-4 w-4" />
-              <span className="text-sm font-semibold">Respond within {secondsLeft}s</span>
+            <div className="flex items-center gap-3 text-primary">
+              <CountdownRing secondsLeft={secondsLeft} totalSeconds={OFFER_WINDOW_SECONDS} />
+              <span className="text-sm font-semibold">
+                {secondsLeft > 0 ? 'Seconds to respond' : 'Time is up'}
+              </span>
             </div>
             {offer.fareEstimate != null && <AmountText amount={offer.fareEstimate} size="lg" />}
           </Card>

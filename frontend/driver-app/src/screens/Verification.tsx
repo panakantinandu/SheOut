@@ -1,7 +1,7 @@
 import { CheckCircle2, Clock, FileWarning, ShieldCheck, Check, Upload } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Card, IconCircle, StatusBadge, TextField, TopHeader, verificationStatusLabel } from '@sheout/design-system';
+import { Button, Card, IconCircle, SkeletonCard, StatusBadge, TextField, TopHeader, verificationStatusLabel } from '@sheout/design-system';
 import type { StatusTone } from '@sheout/design-system';
 import { ApiError, usersApi, verificationApi } from '../api/client';
 import type { DriverProfileSummary, VerificationStatus, VerificationSummary } from '../api/types';
@@ -152,7 +152,7 @@ export function Verification() {
       <TopHeader variant="back" title="Verification" onBack={() => navigate('/home')} />
 
       {error && <p className="text-sm text-danger">{error}</p>}
-      {!summary && !error && <p className="text-center text-sm text-text-secondary">Loading...</p>}
+      {!summary && !error && <SkeletonCard lines={3} label="Loading your verification" />}
 
       {summary && (
         <>

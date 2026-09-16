@@ -7,6 +7,8 @@ import {
   DateRangeFields,
   IconCircle,
   ListEmptyState,
+  PullToRefresh,
+  SkeletonList,
   ListFilterBar,
   LoadMore,
   SelectField,
@@ -117,7 +119,7 @@ export function Bookings() {
   }
 
   return (
-    <div className="space-y-6">
+    <PullToRefresh onRefresh={list.reload} disabled={list.loading} className="space-y-6">
       <TopHeader variant="back" title="My Bookings" onBack={() => navigate('/home')} />
 
       <div className="flex gap-2 overflow-x-auto">
@@ -152,7 +154,7 @@ export function Bookings() {
       </ListFilterBar>
 
       {list.error && <p className="text-sm text-danger">{list.error}</p>}
-      {list.loading && <p className="text-center text-sm text-text-secondary">Loading...</p>}
+      {list.loading && <SkeletonList rows={4} label="Loading your trips" />}
 
       {!list.loading && list.items.length === 0 && !list.error && (
         isNarrowed ? (
@@ -171,6 +173,7 @@ export function Bookings() {
           />
         ) : (
           <ListEmptyState
+            illustrated
             icon={<CalendarX />}
             title="No trips yet"
             message="Go online and the trips you complete will appear here."
@@ -264,6 +267,6 @@ export function Bookings() {
           }}
         />
       )}
-    </div>
+    </PullToRefresh>
   );
 }

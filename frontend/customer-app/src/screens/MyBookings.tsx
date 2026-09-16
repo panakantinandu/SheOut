@@ -9,6 +9,8 @@ import {
   IconCircle,
   ListEmptyState,
   ListFilterBar,
+  PullToRefresh,
+  SkeletonList,
   LoadMore,
   SelectField,
   StatusBadge,
@@ -200,7 +202,10 @@ export function MyBookings() {
   }
 
   return (
-    <div className="space-y-6">
+    // Pull down at the top to reload. These rows change while she is looking
+    // at them - a trip completes, a partner accepts - and the alternative was
+    // leaving and coming back.
+    <PullToRefresh onRefresh={list.reload} disabled={list.loading} className="space-y-6">
       <TopHeader variant="back" title={copy.title} onBack={() => navigate('/home')} />
 
       {view !== 'all' && (
@@ -252,7 +257,7 @@ export function MyBookings() {
       </ListFilterBar>
 
       {list.error && <p className="text-sm text-danger">{list.error}</p>}
-      {list.loading && <p className="text-center text-sm text-text-secondary">Loading...</p>}
+      {list.loading && <SkeletonList rows={4} label="Loading your trips" />}
 
       {!list.loading && list.items.length === 0 && !list.error && (
         // The two empty states mean different things and deliberately do not
@@ -276,6 +281,7 @@ export function MyBookings() {
           />
         ) : (
           <ListEmptyState
+            illustrated
             icon={view === 'live' ? <MapPinned /> : <CalendarX />}
             title={copy.emptyTitle}
             message={copy.emptyMessage}
@@ -359,6 +365,6 @@ export function MyBookings() {
           }}
         />
       )}
-    </div>
+    </PullToRefresh>
   );
 }

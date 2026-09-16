@@ -1,4 +1,5 @@
 import { cn } from '../lib/cn';
+import { useCountUp } from '../lib/motion';
 
 export type AmountSign = 'positive' | 'negative' | 'neutral';
 export type AmountSize = 'sm' | 'md' | 'lg';
@@ -27,6 +28,19 @@ export interface AmountTextProps {
    * ₹190 while Razorpay Checkout, beside it, charged ₹189.67.
    */
   exact?: boolean;
+  /**
+   * Count up from zero to the figure when it first arrives, over half a second.
+   * <p>
+   * For money somebody has earned or holds - a day's earnings, a wallet
+   * balance, a payout total - where the movement says the figure was counted
+   * up for her. NOT for a fare quote: a price that animates while she is
+   * deciding whether to accept it is a price she cannot read, and on a screen
+   * about money that reads as sleight of hand.
+   * <p>
+   * Only the first real value animates; later changes appear at once, and
+   * reduced motion skips it entirely. See useCountUp.
+   */
+  animate?: boolean;
   className?: string;
 }
 
@@ -52,7 +66,8 @@ const formatter = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 });
 const exactFormatter = new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 /** Formatted ₹ amount - e.g. "+ ₹1,250" (wallet credit) or "- ₹56" (debit). */
-export function AmountText({ amount, sign = 'neutral', size = 'md', tone = 'default', exact = false, className }: AmountTextProps) {
+export function AmountText({ amount, sign = 'neutral', size = 'md', tone = 'default', exact = false, animate = false, className }: AmountTextProps) {
+  const shown = useCountUp(amount, animate);
   return (
     <span
       className={cn(
@@ -62,7 +77,7 @@ export function AmountText({ amount, sign = 'neutral', size = 'md', tone = 'defa
         className
       )}
     >
-      {prefix[sign]} ₹{(exact ? exactFormatter : formatter).format(Math.abs(amount))}
+      {prefix[sign]} ₹{(exact ? exactFormatter : formatter).format(Math.abs(shown))}
     </span>
   );
 }

@@ -12,7 +12,9 @@ import {
   OpenInMapsButton,
   PICKUP_CODE_LENGTH,
   PickupCodeField,
+  SkeletonCard,
   StatusBadge,
+  SuccessCheck,
   TopHeader,
   bookingStatusLabel,
 } from '@sheout/design-system';
@@ -304,7 +306,7 @@ export function Trip() {
       </div>
 
       {error && <p className="text-sm text-danger">{error}</p>}
-      {!booking && !error && <p className="text-center text-sm text-text-secondary">Loading...</p>}
+      {!booking && !error && <SkeletonCard lines={4} label="Loading this trip" />}
 
       {booking && (
         <>
@@ -416,6 +418,18 @@ export function Trip() {
           </Card>
 
           <div className="space-y-3">
+            {/* The trip is over. A checkmark drawing itself, once, in half a
+                second - not confetti: she has finished a piece of work, and
+                the same screen shows after a trip that went badly. */}
+            {booking.status === 'COMPLETED' && (
+              <Card className="flex flex-col items-center gap-2 py-6 text-center">
+                <SuccessCheck size={64} label="Trip completed" />
+                <p className="font-heading font-semibold text-text-primary">Trip completed</p>
+                <p className="text-sm text-text-secondary">
+                  Your earnings from this trip are in your wallet.
+                </p>
+              </Card>
+            )}
             {booking.status === 'COMPLETED' && (
               <Button fullWidth variant="secondary" onClick={() => navigate('/home', { replace: true })}>
                 Done

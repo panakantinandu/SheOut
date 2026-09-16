@@ -49,6 +49,48 @@ export default {
       spacing: {
         screen: spacing.screen,
       },
+
+      /*
+       * The app's whole motion vocabulary, in one place, as CSS. No
+       * animation library: every effect here is a handful of keyframes, and
+       * a partner on a slow connection should not download a library to get
+       * them. Each one is disabled wholesale by the prefers-reduced-motion
+       * block in both apps' index.css.
+       */
+      keyframes: {
+        // A loading placeholder, lit by a band of light travelling across it.
+        shimmer: {
+          '0%': { backgroundPosition: '-150% 0' },
+          '100%': { backgroundPosition: '150% 0' },
+        },
+        // A ring expanding out of a dot and fading: "live", not "urgent".
+        'pulse-ring': {
+          '0%': { transform: 'scale(1)', opacity: '0.55' },
+          '70%': { transform: 'scale(2.6)', opacity: '0' },
+          '100%': { transform: 'scale(2.6)', opacity: '0' },
+        },
+        // What a screen does when it arrives. Deliberately small: six pixels.
+        'fade-slide-in': {
+          from: { opacity: '0', transform: 'translateY(6px)' },
+          to: { opacity: '1', transform: 'none' },
+        },
+        // A checkmark drawing itself, by retracting the dash that hides it.
+        'draw-check': {
+          from: { strokeDashoffset: '48' },
+          to: { strokeDashoffset: '0' },
+        },
+        'pop-in': {
+          from: { transform: 'scale(0.86)', opacity: '0' },
+          to: { transform: 'scale(1)', opacity: '1' },
+        },
+      },
+      animation: {
+        shimmer: 'shimmer 1.6s linear infinite',
+        'pulse-ring': 'pulse-ring 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'fade-slide-in': 'fade-slide-in 200ms ease-out both',
+        'draw-check': 'draw-check 420ms ease-out 120ms both',
+        'pop-in': 'pop-in 220ms ease-out both',
+      },
     },
   },
 };
