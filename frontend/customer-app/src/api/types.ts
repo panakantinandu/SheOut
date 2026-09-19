@@ -394,6 +394,12 @@ export interface SearchConfig {
   searchTimeoutSeconds: number;
 }
 
+/** See dispatchApi.nearbyDrivers. Positions only - no ids, names or ratings. */
+export interface NearbyDrivers {
+  drivers: { lat: number; lng: number }[];
+  radiusKm: number;
+}
+
 /** The vehicle a partner drives. Mirrors the backend enum. */
 export type VehicleType = 'BIKE' | 'AUTO' | 'CAB';
 

@@ -3,6 +3,7 @@ import type {
   ApiErrorResponse,
   AuthSession,
   BookingCategory,
+  NearbyDrivers,
   BookingStatus,
   BookingSummary,
   BookingType,
@@ -340,6 +341,15 @@ export const paymentsApi = {
 };
 
 export const dispatchApi = {
+  /**
+   * Approximate points for partners who could take this kind of ride now,
+   * within a few km - the booking screens' "partners near you". Blurred by
+   * the server by 50-100 m and carrying nothing that identifies anyone.
+   */
+  nearbyDrivers(lat: number, lng: number, category: BookingCategory): Promise<NearbyDrivers> {
+    return request(`/api/v1/dispatch/nearby-drivers${buildQuery({ lat, lng, category })}`);
+  },
+
   /**
    * 404s while no driver is assigned or none has reported a position yet -
    * both normal states the tracking screen polls through, not errors.

@@ -276,5 +276,9 @@
     "noCode": "Didn’t get it?",
     "reused": "We’ve already sent a code to {{phone}}. Enter it below.",
     "resent": "New code sent to {{phone}}."
+  },
+  "map": {
+    "recentre": "Recentre map",
+    "unavailable": "The map can’t load right now. Everything you need is still on this screen."
   }
 }

@@ -567,7 +567,7 @@ export function Home() {
       {isOnline && location.position && (
         <div className="space-y-1">
           <LiveMap
-            markers={[{ key: 'me', lat: location.position.lat, lng: location.position.lng, label: t('home.you'), kind: 'driver' }]}
+            markers={[{ key: 'me', lat: location.position.lat, lng: location.position.lng, label: t('home.you'), kind: 'driver', heading: location.position.heading }]}
             className="h-52"
           />
           <p className="text-xs text-text-secondary">{t('home.positionNote')}</p>

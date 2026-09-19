@@ -1,4 +1,4 @@
-import { MapPin } from 'lucide-react';
+import { MapPin, Bike } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button, Card, IconCircle, TextField, LiveMap, TopHeader } from '@sheout/design-system';
@@ -13,6 +13,7 @@ import { ServiceAreaNotice } from '../components/ServiceAreaNotice';
 import { currentPosition, describePoint, isInServiceArea } from '../lib/geocode';
 import { apiErrorText } from '../lib/apiErrors';
 import { useFareQuote } from '../lib/useFareQuote';
+import { useNearbyDrivers } from '../lib/useNearbyDrivers';
 import type { BookingCategory, GeoAddress } from '../api/types';
 import { useTranslation } from '@sheout/design-system';
 
@@ -134,7 +135,10 @@ export function DeliveryBooking() {
   // regardless of what the eventual booking call would say.
   const servableTrip = isInServiceArea(pickup) && isInServiceArea(drop);
 
-  const markers: MapMarker[] = [];
+  // Partners who could take this right now, at approximate positions -
+  // "yes, there really are people near you" before she commits to booking.
+  const nearby = useNearbyDrivers(pickup, config.category, t('booking.nearbyPartner'));
+  const markers: MapMarker[] = [...nearby];
   if (pickup) markers.push({ key: 'pickup', lat: pickup.lat, lng: pickup.lng, label: t('booking.pickup'), kind: 'pickup' });
   if (drop) markers.push({ key: 'drop', lat: drop.lat, lng: drop.lng, label: t('booking.drop'), kind: 'drop' });
 
@@ -153,6 +157,12 @@ export function DeliveryBooking() {
         <p className="text-xs text-text-secondary">
           {drop ? t('booking.mapBoth') : t('booking.mapPickDrop')}
         </p>
+        {nearby.length > 0 && (
+          <p className="flex items-center gap-1.5 text-xs font-medium text-primary" data-testid="nearby-count">
+            <Bike className="h-3.5 w-3.5" aria-hidden="true" />
+            {t('booking.nearbyCount', { count: nearby.length })}
+          </p>
+        )}
       </div>
 
       <Card className="divide-y divide-border p-0">

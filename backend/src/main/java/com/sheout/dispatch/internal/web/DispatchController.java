@@ -16,6 +16,11 @@ import com.sheout.ratings.AggregateRating;
 import com.sheout.ratings.RatingsApi;
 import com.sheout.sharedkernel.Result;
 import com.sheout.sharedkernel.web.ApiException;
+import com.sheout.sharedkernel.ratelimit.RateLimiter;
+import com.sheout.dispatch.internal.ApproximatePosition;
+import org.springframework.web.bind.annotation.RequestParam;
+import java.time.Duration;
+import java.util.List;
 import com.sheout.users.CustomerProfileApi;
 import com.sheout.users.DriverProfileApi;
 import com.sheout.users.VehicleType;
@@ -68,10 +73,12 @@ public class DispatchController {
     private final DriverProfileApi driverProfileApi;
     private final RatingsApi ratingsApi;
     private final CustomerProfileApi customerProfileApi;
+    private final RateLimiter rateLimiter;
 
     public DispatchController(DispatchService dispatchService, BookingApi bookingApi,
                               DriverProfileApi driverProfileApi, RatingsApi ratingsApi,
-                              CustomerProfileApi customerProfileApi) {
+                              CustomerProfileApi customerProfileApi, RateLimiter rateLimiter) {
+        this.rateLimiter = rateLimiter;
         this.customerProfileApi = customerProfileApi;
         this.dispatchService = dispatchService;
         this.bookingApi = bookingApi;
@@ -96,6 +103,37 @@ public class DispatchController {
     @GetMapping("/api/v1/dispatch/search-config")
     public ResponseEntity<SearchConfigResponse> searchConfig() {
         return ResponseEntity.ok(new SearchConfigResponse(dispatchService.searchTimeoutSeconds()));
+    }
+
+    /**
+     * "Partners near you" on the booking screens: approximate points for
+     * partners who could take this kind of ride right now, and nothing else.
+     * <p>
+     * Riders only, and signed in - it is a trust signal on the booking
+     * screen, not a map of where SheOut's partners are for anybody who asks.
+     * Other roles are refused outright (a role gate, so 403, as for the
+     * partner-only endpoints below). Limited per account to a little more than
+     * the screen's own polling needs, which also bounds how much of it one
+     * account can collect. See DispatchService.previewNearby for which
+     * partners appear and NearbyDriverPreview for how their positions are
+     * blurred.
+     */
+    @GetMapping("/api/v1/dispatch/nearby-drivers")
+    public ResponseEntity<NearbyDriversResponse> nearbyDrivers(
+            @RequestParam double lat,
+            @RequestParam double lng,
+            @RequestParam(defaultValue = "BIKE") BookingCategory category) {
+        CurrentAccount caller = requireCustomer();
+        rateLimiter.tryConsume("nearby-drivers:" + caller.accountId(), 20, Duration.ofMinutes(1))
+                .orThrow("Too many requests. Please wait a moment.");
+        if (Math.abs(lat) > 90 || Math.abs(lng) > 180) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Bad Request", "lat/lng out of range");
+        }
+        return ResponseEntity.ok(new NearbyDriversResponse(
+                dispatchService.previewNearby(lat, lng, category), DispatchService.PREVIEW_RADIUS_KM));
+    }
+
+    public record NearbyDriversResponse(List<ApproximatePosition> drivers, double radiusKm) {
     }
 
     @PostMapping("/api/v1/dispatch/location")
@@ -145,6 +183,15 @@ public class DispatchController {
         CurrentAccount caller = requireDriver();
         dispatchService.declineOffer(bookingId, caller.accountId());
         return ResponseEntity.ok().build();
+    }
+
+    private CurrentAccount requireCustomer() {
+        CurrentAccount caller = CurrentAccountContext.get()
+                .orElseThrow(() -> ApiException.unauthorized("Authentication required"));
+        if (caller.role() != AccountRole.CUSTOMER) {
+            throw ApiException.forbidden("Customer role required");
+        }
+        return caller;
     }
 
     private CurrentAccount requireDriver() {
