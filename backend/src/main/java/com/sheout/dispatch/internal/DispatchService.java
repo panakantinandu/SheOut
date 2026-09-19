@@ -69,9 +69,11 @@ public class DispatchService {
     private final int maxRetries;
     private final long searchTimeoutSeconds;
     private final double arrivingRadiusMetres;
+    private final NearbyDriverPreview nearbyPreview;
 
     public DispatchService(
             DriverLocationStore locationStore,
+            NearbyDriverPreview nearbyPreview,
             OfferStore offerStore,
             MatchingStrategy matchingStrategy,
             DriverProfileApi driverProfileApi,
@@ -94,6 +96,7 @@ public class DispatchService {
             @Value("${sheout.dispatch.arriving-radius-metres:300}") double arrivingRadiusMetres
     ) {
         this.locationStore = locationStore;
+        this.nearbyPreview = nearbyPreview;
         this.offerStore = offerStore;
         this.matchingStrategy = matchingStrategy;
         this.driverProfileApi = driverProfileApi;
@@ -152,6 +155,39 @@ public class DispatchService {
                     .filter(approach -> approach.bookingId().equals(event.bookingId()))
                     .ifPresent(approach -> approachStore.finish(event.driverId()));
         }
+    }
+
+    /** How far the "partners near you" preview looks, and how many it shows at most. */
+    public static final double PREVIEW_RADIUS_KM = 3.0;
+    static final int PREVIEW_MAX_SHOWN = 8;
+    /** Partners share every few seconds while online; a position older than this is not "here now". */
+    private static final Duration PREVIEW_FRESH_FOR = Duration.ofMinutes(2);
+
+    /**
+     * Partners who could take this ride right now, near this point, at
+     * blurred positions - the riders' pre-booking "partners near you".
+     * <p>
+     * Same geo search and the same availability gate matching uses, so the
+     * preview never shows somebody who could not actually be offered the trip:
+     * online, verified, not blocked, not mid-trip, not held for an unpaid fare,
+     * with the right vehicle. What comes back is a set of approximate points
+     * and nothing else - see NearbyDriverPreview for how, and why the blur is
+     * stable. Shuffled, so the order does not say which is closest.
+     */
+    public List<ApproximatePosition> previewNearby(double lat, double lng, BookingCategory category) {
+        Instant freshSince = Instant.now().minus(PREVIEW_FRESH_FOR);
+        List<ApproximatePosition> shown = new java.util.ArrayList<>(locationStore
+                .findNearby(lat, lng, PREVIEW_RADIUS_KM, PREVIEW_MAX_SHOWN * 2)
+                .stream()
+                .filter(candidate -> isEligible(candidate.driverId(), category))
+                .flatMap(candidate -> locationStore.findLocation(candidate.driverId())
+                        .filter(location -> location.recordedAt().isAfter(freshSince))
+                        .map(location -> nearbyPreview.blur(candidate.driverId(), location.lat(), location.lng()))
+                        .stream())
+                .limit(PREVIEW_MAX_SHOWN)
+                .toList());
+        java.util.Collections.shuffle(shown);
+        return shown;
     }
 
     /** Last reported position for a driver, or empty if they have never reported one. */
@@ -389,6 +425,12 @@ public class DispatchService {
         // the road. Checked here, the one availability gate, so it covers
         // both new offers and accepting one already on her screen.
         if (bookingApi.findPaymentHoldForDriver(driverId).isPresent()) {
+            return false;
+        }
+        // Already on a trip. Nothing checked this: a partner with a rider
+        // aboard stayed in the geo set and could be offered, and could
+        // accept, a second trip mid-ride.
+        if (bookingApi.hasActiveTripAsDriver(driverId)) {
             return false;
         }
         return driverProfileApi.isCurrentlyVerified(driverId);

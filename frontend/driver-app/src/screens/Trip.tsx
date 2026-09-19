@@ -347,7 +347,7 @@ export function Trip() {
     }
   }
   if (myPosition && !finished) {
-    markers.push({ key: 'me', lat: myPosition.lat, lng: myPosition.lng, label: t('home.you'), kind: 'driver' });
+    markers.push({ key: 'me', lat: myPosition.lat, lng: myPosition.lng, label: t('home.you'), kind: 'driver', heading: myPosition.heading });
   }
 
   const destination = booking ? (phase === 'PICKUP' ? booking.pickup : booking.drop) : null;

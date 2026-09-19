@@ -114,4 +114,10 @@ public interface BookingApi {
      * offers, if any - one that ended within the hold window. See PaymentHold.
      */
     Optional<PaymentHold> findPaymentHoldForDriver(UUID driverId);
+
+    /**
+     * Whether the partner is on a trip right now - assigned, on her way, or
+     * with a rider aboard. She is not available for another until it ends.
+     */
+    boolean hasActiveTripAsDriver(UUID driverId);
 }

@@ -11,7 +11,12 @@ export const LOCATION_SEND_MS = 7000;
 export type LocationStatus = 'idle' | 'locating' | 'sharing' | 'blocked';
 
 export interface LocationBroadcast {
-  position: { lat: number; lng: number } | null;
+  /**
+   * heading: the device's direction of travel, degrees from north, when it
+   * reports one - only while actually moving; null when stopped or unknown.
+   * It turns her own bike marker and is never sent anywhere.
+   */
+  position: { lat: number; lng: number; heading?: number | null } | null;
   status: LocationStatus;
   /** Why sharing failed, in words a driver can act on. Null unless blocked. */
   error: string | null;
@@ -62,7 +67,7 @@ function describe(err: GeolocationPositionError): string {
  * the watch.
  */
 export function LocationBroadcastProvider({ children }: { children: ReactNode }) {
-  const [position, setPosition] = useState<{ lat: number; lng: number } | null>(null);
+  const [position, setPosition] = useState<LocationBroadcast['position']>(null);
   const [status, setStatus] = useState<LocationStatus>('idle');
   const [error, setError] = useState<string | null>(null);
   const [holders, setHolders] = useState(0);
@@ -104,7 +109,11 @@ export function LocationBroadcastProvider({ children }: { children: ReactNode })
     let watchId: number | null = navigator.geolocation.watchPosition(
       (pos) => {
         latest.current = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        setPosition(latest.current);
+        // A heading from a device standing still is noise, so it only counts
+        // above walking pace.
+        const { heading, speed } = pos.coords;
+        const moving = heading != null && Number.isFinite(heading) && (speed == null || speed > 1);
+        setPosition({ ...latest.current, heading: moving ? heading : null });
         setStatus('sharing');
         setError(null);
       },

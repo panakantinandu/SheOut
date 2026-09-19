@@ -307,7 +307,10 @@
     "currentLocation": "Your Current Location",
     "createError": "Could not create your booking. Please check your connection and try again.",
     "booking": "Booking...",
-    "bookNow": "Book Now"
+    "bookNow": "Book Now",
+    "nearbyPartner": "Partner nearby",
+    "nearbyCount_one": "{{count}} partner near your pickup",
+    "nearbyCount_other": "{{count}} partners near your pickup"
   },
   "apiError": {
     "UNPAID_TRIP": "Your last trip is still unpaid. Pay for it from your wallet or online, then book again.",

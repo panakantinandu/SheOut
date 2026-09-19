@@ -10,7 +10,7 @@ declare module '*.png' {
 }
 
 /**
- * The map tile settings, read from whichever app is bundling this package.
+ * The map settings, read from whichever app is bundling this package.
  * <p>
  * Declared here rather than pulled in via `vite/client` types: this package
  * is consumed as source by both apps and has no Vite config of its own, so
@@ -19,8 +19,10 @@ declare module '*.png' {
  * they are for and what to set them to.
  */
 interface ImportMetaEnv {
-  readonly VITE_MAP_TILE_URL?: string;
-  readonly VITE_MAP_TILE_ATTRIBUTION?: string;
+  /** Google Maps JavaScript API key, restricted to the apps' own sites. */
+  readonly VITE_GOOGLE_MAPS_API_KEY?: string;
+  /** Optional Cloud Console map style; replaces the built-in JSON style. */
+  readonly VITE_GOOGLE_MAPS_MAP_ID?: string;
 }
 
 interface ImportMeta {

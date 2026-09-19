@@ -44,6 +44,10 @@ import java.util.UUID;
 @Service
 public class BookingService implements BookingApi {
 
+    /** A partner on any of these is busy - see hasActiveTripAsDriver. */
+    private static final java.util.Set<BookingStatus> ACTIVE_TRIP_STATUSES = java.util.EnumSet.of(
+            BookingStatus.MATCHED, BookingStatus.ACCEPTED, BookingStatus.IN_PROGRESS);
+
     private final BookingRepository bookingRepository;
     private final VerificationApi verificationApi;
     private final FareCalculator fareCalculator;
@@ -571,6 +575,10 @@ public class BookingService implements BookingApi {
     }
 
     @Override
+    public boolean hasActiveTripAsDriver(UUID driverId) {
+        return bookingRepository.existsByDriverIdAndStatusIn(driverId, ACTIVE_TRIP_STATUSES);
+    }
+
     public Optional<PaymentHold> findPaymentHoldForDriver(UUID driverId) {
         Instant cutoff = Instant.now().minus(partnerPaymentHold);
         return bookingRepository
