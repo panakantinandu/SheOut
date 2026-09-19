@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { BrandHeader, Button, LANGUAGES, LanguagePicker, LegalConsentNotice, PhoneField, TextField, Trans, isCompletePhone, setAppLanguage, toE164, useAppLanguage } from '@sheout/design-system';
+import { BrandHeader, Button, LANGUAGES, LanguagePicker, LegalConsentNotice, PhoneField, TextField, Trans, isCompletePhone, setAppLanguage, toE164, useAppLanguage, ResendCode, useOtpSender } from '@sheout/design-system';
 import { Languages } from 'lucide-react';
 import { ApiError, authApi, usersApi } from '../api/client';
 import type { AuthSession } from '../api/types';
@@ -108,6 +108,9 @@ export function Login() {
   const [notice, setNotice] = useState<string | null>((location.state as { notice?: string } | null)?.notice ?? null);
 
   const phoneNumber = toE164(phoneDigits);
+  // Remembers the code it sent, and counts down to when another may be
+  // asked for - see useOtpSender for the "please wait" this replaces.
+  const otp = useOtpSender((phone) => authApi.requestOtp(phone));
 
   /**
    * Shared by both sign-in methods - see the file header comment.
@@ -141,7 +144,13 @@ export function Login() {
       // Profile fetch failed - fall back to the session's own signal rather than stranding the user here.
     }
     if (needsProfile) {
-      navigate('/complete-profile', { replace: true });
+      // Said on the screen she lands on - set here and navigated away from,
+      // the notice was never seen. A number from the other app becomes a new
+      // account in this one, and this is where she learns that.
+      navigate('/complete-profile', {
+        replace: true,
+        state: session.newAccount ? { notice: t('login.createdForYou') } : undefined,
+      });
     } else {
       // Long enough to read the notice before the screen changes; skipped
       // entirely when there is nothing to say.
@@ -160,8 +169,25 @@ export function Login() {
     }
     setSubmitting(true);
     try {
-      await authApi.requestOtp(phoneNumber);
+      const outcome = await otp.sendCode(phoneNumber);
+      if (outcome === 'reused') setNotice(t('otp.reused', { ns: 'ds', phone: phoneNumber }));
+      setCode('');
       setStep('otp');
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t('login.sendError'));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleResend() {
+    setError(null);
+    setNotice(null);
+    setSubmitting(true);
+    try {
+      const outcome = await otp.sendCode(phoneNumber, { resend: true });
+      setNotice(t(outcome === 'sent' ? 'otp.resent' : 'otp.reused', { ns: 'ds', phone: phoneNumber }));
+      setCode('');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t('login.sendError'));
     } finally {
@@ -291,9 +317,10 @@ export function Login() {
                     after verification, not by the tab the user picked. */}
                 {submitting ? t('login.verifying') : t('login.verify')}
               </Button>
+              <ResendCode secondsUntilResend={otp.secondsUntilResend} busy={submitting} onResend={handleResend} />
               <button
                 type="button"
-                onClick={() => setStep('phone')}
+                onClick={() => { setStep('phone'); setError(null); setNotice(null); }}
                 className="w-full text-center text-sm text-text-secondary underline"
               >
                 {t('login.changeNumber')}

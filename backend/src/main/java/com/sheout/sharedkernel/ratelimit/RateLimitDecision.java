@@ -24,4 +24,15 @@ public record RateLimitDecision(boolean allowed, long retryAfterSeconds) {
             throw new TooManyRequestsException(message, retryAfterSeconds);
         }
     }
+
+    /**
+     * As orThrow, with a machine-readable code in place of the generic
+     * "Too Many Requests", for a refusal a client handles differently from
+     * the rest - never by matching the message text.
+     */
+    public void orThrow(String error, String message) {
+        if (!allowed) {
+            throw new TooManyRequestsException(error, message, retryAfterSeconds);
+        }
+    }
 }

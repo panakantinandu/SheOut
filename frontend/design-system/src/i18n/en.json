@@ -269,5 +269,12 @@
   },
   "brand": {
     "tagline": "Your Delivery, Our Priority"
+  },
+  "otp": {
+    "resend": "Resend code",
+    "resendIn": "You can ask for a new code in {{seconds}}s",
+    "noCode": "Didn’t get it?",
+    "reused": "We’ve already sent a code to {{phone}}. Enter it below.",
+    "resent": "New code sent to {{phone}}."
   }
 }

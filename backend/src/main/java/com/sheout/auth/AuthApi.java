@@ -18,6 +18,13 @@ public interface AuthApi {
     Optional<AccountSummary> findAccount(UUID accountId);
 
     /**
+     * Whether two accounts belong to the same person - the same phone number
+     * or the same Google email. One person can hold a rider account and a
+     * partner account (one per app), and must never be matched with herself.
+     */
+    boolean samePerson(UUID accountA, UUID accountB);
+
+    /**
      * Grants ADMIN to the existing account holding this phone number, or
      * returns empty if no such account exists. Idempotent: an account that
      * is already ADMIN is returned unchanged.

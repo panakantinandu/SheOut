@@ -323,6 +323,9 @@ public class DispatchService {
 
         List<CandidateDriver> eligible = nearby.stream()
                 .filter(candidate -> isEligible(candidate.driverId(), state.category()))
+                // One person can hold a rider account and a partner account
+                // on the same number. Her own ride is never offered to her.
+                .filter(candidate -> !authApi.samePerson(candidate.driverId(), state.customerId()))
                 .toList();
 
         List<CandidateDriver> offered = matchingStrategy.rank(eligible).stream()

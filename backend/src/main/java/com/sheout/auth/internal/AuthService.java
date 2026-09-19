@@ -19,6 +19,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -59,14 +60,15 @@ public class AuthService implements AuthApi {
         //
         // The same reasoning is already written down on the customer app's
         // Login screen for the "already registered" notice. It belonged here
-        // too and was missed. verifyOtp still refuses the role mismatch,
-        // which is the right place: by then the caller has proved the number
-        // is theirs, so there is nothing left to disclose.
+        // too and was missed. There is no role mismatch any more - each app
+        // has its own account on a number (see verifyOtp) - and the one
+        // refusal left, a blocked account, is given only after the code
+        // proves the number is theirs.
         //
         // Rate limits are checked by AuthController before this is reached -
         // see OtpRateLimiter - because a refusal has to carry a Retry-After,
         // which a Result error cannot.
-        boolean delivered = otpService.requestCode(phoneNumber);
+        boolean delivered = otpService.requestCode(phoneNumber, role);
         if (!delivered) {
             return Result.failure(AuthError.OTP_DELIVERY_FAILED);
         }
@@ -74,16 +76,24 @@ public class AuthService implements AuthApi {
     }
 
     /**
-     * Verifies a code and either logs into the existing account for this
-     * phone number, or creates a new one with the given role (this is a
-     * combined signup/login flow - there is no separate "signup" step).
+     * Verifies a code and either logs into this app's account for the phone
+     * number, or creates one (a combined signup/login flow - there is no
+     * separate "signup" step).
+     * <p>
+     * ONE ACCOUNT PER APP. The account is looked up by number AND role, so a
+     * number already used in the partner app signs up fresh in the rider
+     * app, and the other way round. There used to be one account per number:
+     * a partner's number entered in the rider app was sent a code, which was
+     * taken, and only then refused as "registered under a different role" -
+     * and trying again hit the resend cooldown. Nothing about the other app's
+     * account is read or revealed here.
      * Transactional so the new account row and the AccountRegistered
      * listener's write (creating driver-verification's record) commit or
      * roll back together.
      */
     @Transactional
     public Result<AuthenticatedSession, AuthError> verifyOtp(String phoneNumber, String code, AccountRole role) {
-        OtpService.VerificationOutcome outcome = otpService.verifyCode(phoneNumber, code);
+        OtpService.VerificationOutcome outcome = otpService.verifyCode(phoneNumber, role, code);
         if (outcome == OtpService.VerificationOutcome.NOT_FOUND_OR_EXPIRED) {
             return Result.failure(AuthError.OTP_NOT_FOUND_OR_EXPIRED);
         }
@@ -91,7 +101,17 @@ public class AuthService implements AuthApi {
             return Result.failure(AuthError.OTP_CODE_MISMATCH);
         }
 
-        Optional<AccountEntity> existing = accountRepository.findByPhoneNumber(phoneNumber);
+        // A block is on the person, not on one app's account. Checked on
+        // every account this number holds, so somebody blocked as a partner
+        // cannot carry on as a rider - or sign up as a partner after being
+        // blocked as a rider - by switching apps. After the code is verified,
+        // so this cannot be used to learn whether a number is blocked.
+        List<AccountEntity> onThisNumber = accountRepository.findByPhoneNumberOrderByCreatedAtAsc(phoneNumber);
+        if (onThisNumber.stream().anyMatch(AccountEntity::isBlocked)) {
+            return Result.failure(AuthError.ACCOUNT_BLOCKED);
+        }
+
+        Optional<AccountEntity> existing = onThisNumber.stream().filter(a -> a.getRole() == role).findFirst();
         boolean isNewAccount = existing.isEmpty();
 
         AccountEntity account;
@@ -103,17 +123,6 @@ public class AuthService implements AuthApi {
             eventPublisher.publish(new AccountRegistered(account.getId(), role));
         } else {
             account = existing.get();
-            if (account.getRole() != role) {
-                return Result.failure(AuthError.ROLE_MISMATCH);
-            }
-            // Checked here, after the code is verified, for the same reason
-            // the role mismatch is: answering it any earlier would tell
-            // anyone holding a phone number whether that account is blocked.
-            // A new account cannot be blocked, so this only needs to run on
-            // the existing-account branch.
-            if (account.isBlocked()) {
-                return Result.failure(AuthError.ACCOUNT_BLOCKED);
-            }
         }
 
         String token = jwtService.issue(account.getId(), account.getRole());
@@ -143,7 +152,14 @@ public class AuthService implements AuthApi {
      */
     @Transactional
     public Result<AuthenticatedSession, AuthError> verifyGoogleSignIn(String email, String name, AccountRole role) {
-        Optional<AccountEntity> existing = accountRepository.findByEmail(email);
+        // Same per-app rule as verifyOtp: the email identifies an account
+        // only together with the app signing in, and a block on any of this
+        // person's accounts holds in every app.
+        List<AccountEntity> onThisEmail = accountRepository.findByEmailOrderByCreatedAtAsc(email);
+        if (onThisEmail.stream().anyMatch(AccountEntity::isBlocked)) {
+            return Result.failure(AuthError.ACCOUNT_BLOCKED);
+        }
+        Optional<AccountEntity> existing = onThisEmail.stream().filter(a -> a.getRole() == role).findFirst();
 
         if (existing.isPresent() && existing.get().getPhoneNumber() != null) {
             return Result.failure(AuthError.EMAIL_LINKED_TO_PHONE_ACCOUNT);
@@ -160,17 +176,6 @@ public class AuthService implements AuthApi {
             eventPublisher.publish(new AccountRegistered(account.getId(), role, name));
         } else {
             account = existing.get();
-            if (account.getRole() != role) {
-                return Result.failure(AuthError.ROLE_MISMATCH);
-            }
-            // Checked here, after the code is verified, for the same reason
-            // the role mismatch is: answering it any earlier would tell
-            // anyone holding a phone number whether that account is blocked.
-            // A new account cannot be blocked, so this only needs to run on
-            // the existing-account branch.
-            if (account.isBlocked()) {
-                return Result.failure(AuthError.ACCOUNT_BLOCKED);
-            }
         }
 
         String token = jwtService.issue(account.getId(), account.getRole());
@@ -256,6 +261,24 @@ public class AuthService implements AuthApi {
     }
 
     @Override
+    public boolean samePerson(UUID accountA, UUID accountB) {
+        if (accountA.equals(accountB)) {
+            return true;
+        }
+        Optional<AccountEntity> a = accountRepository.findById(accountA);
+        Optional<AccountEntity> b = accountRepository.findById(accountB);
+        if (a.isEmpty() || b.isEmpty()) {
+            return false;
+        }
+        return sameNonNull(a.get().getPhoneNumber(), b.get().getPhoneNumber())
+                || sameNonNull(a.get().getEmail(), b.get().getEmail());
+    }
+
+    private static boolean sameNonNull(String x, String y) {
+        return x != null && x.equals(y);
+    }
+
+    @Override
     public Optional<AccountSummary> findAccount(UUID accountId) {
         return accountRepository.findById(accountId)
                 .map(AuthService::toSummary);
@@ -264,7 +287,15 @@ public class AuthService implements AuthApi {
     @Override
     @Transactional
     public Optional<AccountSummary> grantAdminRole(String phoneNumber) {
-        return accountRepository.findByPhoneNumber(phoneNumber).map(account -> {
+        // A number can hold one account per app. An admin account already on
+        // it is the answer; otherwise the number's first account is promoted,
+        // which is the one this chose before accounts were per app.
+        List<AccountEntity> onThisNumber = accountRepository.findByPhoneNumberOrderByCreatedAtAsc(phoneNumber);
+        Optional<AccountEntity> target = onThisNumber.stream()
+                .filter(a -> a.getRole() == AccountRole.ADMIN)
+                .findFirst()
+                .or(() -> onThisNumber.stream().findFirst());
+        return target.map(account -> {
             if (account.getRole() != AccountRole.ADMIN) {
                 account.promoteToAdmin();
                 accountRepository.save(account);

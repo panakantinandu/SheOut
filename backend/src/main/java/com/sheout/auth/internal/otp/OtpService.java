@@ -1,5 +1,6 @@
 package com.sheout.auth.internal.otp;
 
+import com.sheout.auth.AccountRole;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -82,16 +83,21 @@ public class OtpService {
      * lets a live deploy be demoed, or QA-scripted, without a real SMS
      * provider or watching logs for the code.
      */
-    public boolean requestCode(String phoneNumber) {
+    /**
+     * Codes are kept per number AND per app. With one key per number, asking
+     * for a code in the partner app silently replaced the one just sent to
+     * the rider app, and the rider's correct code then read as "incorrect".
+     */
+    public boolean requestCode(String phoneNumber, AccountRole role) {
         String code = resolveDevCode(phoneNumber);
         if (code == null) code = generateCode();
-        redisTemplate.opsForValue().set(key(phoneNumber), code, ttl);
+        redisTemplate.opsForValue().set(key(phoneNumber, role), code, ttl);
         // The guess budget belongs to a code, not to a number. Without this
         // reset, someone who mistyped their last code five times would be
         // locked out of the fresh one on their first attempt. How many codes
         // can be asked for at all is bounded separately - see
         // OtpRateLimiter - so the total guesses per hour stay small.
-        redisTemplate.delete(attemptKey(phoneNumber));
+        redisTemplate.delete(attemptKey(phoneNumber, role));
         try {
             otpSender.send(phoneNumber, code);
             return true;
@@ -106,8 +112,8 @@ public class OtpService {
      * MAX_ATTEMPTS times, after which the code is destroyed. See the
      * comment in the mismatch branch.
      */
-    public VerificationOutcome verifyCode(String phoneNumber, String code) {
-        String stored = redisTemplate.opsForValue().get(key(phoneNumber));
+    public VerificationOutcome verifyCode(String phoneNumber, AccountRole role, String code) {
+        String stored = redisTemplate.opsForValue().get(key(phoneNumber, role));
         if (stored == null) {
             return VerificationOutcome.NOT_FOUND_OR_EXPIRED;
         }
@@ -120,27 +126,27 @@ public class OtpService {
             // the code's lifetime. The code is now destroyed after
             // MAX_ATTEMPTS wrong guesses, so an attacker gets a handful of
             // tries out of a million rather than all of them.
-            if (registerFailedAttempt(phoneNumber)) {
-                redisTemplate.delete(key(phoneNumber));
-                redisTemplate.delete(attemptKey(phoneNumber));
+            if (registerFailedAttempt(phoneNumber, role)) {
+                redisTemplate.delete(key(phoneNumber, role));
+                redisTemplate.delete(attemptKey(phoneNumber, role));
                 log.warn("OTP invalidated after {} incorrect attempts", MAX_ATTEMPTS);
                 return VerificationOutcome.NOT_FOUND_OR_EXPIRED;
             }
             return VerificationOutcome.MISMATCH;
         }
-        redisTemplate.delete(key(phoneNumber));
-        redisTemplate.delete(attemptKey(phoneNumber));
+        redisTemplate.delete(key(phoneNumber, role));
+        redisTemplate.delete(attemptKey(phoneNumber, role));
         return VerificationOutcome.MATCHED;
     }
 
     /** True once this number has used up its allowance of wrong guesses. */
-    private boolean registerFailedAttempt(String phoneNumber) {
+    private boolean registerFailedAttempt(String phoneNumber, AccountRole role) {
         try {
-            Long attempts = redisTemplate.opsForValue().increment(attemptKey(phoneNumber));
+            Long attempts = redisTemplate.opsForValue().increment(attemptKey(phoneNumber, role));
             if (attempts != null && attempts == 1L) {
                 // Outlives the code itself, so the counter cannot be reset
                 // by simply waiting for it to lapse.
-                redisTemplate.expire(attemptKey(phoneNumber), ttl.plusMinutes(5));
+                redisTemplate.expire(attemptKey(phoneNumber, role), ttl.plusMinutes(5));
             }
             return attempts != null && attempts >= MAX_ATTEMPTS;
         } catch (RuntimeException ex) {
@@ -163,12 +169,12 @@ public class OtpService {
         return String.format("%06d", code);
     }
 
-    private String attemptKey(String phoneNumber) {
-        return ATTEMPT_PREFIX + phoneNumber;
+    private String attemptKey(String phoneNumber, AccountRole role) {
+        return ATTEMPT_PREFIX + role + ":" + phoneNumber;
     }
 
-    private String key(String phoneNumber) {
-        return KEY_PREFIX + phoneNumber;
+    private String key(String phoneNumber, AccountRole role) {
+        return KEY_PREFIX + role + ":" + phoneNumber;
     }
 
     private String resolveDevCode(String phoneNumber) {
