@@ -3,9 +3,10 @@ package com.sheout.payments;
 /**
  * How a payment was actually settled.
  * <p>
- * CASH is handed to the partner at the end of any trip - ride or delivery -
- * and confirmed by her. The rest come back from Razorpay Checkout, which
- * offers every method itself; the value recorded is the one the rider chose
+ * CASH is historical only: it was handed to the partner and confirmed by
+ * her, and is no longer accepted - every fare now goes through SheOut.
+ * SHEOUT_WALLET is her own SheOut balance. The rest come back from Razorpay
+ * Checkout, which offers every method itself; the value recorded is the one the rider chose
  * there, read from Razorpay at capture. ONLINE covers a method Razorpay
  * reports that is not listed here.
  * <p>
@@ -17,6 +18,10 @@ public enum PaymentMethod {
     CASH,
     CARD,
     NETBANKING,
+    /** A third-party wallet chosen inside Razorpay Checkout (Paytm, PhonePe wallet...). */
     WALLET,
-    ONLINE
+    ONLINE,
+
+    /** Paid from her own SheOut wallet balance. */
+    SHEOUT_WALLET
 }

@@ -28,6 +28,7 @@ const TONES: Record<PaymentStatus, StatusTone> = {
   CAPTURED: 'success',
   FAILED: 'danger',
   REFUNDED: 'primary',
+  WAIVED: 'primary',
 };
 
 const STATUS_OPTIONS: { value: PaymentStatus; label: string }[] = [
@@ -35,6 +36,7 @@ const STATUS_OPTIONS: { value: PaymentStatus; label: string }[] = [
   { value: 'PENDING', label: 'Awaiting payment' },
   { value: 'FAILED', label: 'Failed' },
   { value: 'REFUNDED', label: 'Refunded' },
+  { value: 'WAIVED', label: 'Settled earlier' },
 ];
 
 /**
@@ -94,7 +96,7 @@ export function PaymentMethods() {
       <TopHeader variant="back" title="Payment History" onBack={() => navigate('/profile')} />
 
       <Card>
-        <p className="text-sm text-text-primary">Payments are taken per trip via UPI or cash.</p>
+        <p className="text-sm text-text-primary">Each trip is paid in the app - from your SheOut wallet, or online by UPI, card or netbanking.</p>
         <p className="mt-1 text-xs text-text-secondary">
           No card or UPI ID is stored on your account - there is nothing saved to manage here, so this shows what you
           have actually been charged.

@@ -119,6 +119,20 @@ export interface BookingSummary {
   startedAt: string | null;
   completedAt: string | null;
   cancelledAt: string | null;
+  /** When the rider paid. A COMPLETED trip with this null has ended and is still unpaid. */
+  paymentSettledAt: string | null;
+}
+
+/**
+ * The trip she ended that is still waiting for the rider's payment. While it
+ * stands she is not sent new offers - until holdUntil, after which she is
+ * back on the road and the rider cannot book again until she pays.
+ */
+export interface PaymentHold {
+  bookingId: string;
+  amount: number;
+  completedAt: string;
+  holdUntil: string | null;
 }
 
 /**
@@ -284,10 +298,10 @@ export interface AssignedDriver {
   totalRatings: number;
 }
 
-export type PaymentStatus = 'PENDING' | 'CAPTURED' | 'FAILED' | 'REFUNDED';
+export type PaymentStatus = 'PENDING' | 'CAPTURED' | 'FAILED' | 'REFUNDED' | 'WAIVED';
 
 /** Recorded at capture. Before capture it is a placeholder - read it only when status is CAPTURED. */
-export type PaymentMethod = 'UPI' | 'CASH' | 'CARD' | 'NETBANKING' | 'WALLET' | 'ONLINE';
+export type PaymentMethod = 'UPI' | 'CASH' | 'CARD' | 'NETBANKING' | 'WALLET' | 'ONLINE' | 'SHEOUT_WALLET';
 
 /** A trip's payment as the partner sees it. driverPayout is her share, null until the rider has paid. */
 export interface PaymentSummary {

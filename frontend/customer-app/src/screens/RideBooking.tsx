@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Card, IconCircle, LiveMap, TopHeader } from '@sheout/design-system';
 import type { MapMarker } from '@sheout/design-system';
+import { UnpaidTripBanner } from '../components/UnpaidTripBanner';
 import { ApiError, bookingApi } from '../api/client';
 import { FareEstimateCard } from '../components/FareEstimateCard';
 import { LocationPicker } from '../components/LocationPicker';
@@ -49,6 +50,8 @@ export function RideBooking() {
   const [submitting, setSubmitting] = useState(false);
   const fare = useFareQuote({ type: 'RIDE', category: 'BIKE', pickup, drop });
   const [error, setError] = useState<string | null>(null);
+  /** Bumped when the server refuses a booking for an unpaid trip, so the banner re-checks. */
+  const [unpaidCheck, setUnpaidCheck] = useState(0);
 
   // Try the device once on arrival as a convenience, and reverse-geocode it
   // so the row reads as a place rather than "Your Current Location". A
@@ -78,6 +81,8 @@ export function RideBooking() {
       navigate(`/tracking/${booking.id}`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not create your booking. Please check your connection and try again.');
+      // The banner above names the unpaid trip and links to it.
+      if (err instanceof ApiError && err.body?.error === 'UNPAID_TRIP') setUnpaidCheck((n) => n + 1);
     } finally {
       setSubmitting(false);
     }
@@ -95,6 +100,8 @@ export function RideBooking() {
   return (
     <div className="space-y-6">
       <TopHeader variant="back" title="Bike Taxi" onBack={() => navigate(-1)} />
+
+      <UnpaidTripBanner refreshKey={unpaidCheck} />
 
       {/* Real map, same shared component the tracking screen uses. Shows the
           points actually chosen: pickup once geolocation resolves, drop once

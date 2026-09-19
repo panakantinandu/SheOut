@@ -68,6 +68,21 @@ export function bookingStatusLabel(status: string | null | undefined): string {
   return BOOKING_STATUS[status] ?? humanizeEnum(status);
 }
 
+/**
+ * A trip the partner has ended but nobody has paid for yet. Shown as
+ * "Awaiting payment", not "Completed": a trip is not over until the fare is
+ * in, and calling it completed is what made ending it without payment look
+ * like the end of the matter.
+ */
+export function isAwaitingPayment(booking: { status: string; paymentSettledAt?: string | null }): boolean {
+  return booking.status === 'COMPLETED' && !booking.paymentSettledAt;
+}
+
+/** The status label for a whole trip, taking payment into account - see isAwaitingPayment. */
+export function tripStatusLabel(booking: { status: string; paymentSettledAt?: string | null }): string {
+  return isAwaitingPayment(booking) ? 'Awaiting payment' : bookingStatusLabel(booking.status);
+}
+
 const CATEGORY: Record<string, string> = {
   BIKE: 'Bike Taxi',
   AUTO: 'Auto Ride',
@@ -84,7 +99,9 @@ export function bookingCategoryLabel(category: string | null | undefined): strin
 /** UPI keeps its capitals - it is the network's name, not an enum. */
 export function paymentMethodLabel(method: string | null | undefined): string {
   if (!method) return 'Not recorded';
-  return method === 'UPI' ? 'UPI' : humanizeEnum(method);
+  if (method === 'UPI') return 'UPI';
+  if (method === 'SHEOUT_WALLET') return 'SheOut wallet';
+  return humanizeEnum(method);
 }
 
 const PAYMENT_STATUS: Record<string, string> = {
@@ -92,6 +109,9 @@ const PAYMENT_STATUS: Record<string, string> = {
   CAPTURED: 'Paid',
   FAILED: 'Failed',
   REFUNDED: 'Refunded',
+  // Trips from before a fare had to be paid to close a trip. Not "Paid" -
+  // no money moved - and not "Failed", which would suggest she owes it.
+  WAIVED: 'Settled earlier',
 };
 
 export function paymentStatusLabel(status: string | null | undefined): string {

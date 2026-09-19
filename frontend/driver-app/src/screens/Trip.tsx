@@ -20,7 +20,7 @@ import {
 } from '@sheout/design-system';
 import type { CancellationReason, MapMarker } from '@sheout/design-system';
 import { ApiError, bookingApi, chatApi } from '../api/client';
-import type { BookingSummary, TripRoute } from '../api/types';
+import type { BookingSummary, PaymentHold, TripRoute } from '../api/types';
 import { CollectPaymentCard } from '../components/CollectPaymentCard';
 import { useShareLocation } from '../lib/LocationBroadcastContext';
 
@@ -89,6 +89,10 @@ export function Trip() {
   const [askingWhy, setAskingWhy] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [supportPhoneNumber, setSupportPhoneNumber] = useState<string | null>(null);
+  /** Paid, as far as this screen knows - from the booking, then from the payment card's polling. */
+  const [paid, setPaid] = useState(false);
+  /** The hold keeping new offers away while this trip is unpaid; null once it has lifted. */
+  const [hold, setHold] = useState<PaymentHold | null | undefined>(undefined);
 
   const [pickupCode, setPickupCode] = useState('');
   const [codeError, setCodeError] = useState<string | null>(null);
@@ -111,6 +115,28 @@ export function Trip() {
   const myPosition = location.position;
 
   const phase = booking?.status === 'IN_PROGRESS' ? 'DROP' : 'PICKUP';
+  const settled = paid || Boolean(booking?.paymentSettledAt);
+  const awaitingPayment = booking?.status === 'COMPLETED' && !settled;
+
+  // While the fare is outstanding, keep asking whether the hold on new
+  // offers still stands, so the screen can tell her the moment it lifts.
+  useEffect(() => {
+    if (!awaitingPayment) return;
+    let cancelled = false;
+    const load = () =>
+      bookingApi
+        .getPaymentHold()
+        .then((h) => {
+          if (!cancelled) setHold(h && h.bookingId === bookingId ? h : null);
+        })
+        .catch(() => undefined);
+    load();
+    const timer = window.setInterval(load, 15000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [awaitingPayment, bookingId]);
 
   useEffect(() => {
     if (!bookingId) return;
@@ -311,7 +337,9 @@ export function Trip() {
       {booking && (
         <>
           {/* Once the trip is over, getting paid is the job in front of her. */}
-          {booking.status === 'COMPLETED' && bookingId && <CollectPaymentCard bookingId={bookingId} />}
+          {booking.status === 'COMPLETED' && bookingId && (
+            <CollectPaymentCard bookingId={bookingId} onPaid={() => setPaid(true)} />
+          )}
 
           {/* Where she is going NEXT, on its own and stated first. The
               two-address list below is the whole trip; this is the job in
@@ -384,7 +412,9 @@ export function Trip() {
           <Card className="space-y-3">
             <div className="flex items-center justify-between">
               <p className="font-heading font-semibold text-text-primary">{booking.type === 'RIDE' ? 'Ride' : 'Delivery'}</p>
-              <StatusBadge tone="primary">{bookingStatusLabel(booking.status)}</StatusBadge>
+              <StatusBadge tone={booking.status === 'COMPLETED' && !settled ? 'warning' : 'primary'}>
+                {booking.status === 'COMPLETED' && !settled ? 'Awaiting payment' : bookingStatusLabel(booking.status)}
+              </StatusBadge>
             </div>
             <div className="space-y-2 text-sm">
               <div className="flex items-start gap-2">
@@ -421,7 +451,10 @@ export function Trip() {
             {/* The trip is over. A checkmark drawing itself, once, in half a
                 second - not confetti: she has finished a piece of work, and
                 the same screen shows after a trip that went badly. */}
-            {booking.status === 'COMPLETED' && (
+            {/* Only once the fare is in. A trip is not complete while it is
+                unpaid, and drawing a success check over an unpaid fare is
+                what made ending a trip look like the end of the matter. */}
+            {booking.status === 'COMPLETED' && settled && (
               <Card className="flex flex-col items-center gap-2 py-6 text-center">
                 <SuccessCheck size={64} label="Trip completed" />
                 <p className="font-heading font-semibold text-text-primary">Trip completed</p>
@@ -430,14 +463,37 @@ export function Trip() {
                 </p>
               </Card>
             )}
-            {booking.status === 'COMPLETED' && (
+            {booking.status === 'COMPLETED' && settled && (
               <Button fullWidth variant="secondary" onClick={() => navigate('/home', { replace: true })}>
                 Done
               </Button>
             )}
+            {/* Unpaid. She is not offered new work until the fare lands or
+                the hold runs out - the server enforces that; this says so,
+                and when. */}
+            {booking.status === 'COMPLETED' && !settled && hold && (
+              <p className="text-center text-sm text-text-secondary" data-testid="payment-hold">
+                New requests resume once your rider pays, or at{' '}
+                {hold.holdUntil
+                  ? new Date(hold.holdUntil).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+                  : 'the latest in a few minutes'}
+                .
+              </p>
+            )}
+            {booking.status === 'COMPLETED' && !settled && hold === null && (
+              <>
+                <p className="text-center text-sm text-text-secondary" data-testid="payment-overdue">
+                  Your rider hasn&apos;t paid yet. You can take new requests - SheOut holds this fare against her
+                  account, she can&apos;t book again until she pays, and it reaches your wallet when she does.
+                </p>
+                <Button fullWidth variant="secondary" onClick={() => navigate('/home', { replace: true })}>
+                  Back to home
+                </Button>
+              </>
+            )}
             {booking.status === 'IN_PROGRESS' && (
               <Button fullWidth variant="success" disabled={busy} onClick={handleComplete}>
-                {busy ? 'Completing...' : 'Complete Trip'}
+                {busy ? 'Ending trip...' : 'End trip and request payment'}
               </Button>
             )}
             {(booking.status === 'MATCHED' || booking.status === 'ACCEPTED') && (

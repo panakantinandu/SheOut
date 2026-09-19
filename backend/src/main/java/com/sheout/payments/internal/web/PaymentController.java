@@ -26,6 +26,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import org.springframework.web.bind.annotation.RequestMapping;
+import com.sheout.payments.internal.wallet.RiderWalletService;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -96,25 +97,31 @@ public class PaymentController {
     }
 
     /**
-     * The partner confirms she has the rider's cash in hand.
+     * Cash is no longer accepted. Kept as an explicit 410 rather than
+     * removed, so a partner app still cached from before this change is told
+     * why its "cash received" button stopped working instead of getting a
+     * bare 404.
      * <p>
-     * Hers alone to confirm. It used to be open to either person on the
-     * trip, which let a rider mark her own fare "paid in cash" and walk off
-     * having paid nothing - and it matters more now that confirming cash
-     * also records the platform's commission as owed by the partner: a
-     * rider could have put that debt on her by tapping a button. Anyone not
-     * on the booking still gets the same 404 as a booking that does not
-     * exist; the rider, who is on it, gets a 403 that reveals nothing new.
+     * Cash was the one way a fare could be marked paid on somebody's word: no
+     * record of the money, nothing to check, and a partner could close a trip
+     * and move on whether or not she had been paid. Every fare now goes
+     * through SheOut into her wallet.
      */
     @PostMapping("/bookings/{bookingId}/cash")
     public ResponseEntity<PaymentSummary> initiateCash(@PathVariable UUID bookingId) {
-        CurrentAccount caller = CurrentAccountContext.get()
-                .orElseThrow(() -> ApiException.unauthorized("Authentication required"));
-        BookingParticipants participants = requireParticipant(bookingId);
-        if (!caller.accountId().equals(participants.driverId())) {
-            throw ApiException.forbidden("Only the partner who received the cash can confirm it");
-        }
-        return respond(paymentService.initiateCashPayment(bookingId));
+        requireParticipant(bookingId);
+        throw toApiException(PaymentError.CASH_NOT_ACCEPTED);
+    }
+
+    /**
+     * The rider pays this trip from her SheOut wallet. Her balance, the
+     * capture, the partner's credit and the trip's settlement all move in
+     * one transaction - see PaymentService.payFromWallet.
+     */
+    @PostMapping("/bookings/{bookingId}/wallet")
+    public ResponseEntity<PaymentSummary> payFromWallet(@PathVariable UUID bookingId) {
+        UUID customerId = requireCustomerOf(bookingId);
+        return respond(paymentService.payFromWallet(bookingId, customerId));
     }
 
     /** What the rider's app opens Razorpay Checkout with. The rider on the booking only. */
@@ -140,14 +147,19 @@ public class PaymentController {
                 bookingId, request.razorpayOrderId(), request.razorpayPaymentId(), request.razorpaySignature()));
     }
 
-    /** Only the rider pays online. The partner is on the booking, so her refusal is a 403 that reveals nothing. */
-    private void requireCustomerOf(UUID bookingId) {
+    /**
+     * Only the rider pays. The partner is on the booking, so her refusal is a
+     * 403 that reveals nothing - and she cannot pay a trip on the rider's
+     * behalf, which is what would let a fare be settled off the app.
+     */
+    private UUID requireCustomerOf(UUID bookingId) {
         CurrentAccount caller = CurrentAccountContext.get()
                 .orElseThrow(() -> ApiException.unauthorized("Authentication required"));
         BookingParticipants participants = requireParticipant(bookingId);
         if (!caller.accountId().equals(participants.customerId())) {
             throw ApiException.forbidden("Only the rider pays for a trip");
         }
+        return caller.accountId();
     }
 
     public record CheckoutResult(
@@ -201,6 +213,20 @@ public class PaymentController {
                     "This payment could not be verified. If money left your account, contact support with your trip.");
             case NOT_CAPTURED -> new ApiException(HttpStatus.CONFLICT, "PAYMENT_NOT_CAPTURED",
                     "The payment did not go through. You can try again.");
+            case CASH_NOT_ACCEPTED -> new ApiException(HttpStatus.GONE, "CASH_NOT_ACCEPTED",
+                    "Cash is no longer accepted. Your rider pays in her app, and the fare goes straight to your wallet.");
+            case TRIP_NOT_ENDED -> new ApiException(HttpStatus.CONFLICT, "TRIP_NOT_ENDED",
+                    "This trip has not ended yet, so there is nothing to pay.");
+            case INSUFFICIENT_BALANCE -> new ApiException(HttpStatus.CONFLICT, "INSUFFICIENT_BALANCE",
+                    "Your SheOut wallet does not have enough for this fare. Add money or pay online.");
+            case INVALID_AMOUNT -> new ApiException(HttpStatus.BAD_REQUEST, "INVALID_AMOUNT",
+                    "Add between " + rupees(RiderWalletService.MIN_TOPUP) + " and " + rupees(RiderWalletService.MAX_TOPUP)
+                            + ", keeping your balance at or under " + rupees(RiderWalletService.MAX_BALANCE) + ".");
+            case TOPUP_NOT_FOUND -> ApiException.notFound("No such top-up");
         };
+    }
+
+    private static String rupees(BigDecimal amount) {
+        return "₹" + amount.stripTrailingZeros().toPlainString();
     }
 }

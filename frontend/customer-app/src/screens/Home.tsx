@@ -14,6 +14,7 @@ import {
   useUnreadNotifications,
 } from '@sheout/design-system';
 import { OutOfAreaBanner } from '../components/OutOfAreaBanner';
+import { UnpaidTripBanner } from '../components/UnpaidTripBanner';
 import { PUSH_TOKEN_KEY, contentApi, notificationsApi, pushApi, usersApi } from '../api/client';
 import type { CustomerProfileSummary } from '../api/types';
 import { ThreeWomen } from '../components/ThreeWomen';
@@ -81,6 +82,9 @@ export function Home() {
           notice, not a block: the trip's pickup and drop are what decide
           whether it can be booked, not where her phone is. */}
       <OutOfAreaBanner />
+
+      {/* An unpaid trip blocks the next booking - say so before she tries. */}
+      <UnpaidTripBanner />
 
       {/* The mockup puts a woman-in-helmet graphic on the banner's right.
           Reusing the existing brand illustration (a woman in a helmet on a

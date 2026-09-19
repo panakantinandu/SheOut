@@ -1,29 +1,35 @@
-import { Banknote, CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, Hourglass, ShieldCheck } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { AmountText, Button, Card, ConfirmDialog, IconCircle, paymentMethodLabel } from '@sheout/design-system';
-import { ApiError, paymentsApi } from '../api/client';
+import { AmountText, Card, IconCircle, paymentMethodLabel } from '@sheout/design-system';
+import { paymentsApi } from '../api/client';
 import type { PaymentSummary } from '../api/types';
 
 const POLL_INTERVAL_MS = 4000;
 
 /**
- * Getting paid for a trip she has just finished.
+ * Getting paid for a trip she has just ended.
  * <p>
- * The rider either pays online in her own app, which this picks up by
- * polling, or hands over cash, which only the partner can confirm - she is the
- * one holding it. Confirming cash is behind a dialog because it cannot be
- * undone from the app, and a stray tap would mark an unpaid fare paid.
+ * There is nothing for her to press. The rider pays in her own app - from
+ * her SheOut wallet or online - and the fare lands in this partner's wallet;
+ * this card polls until it does. There used to be a "cash received" button.
+ * It was the one way a fare could be marked paid on somebody's word, with no
+ * record of the money, and it let a trip be closed whether or not anybody had
+ * paid. Taking cash is now against the rules, and the card says so, so she
+ * has something to point a rider at.
  */
-export function CollectPaymentCard({ bookingId }: { bookingId: string }) {
+export function CollectPaymentCard({ bookingId, onPaid }: { bookingId: string; onPaid?: () => void }) {
   const [payment, setPayment] = useState<PaymentSummary | null>(null);
-  const [confirming, setConfirming] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const captured = payment?.status === 'CAPTURED';
+  const paid = payment?.status === 'CAPTURED' || payment?.status === 'WAIVED';
 
   useEffect(() => {
-    if (captured) return;
+    if (paid) onPaid?.();
+    // onPaid is a fresh closure on every parent render; firing once when paid is the point.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paid]);
+
+  useEffect(() => {
+    if (paid) return;
     let cancelled = false;
     const load = () =>
       paymentsApi
@@ -31,7 +37,7 @@ export function CollectPaymentCard({ bookingId }: { bookingId: string }) {
         .then((p) => {
           if (!cancelled) setPayment(p);
         })
-        // 404 until the payment row is written just after completion; poll through it.
+        // 404 for the moment between the trip ending and its payment row; poll through it.
         .catch(() => undefined);
     load();
     const timer = window.setInterval(load, POLL_INTERVAL_MS);
@@ -39,27 +45,7 @@ export function CollectPaymentCard({ bookingId }: { bookingId: string }) {
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [bookingId, captured]);
-
-  const handleConfirmCash = async () => {
-    setBusy(true);
-    setError(null);
-    try {
-      setPayment(await paymentsApi.confirmCash(bookingId));
-      setConfirming(false);
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 409) {
-        // Paid already - the rider paid online while the dialog was open.
-        setPayment(await paymentsApi.getForBooking(bookingId).catch(() => payment));
-        setConfirming(false);
-      } else {
-        setError(err instanceof ApiError ? err.message : 'Could not confirm the cash payment');
-        setConfirming(false);
-      }
-    } finally {
-      setBusy(false);
-    }
-  };
+  }, [bookingId, paid]);
 
   if (!payment) {
     return (
@@ -69,7 +55,7 @@ export function CollectPaymentCard({ bookingId }: { bookingId: string }) {
     );
   }
 
-  if (captured) {
+  if (paid) {
     return (
       <Card tone="success" className="space-y-2" data-testid="collect-payment-paid">
         <div className="flex items-center gap-3">
@@ -77,17 +63,18 @@ export function CollectPaymentCard({ bookingId }: { bookingId: string }) {
           <div className="flex-1">
             <p className="font-heading font-semibold text-text-primary">Fare paid</p>
             <p className="text-sm text-text-secondary">
-              {payment.method === 'CASH' ? 'Cash, collected by you' : `Online · ${paymentMethodLabel(payment.method)}`}
+              {payment.status === 'WAIVED'
+                ? 'Settled before in-app payment was required'
+                : payment.method === 'CASH'
+                  ? 'Cash, collected by you'
+                  : `Paid by your rider · ${paymentMethodLabel(payment.method)}`}
             </p>
           </div>
           <AmountText amount={payment.amount} size="lg" exact />
         </div>
-        {payment.driverPayout != null && (
+        {payment.driverPayout != null && payment.method !== 'CASH' && (
           <p className="text-sm text-text-secondary">
-            Your share is ₹{payment.driverPayout.toFixed(2)}.
-            {payment.method === 'CASH'
-              ? ' You already hold the full fare, so SheOut\'s commission comes off your wallet balance.'
-              : ' It has been added to your wallet.'}
+            Your share, ₹{payment.driverPayout.toFixed(2)}, is in your wallet.
           </p>
         )}
       </Card>
@@ -97,26 +84,22 @@ export function CollectPaymentCard({ bookingId }: { bookingId: string }) {
   return (
     <Card className="space-y-3" data-testid="collect-payment-due">
       <div className="flex items-center justify-between">
-        <p className="font-heading font-semibold text-text-primary">Collect payment</p>
+        <div className="flex items-center gap-2">
+          <IconCircle size="sm" tone="soft" color="orange" icon={<Hourglass />} />
+          <p className="font-heading font-semibold text-text-primary">Waiting for payment</p>
+        </div>
         <AmountText amount={payment.amount} size="lg" exact />
       </div>
       <p className="text-sm text-text-secondary">
-        Your rider can pay online from her app - this updates on its own. If she pays you in cash, confirm it here once
-        it is in your hand.
+        Your rider pays in her SheOut app, from her wallet or online. This updates on its own the moment she does.
       </p>
-      <Button fullWidth size="md" variant="success" icon={<Banknote className="h-4 w-4" />} disabled={busy}
-        onClick={() => setConfirming(true)}>
-        Cash received
-      </Button>
-      {error && <p className="text-sm text-danger">{error}</p>}
-      <ConfirmDialog
-        open={confirming}
-        title={`Received ₹${payment.amount.toFixed(2)} in cash?`}
-        message="Only confirm once the full fare is in your hand. This marks the trip paid and cannot be undone from the app."
-        confirmLabel={busy ? 'Confirming...' : 'Yes, cash received'}
-        onConfirm={handleConfirmCash}
-        onCancel={() => setConfirming(false)}
-      />
+      <div className="flex items-start gap-2 rounded-card bg-background p-3 text-sm text-text-secondary">
+        <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+        <p>
+          Please don&apos;t take cash or a transfer to your own account. Fares paid outside SheOut can&apos;t be
+          recorded, and your trip won&apos;t count as paid.
+        </p>
+      </div>
     </Card>
   );
 }

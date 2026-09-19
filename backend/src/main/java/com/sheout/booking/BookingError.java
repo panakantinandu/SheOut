@@ -36,5 +36,11 @@ public enum BookingError {
     PICKUP_CODE_REQUIRED,
 
     /** Too many wrong guesses on this booking. See PickupCode.MAX_ATTEMPTS. */
-    PICKUP_VERIFICATION_LOCKED
+    PICKUP_VERIFICATION_LOCKED,
+
+    /**
+     * The rider has a trip that ended and is still unpaid, so she cannot
+     * book another. Paying it - from the wallet or online - clears this.
+     */
+    UNPAID_TRIP
 }

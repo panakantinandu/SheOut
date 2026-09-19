@@ -2,6 +2,7 @@ package com.sheout.payments.internal.web;
 
 import com.sheout.payments.PaymentMethod;
 import com.sheout.payments.internal.PaymentService;
+import com.sheout.payments.internal.wallet.RiderWalletService;
 import com.sheout.payments.internal.gateway.PaymentGateway;
 import com.sheout.sharedkernel.web.ApiException;
 import org.json.JSONObject;
@@ -38,10 +39,13 @@ public class RazorpayWebhookController {
 
     private final PaymentGateway paymentGateway;
     private final PaymentService paymentService;
+    private final RiderWalletService walletService;
 
-    public RazorpayWebhookController(PaymentGateway paymentGateway, PaymentService paymentService) {
+    public RazorpayWebhookController(PaymentGateway paymentGateway, PaymentService paymentService,
+                                     RiderWalletService walletService) {
         this.paymentGateway = paymentGateway;
         this.paymentService = paymentService;
+        this.walletService = walletService;
     }
 
     @PostMapping("/razorpay")
@@ -67,17 +71,28 @@ public class RazorpayWebhookController {
         String orderId = entity.optString("order_id", null);
         String razorpayPaymentId = entity.optString("id", null);
 
+        // An order is either a trip's or a wallet top-up's. Trips are tried
+        // first; an order that is neither is logged and acknowledged, since
+        // asking Razorpay to redeliver it would not make it one of ours.
         switch (eventType) {
-            case "payment.captured" -> paymentService.applyWebhookUpdate(orderId, razorpayPaymentId, true, null,
+            case "payment.captured" -> apply(orderId, razorpayPaymentId, true, null,
                     methodOf(entity.optString("method", "")));
-            case "payment.failed" -> {
-                String reason = entity.optString("error_description", "Payment failed");
-                paymentService.applyWebhookUpdate(orderId, razorpayPaymentId, false, reason, null);
-            }
+            case "payment.failed" -> apply(orderId, razorpayPaymentId, false,
+                    entity.optString("error_description", "Payment failed"), null);
             default -> log.debug("Ignoring unhandled Razorpay webhook event {}", eventType);
         }
 
         return ResponseEntity.ok().build();
+    }
+
+    private void apply(String orderId, String razorpayPaymentId, boolean captured, String reason, PaymentMethod method) {
+        if (paymentService.applyWebhookUpdate(orderId, razorpayPaymentId, captured, reason, method)) {
+            return;
+        }
+        if (walletService.applyWebhook(orderId, razorpayPaymentId, captured, reason, method)) {
+            return;
+        }
+        log.warn("Razorpay webhook for unknown order id {}", orderId);
     }
 
     /** Razorpay's method name to ours - the same mapping the Checkout path uses. */

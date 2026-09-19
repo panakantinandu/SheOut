@@ -97,4 +97,21 @@ public interface BookingApi {
      */
     org.springframework.data.domain.Page<BookingSummary> pageBookings(
             BookingQuery query, org.springframework.data.domain.Pageable pageable);
+
+    /**
+     * Records that the rider's payment for this completed trip was captured.
+     * Called by payments, inside the capture's own transaction, so a trip is
+     * never marked paid for a capture that rolled back. Idempotent: a second
+     * call leaves the first timestamp alone.
+     */
+    Result<BookingSummary, BookingError> markPaymentSettled(UUID bookingId);
+
+    /** The rider's oldest unpaid ended trip, if any. It blocks her next booking until paid. */
+    Optional<PaymentHold> findPaymentHoldForCustomer(UUID customerId);
+
+    /**
+     * The partner's unpaid ended trip that still holds her back from new
+     * offers, if any - one that ended within the hold window. See PaymentHold.
+     */
+    Optional<PaymentHold> findPaymentHoldForDriver(UUID driverId);
 }

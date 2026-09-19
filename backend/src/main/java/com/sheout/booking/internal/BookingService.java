@@ -15,6 +15,7 @@ import com.sheout.booking.BookingStarted;
 import com.sheout.booking.BookingStatus;
 import com.sheout.booking.CancellationReason;
 import com.sheout.booking.BookingSummary;
+import com.sheout.booking.PaymentHold;
 import com.sheout.booking.RequestBookingCommand;
 import com.sheout.booking.internal.fare.FareCalculator;
 import com.sheout.booking.internal.fare.FareQuote;
@@ -34,6 +35,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -49,6 +51,7 @@ public class BookingService implements BookingApi {
     private final AuthApi authApi;
     private final ServiceArea serviceArea;
     private final String verifiedBypassPhone;
+    private final Duration partnerPaymentHold;
 
     public BookingService(BookingRepository bookingRepository,
                            VerificationApi verificationApi,
@@ -56,7 +59,9 @@ public class BookingService implements BookingApi {
                            DomainEventPublisher eventPublisher,
                            AuthApi authApi,
                            ServiceArea serviceArea,
-                           @Value("${sheout.testing.verified-bypass-phone:}") String verifiedBypassPhone) {
+                           @Value("${sheout.testing.verified-bypass-phone:}") String verifiedBypassPhone,
+                           @Value("${sheout.booking.partner-payment-hold-minutes:10}") long partnerPaymentHoldMinutes) {
+        this.partnerPaymentHold = Duration.ofMinutes(partnerPaymentHoldMinutes);
         this.bookingRepository = bookingRepository;
         this.verificationApi = verificationApi;
         this.fareCalculator = fareCalculator;
@@ -110,6 +115,12 @@ public class BookingService implements BookingApi {
         }
         if (!isCustomerVerified(command.customerId())) {
             return Result.failure(BookingError.CUSTOMER_NOT_VERIFIED);
+        }
+        // A trip that ended unpaid has to be paid before the next one. This
+        // is what makes walking away from a fare pointless: the account that
+        // owes it cannot ride again until it is settled.
+        if (findPaymentHoldForCustomer(command.customerId()).isPresent()) {
+            return Result.failure(BookingError.UNPAID_TRIP);
         }
 
         BigDecimal fareEstimate = fareCalculator.estimate(command.category(), command.pickup(), command.drop());
@@ -525,7 +536,47 @@ public class BookingService implements BookingApi {
                 booking.getAcceptedAt(),
                 booking.getStartedAt(),
                 booking.getCompletedAt(),
-                booking.getCancelledAt()
+                booking.getCancelledAt(),
+                booking.getPaymentSettledAt()
         );
+    }
+
+    @Override
+    @Transactional
+    public Result<BookingSummary, BookingError> markPaymentSettled(UUID bookingId) {
+        Optional<BookingEntity> found = bookingRepository.findLockedById(bookingId);
+        if (found.isEmpty()) {
+            return Result.failure(BookingError.BOOKING_NOT_FOUND);
+        }
+        BookingEntity booking = found.get();
+        // Only an ended trip is paid for. Anything else reaching here is a
+        // bug upstream, and settling a trip still in progress would free the
+        // rider to book a second one while riding the first.
+        if (booking.getStatus() != BookingStatus.COMPLETED) {
+            return Result.failure(BookingError.INVALID_STATE_TRANSITION);
+        }
+        if (booking.getPaymentSettledAt() == null) {
+            booking.setPaymentSettledAt(Instant.now());
+            bookingRepository.save(booking);
+        }
+        return Result.success(toSummary(booking));
+    }
+
+    @Override
+    public Optional<PaymentHold> findPaymentHoldForCustomer(UUID customerId) {
+        return bookingRepository
+                .findFirstByCustomerIdAndStatusAndPaymentSettledAtIsNullOrderByCompletedAtAsc(
+                        customerId, BookingStatus.COMPLETED)
+                .map(booking -> new PaymentHold(booking.getId(), booking.getFinalFare(), booking.getCompletedAt(), null));
+    }
+
+    @Override
+    public Optional<PaymentHold> findPaymentHoldForDriver(UUID driverId) {
+        Instant cutoff = Instant.now().minus(partnerPaymentHold);
+        return bookingRepository
+                .findFirstByDriverIdAndStatusAndPaymentSettledAtIsNullAndCompletedAtAfterOrderByCompletedAtDesc(
+                        driverId, BookingStatus.COMPLETED, cutoff)
+                .map(booking -> new PaymentHold(booking.getId(), booking.getFinalFare(), booking.getCompletedAt(),
+                        booking.getCompletedAt().plus(partnerPaymentHold)));
     }
 }

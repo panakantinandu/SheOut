@@ -85,6 +85,47 @@ export interface BookingSummary {
   startedAt: string | null;
   completedAt: string | null;
   cancelledAt: string | null;
+  /**
+   * When the fare was paid. A COMPLETED trip with this null has ended and is
+   * still unpaid - see isAwaitingPayment in the design system.
+   */
+  paymentSettledAt: string | null;
+}
+
+/**
+ * An ended trip still waiting for payment. For a rider it blocks her next
+ * booking until paid; holdUntil is only set on a partner's.
+ */
+export interface PaymentHold {
+  bookingId: string;
+  amount: number;
+  completedAt: string;
+  holdUntil: string | null;
+}
+
+/** Her SheOut wallet: a closed-loop balance, topped up online and spent only on her own trips. */
+export interface RiderWallet {
+  balance: number;
+  minTopup: number;
+  maxTopup: number;
+  maxBalance: number;
+}
+
+export type RiderWalletEntryType = 'TOPUP' | 'TRIP_PAYMENT';
+
+export interface RiderWalletEntry {
+  id: string;
+  type: RiderWalletEntryType;
+  /** Signed: positive added money, negative paid for a trip. */
+  amount: number;
+  balanceAfter: number;
+  bookingId: string | null;
+  createdAt: string;
+}
+
+/** A top-up's Checkout details - the same shape as a trip's, plus the id to verify it against. */
+export interface TopupCheckout extends CheckoutDetails {
+  topupId: string;
 }
 
 export interface SosContactOutcome {
@@ -130,9 +171,11 @@ export type { InboxItem as NotificationView, InboxPage, PushConfig } from '@sheo
 
 /** A booking's payment. razorpayOrderId/paymentId are null for a CASH payment. */
 /** Named so filter controls can enumerate it without repeating the union. */
-export type PaymentStatus = 'PENDING' | 'CAPTURED' | 'FAILED' | 'REFUNDED';
+/** WAIVED marks trips that ended before payment was required to close them. */
+export type PaymentStatus = 'PENDING' | 'CAPTURED' | 'FAILED' | 'REFUNDED' | 'WAIVED';
 
-export type PaymentMethod = 'UPI' | 'CASH' | 'CARD' | 'NETBANKING' | 'WALLET' | 'ONLINE';
+/** CASH is historical only - it is no longer accepted. SHEOUT_WALLET is her own SheOut balance. */
+export type PaymentMethod = 'UPI' | 'CASH' | 'CARD' | 'NETBANKING' | 'WALLET' | 'ONLINE' | 'SHEOUT_WALLET';
 
 /** What Razorpay Checkout is opened with. amountPaise is the fare in paise, as Razorpay counts it. */
 export interface CheckoutDetails {

@@ -1,6 +1,11 @@
 package com.sheout.payments.internal;
 
+import com.sheout.booking.BookingApi;
+import com.sheout.booking.BookingError;
+import com.sheout.booking.BookingStatus;
+import com.sheout.booking.BookingSummary;
 import com.sheout.payments.PaymentApi;
+import com.sheout.payments.internal.wallet.RiderWalletService;
 import com.sheout.payments.PaymentCaptured;
 import com.sheout.payments.internal.gateway.GatewayPayment;
 import com.sheout.sharedkernel.event.DomainEventPublisher;
@@ -41,10 +46,15 @@ public class PaymentService implements PaymentApi {
     private final PlatformCommission platformCommission;
     private final DomainEventPublisher eventPublisher;
     private final TransactionTemplate transactions;
+    private final BookingApi bookingApi;
+    private final RiderWalletService riderWalletService;
 
     public PaymentService(PaymentRepository paymentRepository, PaymentGateway paymentGateway,
                           PlatformCommission platformCommission, DomainEventPublisher eventPublisher,
-                          PlatformTransactionManager transactionManager) {
+                          PlatformTransactionManager transactionManager, BookingApi bookingApi,
+                          RiderWalletService riderWalletService) {
+        this.bookingApi = bookingApi;
+        this.riderWalletService = riderWalletService;
         this.paymentRepository = paymentRepository;
         this.paymentGateway = paymentGateway;
         this.platformCommission = platformCommission;
@@ -79,37 +89,82 @@ public class PaymentService implements PaymentApi {
         eventPublisher.publish(new PaymentCaptured(
                 payment.getId(), payment.getBookingId(), method, payment.getAmount(),
                 payment.getDriverPayout(), payment.getCommissionPercent(), payment.getCapturedAt()));
+        // The trip is over now: the rider may book again and the partner is
+        // free for her next offer. Same transaction as the capture. A refusal
+        // here is logged, not thrown - money Razorpay has already taken must
+        // never be un-recorded because of a booking-side problem.
+        Result<BookingSummary, BookingError> settled = bookingApi.markPaymentSettled(payment.getBookingId());
+        if (settled.isFailure()) {
+            log.error("Payment {} captured but booking {} could not be marked settled - {}",
+                    payment.getId(), payment.getBookingId(), settled.error());
+        }
         return toSummary(payment);
+    }
+
+    /**
+     * The payment row for a trip that has ended, creating it if it is
+     * missing.
+     * <p>
+     * It is normally written just after the trip ends, by
+     * BookingCompletedListener. If that failed - the app restarted in the
+     * gap, say - the trip would be ended, unpaid, and unpayable, and the rider
+     * locked out of booking by a fare she has no way to pay. So every path
+     * that needs the row makes sure it exists, from the booking's own final
+     * fare. Empty only when the trip has not ended.
+     */
+    private Optional<PaymentEntity> ensurePayment(UUID bookingId) {
+        Optional<PaymentEntity> existing = paymentRepository.findByBookingId(bookingId);
+        if (existing.isPresent()) {
+            return existing;
+        }
+        Optional<BookingSummary> booking = bookingApi.findById(bookingId)
+                .filter(b -> b.status() == BookingStatus.COMPLETED && b.finalFare() != null);
+        if (booking.isEmpty()) {
+            return Optional.empty();
+        }
+        log.warn("Booking {} ended with no payment row - creating it now", bookingId);
+        createPendingPayment(bookingId, booking.get().finalFare());
+        return paymentRepository.findByBookingId(bookingId);
+    }
+
+    private static boolean settled(PaymentEntity payment) {
+        return payment.getStatus() == PaymentStatus.CAPTURED || payment.getStatus() == PaymentStatus.WAIVED;
     }
 
     @Override
     public Result<PaymentSummary, PaymentError> getPaymentStatus(UUID bookingId) {
-        return paymentRepository.findByBookingId(bookingId)
+        return ensurePayment(bookingId)
                 .map(payment -> Result.<PaymentSummary, PaymentError>success(toSummary(payment)))
                 .orElseGet(() -> Result.failure(PaymentError.PAYMENT_NOT_FOUND));
     }
 
     /**
-     * See PaymentApi's Javadoc for why this requires a payment row to
-     * already exist (created by createPendingPayment, via
-     * BookingCompletedListener) rather than accepting an amount itself.
+     * Pays a trip from the rider's SheOut wallet: her balance goes down, the
+     * payment is captured, the partner is credited and the trip is settled -
+     * all in one transaction, so none of it can happen without the rest.
+     * <p>
+     * The payment row is locked first and the wallet second, the only place
+     * both are held, so there is no lock-order deadlock to hit. The caller
+     * has checked she is the rider on this booking.
      */
-    @Override
-    @Transactional
-    public Result<PaymentSummary, PaymentError> initiateCashPayment(UUID bookingId) {
-        // Locked: the rider paying online and the partner confirming cash can
-        // land at the same moment, and exactly one of them may capture.
-        Optional<PaymentEntity> found = paymentRepository.findLockedByBookingId(bookingId);
-        if (found.isEmpty()) {
-            return Result.failure(PaymentError.PAYMENT_NOT_FOUND);
+    public Result<PaymentSummary, PaymentError> payFromWallet(UUID bookingId, UUID customerAccountId) {
+        if (ensurePayment(bookingId).isEmpty()) {
+            return Result.failure(PaymentError.TRIP_NOT_ENDED);
         }
-        PaymentEntity payment = found.get();
-        if (payment.getStatus() == PaymentStatus.CAPTURED) {
-            // Idempotent guard, not an error path a normal caller should hit repeatedly:
-            // never let a second "cash collected" call re-capture an already-settled payment.
-            return Result.failure(PaymentError.ALREADY_CAPTURED);
-        }
-        return Result.success(markCaptured(payment, PaymentMethod.CASH, null));
+        return transactions.execute(status -> {
+            PaymentEntity payment = paymentRepository.findLockedByBookingId(bookingId).orElseThrow();
+            if (settled(payment)) {
+                return Result.<PaymentSummary, PaymentError>failure(PaymentError.ALREADY_CAPTURED);
+            }
+            Result<BigDecimal, PaymentError> debit =
+                    riderWalletService.debitForTrip(customerAccountId, bookingId, payment.getAmount());
+            if (debit.isFailure()) {
+                status.setRollbackOnly();
+                return Result.<PaymentSummary, PaymentError>failure(debit.error());
+            }
+            return Result.<PaymentSummary, PaymentError>success(
+                    markCaptured(payment, PaymentMethod.SHEOUT_WALLET, null));
+        });
     }
 
     /**
@@ -123,12 +178,12 @@ public class PaymentService implements PaymentApi {
      * open, same rule as BookingCompletedListener.
      */
     public Result<CheckoutDetails, PaymentError> prepareCheckout(UUID bookingId) {
-        Optional<PaymentEntity> found = paymentRepository.findByBookingId(bookingId);
+        Optional<PaymentEntity> found = ensurePayment(bookingId);
         if (found.isEmpty()) {
-            return Result.failure(PaymentError.PAYMENT_NOT_FOUND);
+            return Result.failure(PaymentError.TRIP_NOT_ENDED);
         }
         PaymentEntity payment = found.get();
-        if (payment.getStatus() == PaymentStatus.CAPTURED) {
+        if (settled(payment)) {
             return Result.failure(PaymentError.ALREADY_CAPTURED);
         }
         String orderId = payment.getRazorpayOrderId();
@@ -180,7 +235,7 @@ public class PaymentService implements PaymentApi {
         }
         return transactions.execute(status -> {
             PaymentEntity payment = paymentRepository.findLockedByBookingId(bookingId).orElseThrow();
-            if (payment.getStatus() == PaymentStatus.CAPTURED) {
+            if (settled(payment)) {
                 return Result.<PaymentSummary, PaymentError>success(toSummary(payment));
             }
             return Result.<PaymentSummary, PaymentError>success(
@@ -244,14 +299,16 @@ public class PaymentService implements PaymentApi {
         paymentRepository.save(payment);
     }
 
-    /** Called by RazorpayWebhookController after signature verification. */
+    /**
+     * Called by RazorpayWebhookController after signature verification.
+     * False when the order is not a trip's - it may be a wallet top-up's.
+     */
     @Transactional
-    public void applyWebhookUpdate(String razorpayOrderId, String razorpayPaymentId, boolean captured, String failureReason,
-                                   PaymentMethod method) {
+    public boolean applyWebhookUpdate(String razorpayOrderId, String razorpayPaymentId, boolean captured,
+                                      String failureReason, PaymentMethod method) {
         Optional<PaymentEntity> found = paymentRepository.findLockedByRazorpayOrderId(razorpayOrderId);
         if (found.isEmpty()) {
-            log.warn("Razorpay webhook for unknown order id {}", razorpayOrderId);
-            return;
+            return false;
         }
         PaymentEntity payment = found.get();
         // CAPTURED is final: a duplicate delivery must never re-apply. FAILED
@@ -259,17 +316,18 @@ public class PaymentService implements PaymentApi {
         // payment.failed for her first attempt can be followed by
         // payment.captured for her second - ignoring that would leave a paid
         // trip reading as failed and the partner uncredited.
-        if (payment.getStatus() == PaymentStatus.CAPTURED) {
-            return;
+        if (settled(payment)) {
+            return true;
         }
         if (captured) {
             markCaptured(payment, method, razorpayPaymentId);
-            return;
+            return true;
         }
         payment.setRazorpayPaymentId(razorpayPaymentId);
         payment.setStatus(PaymentStatus.FAILED);
         payment.setFailureReason(failureReason);
         paymentRepository.save(payment);
+        return true;
     }
 
     /**

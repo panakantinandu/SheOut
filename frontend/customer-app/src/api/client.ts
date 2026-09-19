@@ -30,6 +30,10 @@ import type {
   PagedResult,
   CheckoutDetails,
   CheckoutResult,
+  PaymentHold,
+  RiderWallet,
+  RiderWalletEntry,
+  TopupCheckout,
   InboxPage,
   PushConfig,
   PaymentStatus,
@@ -278,6 +282,14 @@ export const paymentsApi = {
   },
 
   /**
+   * Pays the trip from her SheOut wallet. 409 INSUFFICIENT_BALANCE when the
+   * balance is short, 409 once the trip is already paid.
+   */
+  payFromWallet(bookingId: string): Promise<PaymentSummary> {
+    return request(`/api/v1/payments/bookings/${bookingId}/wallet`, { method: 'POST' });
+  },
+
+  /**
    * The caller's own payments, paged and filtered by date, status and
    * amount range.
    * <p>
@@ -370,7 +382,40 @@ export const verificationApi = {
   },
 };
 
+/**
+ * Her SheOut wallet. No transfer or withdrawal - it is a closed-loop balance
+ * that only pays for her own trips, which is what keeps it outside RBI's
+ * licensed-wallet rules.
+ */
+export const walletApi = {
+  get(): Promise<RiderWallet> {
+    return request('/api/v1/wallet/me');
+  },
+
+  transactions(params: { page?: number; pageSize?: number } = {}): Promise<PagedResult<RiderWalletEntry>> {
+    return request(`/api/v1/wallet/me/transactions${buildQuery(params)}`);
+  },
+
+  /** Opens a Razorpay order for the amount. Nothing is added until verifyTopup succeeds. */
+  startTopup(amount: number): Promise<TopupCheckout> {
+    return request('/api/v1/wallet/topups', { method: 'POST', body: { amount } });
+  },
+
+  /** The server checks the signature and confirms the capture with Razorpay before crediting. */
+  verifyTopup(topupId: string, result: CheckoutResult): Promise<RiderWallet> {
+    return request(`/api/v1/wallet/topups/${topupId}/verify`, { method: 'POST', body: result });
+  },
+};
+
 export const bookingApi = {
+  /**
+   * Her oldest ended-and-unpaid trip, or null. While one exists she cannot
+   * book, so the app sends her to pay it first.
+   */
+  async getPaymentHold(): Promise<PaymentHold | null> {
+    return (await request<PaymentHold | undefined>('/api/v1/bookings/me/payment-hold')) ?? null;
+  },
+
   create(input: { type: BookingType; category: BookingCategory; pickup: GeoAddress; drop: GeoAddress }): Promise<BookingSummary> {
     return request('/api/v1/bookings', { method: 'POST', body: input });
   },
