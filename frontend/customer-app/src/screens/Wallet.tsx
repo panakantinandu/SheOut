@@ -15,8 +15,8 @@ import {
   TopHeader,
   usePagedList,
 } from '@sheout/design-system';
-import { ApiError, usersApi, walletApi } from '../api/client';
-import type { RiderWallet, RiderWalletEntry } from '../api/types';
+import { ApiError, bookingApi, usersApi, walletApi } from '../api/client';
+import type { PaymentHold, RiderWallet, RiderWalletEntry } from '../api/types';
 import { openRazorpayCheckout } from '../lib/razorpayCheckout';
 import { apiErrorText } from '../lib/apiErrors';
 import { useTranslation } from '@sheout/design-system';
@@ -52,7 +52,9 @@ export function Wallet() {
     routeState.need ? String(Math.max(Math.ceil(routeState.need), 10)) : ''
   );
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<{ tone: 'danger' | 'success'; text: string } | null>(null);
+  const [message, setMessage] = useState<{ tone: 'danger' | 'success' | 'info'; text: string } | null>(null);
+  /** The trip waiting to be paid, if there is one - see handlePayTrip. */
+  const [hold, setHold] = useState<PaymentHold | null>(null);
   const amountInput = useRef<HTMLInputElement>(null);
 
   const loadWallet = useCallback(
@@ -67,18 +69,24 @@ export function Wallet() {
     []
   );
 
+  const loadHold = useCallback(
+    () => bookingApi.getPaymentHold().then(setHold).catch(() => undefined),
+    []
+  );
+
   const list = usePagedList<RiderWalletEntry>((page) => walletApi.transactions({ page, pageSize: 20 }), []);
 
   useEffect(() => {
     void loadWallet();
-  }, [loadWallet]);
+    void loadHold();
+  }, [loadWallet, loadHold]);
 
   useEffect(() => {
     if (adding) amountInput.current?.focus();
   }, [adding]);
 
   const refresh = async () => {
-    await loadWallet();
+    await Promise.all([loadWallet(), loadHold()]);
     list.reload();
   };
 
@@ -100,6 +108,31 @@ export function Wallet() {
     }
     return t('wallet.rangeHint', { min: wallet.minTopup, max: wallet.maxTopup });
   })();
+
+  /**
+   * Takes her to the trip that is actually waiting to be paid.
+   * <p>
+   * This used to open My Bookings - a list of every trip she has ever taken,
+   * with no indication of which one owed anything, and no way to pay from
+   * there. It was a placeholder from before the payment screen existed.
+   * The trip's own screen is where a fare is paid, from her wallet or through
+   * Razorpay, so that is where this goes. Re-checked on the tap rather than
+   * trusted from page load, since a trip may have ended while she sat here.
+   */
+  const handlePayTrip = async () => {
+    setBusy(true);
+    setMessage(null);
+    try {
+      const due = await bookingApi.getPaymentHold();
+      setHold(due);
+      if (due) navigate(`/tracking/${due.bookingId}`);
+      else setMessage({ tone: 'info', text: t('wallet.nothingToPay') });
+    } catch (err) {
+      setMessage({ tone: 'danger', text: apiErrorText(err, 'wallet.payTripError') });
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const handleAddMoney = async () => {
     if (!amountValid) return;
@@ -227,7 +260,10 @@ export function Wallet() {
       )}
 
       {message && (
-        <p className={`text-sm font-medium ${message.tone === 'success' ? 'text-success' : 'text-danger'}`}>
+        <p
+          data-testid="wallet-message"
+          className={`text-sm font-medium ${message.tone === 'success' ? 'text-success' : message.tone === 'info' ? 'text-text-secondary' : 'text-danger'}`}
+        >
           {message.text}
         </p>
       )}
@@ -237,9 +273,24 @@ export function Wallet() {
           <IconCircle tone="soft" icon={<PlusCircle />} />
           <span className="text-xs font-medium text-text-primary">{t('wallet.addMoney')}</span>
         </button>
-        <button type="button" className="flex flex-col items-center gap-1.5" onClick={() => navigate('/bookings')}>
-          <IconCircle tone="soft" color="green" icon={<Bike />} />
-          <span className="text-xs font-medium text-text-primary">{t('wallet.payTrip')}</span>
+        <button
+          type="button"
+          className="flex flex-col items-center gap-1.5"
+          onClick={handlePayTrip}
+          disabled={busy}
+          data-testid="wallet-pay-trip"
+        >
+          <span className="relative">
+            <IconCircle tone="soft" color={hold ? 'orange' : 'green'} icon={<Bike />} />
+            {/* A fare is owed: said here, before she taps, because it also
+                blocks her next booking. */}
+            {hold && (
+              <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-background bg-accent-orange" aria-hidden="true" />
+            )}
+          </span>
+          <span className="text-xs font-medium text-text-primary">
+            {hold ? t('wallet.payTripDue', { amount: hold.amount.toFixed(0) }) : t('wallet.payTrip')}
+          </span>
         </button>
         <button type="button" className="flex flex-col items-center gap-1.5" onClick={() => navigate('/profile/payments')}>
           <IconCircle tone="soft" color="orange" icon={<Receipt />} />
