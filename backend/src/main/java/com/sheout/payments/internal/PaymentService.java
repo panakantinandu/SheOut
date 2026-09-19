@@ -124,7 +124,19 @@ public class PaymentService implements PaymentApi {
         }
         log.warn("Booking {} ended with no payment row - creating it now", bookingId);
         createPendingPayment(bookingId, booking.get().finalFare());
-        return paymentRepository.findByBookingId(bookingId);
+        Optional<PaymentEntity> created = paymentRepository.findByBookingId(bookingId);
+        // A trip already settled without a row is one V23 grandfathered.
+        // Recording it as payable would offer the rider a "Pay" button for a
+        // trip that is closed; it is recorded the way V23 recorded its
+        // siblings instead.
+        if (booking.get().paymentSettledAt() != null) {
+            created.filter(p -> p.getStatus() == PaymentStatus.PENDING).ifPresent(p -> {
+                p.setStatus(PaymentStatus.WAIVED);
+                p.setFailureReason("Trip ended before payment was required to close it");
+                paymentRepository.save(p);
+            });
+        }
+        return created;
     }
 
     private static boolean settled(PaymentEntity payment) {
