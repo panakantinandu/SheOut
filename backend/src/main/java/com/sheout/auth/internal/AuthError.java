@@ -17,9 +17,6 @@ public enum AuthError {
     /** Code did not match the one on file for this phone number. */
     OTP_CODE_MISMATCH,
 
-    /** Account already exists for this phone number under a different role. */
-    ROLE_MISMATCH,
-
     /**
      * An admin has blocked this account - see AccountEntity. Checked only
      * after the OTP is verified, so the endpoint cannot be used to discover

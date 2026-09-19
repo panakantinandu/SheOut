@@ -20,3 +20,4 @@ export * from './tokens';
 // decorative slots (Home's hero banner) without either app keeping its own
 // copy of the file in public/.
 export { default as brandIllustration } from './assets/sheout-illustration.png';
+export * from './lib/useOtpSender';

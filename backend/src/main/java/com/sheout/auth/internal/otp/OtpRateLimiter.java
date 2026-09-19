@@ -1,5 +1,6 @@
 package com.sheout.auth.internal.otp;
 
+import com.sheout.auth.AccountRole;
 import com.sheout.sharedkernel.ratelimit.RateLimiter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -60,18 +61,26 @@ public class OtpRateLimiter {
     }
 
     /** Throws TooManyRequestsException when a code may not be sent to this number now. */
-    public void checkRequest(String phoneNumber) {
-        rateLimiter.tryConsume("otp-request-cooldown:" + phoneNumber, 1, cooldown)
-                .orThrow("Please wait before asking for another code.");
-        rateLimiter.tryConsume("otp-request:" + phoneNumber, requestLimit, window)
+    /**
+     * The cooldown and the short window are per app, so signing in to one
+     * app never makes the other say "please wait". The hourly cap stays per
+     * number across both apps: it is what bounds how many texts one number
+     * can be sent, and two apps must not double that.
+     */
+    public void checkRequest(String phoneNumber, AccountRole role) {
+        // Its own code: this refusal means a code went out moments ago, so
+        // the app takes her to enter it rather than showing an error.
+        rateLimiter.tryConsume("otp-request-cooldown:" + role + ":" + phoneNumber, 1, cooldown)
+                .orThrow("OTP_RESEND_COOLDOWN", "A code was sent to this number moments ago.");
+        rateLimiter.tryConsume("otp-request:" + role + ":" + phoneNumber, requestLimit, window)
                 .orThrow("Too many codes requested for this number. Please wait and try again.");
         rateLimiter.tryConsume("otp-request-hourly:" + phoneNumber, hourlyLimit, Duration.ofHours(1))
                 .orThrow("Too many codes requested for this number. Please wait and try again.");
     }
 
     /** Throws TooManyRequestsException when this number has had too many verification attempts. */
-    public void checkVerify(String phoneNumber) {
-        rateLimiter.tryConsume("otp-verify:" + phoneNumber, verifyLimit, window)
+    public void checkVerify(String phoneNumber, AccountRole role) {
+        rateLimiter.tryConsume("otp-verify:" + role + ":" + phoneNumber, verifyLimit, window)
                 .orThrow("Too many attempts for this number. Please wait and try again.");
     }
 }

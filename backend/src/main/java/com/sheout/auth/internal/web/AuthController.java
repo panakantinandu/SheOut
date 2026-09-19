@@ -72,7 +72,7 @@ public class AuthController {
 
     @PostMapping("/api/v1/auth/otp/request")
     public ResponseEntity<Void> requestOtp(@Valid @RequestBody RequestOtpRequest request, HttpServletRequest http) {
-        otpRateLimiter.checkRequest(request.phoneNumber());
+        otpRateLimiter.checkRequest(request.phoneNumber(), request.role());
         checkClient("otp-request", http);
         Result<Void, AuthError> result = authService.requestOtp(request.phoneNumber(), request.role());
         if (result.isFailure()) {
@@ -83,7 +83,7 @@ public class AuthController {
 
     @PostMapping("/api/v1/auth/otp/verify")
     public ResponseEntity<VerifyOtpResponse> verifyOtp(@Valid @RequestBody VerifyOtpRequest request, HttpServletRequest http) {
-        otpRateLimiter.checkVerify(request.phoneNumber());
+        otpRateLimiter.checkVerify(request.phoneNumber(), request.role());
         checkClient("otp-verify", http);
         Result<AuthenticatedSession, AuthError> result =
                 authService.verifyOtp(request.phoneNumber(), request.code(), request.role());
@@ -129,10 +129,6 @@ public class AuthController {
                     new ApiException(HttpStatus.BAD_REQUEST, "Bad Request", "No OTP requested for this number, or it has expired");
             case OTP_CODE_MISMATCH ->
                     new ApiException(HttpStatus.BAD_REQUEST, "Bad Request", "Incorrect OTP code");
-            case ROLE_MISMATCH ->
-                    // Shared between the phone and Google flows (see verifyGoogle) - kept
-                    // provider-agnostic rather than saying "phone number" for both.
-                    new ApiException(HttpStatus.CONFLICT, "Conflict", "This account is already registered under a different role");
             // 403, and specific rather than a generic auth failure: someone
             // locked out deserves to know they were blocked rather than
             // thinking the app is broken and retrying forever. The reason the

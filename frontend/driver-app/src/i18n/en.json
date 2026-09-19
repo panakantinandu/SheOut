@@ -142,7 +142,7 @@
       "subtitle": "Register to start earning with SheOut"
     },
     "alreadyRegistered": "That number is already registered - signing you in instead.",
-    "createdForYou": "We didn't find a partner account for that number, so we've created one.",
+    "createdForYou": "There was no partner account on this number yet, so we’ve set one up for you.",
     "invalidPhone": "Enter a valid 10-digit mobile number",
     "sendError": "Could not send the code. Please check your connection and try again.",
     "verifyError": "Could not verify code",
@@ -152,7 +152,8 @@
     "codeSentTo": "Enter the code sent to {{phone}}",
     "codePlaceholder": "6-digit code",
     "verifying": "Verifying...",
-    "changeNumber": "Change number"
+    "changeNumber": "Change number",
+    "verify": "Verify"
   },
   "verification": {
     "title": "Verification",

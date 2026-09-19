@@ -80,8 +80,9 @@ public class AccountEntity extends BaseEntity {
 
     /**
      * Only AuthService.grantAdminRole calls this. A role is otherwise fixed
-     * for the life of an account (one phone number, one role - see this
-     * class's Javadoc), so this is deliberately not a general setter.
+     * for the life of an account - a number holds one account per app, each
+     * with its own role (see V26) - so this is deliberately not a general
+     * setter.
      */
     void promoteToAdmin() {
         this.role = AccountRole.ADMIN;

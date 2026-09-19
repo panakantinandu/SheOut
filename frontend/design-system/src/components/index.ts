@@ -44,3 +44,4 @@ export * from './StatusDot';
 export * from './LanguagePicker';
 export * from './Drawer';
 export * from './BrandSplash';
+export * from './ResendCode';

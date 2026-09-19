@@ -204,7 +204,7 @@
       "subtitle": "Create your account to book safe rides"
     },
     "alreadyRegistered": "That number is already registered - signing you in instead.",
-    "createdForYou": "We didn't find an account for that number, so we've created one.",
+    "createdForYou": "There was no rider account on this number yet, so we’ve set one up for you.",
     "invalidPhone": "Enter a valid 10-digit mobile number",
     "sendError": "Could not send the code. Please check your connection and try again.",
     "verifyError": "Could not verify code",
