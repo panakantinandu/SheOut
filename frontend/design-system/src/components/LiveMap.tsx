@@ -192,7 +192,13 @@ export function LiveMap({ markers, route, className, autoFit = true, onPick, cen
       map.fitBounds(bounds, { padding: [40, 40], maxZoom: 16 });
     }
     // Leaflet mis-sizes when its container was hidden or resized at mount.
-    setTimeout(() => map.invalidateSize(), 0);
+    // Cancelled on cleanup: leaving the screen in the same moment (Done on a
+    // trip that has just finished) removed the map first, and the late call
+    // then threw "reading '_leaflet_pos'" on a map that no longer existed.
+    const resize = setTimeout(() => {
+      if (mapRef.current === map) map.invalidateSize();
+    }, 0);
+    return () => clearTimeout(resize);
   }, [markers, autoFit, onPick]);
 
   // The route line, kept in its own effect so a driver position arriving

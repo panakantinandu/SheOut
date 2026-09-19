@@ -273,7 +273,8 @@
     "accept": "Accept",
     "unavailableTitle": "This request is no longer available",
     "unavailableBody": "It expired or another driver accepted it first.",
-    "backHome": "Back to Home"
+    "backHome": "Back to Home",
+    "myTrips": "See my trips"
   },
   "trip": {
     "pickup": "Pickup",
@@ -313,7 +314,16 @@
     "backHome": "Back to home",
     "ending": "Ending trip...",
     "endTrip": "End trip and request payment",
-    "cancelTrip": "Cancel Trip"
+    "cancelTrip": "Cancel Trip",
+    "detailsTitle": "Trip details",
+    "requestedOn": "Requested {{when}}",
+    "when": {
+      "requested": "Requested",
+      "started": "Picked up",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
+    "fareNotCharged": "Quoted fare (not charged)"
   },
   "earnings": {
     "group": {
