@@ -1,5 +1,6 @@
 import illustration from '../assets/sheout-illustration.png';
 import { cn } from '../lib/cn';
+import { useTranslation } from 'react-i18next';
 
 export type BrandHeaderSize = 'md' | 'lg';
 
@@ -12,6 +13,8 @@ export interface BrandHeaderProps {
   size?: BrandHeaderSize;
   /** Optional line under the wordmark, e.g. "Empowering Women Partners". */
   footer?: string;
+  /** The line between the orange rules. Defaults to the brand line. */
+  tagline?: string;
   className?: string;
 }
 
@@ -31,7 +34,9 @@ export interface BrandHeaderProps {
  * file, which is the concrete reason its Login could not show the mark;
  * importing it here means neither app needs one.
  */
-export function BrandHeader({ size = 'md', footer, className }: BrandHeaderProps) {
+export function BrandHeader({ size = 'md', footer, tagline: taglineProp, className }: BrandHeaderProps) {
+  const { t } = useTranslation('ds');
+  const tagline = taglineProp ?? t('brand.tagline');
   const large = size === 'lg';
 
   return (
@@ -64,7 +69,7 @@ export function BrandHeader({ size = 'md', footer, className }: BrandHeaderProps
       <div className="flex items-center gap-2">
         <span className="h-0.5 w-5 rounded-full bg-accent-orange" aria-hidden="true" />
         <p className={`font-heading font-bold text-primary-dark ${large ? 'text-sm' : 'text-xs'}`}>
-          Your Delivery, Our Priority
+          {tagline}
         </p>
         <span className="h-0.5 w-5 rounded-full bg-accent-orange" aria-hidden="true" />
       </div>

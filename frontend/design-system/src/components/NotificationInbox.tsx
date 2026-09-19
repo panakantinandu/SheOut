@@ -7,6 +7,7 @@ import { ListEmptyState } from './ListEmptyState';
 import { LoadMore } from './LoadMore';
 import { PullToRefresh } from './PullToRefresh';
 import { SkeletonList } from './Skeleton';
+import { useTranslation } from 'react-i18next';
 
 export interface InboxItem {
   id: string;
@@ -34,12 +35,12 @@ export interface NotificationInboxProps {
   refreshKey?: number;
 }
 
-function when(iso: string): string {
+function when(iso: string, t: (key: string, values?: Record<string, unknown>) => string): string {
   const date = new Date(iso);
   const minutes = Math.round((Date.now() - date.getTime()) / 60000);
-  if (minutes < 1) return 'Just now';
-  if (minutes < 60) return `${minutes} min ago`;
-  if (minutes < 24 * 60) return `${Math.round(minutes / 60)} hr ago`;
+  if (minutes < 1) return t('inbox.justNow');
+  if (minutes < 60) return t('inbox.minutesAgo', { count: minutes });
+  if (minutes < 24 * 60) return t('inbox.hoursAgo', { count: Math.round(minutes / 60) });
   return date.toLocaleDateString(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
 }
 
@@ -49,6 +50,7 @@ function when(iso: string): string {
  * one marks it read and opens what it is about.
  */
 export function NotificationInbox({ fetchPage, markRead, markAllRead, onOpen, refreshKey = 0 }: NotificationInboxProps) {
+  const { t } = useTranslation('ds');
   const [items, setItems] = useState<InboxItem[] | null>(null);
   const [total, setTotal] = useState(0);
   const [hasMore, setHasMore] = useState(false);
@@ -71,7 +73,7 @@ export function NotificationInbox({ fetchPage, markRead, markAllRead, onOpen, re
         setUnread(result.unreadCount);
         setError(null);
       } catch {
-        if (current === generation.current) setError('Could not load your notifications.');
+        if (current === generation.current) setError(t('inbox.loadError'));
       }
     },
     [fetchPage]
@@ -99,15 +101,15 @@ export function NotificationInbox({ fetchPage, markRead, markAllRead, onOpen, re
   if (error && !items) return <p className="text-sm text-danger">{error}</p>;
   // The shape of the notifications about to arrive, rather than the word
   // "Loading" - see Skeleton.
-  if (!items) return <SkeletonList rows={4} label="Loading your notifications" />;
+  if (!items) return <SkeletonList rows={4} label={t('inbox.loading')} />;
 
   if (items.length === 0) {
     return (
       <ListEmptyState
         illustrated
         icon={<Bell />}
-        title="Nothing yet"
-        message="Updates about your trips and account will appear here."
+        title={t('inbox.emptyTitle')}
+        message={t('inbox.emptyMessage')}
       />
     );
   }
@@ -117,9 +119,9 @@ export function NotificationInbox({ fetchPage, markRead, markAllRead, onOpen, re
       <div className="space-y-3" data-testid="inbox">
       {unread > 0 && (
         <div className="flex items-center justify-between">
-          <p className="text-sm text-text-secondary">{unread} unread</p>
+          <p className="text-sm text-text-secondary">{t('inbox.unread', { count: unread })}</p>
           <Button size="md" variant="secondary" onClick={readAll}>
-            Mark all read
+            {t('inbox.markAllRead')}
           </Button>
         </div>
       )}
@@ -142,10 +144,10 @@ export function NotificationInbox({ fetchPage, markRead, markAllRead, onOpen, re
           <span className="min-w-0 flex-1">
             <span className={cn('block text-text-primary', item.read ? 'font-medium' : 'font-semibold')}>
               {item.title}
-              {!item.read && <span className="sr-only"> (unread)</span>}
+              {!item.read && <span className="sr-only"> ({t('inbox.unreadMarker')})</span>}
             </span>
             {item.body && <span className="mt-0.5 block text-sm text-text-secondary">{item.body}</span>}
-            <span className="mt-1 block text-xs text-text-secondary">{when(item.createdAt)}</span>
+            <span className="mt-1 block text-xs text-text-secondary">{when(item.createdAt, t)}</span>
           </span>
         </button>
       ))}

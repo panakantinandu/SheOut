@@ -2,6 +2,7 @@ import { Search, SlidersHorizontal, X } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { Card } from './Card';
 import { TextField } from './TextField';
+import { useTranslation } from 'react-i18next';
 
 export interface ListFilterBarProps {
   /** Omit entirely where text search is meaningless - see the comment below. */
@@ -42,6 +43,7 @@ export function ListFilterBar({
   onClearAll,
   defaultOpen = false,
 }: ListFilterBarProps) {
+  const { t } = useTranslation('ds');
   const [open, setOpen] = useState(defaultOpen);
 
   return (
@@ -62,7 +64,7 @@ export function ListFilterBar({
           type="button"
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
-          aria-label={open ? 'Hide filters' : 'Show filters'}
+          aria-label={open ? t('filters.hide') : t('filters.show')}
           className={
             activeCount > 0
               ? 'flex h-14 shrink-0 items-center gap-2 rounded-input border border-primary bg-primary-light px-4 text-sm font-semibold text-primary'

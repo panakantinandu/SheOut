@@ -1,0 +1,13 @@
+{
+  "raiseIssue": {
+    "dangerTitle": "Are you in danger right now?",
+    "dangerBody": "A ticket is read when support reaches it. If you need help this minute, stop somewhere safe and call {{number}}, or call driver support from the Help screen.",
+    "call": "Call {{number}}"
+  },
+  "pickupCode": {
+    "locked": "This trip needs support to sort out before it can start.",
+    "askForCode": "Ask your rider for her four-digit code and enter it here. The trip starts once it matches.",
+    "fieldLabel": "Pickup code",
+    "fieldPlaceholder": "4-digit code"
+  }
+}

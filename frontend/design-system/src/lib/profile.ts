@@ -1,3 +1,4 @@
+import { dsT } from '../i18n';
 /**
  * Mirrors the backend's ProfileRules so the completion form can say "you
  * must be 18" before a round trip. The server is still the rule: this only
@@ -29,15 +30,15 @@ export function latestAdultBirthDate(today = todayInIndia()): string {
 }
 
 export function dateOfBirthProblem(dateOfBirth: string): string | null {
-  if (!dateOfBirth) return 'Enter your date of birth.';
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth)) return 'Enter your date of birth.';
+  if (!dateOfBirth) return dsT('validation.dobRequired', 'Enter your date of birth.');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth)) return dsT('validation.dobRequired', 'Enter your date of birth.');
   const today = todayInIndia();
-  if (dateOfBirth > today || ageOn(dateOfBirth, today) > 120) return 'That date of birth does not look right. Check the year.';
-  if (ageOn(dateOfBirth, today) < MINIMUM_AGE) return 'You must be 18 or older to use SheOut.';
+  if (dateOfBirth > today || ageOn(dateOfBirth, today) > 120) return dsT('validation.dobInvalid', 'That date of birth does not look right. Check the year.');
+  if (ageOn(dateOfBirth, today) < MINIMUM_AGE) return dsT('validation.dobTooYoung', 'You must be 18 or older to use SheOut.');
   return null;
 }
 
 export function emailProblem(email: string): string | null {
   if (!email.trim()) return null;
-  return /^[^\s@]{1,64}@[^\s@]+\.[^\s@]{2,}$/.test(email.trim()) ? null : 'That email address does not look right.';
+  return /^[^\s@]{1,64}@[^\s@]+\.[^\s@]{2,}$/.test(email.trim()) ? null : dsT('validation.emailInvalid', 'That email address does not look right.');
 }

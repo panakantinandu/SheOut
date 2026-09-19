@@ -1,5 +1,8 @@
+import { MessageCircle } from 'lucide-react';
+import { IconCircle } from './IconCircle';
 import { useEffect, useRef, useState } from 'react';
 import { Send } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export interface ChatThreadMessage {
   id: string;
@@ -66,6 +69,7 @@ export function ChatThread({
   onSend,
   onDismissError,
 }: ChatThreadProps) {
+  const { t } = useTranslation('ds');
   const [draft, setDraft] = useState('');
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -87,13 +91,16 @@ export function ChatThread({
     <div className="flex flex-col gap-3">
       <div className="min-h-[160px] space-y-2 rounded-card bg-background p-3">
         {loading && messages.length === 0 ? (
-          <p className="py-6 text-center text-sm text-text-secondary">Loading messages...</p>
+          <p className="py-6 text-center text-sm text-text-secondary">{t('chat.loading')}</p>
         ) : messages.length === 0 ? (
-          <p className="py-6 text-center text-sm text-text-secondary">
+          <div className="flex flex-col items-center gap-2 py-6 text-center">
+          <IconCircle tone="soft" icon={<MessageCircle />} />
+          <p className="text-sm text-text-secondary">
             {open
-              ? `No messages yet. Say hello, or send ${counterpartLabel} a landmark to look for.`
-              : 'No messages were sent on this trip.'}
+              ? t('chat.emptyOpen', { who: counterpartLabel })
+              : t('chat.emptyClosed')}
           </p>
+          </div>
         ) : (
           messages.map((message) => {
             const mine = myAccountId !== null && message.senderAccountId === myAccountId;
@@ -125,7 +132,7 @@ export function ChatThread({
             className="min-h-[44px] flex-1 resize-none rounded-input border border-border bg-surface px-4 py-3 text-sm text-text-primary outline-none transition-colors focus:border-primary"
             rows={1}
             maxLength={MAX_BODY}
-            placeholder="Type a message"
+            placeholder={t('chat.placeholder')}
             value={draft}
             disabled={sending}
             onChange={(e) => {
@@ -143,7 +150,7 @@ export function ChatThread({
           />
           <button
             type="button"
-            aria-label="Send message"
+            aria-label={t('chat.send')}
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-text-inverse transition-colors hover:bg-primary-dark disabled:opacity-50"
             disabled={sending || draft.trim().length === 0}
             onClick={() => void submit()}

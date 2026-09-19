@@ -16,6 +16,7 @@ import com.sheout.ratings.AggregateRating;
 import com.sheout.ratings.RatingsApi;
 import com.sheout.sharedkernel.Result;
 import com.sheout.sharedkernel.web.ApiException;
+import com.sheout.users.CustomerProfileApi;
 import com.sheout.users.DriverProfileApi;
 import com.sheout.users.VehicleType;
 import jakarta.validation.Valid;
@@ -66,9 +67,12 @@ public class DispatchController {
     private final BookingApi bookingApi;
     private final DriverProfileApi driverProfileApi;
     private final RatingsApi ratingsApi;
+    private final CustomerProfileApi customerProfileApi;
 
     public DispatchController(DispatchService dispatchService, BookingApi bookingApi,
-                              DriverProfileApi driverProfileApi, RatingsApi ratingsApi) {
+                              DriverProfileApi driverProfileApi, RatingsApi ratingsApi,
+                              CustomerProfileApi customerProfileApi) {
+        this.customerProfileApi = customerProfileApi;
         this.dispatchService = dispatchService;
         this.bookingApi = bookingApi;
         this.driverProfileApi = driverProfileApi;
@@ -272,6 +276,50 @@ public class DispatchController {
                             rating.totalRatings()));
                 })
                 .orElseThrow(() -> ApiException.notFound("No driver details available for this booking yet"));
+    }
+
+    /**
+     * Who she is collecting: the rider's first name, photo and rating - the
+     * other half of assignedDriver above.
+     * <p>
+     * Held to the same rules, for the same reasons. Only the partner assigned
+     * to this booking, and only from ACCEPTED onwards: a partner who has only
+     * been offered the trip, or who claimed it and has not confirmed, learns
+     * nothing about the woman who asked for it. First name only - enough to
+     * greet her at the kerb and check she has the right person, not enough to
+     * find her afterwards. No phone number, no surname, no address.
+     * <p>
+     * 404 for every refusal, indistinguishable from each other and from a
+     * booking that does not exist - the enumeration-safe convention.
+     */
+    @GetMapping("/api/v1/dispatch/bookings/{bookingId}/rider")
+    public ResponseEntity<AssignedRiderResponse> assignedRider(@PathVariable UUID bookingId) {
+        CurrentAccount caller = CurrentAccountContext.get()
+                .orElseThrow(() -> ApiException.unauthorized("Authentication required"));
+
+        Result<BookingParticipants, BookingError> participants = bookingApi.getParticipants(bookingId);
+        if (participants.isFailure() || !caller.accountId().equals(participants.value().driverId())) {
+            throw ApiException.notFound("No such booking");
+        }
+        BookingParticipants booking = participants.value();
+        if (!DRIVER_DETAILS_VISIBLE_FROM.contains(booking.status())) {
+            throw ApiException.notFound("No such booking");
+        }
+
+        return customerProfileApi.findByAccountId(booking.customerId())
+                .map(profile -> {
+                    AggregateRating rating = ratingsApi.getAggregateRating(booking.customerId());
+                    String first = profile.name() == null || profile.name().isBlank()
+                            ? null
+                            : profile.name().trim().split("\\s+")[0];
+                    return ResponseEntity.ok(new AssignedRiderResponse(
+                            first, profile.profilePhotoUrl(), rating.averageStars(), rating.totalRatings()));
+                })
+                .orElseThrow(() -> ApiException.notFound("No such booking"));
+    }
+
+    /** What a partner is entitled to know about her rider. See assignedRider. */
+    public record AssignedRiderResponse(String firstName, String photoUrl, Double averageStars, int totalRatings) {
     }
 
     /** recordedAt lets the client show staleness instead of implying a stale point is live. */

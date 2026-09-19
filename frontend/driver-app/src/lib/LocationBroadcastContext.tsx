@@ -1,3 +1,4 @@
+import { i18next } from '@sheout/design-system';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { dispatchApi } from '../api/client';
 
@@ -24,12 +25,12 @@ const Ctx = createContext<LocationBroadcastContextValue | null>(null);
 
 function describe(err: GeolocationPositionError): string {
   if (err.code === err.PERMISSION_DENIED) {
-    return 'Location permission is blocked. Allow it in your browser settings to receive ride requests.';
+    return i18next.t('location.blocked');
   }
   if (err.code === err.POSITION_UNAVAILABLE) {
-    return 'Your location is unavailable right now, so you will not receive ride requests.';
+    return i18next.t('location.unavailable');
   }
-  return 'Finding your location is taking too long, so you will not receive ride requests.';
+  return i18next.t('location.timeout');
 }
 
 /**
@@ -95,7 +96,7 @@ export function LocationBroadcastProvider({ children }: { children: ReactNode })
 
     if (!navigator.geolocation) {
       setStatus('blocked');
-      setError('This browser cannot share your location, so you will not receive ride requests.');
+      setError(i18next.t('location.unsupported'));
       return;
     }
 

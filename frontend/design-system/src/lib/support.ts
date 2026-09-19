@@ -1,5 +1,6 @@
 import type { StatusTone } from '../components/StatusBadge';
 import { humanizeEnum } from './labels';
+import { dsT } from '../i18n';
 
 /**
  * Words and colours for support tickets, shared by both apps so a ticket
@@ -25,17 +26,17 @@ export type SupportTicketStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED'
 export function supportCategoryLabel(category: string, audience: 'customer' | 'driver'): string {
   switch (category) {
     case 'PAYMENT_DISPUTE':
-      return audience === 'driver' ? 'Payment or earnings' : 'Payment problem';
+      return audience === 'driver' ? dsT('support.category.PAYMENT_DISPUTE_driver', 'Payment or earnings') : dsT('support.category.PAYMENT_DISPUTE', 'Payment problem');
     case 'DRIVER_OR_CUSTOMER_BEHAVIOR':
-      return audience === 'driver' ? "A rider's behaviour" : "A partner's behaviour";
+      return audience === 'driver' ? dsT('support.category.BEHAVIOR_driver', "A rider's behaviour") : dsT('support.category.BEHAVIOR', "A partner's behaviour");
     case 'SAFETY_CONCERN':
-      return 'Safety concern';
+      return dsT('support.category.SAFETY_CONCERN', 'Safety concern');
     case 'APP_ISSUE':
-      return 'Problem with the app';
+      return dsT('support.category.APP_ISSUE', 'Problem with the app');
     case 'CANCELLATION_DISPUTE':
-      return 'A cancellation';
+      return dsT('support.category.CANCELLATION_DISPUTE', 'A cancellation');
     case 'OTHER':
-      return 'Something else';
+      return dsT('support.category.OTHER', 'Something else');
     default:
       return humanizeEnum(category);
   }
@@ -44,7 +45,12 @@ export function supportCategoryLabel(category: string, audience: 'customer' | 'd
 export function supportCategoryOptions(audience: 'customer' | 'driver') {
   return (
     ['SAFETY_CONCERN', 'PAYMENT_DISPUTE', 'DRIVER_OR_CUSTOMER_BEHAVIOR', 'CANCELLATION_DISPUTE', 'APP_ISSUE', 'OTHER'] as const
-  ).map((value) => ({ value, label: supportCategoryLabel(value, audience) }));
+  ).map((value) => ({
+    value,
+    get label() {
+      return supportCategoryLabel(value, audience);
+    },
+  }));
 }
 
 const STATUS: Record<string, string> = {
@@ -56,7 +62,7 @@ const STATUS: Record<string, string> = {
 
 /** Written from the raiser's side: "OPEN" says nothing about whose move it is. */
 export function supportStatusLabel(status: string): string {
-  return STATUS[status] ?? humanizeEnum(status);
+  return dsT(`support.status.${status}`, STATUS[status] ?? humanizeEnum(status));
 }
 
 export function supportStatusTone(status: string): StatusTone {
@@ -74,7 +80,9 @@ export function supportStatusTone(status: string): StatusTone {
 
 export const SUPPORT_STATUS_OPTIONS = (['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'] as const).map((value) => ({
   value,
-  label: supportStatusLabel(value),
+  get label() {
+    return supportStatusLabel(value);
+  },
 }));
 
 /** Shared with the server's own column limits. */

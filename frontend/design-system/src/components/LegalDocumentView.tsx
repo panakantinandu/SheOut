@@ -1,6 +1,8 @@
 import { Card } from './Card';
 import { TopHeader } from './TopHeader';
 import { TODO_LEGAL, type LegalDocument } from '../legal/content';
+import { useAppLanguage } from '../i18n';
+import { useTranslation } from 'react-i18next';
 
 export interface LegalDocumentViewProps {
   document: LegalDocument;
@@ -18,9 +20,20 @@ export interface LegalDocumentViewProps {
  * company details are still outstanding.
  */
 export function LegalDocumentView({ document, onBack }: LegalDocumentViewProps) {
+  const { t } = useTranslation('ds');
+  const lng = useAppLanguage();
   return (
     <div className="space-y-6">
       <TopHeader variant="back" title={document.title} onBack={onBack} />
+
+      {/* Legal text is not machine-translated: a wrong word in a contract is
+          a legal problem, not a typo. Said plainly rather than left to be
+          discovered. */}
+      {lng !== 'en' && (
+        <Card tone="warning" data-testid="legal-english-only">
+          <p className="text-sm text-text-primary">{t('legal.englishOnly')}</p>
+        </Card>
+      )}
 
       <Card className="space-y-2">
         <p className="text-xs font-medium uppercase tracking-wide text-text-secondary">{document.effective}</p>

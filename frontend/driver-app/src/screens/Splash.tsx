@@ -1,26 +1,53 @@
-import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { IndianRupee, Package, ShieldCheck } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { BrandSplash, splashDestination, useTranslation } from '@sheout/design-system';
 import { useAuth } from '../auth/AuthContext';
 
-const SPLASH_DELAY_MS = 1500;
+/**
+ * Shorter than the rider app's: a partner opening the app wants to get
+ * online, and has seen this screen many times. Still long enough to read as
+ * a launch rather than a flicker.
+ */
+const SPLASH_DISPLAY_MS = 2200;
+const FADE_DURATION_MS = 300;
+const FADE_START_MS = SPLASH_DISPLAY_MS - FADE_DURATION_MS;
 
-/** Auto-advances to /home or /login after a short delay - same pattern as customer-app's Splash. */
+/**
+ * The partner app's first screen, on every launch - including from the
+ * home-screen icon, which used to skip it (see coldStart.ts). The same brand
+ * treatment as the rider app; it used to be a logo JPEG on a plain page.
+ * Moves on to Login, Home, or wherever the launch was headed - an offer
+ * notification, say.
+ */
 export function Splash() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const { isAuthenticated } = useAuth();
+  const [fading, setFading] = useState(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      navigate(isAuthenticated ? '/home' : '/login', { replace: true });
-    }, SPLASH_DELAY_MS);
-    return () => clearTimeout(timer);
-  }, [navigate, isAuthenticated]);
+    const fadeTimer = setTimeout(() => setFading(true), FADE_START_MS);
+    const navTimer = setTimeout(() => {
+      navigate(splashDestination(location.search, isAuthenticated), { replace: true });
+    }, SPLASH_DISPLAY_MS);
+    return () => {
+      clearTimeout(fadeTimer);
+      clearTimeout(navTimer);
+    };
+  }, [navigate, isAuthenticated, location.search]);
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-screen">
-      <img src="/Logo.jpeg" alt="SheOut" className="h-28 w-28 rounded-card object-cover shadow-card" />
-      <h1 className="font-heading text-3xl font-extrabold text-primary">SHEOUT DRIVER</h1>
-      <p className="text-sm font-medium text-text-secondary">Drive with confidence</p>
-    </div>
+    <BrandSplash
+      fading={fading}
+      badge={t('splash.badge')}
+      items={[
+        { key: 'earn', label: t('splash.earn'), icon: <IndianRupee /> },
+        { key: 'deliver', label: t('splash.deliver'), icon: <Package /> },
+        { key: 'safe', label: t('splash.safe'), icon: <ShieldCheck /> },
+      ]}
+      footerLine={t('splash.footer')}
+    />
   );
 }

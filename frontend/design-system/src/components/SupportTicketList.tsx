@@ -16,6 +16,7 @@ import {
   supportStatusLabel,
   supportStatusTone,
 } from '../lib/support';
+import { useTranslation } from 'react-i18next';
 
 export interface SupportTicketListItem {
   id: string;
@@ -48,6 +49,7 @@ export interface SupportTicketListProps {
  * trips already does.
  */
 export function SupportTicketList({ audience, fetchPage, onOpen }: SupportTicketListProps) {
+  const { t } = useTranslation('ds');
   const [status, setStatus] = useState('');
   const [category, setCategory] = useState('');
   const [dates, setDates] = useState<DateRangeValue>({ from: '', to: '' });
@@ -77,33 +79,33 @@ export function SupportTicketList({ audience, fetchPage, onOpen }: SupportTicket
         }}
       >
         <SelectField
-          label="Status"
-          placeholder="Any status"
+          label={t('tickets.status')}
+          placeholder={t('tickets.anyStatus')}
           value={status}
           onChange={(e) => setStatus(e.target.value)}
           options={SUPPORT_STATUS_OPTIONS}
         />
         <SelectField
-          label="Category"
-          placeholder="Any category"
+          label={t('tickets.category')}
+          placeholder={t('tickets.anyCategory')}
           value={category}
           onChange={(e) => setCategory(e.target.value)}
           options={supportCategoryOptions(audience)}
         />
-        <DateRangeFields value={dates} onChange={setDates} label="Raised between" />
+        <DateRangeFields value={dates} onChange={setDates} label={t('tickets.raisedBetween')} />
       </ListFilterBar>
 
       {list.error && <p className="text-sm text-danger">{list.error}</p>}
-      {list.loading && <SkeletonList rows={3} label="Loading your tickets" />}
+      {list.loading && <SkeletonList rows={3} label={t('tickets.loading')} />}
 
       {!list.loading && !list.error && list.items.length === 0 && (
         activeCount > 0 ? (
           <ListEmptyState
             icon={<SearchX />}
-            title="No tickets match your filters"
-            message="Your tickets are still here. Clear the filters to see them all."
+            title={t('tickets.filteredEmptyTitle')}
+            message={t('tickets.filteredEmptyMessage')}
             action={{
-              label: 'Clear filters',
+              label: t('filters.clear'),
               onClick: () => {
                 setStatus('');
                 setCategory('');
@@ -115,8 +117,8 @@ export function SupportTicketList({ audience, fetchPage, onOpen }: SupportTicket
           <ListEmptyState
             illustrated
             icon={<LifeBuoy />}
-            title="No tickets yet"
-            message="When you raise an issue, it appears here with every reply from support."
+            title={t('tickets.emptyTitle')}
+            message={t('tickets.emptyMessage')}
           />
         )
       )}

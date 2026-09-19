@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { RatingDialog } from '@sheout/design-system';
 import { ApiError, ratingsApi } from '../api/client';
 import type { Rating, RatingTagCatalogue } from '../api/types';
+import { useTranslation } from '@sheout/design-system';
 
 export interface RatingPromptProps {
   /**
@@ -30,7 +31,9 @@ export interface RatingPromptProps {
  * way to rate later from her bookings, because that is when she has a
  * moment.
  */
-export function RatingPrompt({ bookingId, counterpartLabel = 'your rider', onRated }: RatingPromptProps) {
+export function RatingPrompt({ bookingId, counterpartLabel: counterpartLabelProp, onRated }: RatingPromptProps) {
+  const { t } = useTranslation();
+  const counterpartLabel = counterpartLabelProp ?? t('common.yourRider');
   const [slot, setSlot] = useState<Rating | null>(null);
   const [dismissed, setDismissed] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -72,7 +75,7 @@ export function RatingPrompt({ bookingId, counterpartLabel = 'your rider', onRat
       setSlot(null);
       onRated?.(rating);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not send that rating');
+      setError(err instanceof ApiError ? err.message : t('rating.sendError'));
       if (err instanceof ApiError && err.status === 409) {
         // Already rated elsewhere, or the window closed while this was open.
         // Either way there is nothing left to ask.

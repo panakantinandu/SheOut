@@ -1,4 +1,4 @@
-import { Camera, FileText, HelpCircle, Landmark, Lock, LogOut, ShieldCheck, User } from 'lucide-react';
+import { Bike, Camera, FileText, HelpCircle, Landmark, Lock, LogOut, ShieldCheck, User } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -19,6 +19,7 @@ import { ApiError, privacyApi, supportApi, usersApi } from '../api/client';
 import type { DriverProfileSummary, VehicleType } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { VehicleFields } from '../components/VehicleFields';
+import { useTranslation } from '@sheout/design-system';
 
 /**
  * REAL: profile fetched from GET /api/v1/users/driver/me, edits saved via
@@ -27,6 +28,7 @@ import { VehicleFields } from '../components/VehicleFields';
  * to show are gone.
  */
 export function Profile() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { logout } = useAuth();
   const [confirmingLogout, setConfirmingLogout] = useState(false);
@@ -56,7 +58,7 @@ export function Profile() {
     try {
       setProfile(await usersApi.uploadMyPhoto(await shrinkPhoto(file)));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Could not upload that photo');
+      setError(err instanceof ApiError ? err.message : err instanceof Error ? err.message : t('profile.uploadError'));
     } finally {
       setUploadingPhoto(false);
     }
@@ -69,7 +71,7 @@ export function Profile() {
         setProfile(p);
         setVehicle({ vehicleType: p.vehicleType ?? 'BIKE', registration: p.vehicleRegistrationNumber ?? '' });
       })
-      .catch((err) => setError(err instanceof ApiError ? err.message : 'Could not load profile'));
+      .catch((err) => setError(err instanceof ApiError ? err.message : t('profile.loadError')));
   }, []);
 
   function handleLogout() {
@@ -79,18 +81,18 @@ export function Profile() {
 
   return (
     <div className="space-y-6">
-      <TopHeader variant="back" title="My Profile" onBack={() => navigate('/home')} />
+      <TopHeader variant="back" title={t('profile.title')} onBack={() => navigate('/home')} />
 
       <Card className="flex items-center gap-3">
         <Avatar url={profile?.profilePhotoUrl} name={profile?.name} size="lg" />
         <div className="min-w-0 flex-1">
           <p className="font-heading font-semibold text-text-primary">
-            {profile ? profile.name || 'Add your name' : error || 'Loading...'}
+            {profile ? profile.name || t('profile.addName') : error || t('common.loading')}
           </p>
           <p className="text-sm text-text-secondary">{profile?.phoneNumber ?? ''}</p>
           {profile && (
             <StatusBadge tone={profile.verified ? 'success' : 'warning'} className="mt-1">
-              {profile.verified ? 'Verified' : 'Unverified'}
+              {profile.verified ? t('profile.verified') : t('profile.unverified')}
             </StatusBadge>
           )}
         </div>
@@ -110,12 +112,12 @@ export function Profile() {
             />
             <div className="flex-1">
               <p className="font-heading font-semibold text-text-primary">
-                {profile.hasProfilePhoto ? 'Your photo' : 'Add a photo to go online'}
+                {profile.hasProfilePhoto ? t('profile.yourPhoto') : t('profile.addPhotoToGoOnline')}
               </p>
               <p className="mt-1 text-sm text-text-secondary">
                 {profile.hasProfilePhoto
-                  ? 'Riders see this when you are on your way, so they know they have the right vehicle.'
-                  : 'Riders see this when you are on your way. You cannot go online until you add one. A clear photo of your face, in good light.'}
+                  ? t('profile.photoReason')
+                  : t('profile.photoRequired')}
               </p>
             </div>
           </div>
@@ -138,10 +140,10 @@ export function Profile() {
                 label off the URL would offer "Add photo" to somebody who
                 already added one. */}
             {uploadingPhoto
-              ? 'Uploading...'
+              ? t('common.uploading')
               : profile.hasProfilePhoto
-                ? 'Change photo'
-                : 'Add photo'}
+                ? t('profile.changePhoto')
+                : t('profile.addPhoto')}
           </Button>
         </Card>
       )}
@@ -150,16 +152,22 @@ export function Profile() {
 
       {profile && !editing && (
         <Card className="space-y-3">
+          {/* Headed like the photo card above it, rather than two bare
+              label-value lines - see the Part E polish pass. */}
+          <div className="flex items-center gap-3">
+            <IconCircle tone="soft" color="orange" icon={<Bike />} />
+            <p className="font-heading font-semibold text-text-primary">{t('profile.yourVehicle')}</p>
+          </div>
           <div className="flex items-center justify-between text-sm">
-            <span className="text-text-secondary">Vehicle</span>
+            <span className="text-text-secondary">{t('profile.vehicle')}</span>
             <span className="font-medium text-text-primary">{vehicleLabel(profile.vehicleType)}</span>
           </div>
           <div className="flex items-center justify-between text-sm">
-            <span className="text-text-secondary">Registration No.</span>
-            <span className="font-medium text-text-primary">{profile.vehicleRegistrationNumber ?? 'Not set'}</span>
+            <span className="text-text-secondary">{t('profile.registrationNo')}</span>
+            <span className="font-medium text-text-primary">{profile.vehicleRegistrationNumber ?? t('profile.notSet')}</span>
           </div>
           <Button variant="secondary" fullWidth onClick={() => setEditing(true)}>
-            Edit Details
+            {t('profile.editDetails')}
           </Button>
         </Card>
       )}
@@ -170,14 +178,14 @@ export function Profile() {
             initial={{ name: profile.name ?? '', dateOfBirth: profile.dateOfBirth ?? '', email: profile.email ?? '' }}
             photoUrl={profile.profilePhotoUrl}
             hasPhoto={profile.hasProfilePhoto}
-            photoReason="Riders see your photo when you are on your way, so they know they have the right vehicle."
-            submitLabel="Save"
+            photoReason={t('profile.photoReason')}
+            submitLabel={t('common.save')}
             extraFieldsValid={vehicle.registration.trim().length > 0}
             onUploadPhoto={async (file) => {
               try {
                 setProfile(await usersApi.uploadMyPhoto(file));
               } catch (err) {
-                throw new Error(err instanceof ApiError ? err.message : 'Could not upload that photo');
+                throw new Error(err instanceof ApiError ? err.message : t('profile.uploadError'));
               }
             }}
             onSubmit={async (values) => {
@@ -194,7 +202,7 @@ export function Profile() {
                 );
                 setEditing(false);
               } catch (err) {
-                throw new Error(err instanceof ApiError ? err.message : 'Could not save profile');
+                throw new Error(err instanceof ApiError ? err.message : t('profile.saveError'));
               }
             }}
           >
@@ -206,7 +214,7 @@ export function Profile() {
             />
           </ProfileCompletionForm>
           <Button variant="secondary" fullWidth onClick={() => setEditing(false)}>
-            Cancel
+            {t('common.cancel')}
           </Button>
         </Card>
       )}
@@ -214,27 +222,27 @@ export function Profile() {
       <Card className="divide-y divide-border p-0">
         <ListRow
           icon={<IconCircle tone="soft" size="sm" icon={<ShieldCheck />} />}
-          label="Verification"
+          label={t('verification.title')}
           onClick={() => navigate('/verification')}
         />
         <ListRow
           icon={<IconCircle tone="soft" size="sm" icon={<Landmark />} />}
-          label="Payouts & bank details"
+          label={t('profile.payouts')}
           onClick={() => navigate('/payouts')}
         />
         <ListRow
           icon={<IconCircle tone="soft" size="sm" icon={<HelpCircle />} />}
-          label="Help & Support"
+          label={t('help.title')}
           onClick={() => navigate('/help')}
         />
         <ListRow
           icon={<IconCircle tone="soft" size="sm" icon={<Lock />} />}
-          label="Privacy Policy"
+          label={t('legal.privacy')}
           onClick={() => navigate('/privacy')}
         />
         <ListRow
           icon={<IconCircle tone="soft" size="sm" icon={<FileText />} />}
-          label="Terms of Service"
+          label={t('legal.terms')}
           onClick={() => navigate('/terms')}
         />
       </Card>
@@ -250,7 +258,7 @@ export function Profile() {
           logout();
           navigate('/login', {
             replace: true,
-            state: { notice: 'Your account has been deleted. Your personal details have been removed.' },
+            state: { notice: t('profile.deletedNotice') },
           });
         }}
       />
@@ -258,7 +266,7 @@ export function Profile() {
       <Card className="p-0">
         <ListRow
           icon={<IconCircle color="red" tone="soft" size="sm" icon={<LogOut />} />}
-          label="Log Out"
+          label={t('auth.logout')}
           chevron={false}
           onClick={() => setConfirmingLogout(true)}
         />
@@ -268,9 +276,9 @@ export function Profile() {
           no way back. */}
       <ConfirmDialog
         open={confirmingLogout}
-        title="Log out?"
-        message="You will be taken offline and will need your mobile number and an OTP to sign back in."
-        confirmLabel="Log Out"
+        title={t('auth.logoutTitle')}
+        message={t('auth.logoutMessage')}
+        confirmLabel={t('auth.logout')}
         destructive
         onConfirm={handleLogout}
         onCancel={() => setConfirmingLogout(false)}

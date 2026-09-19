@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, ProfileCompletionForm, SkeletonCard, TopHeader } from '@sheout/design-system';
 import { ApiError, usersApi } from '../api/client';
 import type { CustomerProfileSummary } from '../api/types';
+import { useTranslation } from '@sheout/design-system';
 
 /**
  * Name, date of birth, photo and email - the same form and the same rules as
@@ -16,6 +17,7 @@ import type { CustomerProfileSummary } from '../api/types';
  * the whole profile.
  */
 export function PersonalDetails() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<CustomerProfileSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -25,30 +27,30 @@ export function PersonalDetails() {
     usersApi
       .getMyProfile()
       .then(setProfile)
-      .catch((err) => setError(err instanceof ApiError ? err.message : 'Could not load profile'));
+      .catch((err) => setError(err instanceof ApiError ? err.message : t('profile.loadError')));
   }, []);
 
   return (
     <div className="space-y-6">
-      <TopHeader variant="back" title="Personal Details" onBack={() => navigate('/profile')} />
+      <TopHeader variant="back" title={t('profile.personalDetails')} onBack={() => navigate('/profile')} />
       {error && <p className="text-sm text-danger">{error}</p>}
-      {saved && <p className="text-sm text-success">Saved.</p>}
+      {saved && <p className="text-sm text-success">{t('common.saved')}</p>}
 
       {!profile ? (
-        !error && <SkeletonCard lines={3} label="Loading your details" />
+        !error && <SkeletonCard lines={3} label={t('profile.loading')} />
       ) : (
         <Card className="space-y-4">
           <ProfileCompletionForm
             initial={{ name: profile.name ?? '', dateOfBirth: profile.dateOfBirth ?? '', email: profile.email ?? '' }}
             photoUrl={profile.profilePhotoUrl}
             hasPhoto={profile.hasProfilePhoto}
-            photoReason="Your partner sees your photo so she knows she is picking up the right person."
-            submitLabel="Save Changes"
+            photoReason={t('profile.photoReason')}
+            submitLabel={t('common.saveChanges')}
             onUploadPhoto={async (file) => {
               try {
                 setProfile(await usersApi.uploadMyPhoto(file));
               } catch (err) {
-                throw new Error(err instanceof ApiError ? err.message : 'Could not upload that photo.');
+                throw new Error(err instanceof ApiError ? err.message : t('profile.uploadError'));
               }
             }}
             onSubmit={async (values) => {
@@ -65,15 +67,15 @@ export function PersonalDetails() {
                 );
                 setSaved(true);
               } catch (err) {
-                throw new Error(err instanceof ApiError ? err.message : 'Could not save changes');
+                throw new Error(err instanceof ApiError ? err.message : t('profile.saveError'));
               }
             }}
           >
             <div>
-              <p className="text-sm text-text-secondary">Mobile Number</p>
+              <p className="text-sm text-text-secondary">{t('profile.mobile')}</p>
               <p className="text-text-primary">{profile.phoneNumber}</p>
               <p className="mt-1 text-xs text-text-secondary">
-                Your number identifies your account and cannot be changed here.
+                {t('profile.mobileFixed')}
               </p>
             </div>
           </ProfileCompletionForm>

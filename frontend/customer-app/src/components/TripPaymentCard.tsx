@@ -5,6 +5,8 @@ import { AmountText, Button, Card, IconCircle, paymentMethodLabel } from '@sheou
 import { ApiError, paymentsApi, usersApi, walletApi } from '../api/client';
 import type { BookingSummary, PaymentSummary, RiderWallet } from '../api/types';
 import { openRazorpayCheckout } from '../lib/razorpayCheckout';
+import { apiErrorText } from '../lib/apiErrors';
+import { useTranslation } from '@sheout/design-system';
 
 const POLL_INTERVAL_MS = 4000;
 
@@ -21,6 +23,7 @@ const POLL_INTERVAL_MS = 4000;
  * webhook after a Checkout she closed too early.
  */
 export function TripPaymentCard({ booking, onPaid }: { booking: BookingSummary; onPaid?: () => void }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [payment, setPayment] = useState<PaymentSummary | null>(null);
   const [wallet, setWallet] = useState<RiderWallet | null>(null);
@@ -73,11 +76,11 @@ export function TripPaymentCard({ booking, onPaid }: { booking: BookingSummary; 
     } catch (err) {
       if (err instanceof ApiError && err.body?.error === 'INSUFFICIENT_BALANCE') {
         loadWallet();
-        setMessage('Your wallet balance is too low for this fare. Add money, or pay online.');
+        setMessage(t('tripPay.lowBalance'));
       } else if (err instanceof ApiError && err.status === 409) {
         await refreshAfterConflict();
       } else {
-        setMessage(err instanceof ApiError ? err.message : 'Could not pay from your wallet. Please try again.');
+        setMessage(apiErrorText(err, 'tripPay.walletError'));
       }
     } finally {
       setPaying(null);
@@ -95,12 +98,12 @@ export function TripPaymentCard({ booking, onPaid }: { booking: BookingSummary; 
       ]);
       const outcome = await openRazorpayCheckout(
         details,
-        `${booking.type === 'DELIVERY' ? 'Delivery' : 'Ride'} fare`,
+        booking.type === 'DELIVERY' ? t('tripPay.deliveryFare') : t('tripPay.rideFare'),
         contact
       );
       if (outcome.kind === 'dismissed') return;
       if (outcome.kind === 'failed') {
-        setMessage(`${outcome.message} Nothing was taken - you can try again.`);
+        setMessage(t('tripPay.checkoutFailed', { reason: outcome.message }));
         return;
       }
       setPayment(await paymentsApi.verifyCheckout(booking.id, outcome.result));
@@ -108,11 +111,11 @@ export function TripPaymentCard({ booking, onPaid }: { booking: BookingSummary; 
       if (err instanceof ApiError && err.status === 409) {
         await refreshAfterConflict();
       } else if (err instanceof ApiError && err.body?.error === 'PAYMENT_NOT_VERIFIED') {
-        setMessage('We could not verify that payment. If money left your account, contact support with this trip.');
+        setMessage(t('apiError.PAYMENT_NOT_VERIFIED'));
       } else if (err instanceof ApiError && err.status >= 500) {
-        setMessage('Online payment is not available right now. Please try again in a minute, or pay from your wallet.');
+        setMessage(t('tripPay.onlineUnavailable'));
       } else {
-        setMessage(err instanceof Error ? err.message : 'Online payment is not available right now.');
+        setMessage(apiErrorText(err, 'tripPay.onlineUnavailable'));
       }
     } finally {
       setPaying(null);
@@ -122,7 +125,7 @@ export function TripPaymentCard({ booking, onPaid }: { booking: BookingSummary; 
   if (!payment) {
     return (
       <Card>
-        <p className="text-sm text-text-secondary">Getting your fare ready...</p>
+        <p className="text-sm text-text-secondary">{t('tripPay.gettingReady')}</p>
       </Card>
     );
   }
@@ -132,12 +135,12 @@ export function TripPaymentCard({ booking, onPaid }: { booking: BookingSummary; 
       <Card tone="success" className="flex items-center gap-3" data-testid="trip-payment-paid">
         <IconCircle size="md" tone="soft" color="green" icon={<CheckCircle2 />} />
         <div className="flex-1">
-          <p className="font-heading font-semibold text-text-primary">Paid</p>
+          <p className="font-heading font-semibold text-text-primary">{t('tripPay.paid')}</p>
           <p className="text-sm text-text-secondary">
             {payment.status === 'WAIVED'
-              ? 'Settled earlier'
+              ? t('tripPay.settledEarlier')
               : payment.method === 'CASH'
-                ? 'Cash to your partner'
+                ? t('tripPay.cashToPartner')
                 : paymentMethodLabel(payment.method)}
           </p>
         </div>
@@ -152,7 +155,7 @@ export function TripPaymentCard({ booking, onPaid }: { booking: BookingSummary; 
   return (
     <Card data-testid="trip-payment-due" className="space-y-3">
       <div className="flex items-center justify-between">
-        <p className="font-heading font-semibold text-text-primary">Pay for this trip</p>
+        <p className="font-heading font-semibold text-text-primary">{t('tripPay.payForTrip')}</p>
         <AmountText amount={payment.amount} size="lg" exact />
       </div>
 
@@ -165,10 +168,10 @@ export function TripPaymentCard({ booking, onPaid }: { booking: BookingSummary; 
         data-testid="pay-from-wallet"
       >
         {paying === 'wallet'
-          ? 'Paying...'
+          ? t('tripPay.paying')
           : balance === null
-            ? 'Pay from SheOut wallet'
-            : `Pay from wallet (balance ₹${balance.toFixed(2)})`}
+            ? t('tripPay.payFromWallet')
+            : t('tripPay.payFromWalletBalance', { amount: balance.toFixed(2) })}
       </Button>
       {balance !== null && !enough && (
         <button
@@ -176,7 +179,7 @@ export function TripPaymentCard({ booking, onPaid }: { booking: BookingSummary; 
           className="w-full text-center text-sm font-semibold text-primary"
           onClick={() => navigate('/wallet', { state: { returnTo: `/tracking/${booking.id}`, need: payment.amount - balance } })}
         >
-          Add ₹{Math.ceil(payment.amount - balance)} or more to your wallet
+          {t('tripPay.addToWallet', { amount: Math.ceil(payment.amount - balance) })}
         </button>
       )}
 
@@ -188,14 +191,13 @@ export function TripPaymentCard({ booking, onPaid }: { booking: BookingSummary; 
         disabled={paying !== null}
         onClick={handlePayOnline}
       >
-        {paying === 'online' ? 'Opening payment...' : 'Pay online - UPI, card or netbanking'}
+        {paying === 'online' ? t('wallet.opening') : t('tripPay.payOnline')}
       </Button>
 
       <div className="flex items-start gap-2 text-sm text-text-secondary">
         <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
         <p>
-          Pay only in the app - never in cash or to your partner&apos;s own account. Your fare goes to her SheOut wallet,
-          and you can book your next trip once it is paid.
+          {t('tripPay.appOnlyNote')}
         </p>
       </div>
       {message && <p className="text-sm text-danger">{message}</p>}

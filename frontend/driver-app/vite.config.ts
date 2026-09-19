@@ -34,7 +34,12 @@ export default defineConfig({
         short_name: 'SheOut Driver',
         description: 'SheOut driver app - Hyderabad',
         theme_color: '#4A1A9E',
-        start_url: '/home',
+        // Splash, not /home: opening at /home skipped the splash on every
+        // launch from the icon. id keeps the old start URL so installed copies
+        // are still recognised as the same app - see coldStart.ts.
+        id: '/home',
+        start_url: '/',
+        scope: '/',
         background_color: '#ffffff',
         display: 'standalone',
         icons: [

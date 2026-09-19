@@ -1,6 +1,7 @@
 import { Bike } from 'lucide-react';
 import { AmountText, Card, IconCircle } from '@sheout/design-system';
 import type { FareQuoteState } from '../lib/useFareQuote';
+import { useTranslation } from '@sheout/design-system';
 
 /**
  * The mockup's "Estimated Fare ₹42 - 58 (2.8 km)" card, shown before the
@@ -18,13 +19,14 @@ import type { FareQuoteState } from '../lib/useFareQuote';
  * not the distance the trip will cover - hence "approx".
  */
 export function FareEstimateCard({ state }: { state: FareQuoteState }) {
+  const { t } = useTranslation();
   const { quote, loading, error } = state;
 
   if (error) {
     return (
       <Card className="flex items-center gap-3">
         <IconCircle tone="soft" size="sm" icon={<Bike />} />
-        <p className="text-sm text-text-secondary">{error}. You can still book - the fare is confirmed on booking.</p>
+        <p className="text-sm text-text-secondary">{t('fare.errorNote', { error })}</p>
       </Card>
     );
   }
@@ -35,11 +37,11 @@ export function FareEstimateCard({ state }: { state: FareQuoteState }) {
     <Card className="flex items-center gap-3">
       <IconCircle tone="soft" icon={<Bike />} />
       <div className="flex-1">
-        <p className="text-sm text-text-secondary">Estimated Fare</p>
+        <p className="text-sm text-text-secondary">{t('fare.estimated')}</p>
         {loading && !quote ? (
-          <p className="font-heading font-semibold text-text-secondary">Calculating...</p>
+          <p className="font-heading font-semibold text-text-secondary">{t('fare.calculating')}</p>
         ) : (
-          <p className="text-xs text-text-secondary">approx. {quote!.distanceKm} km</p>
+          <p className="text-xs text-text-secondary">{t('fare.approxKm', { km: quote!.distanceKm })}</p>
         )}
       </div>
       {quote && <AmountText amount={quote.fareEstimate} size="lg" />}

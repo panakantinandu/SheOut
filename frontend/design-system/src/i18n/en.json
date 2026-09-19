@@ -1,0 +1,273 @@
+{
+  "common": {
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "continue": "Continue",
+    "loading": "Loading...",
+    "done": "Done",
+    "notNow": "Not now",
+    "sending": "Sending...",
+    "submit": "Submit",
+    "saving": "Saving...",
+    "unknown": "Unknown",
+    "close": "Close"
+  },
+  "consent": {
+    "text": "By tapping “{{action}}” you agree to our <terms>Terms of Service</terms> and confirm you have read the <privacy>Privacy Policy</privacy>, including that SheOut is women only and that a government ID is reviewed by a person before your first trip."
+  },
+  "legal": {
+    "englishOnly": "This document is available in English only for now. A translated version is being prepared."
+  },
+  "drawer": {
+    "label": "Menu"
+  },
+  "language": {
+    "title": "Language",
+    "subtitle": "Choose the language for SheOut. You can change it any time from the menu.",
+    "saved": "Language changed",
+    "saveError": "Changed on this phone. We could not save it to your account - it will try again next time."
+  },
+  "cancelDialog": {
+    "title": "Why are you cancelling?",
+    "message": "This helps us understand what went wrong. Your answer is not shown to the other person.",
+    "noteLabel": "Tell us what happened",
+    "notePlaceholder": "A sentence is enough",
+    "cancelling": "Cancelling...",
+    "cancelTrip": "Cancel trip"
+  },
+  "rating": {
+    "title": "How was your trip?",
+    "message": "Your rating is private. It is never shown to the other person, and it is not attached to your name.",
+    "commentPlaceholder": "What was it like travelling with {{who}}?",
+    "label": "Rating",
+    "notRated": "Not rated yet",
+    "none": "not rated",
+    "aria": "{{label}}: {{value}} out of 5"
+  },
+  "chat": {
+    "loading": "Loading messages...",
+    "emptyOpen": "No messages yet. Say hello, or send {{who}} a landmark to look for.",
+    "emptyClosed": "No messages were sent on this trip.",
+    "placeholder": "Type a message",
+    "send": "Send message"
+  },
+  "push": {
+    "rider": {
+      "title": "Turn on notifications",
+      "body": "Know the moment your partner accepts, when she is arriving, and when support replies - even with SheOut closed."
+    },
+    "partner": {
+      "title": "Turn on trip alerts",
+      "body": "New trip requests only last 15 seconds. With alerts on, your phone rings and vibrates for each one, even when SheOut is closed."
+    },
+    "turnOn": "Turn on",
+    "turningOn": "Turning on...",
+    "blocked": "Notifications are blocked for SheOut in this browser. Allow them in the site settings to get alerts on this device.",
+    "unsupported": "This browser cannot show SheOut notifications. On an iPhone, add SheOut to your Home Screen first.",
+    "off": "Notifications are off on this device. Everything still appears here."
+  },
+  "inbox": {
+    "justNow": "Just now",
+    "minutesAgo_one": "{{count}} min ago",
+    "minutesAgo_other": "{{count}} min ago",
+    "hoursAgo_one": "{{count}} hr ago",
+    "hoursAgo_other": "{{count}} hr ago",
+    "loadError": "Could not load your notifications.",
+    "loading": "Loading your notifications",
+    "emptyTitle": "Nothing yet",
+    "emptyMessage": "Updates about your trips and account will appear here.",
+    "unread_one": "{{count}} unread",
+    "unread_other": "{{count}} unread",
+    "markAllRead": "Mark all read",
+    "unreadMarker": "unread"
+  },
+  "list": {
+    "showing": "Showing {{shown}} of {{total}}",
+    "loadMore": "Load more",
+    "loadError": "Could not load this list",
+    "loadMoreError": "Could not load more"
+  },
+  "header": {
+    "back": "Go back",
+    "menu": "Open menu",
+    "notifications": "Notifications",
+    "notificationsUnread_one": "Notifications, {{count}} unread",
+    "notificationsUnread_other": "Notifications, {{count}} unread"
+  },
+  "filters": {
+    "hide": "Hide filters",
+    "show": "Show filters",
+    "dateRange": "Date range",
+    "from": "From date",
+    "to": "To date",
+    "clear": "Clear filters"
+  },
+  "support": {
+    "contact": "Contact Support",
+    "category": {
+      "PAYMENT_DISPUTE": "Payment problem",
+      "PAYMENT_DISPUTE_driver": "Payment or earnings",
+      "BEHAVIOR": "A partner's behaviour",
+      "BEHAVIOR_driver": "A rider's behaviour",
+      "SAFETY_CONCERN": "Safety concern",
+      "APP_ISSUE": "Problem with the app",
+      "CANCELLATION_DISPUTE": "A cancellation",
+      "OTHER": "Something else"
+    },
+    "status": {
+      "OPEN": "Waiting for support",
+      "IN_PROGRESS": "Being looked at",
+      "RESOLVED": "Resolved",
+      "CLOSED": "Closed"
+    }
+  },
+  "maps": {
+    "open": "Open in Google Maps"
+  },
+  "tickets": {
+    "status": "Status",
+    "anyStatus": "Any status",
+    "category": "Category",
+    "anyCategory": "Any category",
+    "raisedBetween": "Raised between",
+    "loading": "Loading your tickets",
+    "filteredEmptyTitle": "No tickets match your filters",
+    "filteredEmptyMessage": "Your tickets are still here. Clear the filters to see them all.",
+    "emptyTitle": "No tickets yet",
+    "emptyMessage": "When you raise an issue, it appears here with every reply from support."
+  },
+  "thread": {
+    "you": "You",
+    "support": "SheOut Support",
+    "placeholder": "Add more detail or reply to support"
+  },
+  "raiseIssue": {
+    "missingCategory": "Choose what this is about.",
+    "missingSubject": "Add a short subject.",
+    "missingDescription": "Say what happened.",
+    "category": "What is this about?",
+    "choose": "Choose one",
+    "subject": "Subject",
+    "subjectPlaceholder": "e.g. Charged twice for one trip",
+    "description": "What happened?",
+    "descriptionPlaceholder": "Tell us as much as you can - when, where, and what you would like us to do.",
+    "trip": "Is this about a trip? (optional)",
+    "noTrip": "Not about a specific trip",
+    "submit": "Send to support"
+  },
+  "avatar": {
+    "named": "{{name}}'s photo",
+    "unnamed": "Profile photo"
+  },
+  "privacy": {
+    "heading": "Privacy & Data",
+    "preparing": "Preparing your data...",
+    "download": "Download my data",
+    "downloadSub": "A copy of everything SheOut holds about you",
+    "grievance": "Grievance Officer",
+    "grievancePending": "Contact details are being set up - use Help & Support meanwhile",
+    "delete": "Delete my account",
+    "deleteSub": "Close your account and remove your personal details",
+    "deleteTitle": "Delete your account?",
+    "confirmAria": "Confirm account deletion",
+    "typeToConfirm": "Type DELETE to confirm",
+    "permanent": "This permanently closes your account. There is no way to undo it.",
+    "deleting": "Deleting...",
+    "deleteButton": "Delete",
+    "downloadError": "Could not download your data. Try again.",
+    "deleteError": "Could not delete your account. Try again.",
+    "explain": {
+      "closed": "Your account is closed straight away: you are signed out everywhere and cannot sign back in to it.",
+      "removedDriver": "You go offline permanently and stop receiving trips. Your name, vehicle registration, profile photo and ID documents are removed - the photo and documents are deleted from storage, not just hidden.",
+      "removedRider": "Your name, saved addresses, emergency contacts and ID documents are removed - the documents are deleted from storage, not just hidden.",
+      "messages": "Your messages are deleted, except on a trip with an open support dispute, where they are kept as \"[deleted]\".",
+      "kept": "Completed trips and payments are kept for the period Indian tax and dispute rules require, but with your name shown as \"Deleted User\" and your phone number removed.",
+      "final": "This cannot be undone. Signing in with the same number later starts a new, empty account."
+    }
+  },
+  "profileForm": {
+    "nameRequired": "Enter your name.",
+    "choosePhoto": "Choose a photo.",
+    "uploadError": "Could not upload that photo. Please try again.",
+    "photoRequired": "Add a profile photo to continue.",
+    "saveError": "Could not save your profile. Please try again.",
+    "uploading": "Uploading...",
+    "changePhoto": "Change photo",
+    "addPhoto": "Add photo",
+    "name": "Your name",
+    "dob": "Date of birth",
+    "email": "Email (optional)",
+    "emailPlaceholder": "For receipts and support replies",
+    "ageNote": "SheOut is only for people aged 18 and over."
+  },
+  "validation": {
+    "dobRequired": "Enter your date of birth.",
+    "dobInvalid": "That date of birth does not look right. Check the year.",
+    "dobTooYoung": "You must be 18 or older to use SheOut.",
+    "emailInvalid": "That email address does not look right."
+  },
+  "photo": {
+    "unreadable": "That file could not be read as a photo. Choose a JPEG or PNG image.",
+    "unsupported": "This browser cannot prepare the photo. Try another browser."
+  },
+  "vehicle": {
+    "unset": "Vehicle not set",
+    "BIKE": "Bike",
+    "AUTO": "Auto",
+    "CAB": "Cab"
+  },
+  "verification": {
+    "notRequired": "Not required",
+    "PENDING": "Not submitted",
+    "UNDER_REVIEW": "Under review",
+    "VERIFIED": "Verified",
+    "REJECTED": "Rejected"
+  },
+  "bookingStatus": {
+    "REQUESTED": "Finding a partner",
+    "MATCHED": "Partner assigned",
+    "ACCEPTED": "On the way",
+    "IN_PROGRESS": "In progress",
+    "COMPLETED": "Completed",
+    "CANCELLED": "Cancelled",
+    "NO_DRIVERS_AVAILABLE": "No drivers found",
+    "AWAITING_PAYMENT": "Awaiting payment"
+  },
+  "category": {
+    "trip": "Trip",
+    "BIKE": "Bike Taxi",
+    "AUTO": "Auto Ride",
+    "CAB": "Cab Ride",
+    "PARCEL": "Parcel Delivery",
+    "LUNCHBOX": "Lunch Box Delivery"
+  },
+  "paymentMethod": {
+    "none": "Not recorded",
+    "SHEOUT_WALLET": "SheOut wallet",
+    "CASH": "Cash",
+    "CARD": "Card",
+    "NETBANKING": "Netbanking",
+    "WALLET": "Wallet",
+    "ONLINE": "Online"
+  },
+  "paymentStatus": {
+    "PENDING": "Awaiting payment",
+    "CAPTURED": "Paid",
+    "FAILED": "Failed",
+    "REFUNDED": "Refunded",
+    "WAIVED": "Settled earlier"
+  },
+  "cancellation": {
+    "none": "No reason recorded",
+    "CHANGE_OF_PLANS": "My plans changed",
+    "DRIVER_TAKING_TOO_LONG": "The partner is taking too long",
+    "FOUND_ANOTHER_RIDE": "I found another ride",
+    "WRONG_PICKUP_LOCATION": "The pickup point is wrong",
+    "CUSTOMER_NOT_AT_PICKUP": "The rider was not at the pickup point",
+    "DRIVER_UNAVAILABLE": "I cannot complete this trip",
+    "OTHER": "Something else"
+  },
+  "brand": {
+    "tagline": "Your Delivery, Our Priority"
+  }
+}

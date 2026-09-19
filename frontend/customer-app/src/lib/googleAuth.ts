@@ -1,3 +1,4 @@
+import { i18next } from '@sheout/design-system';
 // Minimal ambient typing for the bits of Google Identity Services (GIS) this
 // file actually calls - GIS ships no official TS types, and pulling in a
 // full @types package for two methods isn't worth it.
@@ -33,7 +34,7 @@ function loadGisScript(): Promise<void> {
     script.async = true;
     script.defer = true;
     script.onload = () => resolve();
-    script.onerror = () => reject(new Error('Could not load Google Identity Services - check your connection'));
+    script.onerror = () => reject(new Error(i18next.t('login.googleLoadError')));
     document.head.appendChild(script);
   });
   return scriptLoadPromise;
@@ -66,7 +67,7 @@ export function signInWithGoogle(clientId: string): Promise<string> {
     () =>
       new Promise<string>((resolve, reject) => {
         if (!window.google) {
-          reject(new Error('Google Identity Services unavailable'));
+          reject(new Error(i18next.t('login.googleUnavailable')));
           return;
         }
         const client = window.google.accounts.oauth2.initTokenClient({
@@ -74,7 +75,7 @@ export function signInWithGoogle(clientId: string): Promise<string> {
           scope: 'openid email profile',
           callback: (response) => {
             if (response.access_token) resolve(response.access_token);
-            else reject(new Error(response.error || 'Google sign-in was cancelled'));
+            else reject(new Error(response.error || i18next.t('login.googleCancelled')));
           },
         });
         client.requestAccessToken();

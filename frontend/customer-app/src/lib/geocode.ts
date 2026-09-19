@@ -1,3 +1,4 @@
+import { i18next } from '@sheout/design-system';
 import type { GeoAddress } from '../api/types';
 
 /**
@@ -67,8 +68,9 @@ export function isInServiceArea(point: { lat: number; lng: number } | null | und
 }
 
 /** What a customer is told when a place is out of range. */
-export const OUT_OF_AREA_MESSAGE =
-  `SheOut currently operates only in and around ${SERVICE_CENTRE_NAME} - this location is outside our service area right now.`;
+export function outOfAreaMessage(): string {
+  return i18next.t('serviceArea.message', { city: SERVICE_CENTRE_NAME });
+}
 
 /**
  * Nominatim's policy caps absolute traffic at one request per second, so
@@ -187,18 +189,18 @@ export async function describePoint(lat: number, lng: number, fallback: string):
 export function currentPosition(): Promise<{ lat: number; lng: number }> {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
-      reject(new Error('This browser cannot share your location. Search for your pickup point instead.'));
+      reject(new Error(i18next.t('geo.unsupported')));
       return;
     }
     navigator.geolocation.getCurrentPosition(
       (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
       (err) => {
         if (err.code === err.PERMISSION_DENIED) {
-          reject(new Error('Location permission is blocked. Allow it in your browser settings, or search for your pickup point.'));
+          reject(new Error(i18next.t('geo.blocked')));
         } else if (err.code === err.POSITION_UNAVAILABLE) {
-          reject(new Error('Your location is unavailable right now. Try again, or search for your pickup point.'));
+          reject(new Error(i18next.t('geo.unavailable')));
         } else {
-          reject(new Error('Finding your location took too long. Try again, or search for your pickup point.'));
+          reject(new Error(i18next.t('geo.timeout')));
         }
       },
       { timeout: 10000, enableHighAccuracy: true, maximumAge: 30000 }

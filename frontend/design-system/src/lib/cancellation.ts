@@ -1,3 +1,4 @@
+import { dsT } from '../i18n';
 /**
  * The reasons a trip can be cancelled, in the words each side would use.
  * <p>
@@ -33,8 +34,8 @@ const REASON_LABELS: Record<CancellationReason, string> = {
 };
 
 export function cancellationReasonLabel(reason: string | null | undefined): string {
-  if (!reason) return 'No reason recorded';
-  return REASON_LABELS[reason as CancellationReason] ?? reason;
+  if (!reason) return dsT('cancellation.none', 'No reason recorded');
+  return dsT(`cancellation.${reason}`, REASON_LABELS[reason as CancellationReason] ?? reason);
 }
 
 export interface CancellationReasonOption {
@@ -43,7 +44,14 @@ export interface CancellationReasonOption {
 }
 
 function optionsFor(values: CancellationReason[]): CancellationReasonOption[] {
-  return values.map((value) => ({ value, label: REASON_LABELS[value] }));
+  // A getter, so the label is read in the current language each time it is
+  // shown rather than frozen in whichever language the app started in.
+  return values.map((value) => ({
+    value,
+    get label() {
+      return cancellationReasonLabel(value);
+    },
+  }));
 }
 
 /**

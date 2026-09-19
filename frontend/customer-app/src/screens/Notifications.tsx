@@ -8,6 +8,7 @@ import {
   usePushNotifications,
 } from '@sheout/design-system';
 import { PUSH_TOKEN_KEY, notificationsApi, pushApi } from '../api/client';
+import { useTranslation } from '@sheout/design-system';
 
 /**
  * The inbox: every notification SheOut sent this account, newest first,
@@ -16,6 +17,7 @@ import { PUSH_TOKEN_KEY, notificationsApi, pushApi } from '../api/client';
  * so on a trial SMS account every row read "Failed".
  */
 export function Notifications() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const push = usePushNotifications(pushApi, PUSH_TOKEN_KEY, true);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -23,7 +25,7 @@ export function Notifications() {
 
   return (
     <div className="space-y-6">
-      <TopHeader variant="back" title="Notifications" onBack={() => navigate('/home')} />
+      <TopHeader variant="back" title={t('notifications.title')} onBack={() => navigate('/home')} />
       <PushStatusNote status={push.status} busy={push.busy} onTurnOn={push.turnOn} />
       <NotificationInbox
         fetchPage={notificationsApi.inbox}

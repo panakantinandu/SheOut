@@ -17,6 +17,7 @@ import {
 import type { DateRangeValue } from '@sheout/design-system';
 import { ApiError, bookingApi } from '../api/client';
 import type { BookingCategory, BookingSummary } from '../api/types';
+import { useTranslation } from '@sheout/design-system';
 
 /**
  * The mockup groups earnings as Rides / Parcels / Lunch Box rather than by
@@ -26,11 +27,7 @@ import type { BookingCategory, BookingSummary } from '../api/types';
  */
 type EarningsGroup = 'RIDES' | 'PARCELS' | 'LUNCH_BOX';
 
-const GROUP_LABEL: Record<EarningsGroup, string> = {
-  RIDES: 'Rides',
-  PARCELS: 'Parcels',
-  LUNCH_BOX: 'Lunch Box',
-};
+// Labels live in the translations under earnings.group.<key>.
 
 function groupOf(category: BookingCategory): EarningsGroup {
   if (category === 'PARCEL') return 'PARCELS';
@@ -46,11 +43,7 @@ function groupIcon(group: EarningsGroup) {
 
 type Period = 'TODAY' | 'WEEK' | 'ALL';
 
-const PERIODS: { key: Period; label: string }[] = [
-  { key: 'WEEK', label: 'This Week' },
-  { key: 'TODAY', label: 'Today' },
-  { key: 'ALL', label: 'All Time' },
-];
+const PERIODS: Period[] = ['WEEK', 'TODAY', 'ALL'];
 
 /** How many detail rows appear at a time under View Details. */
 const DETAIL_PAGE_SIZE = 10;
@@ -98,6 +91,7 @@ function periodStart(period: Period): Date | null {
  * applied client-side over that same response, on completedAt and category.
  */
 export function Earnings() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [bookings, setBookings] = useState<BookingSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -114,7 +108,7 @@ export function Earnings() {
       bookingApi
         .listMine()
         .then(setBookings)
-        .catch((err) => setError(err instanceof ApiError ? err.message : 'Could not load earnings')),
+        .catch((err) => setError(err instanceof ApiError ? err.message : t('earnings.loadError'))),
     []
   );
 
@@ -160,7 +154,7 @@ export function Earnings() {
     };
   }, [bookings, period, dates.from, dates.to, group]);
 
-  const periodLabel = PERIODS.find((p) => p.key === period)!.label;
+  const periodLabel = t(`earnings.period.${period}`);
 
   const activeFilters = [group, dates.from, dates.to].filter(Boolean).length;
   const hasFilters = activeFilters > 0;
@@ -175,10 +169,10 @@ export function Earnings() {
     // Pull down to reload: a trip completed on this phone minutes ago should
     // be one gesture away from showing up in the total.
     <PullToRefresh onRefresh={load} disabled={!bookings} className="space-y-6">
-      <TopHeader variant="back" title="Earnings" onBack={() => navigate('/home')} />
+      <TopHeader variant="back" title={t('earnings.title')} onBack={() => navigate('/home')} />
 
       {error && <p className="text-sm text-danger">{error}</p>}
-      {!bookings && !error && <SkeletonCard lines={4} label="Loading your earnings" />}
+      {!bookings && !error && <SkeletonCard lines={4} label={t('earnings.loading')} />}
 
       {bookings && (
         <>
@@ -188,25 +182,25 @@ export function Earnings() {
               much, over what period, for what kind of work". */}
           <ListFilterBar activeCount={activeFilters} onClearAll={clearFilters}>
             <SelectField
-              label="Type of work"
-              placeholder="All types"
+              label={t('earnings.typeOfWork')}
+              placeholder={t('earnings.allTypes')}
               value={group}
               onChange={(e) => setGroup(e.target.value as EarningsGroup | '')}
               options={(['RIDES', 'PARCELS', 'LUNCH_BOX'] as EarningsGroup[]).map((g) => ({
                 value: g,
-                label: GROUP_LABEL[g],
+                label: t(`earnings.group.${g}`),
               }))}
             />
-            <DateRangeFields value={dates} onChange={setDates} label="Custom date range" />
+            <DateRangeFields value={dates} onChange={setDates} label={t('earnings.customRange')} />
             <p className="text-xs text-text-secondary">
-              A custom range replaces the period button above it, so only one date filter is ever in effect.
+              {t('earnings.customRangeNote')}
             </p>
           </ListFilterBar>
 
           <Card variant="primary" className="space-y-3">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-sm opacity-90">Total Earnings</p>
+                <p className="text-sm opacity-90">{t('earnings.total')}</p>
                 <AmountText amount={periodTotal} size="lg" tone="inverse" animate />
               </div>
               <button
@@ -224,19 +218,19 @@ export function Earnings() {
               <div className="flex gap-2">
                 {PERIODS.map((p) => (
                   <button
-                    key={p.key}
+                    key={p}
                     type="button"
                     onClick={() => {
-                      setPeriod(p.key);
+                      setPeriod(p);
                       setPickingPeriod(false);
                     }}
                     className={
-                      p.key === period
+                      p === period
                         ? 'flex-1 rounded-full bg-text-inverse px-3 py-1.5 text-xs font-semibold text-primary'
                         : 'flex-1 rounded-full border border-text-inverse/40 px-3 py-1.5 text-xs font-medium text-text-inverse'
                     }
                   >
-                    {p.label}
+                    {t(`earnings.period.${p}`)}
                   </button>
                 ))}
               </div>
@@ -246,21 +240,21 @@ export function Earnings() {
           {/* The totals here are fares; what she can actually withdraw is the
               wallet, which nets out commission and cash she already holds. */}
           <Button fullWidth variant="secondary" icon={<Wallet className="h-4 w-4" />} onClick={() => navigate('/payouts')}>
-            Wallet &amp; payouts
+            {t('earnings.walletPayouts')}
           </Button>
 
           <div className="grid grid-cols-2 gap-3">
             <Card className="flex items-center gap-3">
               <IconCircle tone="soft" icon={<TrendingUp />} />
               <div>
-                <p className="text-xs text-text-secondary">All-Time</p>
+                <p className="text-xs text-text-secondary">{t('earnings.allTime')}</p>
                 <AmountText amount={allTimeTotal} animate />
               </div>
             </Card>
             <Card className="flex items-center gap-3">
               <IconCircle tone="soft" color="green" icon={<Calendar />} />
               <div>
-                <p className="text-xs text-text-secondary">Trips ({periodLabel})</p>
+                <p className="text-xs text-text-secondary">{t('earnings.tripsIn', { period: periodLabel })}</p>
                 <p className="font-heading font-semibold text-text-primary">{completedTrips}</p>
               </div>
             </Card>
@@ -268,14 +262,14 @@ export function Earnings() {
 
           {byGroup.length > 0 ? (
             <div>
-              <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">By Category</h2>
+              <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">{t('earnings.byCategory')}</h2>
               <Card className="divide-y divide-border p-0">
                 {byGroup.map(([group, { amount, count }]) => (
                   <div key={group} className="flex items-center gap-3 p-4">
                     <IconCircle tone="soft" size="sm" icon={groupIcon(group)} />
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-text-primary">{GROUP_LABEL[group]}</p>
-                      <p className="text-xs text-text-secondary">{count} trip{count === 1 ? '' : 's'}</p>
+                      <p className="text-sm font-medium text-text-primary">{t(`earnings.group.${group}`)}</p>
+                      <p className="text-xs text-text-secondary">{t('earnings.tripCount', { count })}</p>
                     </div>
                     <AmountText amount={amount} />
                   </div>
@@ -283,14 +277,14 @@ export function Earnings() {
               </Card>
             </div>
           ) : (
-            <p className="text-center text-sm text-text-secondary">No completed trips in this period.</p>
+            <p className="text-center text-sm text-text-secondary">{t('earnings.noneInPeriod')}</p>
           )}
 
           {/* "View Details" in the mockup has no destination screen behind
               it. Rather than a button that goes nowhere, it expands the
               individual trips making up the total above. */}
           <Button fullWidth variant={showDetails ? 'secondary' : 'primary'} onClick={() => setShowDetails((v) => !v)}>
-            {showDetails ? 'Hide Details' : 'View Details'}
+            {showDetails ? t('earnings.hideDetails') : t('earnings.viewDetails')}
           </Button>
 
           {showDetails && (
@@ -299,8 +293,8 @@ export function Earnings() {
                 {trips.length === 0 ? (
                   <p className="p-4 text-center text-sm text-text-secondary">
                     {hasFilters
-                      ? 'No results match your filters.'
-                      : `Nothing to show for ${periodLabel.toLowerCase()}.`}
+                      ? t('earnings.noResults')
+                      : t('earnings.nothingFor', { period: periodLabel })}
                   </p>
                 ) : (
                   trips.slice(0, detailShown).map((b) => (
@@ -326,7 +320,7 @@ export function Earnings() {
           )}
 
           <p className="text-center text-xs text-text-secondary">
-            Totals are worked out from every trip you completed in this period, not just the ones listed.
+            {t('earnings.totalsNote')}
           </p>
         </>
       )}

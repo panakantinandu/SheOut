@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Button } from './Button';
 import { StarRating } from './StarRating';
+import { useTranslation } from 'react-i18next';
 
 /** One tappable reason, as the server's catalogue describes it. */
 export interface RatingTagOption {
@@ -58,8 +59,8 @@ const COMMENT_MAX = 500;
  */
 export function RatingDialog({
   open,
-  title = 'How was your trip?',
-  message = 'Your rating is private. It is never shown to the other person, and it is not attached to your name.',
+  title: titleProp,
+  message: messageProp,
   counterpartLabel = 'them',
   busy = false,
   error = null,
@@ -67,6 +68,9 @@ export function RatingDialog({
   onSubmit,
   onSkip,
 }: RatingDialogProps) {
+  const { t } = useTranslation('ds');
+  const title = titleProp ?? t('rating.title');
+  const message = messageProp ?? t('rating.message');
   const [stars, setStars] = useState<number | null>(null);
   const [comment, setComment] = useState('');
   const [tags, setTags] = useState<string[]>([]);
@@ -173,7 +177,7 @@ export function RatingDialog({
               value={comment}
               disabled={busy}
               onChange={(e) => setComment(e.target.value)}
-              placeholder={`What was it like travelling with ${counterpartLabel}?`}
+              placeholder={t('rating.commentPlaceholder', { who: counterpartLabel })}
             />
           </label>
         )}
@@ -182,14 +186,14 @@ export function RatingDialog({
 
         <div className="mt-5 flex gap-3">
           <Button variant="secondary" fullWidth disabled={busy} onClick={onSkip}>
-            Not now
+            {t('common.notNow')}
           </Button>
           <Button
             fullWidth
             disabled={stars === null || busy}
             onClick={() => stars !== null && onSubmit(stars, comment.trim() || undefined, tags)}
           >
-            {busy ? 'Sending...' : 'Submit'}
+            {busy ? t('common.sending') : t('common.submit')}
           </Button>
         </div>
       </div>

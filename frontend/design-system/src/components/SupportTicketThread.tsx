@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Send } from 'lucide-react';
 import { SUPPORT_TEXT_MAX } from '../lib/support';
+import { useTranslation } from 'react-i18next';
 
 export interface SupportThreadMessage {
   id: string;
@@ -45,6 +46,7 @@ export function SupportTicketThread({
   onSend,
   onDismissError,
 }: SupportTicketThreadProps) {
+  const { t } = useTranslation('ds');
   const [draft, setDraft] = useState('');
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -61,12 +63,12 @@ export function SupportTicketThread({
   return (
     <div className="flex flex-col gap-3">
       <div className="space-y-2 rounded-card bg-background p-3">
-        <Bubble mine label="You" text={description} at={raisedAt} />
+        <Bubble mine label={t('thread.you')} text={description} at={raisedAt} />
         {messages.map((m) => (
           <Bubble
             key={m.id}
             mine={m.mine}
-            label={m.fromSupport ? 'SheOut Support' : 'You'}
+            label={m.fromSupport ? t('thread.support') : t('thread.you')}
             text={m.message}
             at={m.createdAt}
           />
@@ -87,7 +89,7 @@ export function SupportTicketThread({
             className="min-h-[44px] flex-1 resize-none rounded-input border border-border bg-surface px-4 py-3 text-sm text-text-primary outline-none transition-colors focus:border-primary"
             rows={2}
             maxLength={SUPPORT_TEXT_MAX}
-            placeholder="Add more detail or reply to support"
+            placeholder={t('thread.placeholder')}
             value={draft}
             disabled={sending}
             onChange={(e) => {
@@ -97,7 +99,7 @@ export function SupportTicketThread({
           />
           <button
             type="button"
-            aria-label="Send message"
+            aria-label={t('chat.send')}
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-text-inverse transition-colors hover:bg-primary-dark disabled:opacity-50"
             disabled={sending || draft.trim().length === 0}
             onClick={() => void submit()}

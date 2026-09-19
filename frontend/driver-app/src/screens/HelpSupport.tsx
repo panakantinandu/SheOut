@@ -10,12 +10,14 @@ import {
   SupportTicketList,
   TopHeader,
   contentText,
+  useAppLanguage,
   faqItemsFromContent,
   useContentSection,
 } from '@sheout/design-system';
 import type { FaqItem, SupportTicketFilters } from '@sheout/design-system';
 import { contentApi, supportApi } from '../api/client';
 import type { SupportTicketCategory, SupportTicketStatus } from '../api/types';
+import { useTranslation } from '@sheout/design-system';
 
 const SUPPORT_EMAIL = 'drivers@sheout.app';
 
@@ -34,44 +36,10 @@ const SUPPORT_EMAIL = 'drivers@sheout.app';
  * as the fallback for a first open with no network. Operators edit the live
  * copy in the ops console; this list is not where to change an answer.
  */
-const FAQS_FALLBACK: FaqItem[] = [
-  {
-    question: 'Why can I not go online?',
-    answer:
-      'Three things have to be in place: your ID and police verification both approved, and a profile photo on your '
-      + 'account. Check Verification to see which checks are still pending, and My Profile to add a photo.',
-  },
-  {
-    question: 'Why do I need a profile photo?',
-    answer:
-      'Riders see it when you are on your way. It is how a woman getting into a stranger\'s vehicle at night checks '
-      + 'she has the right one. It is never shown to anyone before you accept a trip.',
-  },
-  {
-    question: 'Why am I not getting requests?',
-    answer:
-      'You must be online, verified, and allowing location access - requests are offered to the nearest available '
-      + 'partners first, then further out.',
-  },
-  {
-    question: 'How do I contact my rider?',
-    answer:
-      'Through chat on the trip screen, from the moment you accept until the trip ends. Phone numbers are never '
-      + 'shared in either direction and cannot be sent through chat. If something needs a call, call us.',
-  },
-  {
-    question: 'What happens if I cancel a trip?',
-    answer:
-      'You will be asked why, in one tap. Cancelling often relative to the trips you take on is reviewed by a person '
-      + 'here - never acted on automatically - so the reason you give is your side of it.',
-  },
-  {
-    question: 'How are my earnings worked out?',
-    answer:
-      'Earnings are the total of your completed trips. There is no separate payout module yet, so Earnings shows trip '
-      + 'totals rather than settled payouts.',
-  },
-];
+/** The built-in answers, in the current language. English is also the fallback for ops-edited copy. */
+function faqs(t: (key: string) => string): FaqItem[] {
+  return [1, 2, 3, 4, 5, 6].map((n) => ({ question: t(`faq.q${n}`), answer: t(`faq.a${n}`) }));
+}
 
 /**
  * Raise an issue, follow the ones already raised, and the direct routes for
@@ -86,6 +54,12 @@ const FAQS_FALLBACK: FaqItem[] = [
  * configured rather than offering a dead dial.
  */
 export function HelpSupport() {
+  const { t } = useTranslation();
+  const lng = useAppLanguage();
+  // Operators edit the English in the console; other languages use the
+  // translated copy until the content module has per-language entries.
+  const fromContent = (section: Record<string, string>, key: string, fallbackKey: string) =>
+    lng === 'en' ? contentText(section, key, t(fallbackKey)) : t(fallbackKey);
   const navigate = useNavigate();
   const [supportPhone, setSupportPhone] = useState<string | null>(null);
   const [grievanceEmail, setGrievanceEmail] = useState<string | null>(null);
@@ -124,34 +98,34 @@ export function HelpSupport() {
 
   return (
     <div className="space-y-6">
-      <TopHeader variant="back" title="Help & Support" onBack={() => navigate('/profile')} />
+      <TopHeader variant="back" title={t('help.title')} onBack={() => navigate(-1)} />
 
       <Card className="space-y-3">
         <div className="flex items-center gap-3">
           <IconCircle size="lg" tone="soft" icon={<LifeBuoy />} />
           <div>
-            <p className="font-heading font-semibold text-text-primary">{contentText(intro, 'help.driver.intro.title', 'Driver support')}</p>
-            <p className="text-sm text-text-secondary">{contentText(intro, 'help.driver.intro.subtitle', 'Tell us what happened and we will reply here.')}</p>
+            <p className="font-heading font-semibold text-text-primary">{fromContent(intro, 'help.driver.intro.title', 'help.introTitle')}</p>
+            <p className="text-sm text-text-secondary">{fromContent(intro, 'help.driver.intro.subtitle', 'help.introSubtitle')}</p>
           </div>
         </div>
         <Button fullWidth size="md" icon={<Plus className="h-4 w-4" />} onClick={() => navigate('/help/new')}>
-          Raise an issue
+          {t('help.raiseIssue')}
         </Button>
       </Card>
 
       <section>
-        <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">My tickets</h2>
+        <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">{t('help.myTickets')}</h2>
         <SupportTicketList audience="driver" fetchPage={fetchPage} onOpen={(id) => navigate(`/help/tickets/${id}`)} />
       </section>
 
       {/* Headed sections over divided cards - the same shape the Profile
           screens use, so a partner meets one convention across the app. */}
       <section>
-        <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">Other ways to reach us</h2>
+        <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">{t('help.otherWays')}</h2>
         <Card className="divide-y divide-border p-0">
           <ListRow
             icon={<IconCircle tone="soft" size="sm" icon={<Mail />} />}
-            label="Email us"
+            label={t('help.emailUs')}
             sublabel={SUPPORT_EMAIL}
             onClick={() => { window.location.href = `mailto:${SUPPORT_EMAIL}`; }}
           />
@@ -159,29 +133,29 @@ export function HelpSupport() {
               account is handled, and data-rights requests. */}
           <ListRow
             icon={<IconCircle tone="soft" size="sm" icon={<Scale />} />}
-            label="Grievance Officer"
-            sublabel={grievanceEmail ?? 'Contact details are being set up'}
+            label={t('help.grievance')}
+            sublabel={grievanceEmail ?? t('help.grievancePending')}
             onClick={grievanceEmail ? () => { window.location.href = `mailto:${grievanceEmail}`; } : undefined}
             chevron={Boolean(grievanceEmail)}
           />
           {supportPhone && (
             <ListRow
               icon={<IconCircle tone="soft" size="sm" icon={<Phone />} />}
-              label="Call driver support"
+              label={t('help.callSupport')}
               sublabel={supportPhone}
               onClick={() => { window.location.href = `tel:${supportPhone}`; }}
             />
           )}
           <ListRow
             icon={<IconCircle tone="soft" size="sm" icon={<ShieldCheck />} />}
-            label="Verification status"
-            sublabel="See what is still outstanding"
+            label={t('help.verificationStatus')}
+            sublabel={t('help.verificationStatusSub')}
             onClick={() => navigate('/verification')}
           />
         </Card>
       </section>
 
-      <FaqList heading="Common questions" items={faqItemsFromContent(faqCopy, 'faq.driver.', FAQS_FALLBACK)} />
+      <FaqList heading={t('help.faqHeading')} items={lng === 'en' ? faqItemsFromContent(faqCopy, 'faq.driver.', faqs(t)) : faqs(t)} />
     </div>
   );
 }

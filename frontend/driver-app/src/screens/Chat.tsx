@@ -4,6 +4,7 @@ import { Card, ChatThread, ContactSupportButton, TopHeader } from '@sheout/desig
 import { ApiError, chatApi } from '../api/client';
 import type { ChatMessage } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
+import { useTranslation } from '@sheout/design-system';
 
 // Long enough not to hammer the backend, short enough that a reply during a
 // live trip arrives while it still matters. Same polling approach the rest
@@ -26,6 +27,7 @@ const POLL_INTERVAL_MS = 4000;
  * something needs the thread as much as a rider does.
  */
 export function Chat() {
+  const { t } = useTranslation();
   const { bookingId } = useParams<{ bookingId: string }>();
   const navigate = useNavigate();
   const { accountId } = useAuth();
@@ -47,7 +49,7 @@ export function Chat() {
       setSupportPhoneNumber(thread.supportPhoneNumber || null);
       setLoadError(null);
     } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : 'Could not load this conversation');
+      setLoadError(err instanceof ApiError ? err.message : t('chat.loadError'));
     } finally {
       setLoading(false);
     }
@@ -81,7 +83,7 @@ export function Chat() {
       // A refusal, not a failure: the message was understood and declined.
       // The server's own wording explains which rule was hit, so it is shown
       // as-is rather than flattened into "something went wrong".
-      setError(err instanceof ApiError ? err.message : 'Could not send that message');
+      setError(err instanceof ApiError ? err.message : t('chat.sendError'));
       if (err instanceof ApiError && err.status === 409) {
         setOpen(false);
       }
@@ -93,7 +95,7 @@ export function Chat() {
 
   return (
     <div className="space-y-5">
-      <TopHeader variant="back" title="Chat" onBack={() => navigate(-1)} />
+      <TopHeader variant="back" title={t('chat.title')} onBack={() => navigate(-1)} />
 
       {loadError && <p className="text-sm text-danger">{loadError}</p>}
 
@@ -102,7 +104,7 @@ export function Chat() {
           messages={messages}
           myAccountId={accountId}
           open={open}
-          counterpartLabel="your rider"
+          counterpartLabel={t('common.yourRider')}
           loading={loading}
           sending={sending}
           error={error}
@@ -113,7 +115,7 @@ export function Chat() {
 
       <div className="space-y-2">
         <p className="text-center text-xs text-text-secondary">
-          Phone numbers cannot be shared here. If something needs a call, we will make it.
+          {t('chat.noNumbers')}
         </p>
         <ContactSupportButton phoneNumber={supportPhoneNumber} />
       </div>

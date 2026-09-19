@@ -5,6 +5,7 @@ import { ApiError, usersApi } from '../api/client';
 import type { CustomerProfileSummary } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { markProfileComplete } from '../auth/ProtectedRoute';
+import { useTranslation } from '@sheout/design-system';
 
 /**
  * Required once, before the app: name, date of birth (18 or over), a photo,
@@ -14,6 +15,7 @@ import { markProfileComplete } from '../auth/ProtectedRoute';
  * the explanation, not the enforcement.
  */
 export function CompleteProfile() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { accountId } = useAuth();
   const [profile, setProfile] = useState<CustomerProfileSummary | null>(null);
@@ -23,15 +25,15 @@ export function CompleteProfile() {
     usersApi
       .getMyProfile()
       .then(setProfile)
-      .catch((err) => setLoadError(err instanceof ApiError ? err.message : 'Could not load your profile'));
+      .catch((err) => setLoadError(err instanceof ApiError ? err.message : t('profile.loadError')));
   }, []);
 
   return (
     <div className="space-y-6 py-4">
       <BrandHeader size="md" />
       <div>
-        <h1 className="font-heading text-2xl font-bold text-text-primary">Complete your profile</h1>
-        <p className="mt-1 text-sm text-text-secondary">A few details before your first ride.</p>
+        <h1 className="font-heading text-2xl font-bold text-text-primary">{t('completeProfile.title')}</h1>
+        <p className="mt-1 text-sm text-text-secondary">{t('completeProfile.subtitle')}</p>
       </div>
       {loadError && <p className="text-sm text-danger">{loadError}</p>}
       {profile && (
@@ -39,13 +41,13 @@ export function CompleteProfile() {
           initial={{ name: profile.name ?? '', dateOfBirth: profile.dateOfBirth ?? '', email: profile.email ?? '' }}
           photoUrl={profile.profilePhotoUrl}
           hasPhoto={profile.hasProfilePhoto}
-          photoReason="Your partner sees your photo so she knows she is picking up the right person."
-          submitLabel="Continue"
+          photoReason={t('profile.photoReason')}
+          submitLabel={t('common.continue')}
           onUploadPhoto={async (file) => {
             try {
               setProfile(await usersApi.uploadMyPhoto(file));
             } catch (err) {
-              throw new Error(err instanceof ApiError ? err.message : 'Could not upload that photo. Please try again.');
+              throw new Error(err instanceof ApiError ? err.message : t('profile.uploadError'));
             }
           }}
           onSubmit={async (values) => {
@@ -58,7 +60,7 @@ export function CompleteProfile() {
                 workAddress: profile.workAddress ?? undefined,
               });
             } catch (err) {
-              throw new Error(err instanceof ApiError ? err.message : 'Could not save your profile. Please try again.');
+              throw new Error(err instanceof ApiError ? err.message : t('profile.saveError'));
             }
             if (accountId) markProfileComplete(accountId);
             navigate('/home', { replace: true });

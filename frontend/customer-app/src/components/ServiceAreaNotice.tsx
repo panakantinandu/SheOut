@@ -1,7 +1,8 @@
 import { MapPinOff } from 'lucide-react';
 import { Card, IconCircle } from '@sheout/design-system';
 import type { GeoAddress } from '../api/types';
-import { OUT_OF_AREA_MESSAGE, isInServiceArea } from '../lib/geocode';
+import { SERVICE_CENTRE_NAME, isInServiceArea } from '../lib/geocode';
+import { useTranslation } from '@sheout/design-system';
 
 export interface ServiceAreaNoticeProps {
   pickup: GeoAddress | null;
@@ -21,18 +22,18 @@ export interface ServiceAreaNoticeProps {
  * copies of this would eventually say two different things.
  */
 export function ServiceAreaNotice({ pickup, drop }: ServiceAreaNoticeProps) {
+  const { t } = useTranslation();
   const badPickup = pickup !== null && !isInServiceArea(pickup);
   const badDrop = drop !== null && !isInServiceArea(drop);
   if (!badPickup && !badDrop) return null;
 
-  const which = badPickup && badDrop ? 'Your pickup and drop are' : badPickup ? 'Your pickup is' : 'Your drop is';
 
   return (
     <Card tone="danger" className="flex items-start gap-3">
       <IconCircle color="red" tone="soft" size="sm" icon={<MapPinOff />} />
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-text-primary">{which} outside our service area</p>
-        <p className="mt-0.5 text-xs text-text-secondary">{OUT_OF_AREA_MESSAGE}</p>
+        <p className="text-sm font-semibold text-text-primary">{badPickup && badDrop ? t('serviceArea.bothOutside') : badPickup ? t('serviceArea.pickupOutside') : t('serviceArea.dropOutside')}</p>
+        <p className="mt-0.5 text-xs text-text-secondary">{t('serviceArea.message', { city: SERVICE_CENTRE_NAME })}</p>
       </div>
     </Card>
   );

@@ -1,11 +1,11 @@
-import { CheckCircle2, Clock, FileWarning, ShieldCheck, Check, Upload } from 'lucide-react';
+import { Car, CheckCircle2, Clock, FileText, FileWarning, IdCard, ShieldCheck, Check, Upload } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Card, IconCircle, SkeletonCard, StatusBadge, TextField, TopHeader, verificationStatusLabel } from '@sheout/design-system';
 import type { StatusTone } from '@sheout/design-system';
 import { ApiError, usersApi, verificationApi } from '../api/client';
 import type { DriverProfileSummary, VerificationStatus, VerificationSummary } from '../api/types';
-import { mockAction } from '../lib/mockAction';
+import { useTranslation } from '@sheout/design-system';
 
 function statusTone(status: VerificationStatus | null): StatusTone {
   switch (status) {
@@ -40,6 +40,8 @@ function statusLabel(status: VerificationStatus | null): string {
  * does not pretend to be.
  */
 export function Verification() {
+  const { t } = useTranslation();
+  const [explaining, setExplaining] = useState(false);
   const navigate = useNavigate();
   const idInputRef = useRef<HTMLInputElement>(null);
   const rcInputRef = useRef<HTMLInputElement>(null);
@@ -68,7 +70,7 @@ export function Verification() {
     verificationApi
       .getMyStatus()
       .then(setSummary)
-      .catch((err) => setError(err instanceof ApiError ? err.message : 'Could not load verification status'));
+      .catch((err) => setError(err instanceof ApiError ? err.message : t('verification.loadError')));
   }
 
   useEffect(load, []);
@@ -106,7 +108,7 @@ export function Verification() {
       setIdFile(null);
       setRcFile(null);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not upload your documents');
+      setError(err instanceof ApiError ? err.message : t('verification.uploadError'));
     } finally {
       setUploading(false);
     }
@@ -131,7 +133,7 @@ export function Verification() {
       setPan(updated.panNumber ?? '');
       setPanSaved(true);
     } catch (err) {
-      setPanError(err instanceof ApiError ? err.message : 'Could not save your PAN');
+      setPanError(err instanceof ApiError ? err.message : t('verification.panSaveError'));
     } finally {
       setSavingPan(false);
     }
@@ -149,10 +151,10 @@ export function Verification() {
 
   return (
     <div className="space-y-6">
-      <TopHeader variant="back" title="Verification" onBack={() => navigate('/home')} />
+      <TopHeader variant="back" title={t('verification.title')} onBack={() => navigate('/home')} />
 
       {error && <p className="text-sm text-danger">{error}</p>}
-      {!summary && !error && <SkeletonCard lines={3} label="Loading your verification" />}
+      {!summary && !error && <SkeletonCard lines={3} label={t('verification.loading')} />}
 
       {summary && (
         <>
@@ -172,21 +174,21 @@ export function Verification() {
             <div className="flex-1">
               <p className="font-heading font-semibold text-text-primary">
                 {readyToWork
-                  ? "You're ready to work"
+                  ? t('verification.readyTitle')
                   : bothVerified
-                    ? 'One more thing'
-                    : 'Verification in progress'}
+                    ? t('verification.oneMoreTitle')
+                    : t('verification.inProgressTitle')}
               </p>
               <p className="mt-1 text-xs text-text-secondary">
                 {readyToWork
-                  ? 'Both checks are approved and your photo is on file. You can go online and accept trips.'
+                  ? t('verification.readyBody')
                   : bothVerified
-                    ? 'Both checks are approved. Add a profile photo and you can go online - riders use it to check they have the right vehicle.'
-                    : 'Complete the steps below before you can go online.'}
+                    ? t('verification.oneMoreBody')
+                    : t('verification.inProgressBody')}
               </p>
               {bothVerified && !hasPhoto && (
                 <Button size="md" className="mt-3" onClick={() => navigate('/profile')}>
-                  Add your photo
+                  {t('verification.addPhoto')}
                 </Button>
               )}
             </div>
@@ -199,7 +201,7 @@ export function Verification() {
             <div className="flex items-center justify-between p-4">
               <div className="flex items-center gap-2">
                 <IconCircle size="sm" tone="soft" icon={<CheckCircle2 />} />
-                <span className="text-sm font-medium text-text-primary">Gender Verification</span>
+                <span className="text-sm font-medium text-text-primary">{t('verification.gender')}</span>
               </div>
               <StatusBadge tone={statusTone(summary.genderVerificationStatus)}>{statusLabel(summary.genderVerificationStatus)}</StatusBadge>
             </div>
@@ -207,26 +209,41 @@ export function Verification() {
             <div className="flex items-center justify-between p-4">
               <div className="flex items-center gap-2">
                 <IconCircle size="sm" tone="soft" icon={<ShieldCheck />} />
-                <span className="text-sm font-medium text-text-primary">Police Verification</span>
+                <span className="text-sm font-medium text-text-primary">{t('verification.police')}</span>
               </div>
               <StatusBadge tone={statusTone(summary.policeVerificationStatus)}>{statusLabel(summary.policeVerificationStatus)}</StatusBadge>
             </div>
 
-            {/* MOCK: police verification has no driver-facing submission step on the
-                backend at all - it's admin-only, so there's nothing real this button can do. */}
-            <button
-              type="button"
-              onClick={() => mockAction('Submit police verification', 'our team runs this check for you - there is nothing to submit')}
-              className="flex w-full items-center gap-2 p-4 text-xs text-text-secondary underline"
-            >
-              <FileWarning className="h-3.5 w-3.5" /> How is this verified?
-            </button>
+            {/* A real answer rather than the placeholder message this used to
+                open: police verification has no step for her to submit -
+                SheOut's team runs it - and she should know what each check
+                is looking at. */}
+            <div className="p-4">
+              <button
+                type="button"
+                onClick={() => setExplaining((v) => !v)}
+                aria-expanded={explaining}
+                className="flex w-full items-center gap-2 text-xs font-medium text-primary"
+                data-testid="how-verified"
+              >
+                <FileWarning className="h-3.5 w-3.5" /> {t('verification.howVerified')}
+              </button>
+              {explaining && (
+                <div className="mt-3 space-y-2 text-xs text-text-secondary">
+                  <p>{t('verification.howGender')}</p>
+                  <p>{t('verification.howPolice')}</p>
+                </div>
+              )}
+            </div>
           </Card>
 
           <Card className="space-y-4">
-            <p className="text-sm font-medium text-text-primary">
-              {summary.documentSubmitted ? 'Documents submitted' : 'Upload your documents'}
-            </p>
+            <div className="flex items-center gap-3">
+              <IconCircle tone="soft" icon={<FileText />} />
+              <p className="font-heading font-semibold text-text-primary">
+                {summary.documentSubmitted ? t('verification.docsSubmitted') : t('verification.uploadDocs')}
+              </p>
+            </div>
             {/* This used to explain the backend's single document slot to
                 the driver, in those words. A partner does not have a
                 backend; they have an ID and a phone. Same fact, said as a
@@ -234,10 +251,12 @@ export function Verification() {
                 this file's header comment, where it belongs. */}
 
             <div className="space-y-2">
-              <p className="text-sm font-medium text-text-primary">1. Your ID</p>
+              <div className="flex items-center gap-2">
+                <IconCircle size="sm" tone="soft" icon={<IdCard />} />
+                <p className="text-sm font-semibold text-text-primary">{t('verification.yourId')}</p>
+              </div>
               <p className="text-xs text-text-secondary">
-                One government ID, used to confirm your identity. Aadhaar, passport, driving licence or voter ID. Make
-                sure your name and photo are readable.
+                {t('verification.yourIdBody')}
               </p>
               <input
                 ref={idInputRef}
@@ -253,15 +272,17 @@ export function Verification() {
                 disabled={!canUpload || uploading}
                 onClick={() => idInputRef.current?.click()}
               >
-                {idFile ? idFile.name : 'Choose ID document'}
+                {idFile ? idFile.name : t('verification.chooseId')}
               </Button>
             </div>
 
             <div className="space-y-2">
-              <p className="text-sm font-medium text-text-primary">2. Your vehicle's RC</p>
+              <div className="flex items-center gap-2">
+                <IconCircle size="sm" tone="soft" color="orange" icon={<Car />} />
+                <p className="text-sm font-semibold text-text-primary">{t('verification.yourRc')}</p>
+              </div>
               <p className="text-xs text-text-secondary">
-                A photo of the registration certificate for the vehicle you drive. We check it against the registration
-                number on your profile, so the number plate must be readable.
+                {t('verification.yourRcBody')}
               </p>
               <input
                 ref={rcInputRef}
@@ -277,7 +298,7 @@ export function Verification() {
                 disabled={!canUpload || uploading}
                 onClick={() => rcInputRef.current?.click()}
               >
-                {rcFile ? rcFile.name : 'Choose RC photo'}
+                {rcFile ? rcFile.name : t('verification.chooseRc')}
               </Button>
             </div>
 
@@ -286,16 +307,16 @@ export function Verification() {
                 explanation - a dead control is its own dead end. */}
             <Button fullWidth disabled={!canUpload || uploading || !idFile || !rcFile} onClick={handleSubmit}>
               {uploading
-                ? 'Uploading...'
+                ? t('common.uploading')
                 : !idFile && !rcFile
-                  ? 'Choose both documents'
+                  ? t('verification.chooseBoth')
                   : !idFile
-                    ? 'Choose your ID to continue'
+                    ? t('verification.chooseIdToContinue')
                     : !rcFile
-                      ? 'Choose your RC photo to continue'
+                      ? t('verification.chooseRcToContinue')
                       : summary.documentSubmitted
-                        ? 'Re-submit both documents'
-                        : 'Submit for review'}
+                        ? t('verification.resubmit')
+                        : t('verification.submit')}
             </Button>
           </Card>
 
@@ -306,13 +327,12 @@ export function Verification() {
               earned. It is optional, it is not an identity check, and no
               part of the app withholds anything for its absence. */}
           <Card className="space-y-3">
-            <div>
-              <p className="text-sm font-medium text-text-primary">Your PAN (optional)</p>
-              <p className="mt-1 text-xs text-text-secondary">
-                For tax on your payouts. Tax is deducted and reported against a PAN when we pay you, so adding it now
-                keeps that from holding up money you have earned. It is not part of your verification, and you can add
-                it later.
-              </p>
+            <div className="flex items-start gap-3">
+              <IconCircle tone="soft" color="green" icon={<IdCard />} />
+              <div>
+                <p className="font-heading font-semibold text-text-primary">{t('verification.panTitle')}</p>
+                <p className="mt-1 text-xs text-text-secondary">{t('verification.panBody')}</p>
+              </div>
             </div>
             <TextField
               label="PAN"
@@ -329,7 +349,7 @@ export function Verification() {
               }}
               error={panError ?? undefined}
             />
-            {panSaved && !panChanged && <p className="text-xs text-success">Saved.</p>}
+            {panSaved && !panChanged && <p className="text-xs text-success">{t('common.saved')}</p>}
             <Button
               fullWidth
               variant="secondary"
@@ -337,12 +357,12 @@ export function Verification() {
               onClick={savePan}
             >
               {savingPan
-                ? 'Saving...'
+                ? t('common.saving')
                 : pan.trim() === ''
-                  ? 'Remove PAN'
+                  ? t('verification.removePan')
                   : panOnFile
-                    ? 'Update PAN'
-                    : 'Save PAN'}
+                    ? t('verification.updatePan')
+                    : t('verification.savePan')}
             </Button>
           </Card>
         </>

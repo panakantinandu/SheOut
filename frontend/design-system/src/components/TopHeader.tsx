@@ -1,6 +1,7 @@
 import { ArrowLeft, Bell, Menu } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { cn } from '../lib/cn';
+import { useTranslation } from 'react-i18next';
 
 interface BackHeaderProps {
   /**
@@ -18,6 +19,11 @@ interface BackHeaderProps {
    * back-header screen sits the title next to the arrow.
    */
   centerTitle?: boolean;
+  /**
+   * A menu button where the back arrow would be - for a top-level screen
+   * that opens the app drawer. Only used with the plain variant.
+   */
+  onMenuClick?: () => void;
   className?: string;
 }
 
@@ -40,6 +46,7 @@ export type TopHeaderProps = BackHeaderProps | GreetingHeaderProps;
  * notification bell.
  */
 export function TopHeader(props: TopHeaderProps) {
+  const { t } = useTranslation('ds');
   if (props.variant !== 'greeting') {
     return (
       <header className={cn('flex items-center gap-3', props.className)}>
@@ -47,10 +54,20 @@ export function TopHeader(props: TopHeaderProps) {
           <button
             type="button"
             onClick={props.onBack}
-            aria-label="Go back"
+            aria-label={t('header.back')}
             className="flex h-9 w-9 items-center justify-center rounded-full text-text-primary hover:bg-background"
           >
             <ArrowLeft className="h-5 w-5" />
+          </button>
+        ) : props.onMenuClick ? (
+          <button
+            type="button"
+            onClick={props.onMenuClick}
+            aria-label={t('header.menu')}
+            className="flex h-9 w-9 items-center justify-center rounded-full text-text-primary hover:bg-background"
+            data-testid="menu-button"
+          >
+            <Menu className="h-5 w-5" />
           </button>
         ) : (
           props.centerTitle && (
@@ -82,8 +99,9 @@ export function TopHeader(props: TopHeaderProps) {
       <button
         type="button"
         onClick={props.onMenuClick}
-        aria-label="Open menu"
+        aria-label={t('header.menu')}
         className="flex h-9 w-9 items-center justify-center rounded-full text-text-primary hover:bg-background"
+        data-testid="menu-button"
       >
         <Menu className="h-5 w-5" />
       </button>
@@ -94,7 +112,7 @@ export function TopHeader(props: TopHeaderProps) {
       <button
         type="button"
         onClick={props.onBellClick}
-        aria-label={props.unreadCount ? `Notifications, ${props.unreadCount} unread` : 'Notifications'}
+        aria-label={props.unreadCount ? t('header.notificationsUnread', { count: props.unreadCount }) : t('header.notifications')}
         className="relative flex h-9 w-9 items-center justify-center rounded-full text-text-primary hover:bg-background"
       >
         <Bell className="h-5 w-5" />

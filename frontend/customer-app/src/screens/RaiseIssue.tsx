@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, RaiseIssueForm, TopHeader, bookingCategoryLabel, showToast } from '@sheout/design-system';
+import { Button, RaiseIssueForm, SafetyText, TopHeader, bookingCategoryLabel, showToast } from '@sheout/design-system';
 import type { RaiseIssueValues, SelectOption } from '@sheout/design-system';
 import { ApiError, bookingApi, supportApi } from '../api/client';
 import { localEmergencyNumber } from '../lib/emergency';
+import { useTranslation } from '@sheout/design-system';
 
 /**
  * Raising a support ticket.
@@ -13,6 +14,7 @@ import { localEmergencyNumber } from '../lib/emergency';
  * it, not by knowing an id. The server checks the link is really hers anyway.
  */
 export function RaiseIssue() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [bookingOptions, setBookingOptions] = useState<SelectOption[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -30,7 +32,7 @@ export function RaiseIssue() {
             label: `${bookingCategoryLabel(b.category)} · ${new Date(b.requestedAt).toLocaleDateString([], {
               day: 'numeric',
               month: 'short',
-            })} · to ${b.drop.label}`,
+            })} · ${t('help.toPlace', { place: b.drop.label })}`,
           }))
         );
       })
@@ -48,10 +50,10 @@ export function RaiseIssue() {
     setError(null);
     try {
       const ticket = await supportApi.raiseTicket(values);
-      showToast('Sent. Support will reply here.');
+      showToast(t('help.sent'));
       navigate(`/help/tickets/${ticket.id}`, { replace: true });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not send that. Check your connection and try again.');
+      setError(err instanceof ApiError ? err.message : t('help.sendError'));
     } finally {
       setSubmitting(false);
     }
@@ -59,7 +61,7 @@ export function RaiseIssue() {
 
   return (
     <div className="space-y-6">
-      <TopHeader variant="back" title="Raise an issue" onBack={() => navigate('/help')} />
+      <TopHeader variant="back" title={t('help.raiseIssue')} onBack={() => navigate('/help')} />
       <RaiseIssueForm
         audience="customer"
         bookingOptions={bookingOptions}
@@ -68,13 +70,14 @@ export function RaiseIssue() {
         onSubmit={submit}
         safetyNotice={
           <div className="space-y-2">
-            <p className="font-semibold">Are you in danger right now?</p>
+            <p className="font-semibold">
+              <SafetyText k="raiseIssue.dangerTitle" />
+            </p>
             <p className="text-text-secondary">
-              A ticket is read when support reaches it. If you need help this minute, use SOS to alert your
-              emergency contacts, or call {localEmergencyNumber().number}.
+              <SafetyText k="raiseIssue.dangerBody" values={{ number: localEmergencyNumber().number }} />
             </p>
             <Button type="button" variant="danger" size="md" onClick={() => navigate('/sos')}>
-              Open SOS
+              {t('help.openSos')}
             </Button>
           </div>
         }

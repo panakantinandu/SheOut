@@ -1,9 +1,10 @@
 import { BadgeCheck, ShieldCheck, Upload } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Card, IconCircle, SkeletonCard, StatusBadge, TopHeader } from '@sheout/design-system';
+import { Button, Card, IconCircle, SkeletonCard, StatusBadge, TopHeader, verificationStatusLabel } from '@sheout/design-system';
 import { ApiError, verificationApi } from '../api/client';
 import type { VerificationSummary } from '../api/types';
+import { useTranslation } from '@sheout/design-system';
 
 const MAX_BYTES = 10 * 1024 * 1024; // matches the backend's multipart limit
 
@@ -28,6 +29,7 @@ const MAX_BYTES = 10 * 1024 * 1024; // matches the backend's multipart limit
  * automatically.
  */
 export function Verification() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [status, setStatus] = useState<VerificationSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -39,23 +41,23 @@ export function Verification() {
     verificationApi
       .getMyStatus()
       .then(setStatus)
-      .catch((err) => setError(err instanceof ApiError ? err.message : 'Could not load your verification status'));
+      .catch((err) => setError(err instanceof ApiError ? err.message : t('verification.loadError')));
   }, []);
 
   async function handleFile(file: File) {
     setError(null);
     setNotice(null);
     if (file.size > MAX_BYTES) {
-      setError('That file is larger than 10MB. Please upload a smaller photo.');
+      setError(t('verification.tooLarge'));
       return;
     }
     setUploading(true);
     try {
       const updated = await verificationApi.submitDocument(file);
       setStatus(updated);
-      setNotice('Document submitted. Our team will review it shortly.');
+      setNotice(t('verification.submitted'));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not upload your document. Please try again.');
+      setError(err instanceof ApiError ? err.message : t('verification.uploadError'));
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = '';
@@ -69,7 +71,7 @@ export function Verification() {
 
   return (
     <div className="space-y-6">
-      <TopHeader variant="back" title="Identity Verification" onBack={() => navigate('/profile')} />
+      <TopHeader variant="back" title={t('verification.title')} onBack={() => navigate(-1)} />
 
       {error && <p className="text-sm text-danger">{error}</p>}
       {notice && (
@@ -77,7 +79,7 @@ export function Verification() {
       )}
 
       {!status ? (
-        <SkeletonCard lines={3} label="Loading your verification" />
+        <SkeletonCard lines={3} label={t('verification.loading')} />
       ) : (
         <>
           <Card className="flex items-start gap-3">
@@ -89,19 +91,19 @@ export function Verification() {
             />
             <div className="flex-1">
               <div className="flex items-center gap-2">
-                <p className="font-heading font-semibold text-text-primary">ID verification</p>
+                <p className="font-heading font-semibold text-text-primary">{t('verification.idVerification')}</p>
                 <StatusBadge tone={isVerified ? 'success' : isRejected ? 'danger' : 'warning'}>
-                  {isVerified ? 'Verified' : isUnderReview ? 'Under review' : isRejected ? 'Rejected' : 'Not submitted'}
+                  {verificationStatusLabel(gender ?? 'PENDING')}
                 </StatusBadge>
               </div>
               <p className="mt-1 text-sm text-text-secondary">
                 {isVerified
-                  ? "You're verified and can book rides and deliveries."
+                  ? t('verification.verifiedBody')
                   : isUnderReview
-                    ? 'Your document is with our team. This usually takes a few hours.'
+                    ? t('verification.reviewBody')
                     : isRejected
-                      ? 'Your last document could not be accepted. Please upload a clearer photo.'
-                      : 'SheOut is women-only. Upload a government ID so we can confirm your identity before your first booking.'}
+                      ? t('verification.rejectedBody')
+                      : t('verification.pendingBody')}
               </p>
             </div>
           </Card>
@@ -109,10 +111,10 @@ export function Verification() {
           {!isVerified && (
             <Card className="space-y-3">
               <p className="font-heading font-semibold text-text-primary">
-                {isUnderReview ? 'Replace your document' : 'Upload your ID'}
+                {isUnderReview ? t('verification.replace') : t('verification.upload')}
               </p>
               <p className="text-sm text-text-secondary">
-                Aadhaar, passport, driving licence or voter ID. Make sure your name and photo are readable.
+                {t('verification.acceptedIds')}
               </p>
 
               <input
@@ -131,11 +133,11 @@ export function Verification() {
                 icon={<Upload className="h-4 w-4" />}
                 onClick={() => fileRef.current?.click()}
               >
-                {uploading ? 'Uploading...' : status.documentSubmitted ? 'Upload a different document' : 'Choose document'}
+                {uploading ? t('common.uploading') : status.documentSubmitted ? t('verification.uploadDifferent') : t('verification.choose')}
               </Button>
 
               <p className="text-xs text-text-secondary">
-                Your document is only used to confirm your identity and is reviewed by a person, never automatically.
+                {t('verification.privacyNote')}
               </p>
             </Card>
           )}

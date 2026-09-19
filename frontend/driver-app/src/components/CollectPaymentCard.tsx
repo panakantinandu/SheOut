@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { AmountText, Card, IconCircle, paymentMethodLabel } from '@sheout/design-system';
 import { paymentsApi } from '../api/client';
 import type { PaymentSummary } from '../api/types';
+import { useTranslation } from '@sheout/design-system';
 
 const POLL_INTERVAL_MS = 4000;
 
@@ -18,6 +19,7 @@ const POLL_INTERVAL_MS = 4000;
  * has something to point a rider at.
  */
 export function CollectPaymentCard({ bookingId, onPaid }: { bookingId: string; onPaid?: () => void }) {
+  const { t } = useTranslation();
   const [payment, setPayment] = useState<PaymentSummary | null>(null);
 
   const paid = payment?.status === 'CAPTURED' || payment?.status === 'WAIVED';
@@ -50,7 +52,7 @@ export function CollectPaymentCard({ bookingId, onPaid }: { bookingId: string; o
   if (!payment) {
     return (
       <Card>
-        <p className="text-sm text-text-secondary">Getting the fare ready...</p>
+        <p className="text-sm text-text-secondary">{t('collect.gettingReady')}</p>
       </Card>
     );
   }
@@ -61,20 +63,20 @@ export function CollectPaymentCard({ bookingId, onPaid }: { bookingId: string; o
         <div className="flex items-center gap-3">
           <IconCircle size="md" tone="soft" color="green" icon={<CheckCircle2 />} />
           <div className="flex-1">
-            <p className="font-heading font-semibold text-text-primary">Fare paid</p>
+            <p className="font-heading font-semibold text-text-primary">{t('collect.paid')}</p>
             <p className="text-sm text-text-secondary">
               {payment.status === 'WAIVED'
-                ? 'Settled before in-app payment was required'
+                ? t('collect.settledEarlier')
                 : payment.method === 'CASH'
-                  ? 'Cash, collected by you'
-                  : `Paid by your rider · ${paymentMethodLabel(payment.method)}`}
+                  ? t('collect.cash')
+                  : t('collect.paidBy', { method: paymentMethodLabel(payment.method) })}
             </p>
           </div>
           <AmountText amount={payment.amount} size="lg" exact />
         </div>
         {payment.driverPayout != null && payment.method !== 'CASH' && (
           <p className="text-sm text-text-secondary">
-            Your share, ₹{payment.driverPayout.toFixed(2)}, is in your wallet.
+            {t('collect.share', { amount: payment.driverPayout.toFixed(2) })}
           </p>
         )}
       </Card>
@@ -86,18 +88,17 @@ export function CollectPaymentCard({ bookingId, onPaid }: { bookingId: string; o
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <IconCircle size="sm" tone="soft" color="orange" icon={<Hourglass />} />
-          <p className="font-heading font-semibold text-text-primary">Waiting for payment</p>
+          <p className="font-heading font-semibold text-text-primary">{t('collect.waiting')}</p>
         </div>
         <AmountText amount={payment.amount} size="lg" exact />
       </div>
       <p className="text-sm text-text-secondary">
-        Your rider pays in her SheOut app, from her wallet or online. This updates on its own the moment she does.
+        {t('collect.howPaid')}
       </p>
       <div className="flex items-start gap-2 rounded-card bg-background p-3 text-sm text-text-secondary">
         <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
         <p>
-          Please don&apos;t take cash or a transfer to your own account. Fares paid outside SheOut can&apos;t be
-          recorded, and your trip won&apos;t count as paid.
+          {t('collect.noCash')}
         </p>
       </div>
     </Card>

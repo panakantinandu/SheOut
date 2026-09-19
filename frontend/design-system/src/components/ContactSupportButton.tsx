@@ -1,5 +1,6 @@
 import { Headphones } from 'lucide-react';
 import { Button } from './Button';
+import { useTranslation } from 'react-i18next';
 
 export interface ContactSupportButtonProps {
   /** Comes from the backend, which reads SUPPORT_PHONE_NUMBER. Null or blank renders nothing. */
@@ -28,9 +29,11 @@ export interface ContactSupportButtonProps {
  */
 export function ContactSupportButton({
   phoneNumber,
-  label = 'Contact Support',
+  label: labelProp,
   className,
 }: ContactSupportButtonProps) {
+  const { t } = useTranslation('ds');
+  const label = labelProp ?? t('support.contact');
   const trimmed = phoneNumber?.trim();
   if (!trimmed) return null;
 

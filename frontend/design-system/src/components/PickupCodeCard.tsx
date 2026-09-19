@@ -1,6 +1,8 @@
 import { KeyRound } from 'lucide-react';
 import { Card } from './Card';
+import { SafetyText } from '../i18n/SafetyText';
 import { IconCircle } from './IconCircle';
+import { useTranslation } from 'react-i18next';
 
 export interface PickupCodeCardProps {
   /** Null while it is still being fetched, or when the booking has no code. */
@@ -24,6 +26,7 @@ export interface PickupCodeCardProps {
  * length, in the dark, through a car window.
  */
 export function PickupCodeCard({ code, className }: PickupCodeCardProps) {
+  const { t } = useTranslation('safety');
   if (!code) return null;
 
   return (
@@ -31,9 +34,11 @@ export function PickupCodeCard({ code, className }: PickupCodeCardProps) {
       <div className="flex items-center gap-3">
         <IconCircle tone="soft" icon={<KeyRound />} />
         <div className="min-w-0 flex-1">
-          <p className="font-heading font-semibold text-text-primary">Your pickup code</p>
+          <p className="font-heading font-semibold text-text-primary">
+            <SafetyText k="pickupCode.title" />
+          </p>
           <p className="mt-0.5 text-sm text-text-secondary">
-            Read this out to your partner before you get in. She cannot start the trip without it.
+            <SafetyText k="pickupCode.instruction" />
           </p>
         </div>
       </div>
@@ -41,7 +46,7 @@ export function PickupCodeCard({ code, className }: PickupCodeCardProps) {
         // Spaced so the digits are read as four separate numbers rather than
         // as one four-digit number, which is how somebody says them aloud.
         className="mt-3 text-center font-heading text-4xl font-bold tracking-[0.35em] text-primary"
-        aria-label={`Your pickup code is ${code.split('').join(' ')}`}
+        aria-label={t('pickupCode.aria', { digits: code.split('').join(' ') })}
       >
         {code}
       </p>

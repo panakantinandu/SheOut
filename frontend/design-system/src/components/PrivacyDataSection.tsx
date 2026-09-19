@@ -6,6 +6,7 @@ import { ConfirmDialog } from './ConfirmDialog';
 import { IconCircle } from './IconCircle';
 import { ListRow } from './ListRow';
 import { showToast } from '../lib/toast';
+import { useTranslation } from 'react-i18next';
 
 export interface PrivacyDataSectionProps {
   audience: 'customer' | 'driver';
@@ -42,6 +43,7 @@ export function PrivacyDataSection({
   onDelete,
   onDeleted,
 }: PrivacyDataSectionProps) {
+  const { t } = useTranslation('ds');
   const [downloading, setDownloading] = useState(false);
   const [step, setStep] = useState<'idle' | 'explain' | 'type'>('idle');
   const [typed, setTyped] = useState('');
@@ -63,7 +65,7 @@ export function PrivacyDataSection({
       // arrived, and a toast here sat over the delete dialog's buttons.
       await onDownload();
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Could not download your data. Try again.');
+      showToast(err instanceof Error ? err.message : t('privacy.downloadError'));
     } finally {
       setDownloading(false);
     }
@@ -77,52 +79,50 @@ export function PrivacyDataSection({
       await onDelete();
       onDeleted();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not delete your account. Try again.');
+      setError(err instanceof Error ? err.message : t('privacy.deleteError'));
     } finally {
       setDeleting(false);
     }
   }
 
   const explanation = [
-    'Your account is closed straight away: you are signed out everywhere and cannot sign back in to it.',
-    audience === 'driver'
-      ? 'You go offline permanently and stop receiving trips. Your name, vehicle registration, profile photo and ID documents are removed - the photo and documents are deleted from storage, not just hidden.'
-      : 'Your name, saved addresses, emergency contacts and ID documents are removed - the documents are deleted from storage, not just hidden.',
-    'Your messages are deleted, except on a trip with an open support dispute, where they are kept as "[deleted]".',
-    'Completed trips and payments are kept for the period Indian tax and dispute rules require, but with your name shown as "Deleted User" and your phone number removed.',
-    'This cannot be undone. Signing in with the same number later starts a new, empty account.',
+    t('privacy.explain.closed'),
+    audience === 'driver' ? t('privacy.explain.removedDriver') : t('privacy.explain.removedRider'),
+    t('privacy.explain.messages'),
+    t('privacy.explain.kept'),
+    t('privacy.explain.final'),
   ].join('\n\n');
 
   return (
     <section>
-      <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">Privacy &amp; Data</h2>
+      <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">{t('privacy.heading')}</h2>
       <Card className="divide-y divide-border p-0">
         <ListRow
           icon={<IconCircle tone="soft" size="sm" icon={<Download />} />}
-          label={downloading ? 'Preparing your data...' : 'Download my data'}
-          sublabel="A copy of everything SheOut holds about you"
+          label={downloading ? t('privacy.preparing') : t('privacy.download')}
+          sublabel={t('privacy.downloadSub')}
           onClick={() => void download()}
         />
         <ListRow
           icon={<IconCircle tone="soft" size="sm" icon={<Mail />} />}
-          label="Grievance Officer"
-          sublabel={grievanceOfficerEmail ?? 'Contact details are being set up - use Help & Support meanwhile'}
+          label={t('privacy.grievance')}
+          sublabel={grievanceOfficerEmail ?? t('privacy.grievancePending')}
           onClick={grievanceOfficerEmail ? () => { window.location.href = `mailto:${grievanceOfficerEmail}`; } : undefined}
           chevron={Boolean(grievanceOfficerEmail)}
         />
         <ListRow
           icon={<IconCircle color="red" tone="soft" size="sm" icon={<Trash2 />} />}
-          label="Delete my account"
-          sublabel="Close your account and remove your personal details"
+          label={t('privacy.delete')}
+          sublabel={t('privacy.deleteSub')}
           onClick={() => setStep('explain')}
         />
       </Card>
 
       <ConfirmDialog
         open={step === 'explain'}
-        title="Delete your account?"
+        title={t('privacy.deleteTitle')}
         message={explanation}
-        confirmLabel="Continue"
+        confirmLabel={t('common.continue')}
         destructive
         onConfirm={() => setStep('type')}
         onCancel={() => setStep('idle')}
@@ -133,16 +133,16 @@ export function PrivacyDataSection({
           className="fixed inset-0 z-50 flex items-center justify-center bg-text-primary/40 px-6"
           role="dialog"
           aria-modal="true"
-          aria-label="Confirm account deletion"
+          aria-label={t('privacy.confirmAria')}
           onClick={() => !deleting && setStep('idle')}
         >
           <div className="w-full max-w-xs rounded-card bg-surface p-5 shadow-card" onClick={(e) => e.stopPropagation()}>
-            <p className="font-heading text-lg font-semibold text-text-primary">Type DELETE to confirm</p>
+            <p className="font-heading text-lg font-semibold text-text-primary">{t('privacy.typeToConfirm')}</p>
             <p className="mt-2 text-sm text-text-secondary">
-              This permanently closes your account. There is no way to undo it.
+              {t('privacy.permanent')}
             </p>
             <input
-              aria-label="Type DELETE to confirm"
+              aria-label={t('privacy.typeToConfirm')}
               name="confirmDelete"
               autoFocus
               autoCapitalize="characters"
@@ -156,10 +156,10 @@ export function PrivacyDataSection({
             {error && <p className="mt-2 text-sm text-danger">{error}</p>}
             <div className="mt-5 flex gap-3">
               <Button variant="secondary" fullWidth disabled={deleting} onClick={() => setStep('idle')}>
-                Cancel
+                {t('common.cancel')}
               </Button>
               <Button variant="danger" fullWidth disabled={typed !== CONFIRM_WORD || deleting} onClick={() => void confirmDelete()}>
-                {deleting ? 'Deleting...' : 'Delete'}
+                {deleting ? t('privacy.deleting') : t('privacy.deleteButton')}
               </Button>
             </div>
           </div>

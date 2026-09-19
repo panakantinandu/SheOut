@@ -116,8 +116,8 @@ class NotificationEventListeners {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onBookingCompleted(BookingCompleted event) {
         dispatcher.deliver(event.customerId(), NotificationType.BOOKING_COMPLETED, new OutboundMessage(
-                "Trip completed",
-                "Fare " + rupees(event.finalFare()) + ". Pay online in the app, or hand it to your partner in cash.",
+                "You have arrived - payment due",
+                "Fare " + rupees(event.finalFare()) + ". Pay in the app, from your SheOut wallet or online, to finish the trip.",
                 "/tracking/" + event.bookingId(), "booking-" + event.bookingId(), OutboundMessage.Urgency.NORMAL));
     }
 

@@ -1,4 +1,5 @@
 import { cn } from '../lib/cn';
+import { useTranslation } from 'react-i18next';
 
 export interface SuccessCheckProps {
   size?: number;
@@ -20,7 +21,9 @@ export interface SuccessCheckProps {
  * <p>
  * Pure SVG and CSS. Under reduced motion the stroke is simply there.
  */
-export function SuccessCheck({ size = 64, className, label = 'Done' }: SuccessCheckProps) {
+export function SuccessCheck({ size = 64, className, label: labelProp }: SuccessCheckProps) {
+  const { t } = useTranslation('ds');
+  const label = labelProp ?? t('common.done');
   return (
     <span
       className={cn('inline-flex items-center justify-center', className)}

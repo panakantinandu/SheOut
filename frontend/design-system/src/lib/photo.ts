@@ -1,3 +1,4 @@
+import { dsT } from '../i18n';
 /** The longest edge a profile photo is stored at - sharp on any phone screen, a fraction of a camera original. */
 const MAX_EDGE = 1024;
 const QUALITY = 0.85;
@@ -23,7 +24,7 @@ export async function shrinkPhoto(file: File): Promise<File> {
   try {
     bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
   } catch {
-    throw new Error('That file could not be read as a photo. Choose a JPEG or PNG image.');
+    throw new Error(dsT('photo.unreadable', 'That file could not be read as a photo. Choose a JPEG or PNG image.'));
   }
   const scale = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height));
   const width = Math.max(1, Math.round(bitmap.width * scale));
@@ -32,10 +33,10 @@ export async function shrinkPhoto(file: File): Promise<File> {
   canvas.width = width;
   canvas.height = height;
   const context = canvas.getContext('2d');
-  if (!context) throw new Error('This browser cannot prepare the photo. Try another browser.');
+  if (!context) throw new Error(dsT('photo.unsupported', 'This browser cannot prepare the photo. Try another browser.'));
   context.drawImage(bitmap, 0, 0, width, height);
   bitmap.close();
   const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', QUALITY));
-  if (!blob) throw new Error('This browser cannot prepare the photo. Try another browser.');
+  if (!blob) throw new Error(dsT('photo.unsupported', 'This browser cannot prepare the photo. Try another browser.'));
   return new File([blob], 'profile-photo.jpg', { type: 'image/jpeg' });
 }

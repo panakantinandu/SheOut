@@ -1,4 +1,5 @@
 import { Button } from './Button';
+import { useTranslation } from 'react-i18next';
 
 export interface LoadMoreProps {
   /** How many are on screen now. */
@@ -26,15 +27,16 @@ export interface LoadMoreProps {
  * filtered list invites.
  */
 export function LoadMore({ shown, total, hasMore, loading, onLoadMore }: LoadMoreProps) {
+  const { t } = useTranslation('ds');
   if (total === 0) return null;
   return (
     <div className="space-y-3 text-center">
       <p className="text-xs text-text-secondary">
-        Showing {shown} of {total}
+        {t('list.showing', { shown, total })}
       </p>
       {hasMore && (
         <Button variant="secondary" fullWidth disabled={loading} onClick={onLoadMore}>
-          {loading ? 'Loading...' : 'Load more'}
+          {loading ? t('common.loading') : t('list.loadMore')}
         </Button>
       )}
     </div>

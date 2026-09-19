@@ -1,5 +1,6 @@
 import { Navigation } from 'lucide-react';
 import { Button } from './Button';
+import { useTranslation } from 'react-i18next';
 
 export interface OpenInMapsButtonProps {
   lat: number;
@@ -59,11 +60,13 @@ export function OpenInMapsButton({
   lat,
   lng,
   label,
-  children = 'Open in Google Maps',
+  children: childrenProp,
   variant = 'secondary',
   fullWidth = true,
   className,
 }: OpenInMapsButtonProps) {
+  const { t } = useTranslation('ds');
+  const children = childrenProp ?? t('maps.open');
   function open() {
     const fallback = universalUrl(lat, lng);
     const ua = typeof navigator === 'undefined' ? '' : navigator.userAgent;

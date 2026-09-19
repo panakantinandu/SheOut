@@ -11,8 +11,10 @@ import type { PickerMode } from '../components/LocationPicker';
 import { LocationRow } from '../components/LocationRow';
 import { ServiceAreaNotice } from '../components/ServiceAreaNotice';
 import { currentPosition, describePoint, isInServiceArea } from '../lib/geocode';
+import { apiErrorText } from '../lib/apiErrors';
 import { useFareQuote } from '../lib/useFareQuote';
 import type { BookingCategory, GeoAddress } from '../api/types';
+import { useTranslation } from '@sheout/design-system';
 
 const DROP_PRESETS: GeoAddress[] = [
   { label: 'Hitech City', lat: 17.4483, lng: 78.3915 },
@@ -21,15 +23,17 @@ const DROP_PRESETS: GeoAddress[] = [
   { label: 'Charminar', lat: 17.3616, lng: 78.4747 },
 ];
 
-const CONFIG: Record<'parcel' | 'lunchbox', { title: string; category: BookingCategory; detailsLabel: string; cta: string }> = {
-  parcel: { title: 'Parcel Delivery', category: 'PARCEL', detailsLabel: 'Package Details (optional)', cta: 'Continue' },
+// Title, details label and button text live in the translations under
+// delivery.<key>.
+const CONFIG: Record<'parcel' | 'lunchbox', { key: 'parcel' | 'lunchbox'; category: BookingCategory }> = {
+  parcel: { key: 'parcel', category: 'PARCEL' },
   // Mockup's CTA here is "View Menu", implying a menu-browsing step before
   // checkout - the booking module has no line-items/menu concept at all
   // (RequestBookingCommand is just type/category/pickup/drop), so this
   // button actually creates the real booking immediately, same as every
   // other flow. Labeled "Place Order" instead so the copy doesn't promise
   // a menu screen that isn't coming next - flagged deviation, not a typo.
-  lunchbox: { title: 'Lunch Box Delivery', category: 'LUNCHBOX', detailsLabel: 'Meal Notes (optional)', cta: 'Place Order' },
+  lunchbox: { key: 'lunchbox', category: 'LUNCHBOX' },
 };
 
 const MEAL_TYPES = ['VEG', 'NON_VEG'] as const;
@@ -55,6 +59,7 @@ type Plan = (typeof PLANS)[number];
  * cosmetic today.
  */
 export function DeliveryBooking() {
+  const { t } = useTranslation();
   const { kind } = useParams<{ kind: 'parcel' | 'lunchbox' }>();
   const config = CONFIG[kind === 'lunchbox' ? 'lunchbox' : 'parcel'];
   const navigate = useNavigate();
@@ -97,7 +102,7 @@ export function DeliveryBooking() {
     let cancelled = false;
     currentPosition()
       .then(async ({ lat, lng }) => {
-        const address = await describePoint(lat, lng, 'Your Current Location');
+        const address = await describePoint(lat, lng, t('booking.currentLocation'));
         if (!cancelled) setPickup(address);
       })
       .catch((err: Error) => {
@@ -116,7 +121,7 @@ export function DeliveryBooking() {
       const booking = await bookingApi.create({ type: 'DELIVERY', category: config.category, pickup, drop });
       navigate(`/tracking/${booking.id}`);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not create your booking. Please check your connection and try again.');
+      setError(apiErrorText(err, 'booking.createError'));
       // The banner above names the unpaid trip and links to it.
       if (err instanceof ApiError && err.body?.error === 'UNPAID_TRIP') setUnpaidCheck((n) => n + 1);
     } finally {
@@ -130,12 +135,12 @@ export function DeliveryBooking() {
   const servableTrip = isInServiceArea(pickup) && isInServiceArea(drop);
 
   const markers: MapMarker[] = [];
-  if (pickup) markers.push({ key: 'pickup', lat: pickup.lat, lng: pickup.lng, label: 'Pickup', kind: 'pickup' });
-  if (drop) markers.push({ key: 'drop', lat: drop.lat, lng: drop.lng, label: 'Drop', kind: 'drop' });
+  if (pickup) markers.push({ key: 'pickup', lat: pickup.lat, lng: pickup.lng, label: t('booking.pickup'), kind: 'pickup' });
+  if (drop) markers.push({ key: 'drop', lat: drop.lat, lng: drop.lng, label: t('booking.drop'), kind: 'drop' });
 
   return (
     <div className="space-y-6">
-      <TopHeader variant="back" title={config.title} onBack={() => navigate(-1)} />
+      <TopHeader variant="back" title={t(`delivery.${config.key}.title`)} onBack={() => navigate(-1)} />
 
       <UnpaidTripBanner refreshKey={unpaidCheck} />
 
@@ -146,22 +151,22 @@ export function DeliveryBooking() {
       <div className="space-y-1">
         <LiveMap markers={markers} />
         <p className="text-xs text-text-secondary">
-          {drop ? 'Pickup and drop shown below.' : 'Pick a destination to see it on the map.'}
+          {drop ? t('booking.mapBoth') : t('booking.mapPickDrop')}
         </p>
       </div>
 
       <Card className="divide-y divide-border p-0">
         <LocationRow
           icon={<IconCircle icon={<MapPin />} size="sm" />}
-          label="Pickup Location"
-          sublabel={pickup?.label ?? (pickupError ? 'Tap to choose your pickup point' : 'Finding your location...')}
+          label={t('booking.pickupLocation')}
+          sublabel={pickup?.label ?? (pickupError ? t('booking.tapToChoosePickup') : t('booking.findingLocation'))}
           onSearch={() => openPicker('pickup', 'search')}
           onMap={() => openPicker('pickup', 'map')}
         />
         <LocationRow
           icon={<IconCircle color="orange" icon={<MapPin />} size="sm" />}
-          label="Drop Location"
-          sublabel={drop?.label ?? 'Select Destination'}
+          label={t('booking.dropLocation')}
+          sublabel={drop?.label ?? t('booking.selectDestination')}
           onSearch={() => openPicker('drop', 'search')}
           onMap={() => openPicker('drop', 'map')}
         />
@@ -172,7 +177,7 @@ export function DeliveryBooking() {
       {isLunchbox && (
         <>
           <div>
-            <span className="mb-1.5 block text-sm font-medium text-text-primary">Meal Type</span>
+            <span className="mb-1.5 block text-sm font-medium text-text-primary">{t('delivery.mealType')}</span>
             <div className="flex gap-2">
               <Button
                 type="button"
@@ -181,7 +186,7 @@ export function DeliveryBooking() {
                 fullWidth
                 onClick={() => setMealType('VEG')}
               >
-                Veg
+                {t('delivery.veg')}
               </Button>
               <Button
                 type="button"
@@ -190,13 +195,13 @@ export function DeliveryBooking() {
                 fullWidth
                 onClick={() => setMealType('NON_VEG')}
               >
-                Non-Veg
+                {t('delivery.nonVeg')}
               </Button>
             </div>
           </div>
 
           <div>
-            <span className="mb-1.5 block text-sm font-medium text-text-primary">Choose Plan</span>
+            <span className="mb-1.5 block text-sm font-medium text-text-primary">{t('delivery.choosePlan')}</span>
             <div className="flex gap-2">
               {PLANS.map((p) => (
                 <button
@@ -209,7 +214,7 @@ export function DeliveryBooking() {
                       : 'flex-1 rounded-full border border-border py-2 text-sm font-medium text-text-secondary'
                   }
                 >
-                  {p.charAt(0) + p.slice(1).toLowerCase()}
+                  {t(`delivery.plan.${p}`)}
                 </button>
               ))}
             </div>
@@ -218,8 +223,8 @@ export function DeliveryBooking() {
       )}
 
       <TextField
-        label={config.detailsLabel}
-        placeholder={isLunchbox ? 'e.g. less spicy' : 'e.g. small box, handle with care'}
+        label={t(`delivery.${config.key}.details`)}
+        placeholder={isLunchbox ? t('delivery.lunchbox.detailsPlaceholder') : t('delivery.parcel.detailsPlaceholder')}
         value={details}
         onChange={(e) => setDetails(e.target.value)}
       />
@@ -232,12 +237,12 @@ export function DeliveryBooking() {
       {servableTrip && <FareEstimateCard state={fare} />}
 
       <Button fullWidth disabled={!pickup || !drop || !servableTrip || submitting} onClick={handleContinue}>
-        {submitting ? 'Booking...' : config.cta}
+        {submitting ? t('booking.booking') : t(`delivery.${config.key}.cta`)}
       </Button>
 
       <LocationPicker
         open={picking !== null}
-        title={picking === 'pickup' ? 'Set pickup location' : 'Where to?'}
+        title={picking === 'pickup' ? t('booking.setPickup') : t('booking.whereTo')}
         presets={DROP_PRESETS}
         allowCurrentLocation={picking === 'pickup'}
         initialMode={pickerMode}

@@ -1,6 +1,7 @@
 import { MapPinned } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { ListRow } from '@sheout/design-system';
+import { useTranslation } from '@sheout/design-system';
 
 export interface LocationRowProps {
   icon: ReactNode;
@@ -25,12 +26,13 @@ export interface LocationRowProps {
  * way the phone inputs did.
  */
 export function LocationRow({ icon, label, sublabel, onSearch, onMap }: LocationRowProps) {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center gap-2 p-4">
       <ListRow padded={false} className="flex-1" icon={icon} label={label} sublabel={sublabel} onClick={onSearch} />
       <button
         type="button"
-        aria-label={`Pick ${label.toLowerCase()} on the map`}
+        aria-label={t('location.pickOnMap', { what: label })}
         onClick={onMap}
         className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border text-text-secondary hover:bg-background"
       >

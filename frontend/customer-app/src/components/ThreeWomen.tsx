@@ -1,3 +1,4 @@
+import { useTranslation } from '@sheout/design-system';
 /**
  * Three stylised women for the "Women Supporting Women" card.
  * <p>
@@ -11,6 +12,7 @@
  * one exists, without touching the card around it.
  */
 export function ThreeWomen({ className }: { className?: string }) {
+  const { t } = useTranslation();
   // Back, front-left, front-right. Drawn back-to-front so the overlap
   // reads as depth rather than as flat cut-outs.
   const figures = [
@@ -20,7 +22,7 @@ export function ThreeWomen({ className }: { className?: string }) {
   ];
 
   return (
-    <svg viewBox="0 0 100 64" className={className} role="img" aria-label="Three women standing together">
+    <svg viewBox="0 0 100 64" className={className} role="img" aria-label={t('home.threeWomen')}>
       {figures.map((f, i) => (
         <g key={i} transform={`translate(${f.cx} ${f.y}) scale(${f.scale})`}>
           {/* shoulders / torso */}

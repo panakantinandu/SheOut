@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button, Card, IconCircle, SkeletonCard, TextField, TopHeader } from '@sheout/design-system';
 import { ApiError, usersApi } from '../api/client';
 import type { CustomerProfileSummary } from '../api/types';
+import { useTranslation } from '@sheout/design-system';
 
 /**
  * REAL: home/work addresses are columns on the customer profile, read and
@@ -16,6 +17,7 @@ import type { CustomerProfileSummary } from '../api/types';
  * nothing geocodes them into coordinates yet.
  */
 export function SavedAddresses() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<CustomerProfileSummary | null>(null);
   const [home, setHome] = useState('');
@@ -32,7 +34,7 @@ export function SavedAddresses() {
         setHome(p.homeAddress ?? '');
         setWork(p.workAddress ?? '');
       })
-      .catch((err) => setError(err instanceof ApiError ? err.message : 'Could not load addresses'));
+      .catch((err) => setError(err instanceof ApiError ? err.message : t('addresses.loadError')));
   }, []);
 
   async function handleSave() {
@@ -52,7 +54,7 @@ export function SavedAddresses() {
       setProfile(updated);
       setSaved(true);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not save addresses');
+      setError(err instanceof ApiError ? err.message : t('addresses.saveError'));
     } finally {
       setSaving(false);
     }
@@ -60,32 +62,31 @@ export function SavedAddresses() {
 
   return (
     <div className="space-y-6">
-      <TopHeader variant="back" title="Saved Addresses" onBack={() => navigate('/profile')} />
+      <TopHeader variant="back" title={t('addresses.title')} onBack={() => navigate('/profile')} />
       {error && <p className="text-sm text-danger">{error}</p>}
-      {saved && <p className="text-sm text-success">Saved.</p>}
+      {saved && <p className="text-sm text-success">{t('common.saved')}</p>}
 
       {!profile ? (
-        <SkeletonCard lines={3} label="Loading your addresses" />
+        <SkeletonCard lines={3} label={t('addresses.loading')} />
       ) : (
         <Card className="space-y-4">
           <div className="flex items-center gap-2">
             <IconCircle size="sm" tone="soft" icon={<House />} />
-            <span className="font-medium text-text-primary">Home</span>
+            <span className="font-medium text-text-primary">{t('addresses.home')}</span>
           </div>
-          <TextField value={home} onChange={(e) => setHome(e.target.value)} placeholder="Add a home address" />
+          <TextField value={home} onChange={(e) => setHome(e.target.value)} placeholder={t('addresses.homePlaceholder')} />
 
           <div className="flex items-center gap-2 pt-2">
             <IconCircle size="sm" tone="soft" icon={<Briefcase />} />
-            <span className="font-medium text-text-primary">Work</span>
+            <span className="font-medium text-text-primary">{t('addresses.work')}</span>
           </div>
-          <TextField value={work} onChange={(e) => setWork(e.target.value)} placeholder="Add a work address" />
+          <TextField value={work} onChange={(e) => setWork(e.target.value)} placeholder={t('addresses.workPlaceholder')} />
 
           <Button fullWidth onClick={handleSave} disabled={saving}>
-            {saving ? 'Saving...' : 'Save Addresses'}
+            {saving ? t('common.saving') : t('addresses.save')}
           </Button>
           <p className="text-xs text-text-secondary">
-            Home and Work are the two addresses your account stores. They are labels for now - booking still asks you to
-            pick pickup and drop points.
+            {t('addresses.note')}
           </p>
         </Card>
       )}

@@ -17,6 +17,8 @@
  */
 
 /** "IN_PROGRESS" -> "In progress". The last-resort fallback for all of these. */
+import { dsT } from '../i18n';
+
 export function humanizeEnum(value: string): string {
   const words = value.replace(/_/g, ' ').trim().toLowerCase();
   return words.charAt(0).toUpperCase() + words.slice(1);
@@ -30,8 +32,8 @@ const VEHICLE: Record<string, string> = {
 
 /** A partner's vehicle, as shown on their profile and dashboard. */
 export function vehicleLabel(vehicle: string | null | undefined): string {
-  if (!vehicle) return 'Vehicle not set';
-  return VEHICLE[vehicle] ?? humanizeEnum(vehicle);
+  if (!vehicle) return dsT('vehicle.unset', 'Vehicle not set');
+  return dsT(`vehicle.${vehicle}`, VEHICLE[vehicle] ?? humanizeEnum(vehicle));
 }
 
 const VERIFICATION: Record<string, string> = {
@@ -46,8 +48,8 @@ const VERIFICATION: Record<string, string> = {
  * means: nothing has been submitted yet and the person needs to act.
  */
 export function verificationStatusLabel(status: string | null | undefined): string {
-  if (!status) return 'Not required';
-  return VERIFICATION[status] ?? humanizeEnum(status);
+  if (!status) return dsT('verification.notRequired', 'Not required');
+  return dsT(`verification.${status}`, VERIFICATION[status] ?? humanizeEnum(status));
 }
 
 const BOOKING_STATUS: Record<string, string> = {
@@ -64,8 +66,8 @@ const BOOKING_STATUS: Record<string, string> = {
 };
 
 export function bookingStatusLabel(status: string | null | undefined): string {
-  if (!status) return 'Unknown';
-  return BOOKING_STATUS[status] ?? humanizeEnum(status);
+  if (!status) return dsT('common.unknown', 'Unknown');
+  return dsT(`bookingStatus.${status}`, BOOKING_STATUS[status] ?? humanizeEnum(status));
 }
 
 /**
@@ -80,7 +82,7 @@ export function isAwaitingPayment(booking: { status: string; paymentSettledAt?: 
 
 /** The status label for a whole trip, taking payment into account - see isAwaitingPayment. */
 export function tripStatusLabel(booking: { status: string; paymentSettledAt?: string | null }): string {
-  return isAwaitingPayment(booking) ? 'Awaiting payment' : bookingStatusLabel(booking.status);
+  return isAwaitingPayment(booking) ? dsT('bookingStatus.AWAITING_PAYMENT', 'Awaiting payment') : bookingStatusLabel(booking.status);
 }
 
 const CATEGORY: Record<string, string> = {
@@ -92,16 +94,16 @@ const CATEGORY: Record<string, string> = {
 };
 
 export function bookingCategoryLabel(category: string | null | undefined): string {
-  if (!category) return 'Trip';
-  return CATEGORY[category] ?? humanizeEnum(category);
+  if (!category) return dsT('category.trip', 'Trip');
+  return dsT(`category.${category}`, CATEGORY[category] ?? humanizeEnum(category));
 }
 
 /** UPI keeps its capitals - it is the network's name, not an enum. */
 export function paymentMethodLabel(method: string | null | undefined): string {
-  if (!method) return 'Not recorded';
+  if (!method) return dsT('paymentMethod.none', 'Not recorded');
   if (method === 'UPI') return 'UPI';
-  if (method === 'SHEOUT_WALLET') return 'SheOut wallet';
-  return humanizeEnum(method);
+  if (method === 'SHEOUT_WALLET') return dsT('paymentMethod.SHEOUT_WALLET', 'SheOut wallet');
+  return dsT(`paymentMethod.${method}`, humanizeEnum(method));
 }
 
 const PAYMENT_STATUS: Record<string, string> = {
@@ -115,6 +117,6 @@ const PAYMENT_STATUS: Record<string, string> = {
 };
 
 export function paymentStatusLabel(status: string | null | undefined): string {
-  if (!status) return 'Unknown';
-  return PAYMENT_STATUS[status] ?? humanizeEnum(status);
+  if (!status) return dsT('common.unknown', 'Unknown');
+  return dsT(`paymentStatus.${status}`, PAYMENT_STATUS[status] ?? humanizeEnum(status));
 }

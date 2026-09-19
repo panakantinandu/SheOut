@@ -290,7 +290,20 @@ export const verificationApi = {
   },
 };
 
+/** What a partner is told about her rider - see the backend's assignedRider. */
+export interface AssignedRider {
+  firstName: string | null;
+  photoUrl: string | null;
+  averageStars: number | null;
+  totalRatings: number;
+}
+
 export const dispatchApi = {
+  /** 404 until she has accepted the trip. */
+  getAssignedRider(bookingId: string): Promise<AssignedRider> {
+    return request(`/api/v1/dispatch/bookings/${bookingId}/rider`);
+  },
+
   recordLocation(lat: number, lng: number): Promise<void> {
     return request('/api/v1/dispatch/location', { method: 'POST', body: { lat, lng } });
   },
@@ -306,6 +319,19 @@ export const dispatchApi = {
 
   declineOffer(bookingId: string): Promise<void> {
     return request(`/api/v1/dispatch/offers/${bookingId}/decline`, { method: 'POST' });
+  },
+};
+
+/**
+ * The signed-in account's own preferences and waitlist places. Scoped by the
+ * token - there is no account id to pass.
+ */
+export const preferencesApi = {
+  get(): Promise<{ language: string | null }> {
+    return request('/api/v1/users/me/preferences');
+  },
+  save(language: string): Promise<{ language: string }> {
+    return request('/api/v1/users/me/preferences/language', { method: 'PUT', body: { language } });
   },
 };
 

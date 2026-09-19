@@ -18,6 +18,8 @@ import {
 import { ApiError, usersApi, walletApi } from '../api/client';
 import type { RiderWallet, RiderWalletEntry } from '../api/types';
 import { openRazorpayCheckout } from '../lib/razorpayCheckout';
+import { apiErrorText } from '../lib/apiErrors';
+import { useTranslation } from '@sheout/design-system';
 
 const QUICK_AMOUNTS = [100, 200, 500, 1000];
 
@@ -38,6 +40,7 @@ interface WalletRouteState {
  * drove, recorded against that trip.
  */
 export function Wallet() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const routeState = (location.state as WalletRouteState | null) ?? {};
@@ -60,7 +63,7 @@ export function Wallet() {
           setWallet(w);
           setLoadError(null);
         })
-        .catch((err) => setLoadError(err instanceof ApiError ? err.message : 'Could not load your wallet.')),
+        .catch((err) => setLoadError(apiErrorText(err, 'wallet.loadError'))),
     []
   );
 
@@ -93,9 +96,9 @@ export function Wallet() {
     if (!wallet) return undefined;
     if (amount.trim() === '' || amountValid) return undefined;
     if (wallet.balance + parsed > wallet.maxBalance) {
-      return `Your wallet can hold up to ₹${wallet.maxBalance}. You can add up to ₹${Math.max(0, wallet.maxBalance - wallet.balance).toFixed(0)}.`;
+      return t('wallet.capHint', { max: wallet.maxBalance, room: Math.max(0, wallet.maxBalance - wallet.balance).toFixed(0) });
     }
-    return `Enter an amount from ₹${wallet.minTopup} to ₹${wallet.maxTopup}.`;
+    return t('wallet.rangeHint', { min: wallet.minTopup, max: wallet.maxTopup });
   })();
 
   const handleAddMoney = async () => {
@@ -107,10 +110,10 @@ export function Wallet() {
         walletApi.startTopup(parsed),
         usersApi.getMyProfile().then((p) => p.phoneNumber ?? undefined).catch(() => undefined),
       ]);
-      const outcome = await openRazorpayCheckout(checkout, 'Add money to SheOut wallet', contact);
+      const outcome = await openRazorpayCheckout(checkout, t('wallet.checkoutDescription'), contact);
       if (outcome.kind === 'dismissed') return;
       if (outcome.kind === 'failed') {
-        setMessage({ tone: 'danger', text: `${outcome.message} Nothing was added - you can try again.` });
+        setMessage({ tone: 'danger', text: t('wallet.checkoutFailed', { reason: outcome.message }) });
         return;
       }
       const updated = await walletApi.verifyTopup(checkout.topupId, outcome.result);
@@ -118,22 +121,16 @@ export function Wallet() {
       list.reload();
       setAdding(false);
       setAmount('');
-      setMessage({ tone: 'success', text: `₹${parsed.toFixed(2)} added to your wallet.` });
+      setMessage({ tone: 'success', text: t('wallet.added', { amount: parsed.toFixed(2) }) });
       // She came here to cover a fare - take her back to it.
       if (routeState.returnTo) {
         navigate(routeState.returnTo, { replace: true });
       }
     } catch (err) {
       if (err instanceof ApiError && err.body?.error === 'PAYMENT_NOT_VERIFIED') {
-        setMessage({
-          tone: 'danger',
-          text: 'We could not verify that payment. If money left your account, it will be added shortly or refunded - contact support if not.',
-        });
+        setMessage({ tone: 'danger', text: t('wallet.notVerified') });
       } else {
-        setMessage({
-          tone: 'danger',
-          text: err instanceof ApiError ? err.message : 'Could not add money right now. Please try again.',
-        });
+        setMessage({ tone: 'danger', text: apiErrorText(err, 'wallet.addError') });
       }
     } finally {
       setBusy(false);
@@ -144,18 +141,18 @@ export function Wallet() {
     <PullToRefresh onRefresh={refresh} disabled={busy} className="space-y-6">
       <TopHeader
         variant="back"
-        title="Wallet"
+        title={t('wallet.title')}
         onBack={() => (routeState.returnTo ? navigate(routeState.returnTo) : navigate('/home'))}
       />
 
       {loadError && !wallet && <p className="text-sm text-danger">{loadError}</p>}
-      {!wallet && !loadError && <SkeletonCard lines={2} label="Loading your wallet" />}
+      {!wallet && !loadError && <SkeletonCard lines={2} label={t('wallet.loading')} />}
 
       {wallet && (
         <Card variant="primary">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm opacity-90">SheOut wallet balance</p>
+              <p className="text-sm opacity-90">{t('wallet.balance')}</p>
               <AmountText amount={wallet.balance} size="lg" tone="inverse" exact animate />
             </div>
             <button
@@ -164,7 +161,7 @@ export function Wallet() {
               onClick={() => setAdding(true)}
               data-testid="wallet-add-money"
             >
-              Add Money
+              {t('wallet.addMoney')}
             </button>
           </div>
         </Card>
@@ -173,14 +170,14 @@ export function Wallet() {
       {routeState.need && wallet && (
         <Card tone="warning">
           <p className="text-sm text-text-primary">
-            Add at least ₹{Math.ceil(routeState.need)} to pay for your trip. You&apos;ll go straight back to it.
+            {t('wallet.needForTrip', { amount: Math.ceil(routeState.need) })}
           </p>
         </Card>
       )}
 
       {adding && wallet && (
         <Card className="space-y-3" data-testid="wallet-add-panel">
-          <p className="font-heading font-semibold text-text-primary">Add money</p>
+          <p className="font-heading font-semibold text-text-primary">{t('wallet.addMoneyTitle')}</p>
           <div className="flex flex-wrap gap-2">
             {QUICK_AMOUNTS.filter((q) => wallet.balance + q <= wallet.maxBalance).map((q) => (
               <button
@@ -199,9 +196,9 @@ export function Wallet() {
           </div>
           <TextField
             ref={amountInput}
-            label="Amount (₹)"
+            label={t('wallet.amount')}
             inputMode="decimal"
-            placeholder={`₹${wallet.minTopup} to ₹${wallet.maxTopup}`}
+            placeholder={t('wallet.amountPlaceholder', { min: wallet.minTopup, max: wallet.maxTopup })}
             value={amount}
             onChange={(e) => setAmount(e.target.value.replace(/[^\d.]/g, ''))}
             error={amountHint}
@@ -217,14 +214,14 @@ export function Wallet() {
                 setMessage(null);
               }}
             >
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button className="flex-1" disabled={!amountValid || busy} onClick={handleAddMoney} data-testid="wallet-pay">
-              {busy ? 'Opening payment...' : amountValid ? `Add ₹${parsed.toFixed(0)}` : 'Add'}
+              {busy ? t('wallet.opening') : amountValid ? t('wallet.addAmount', { amount: parsed.toFixed(0) }) : t('wallet.add')}
             </Button>
           </div>
           <p className="text-xs text-text-secondary">
-            Paid securely through Razorpay by UPI, card or netbanking. Money is added once your bank confirms it.
+            {t('wallet.razorpayNote')}
           </p>
         </Card>
       )}
@@ -238,36 +235,35 @@ export function Wallet() {
       <div className="flex justify-around">
         <button type="button" className="flex flex-col items-center gap-1.5" onClick={() => setAdding(true)}>
           <IconCircle tone="soft" icon={<PlusCircle />} />
-          <span className="text-xs font-medium text-text-primary">Add Money</span>
+          <span className="text-xs font-medium text-text-primary">{t('wallet.addMoney')}</span>
         </button>
         <button type="button" className="flex flex-col items-center gap-1.5" onClick={() => navigate('/bookings')}>
           <IconCircle tone="soft" color="green" icon={<Bike />} />
-          <span className="text-xs font-medium text-text-primary">Pay a Trip</span>
+          <span className="text-xs font-medium text-text-primary">{t('wallet.payTrip')}</span>
         </button>
         <button type="button" className="flex flex-col items-center gap-1.5" onClick={() => navigate('/profile/payments')}>
           <IconCircle tone="soft" color="orange" icon={<Receipt />} />
-          <span className="text-xs font-medium text-text-primary">Trip Payments</span>
+          <span className="text-xs font-medium text-text-primary">{t('wallet.tripPayments')}</span>
         </button>
       </div>
 
       <div className="flex items-start gap-2 text-xs text-text-secondary">
         <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
         <p>
-          Your wallet pays only for your own SheOut trips, and each fare goes to your partner&apos;s SheOut wallet. It
-          can&apos;t be sent to other people or withdrawn.
+          {t('wallet.closedLoopNote')}
         </p>
       </div>
 
       <div className="space-y-3">
-        <h2 className="font-heading text-base font-semibold text-text-primary">Wallet activity</h2>
+        <h2 className="font-heading text-base font-semibold text-text-primary">{t('wallet.activity')}</h2>
         {list.error && <p className="text-sm text-danger">{list.error}</p>}
-        {list.loading && <SkeletonList rows={3} label="Loading your wallet activity" />}
+        {list.loading && <SkeletonList rows={3} label={t('wallet.activityLoading')} />}
         {!list.loading && !list.error && list.items.length === 0 && (
           <ListEmptyState
             illustrated
             icon={<Receipt />}
-            title="No activity yet"
-            message="Money you add and trips you pay from your wallet appear here."
+            title={t('wallet.activityEmptyTitle')}
+            message={t('wallet.activityEmptyMessage')}
           />
         )}
         {list.items.length > 0 && (
@@ -286,7 +282,7 @@ export function Wallet() {
                 />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-text-primary">
-                    {entry.type === 'TOPUP' ? 'Money added' : 'Trip payment'}
+                    {entry.type === 'TOPUP' ? t('wallet.moneyAdded') : t('wallet.tripPayment')}
                   </p>
                   <p className="text-xs text-text-secondary">
                     {new Date(entry.createdAt).toLocaleString(undefined, {
@@ -295,7 +291,7 @@ export function Wallet() {
                       hour: 'numeric',
                       minute: '2-digit',
                     })}{' '}
-                    · Balance ₹{entry.balanceAfter.toFixed(2)}
+                    · {t('wallet.balanceAfter', { amount: entry.balanceAfter.toFixed(2) })}
                   </p>
                 </div>
                 <AmountText amount={Math.abs(entry.amount)} sign={entry.amount >= 0 ? 'positive' : 'negative'} exact />

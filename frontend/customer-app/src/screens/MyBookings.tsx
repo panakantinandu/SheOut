@@ -16,6 +16,7 @@ import {
   StatusBadge,
   TopHeader,
   bookingCategoryLabel,
+  bookingStatusLabel,
   isAwaitingPayment,
   tripStatusLabel,
   endOfDayIso,
@@ -27,6 +28,7 @@ import { bookingApi } from '../api/client';
 import type { BookingCategory, BookingStatus, BookingSummary } from '../api/types';
 import { RatingPrompt } from '../components/RatingPrompt';
 import { useRatingMarks } from '../lib/useRatingMarks';
+import { useTranslation } from '@sheout/design-system';
 
 type Tab = 'ALL' | 'RIDES' | 'PARCELS' | 'FOOD';
 
@@ -60,24 +62,24 @@ const VIEW_COPY: Record<View, {
   trackable: boolean;
 }> = {
   all: {
-    title: 'My Bookings',
+    title: 'bookings.all.title',
     statuses: [],
-    emptyTitle: 'No bookings yet',
-    emptyMessage: 'Your rides and deliveries will appear here once you book your first one.',
+    emptyTitle: 'bookings.all.emptyTitle',
+    emptyMessage: 'bookings.all.emptyMessage',
     trackable: false,
   },
   live: {
-    title: 'Live Tracking',
+    title: 'bookings.live.title',
     statuses: LIVE_STATUSES,
-    emptyTitle: 'Nothing in progress',
-    emptyMessage: 'You have no trip running right now. Book a ride or a delivery and you can follow it on the map from here.',
+    emptyTitle: 'bookings.live.emptyTitle',
+    emptyMessage: 'bookings.live.emptyMessage',
     trackable: true,
   },
   history: {
-    title: 'Trip History',
+    title: 'bookings.history.title',
     statuses: PAST_STATUSES,
-    emptyTitle: 'No past trips yet',
-    emptyMessage: 'Trips you finish or cancel move here, so you can look back at what you paid.',
+    emptyTitle: 'bookings.history.emptyTitle',
+    emptyMessage: 'bookings.history.emptyMessage',
     trackable: false,
   },
 };
@@ -88,9 +90,9 @@ const VIEW_COPY: Record<View, {
 // The FOOD case stays in the type and in TAB_CATEGORIES so the tab returns
 // by adding one line here when Lunch Box does.
 const TABS: { key: Tab; label: string }[] = [
-  { key: 'ALL', label: 'All' },
-  { key: 'RIDES', label: 'Rides' },
-  { key: 'PARCELS', label: 'Parcels' },
+  { key: 'ALL', label: 'bookings.tabs.ALL' },
+  { key: 'RIDES', label: 'bookings.tabs.RIDES' },
+  { key: 'PARCELS', label: 'bookings.tabs.PARCELS' },
 ];
 
 const TAB_CATEGORIES: Record<Tab, BookingCategory[]> = {
@@ -152,6 +154,7 @@ function categoryIcon(category: BookingCategory) {
  * request, then filter and sort the whole array in the browser.
  */
 export function MyBookings() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const raw = params.get('view');
@@ -210,7 +213,7 @@ export function MyBookings() {
     // at them - a trip completes, a partner accepts - and the alternative was
     // leaving and coming back.
     <PullToRefresh onRefresh={list.reload} disabled={list.loading} className="space-y-6">
-      <TopHeader variant="back" title={copy.title} onBack={() => navigate('/home')} />
+      <TopHeader variant="back" title={t(copy.title)} onBack={() => navigate('/home')} />
 
       {view !== 'all' && (
         // Says which slice you are looking at, and offers the way to the
@@ -220,48 +223,48 @@ export function MyBookings() {
           <IconCircle tone="soft" size="sm" icon={view === 'live' ? <MapPinned /> : <CalendarX />} />
           <p className="flex-1 text-xs text-text-secondary">
             {view === 'live'
-              ? 'Trips happening now. Finished trips are under History.'
-              : 'Trips already finished or cancelled. Anything running now is under Live Track.'}
+              ? t('bookings.liveNote')
+              : t('bookings.historyNote')}
           </p>
           <Button variant="secondary" size="md" onClick={() => navigate('/bookings')}>
-            See all
+            {t('bookings.seeAll')}
           </Button>
         </Card>
       )}
 
       <div className="flex gap-2 overflow-x-auto">
-        {TABS.map((t) => (
+        {TABS.map((tabItem) => (
           <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
+            key={tabItem.key}
+            onClick={() => setTab(tabItem.key)}
             className={
-              tab === t.key
+              tab === tabItem.key
                 ? 'shrink-0 rounded-full bg-primary px-4 py-1.5 text-sm font-semibold text-text-inverse'
                 : 'shrink-0 rounded-full border border-border px-4 py-1.5 text-sm font-medium text-text-secondary'
             }
           >
-            {t.label}
+            {t(tabItem.label)}
           </button>
         ))}
       </div>
 
       <ListFilterBar
-        search={{ value: query, placeholder: 'Search pickup or drop', onChange: setQuery }}
+        search={{ value: query, placeholder: t('bookings.searchPlaceholder'), onChange: setQuery }}
         activeCount={activeFilters}
         onClearAll={clearAll}
       >
         <SelectField
-          label="Status"
-          placeholder="Any status"
+          label={t('payments.status')}
+          placeholder={t('payments.anyStatus')}
           value={status}
           onChange={(e) => setStatus(e.target.value as BookingStatus | '')}
-          options={STATUS_OPTIONS[view]}
+          options={STATUS_OPTIONS[view].map((o) => ({ value: o.value, label: bookingStatusLabel(o.value) }))}
         />
         <DateRangeFields value={dates} onChange={setDates} />
       </ListFilterBar>
 
       {list.error && <p className="text-sm text-danger">{list.error}</p>}
-      {list.loading && <SkeletonList rows={4} label="Loading your trips" />}
+      {list.loading && <SkeletonList rows={4} label={t('bookings.loading')} />}
 
       {!list.loading && list.items.length === 0 && !list.error && (
         // The two empty states mean different things and deliberately do not
@@ -272,10 +275,10 @@ export function MyBookings() {
         isNarrowed ? (
           <ListEmptyState
             icon={<SearchX />}
-            title="No results match your filters"
-            message="Your trips are still here. Try a wider date range, a different status, or clear the filters."
+            title={t('list.noResults')}
+            message={t('bookings.filteredEmpty')}
             action={{
-              label: 'Clear filters and search',
+              label: t('bookings.clearAll'),
               onClick: () => {
                 clearAll();
                 setQuery('');
@@ -287,9 +290,9 @@ export function MyBookings() {
           <ListEmptyState
             illustrated
             icon={view === 'live' ? <MapPinned /> : <CalendarX />}
-            title={copy.emptyTitle}
-            message={copy.emptyMessage}
-            action={view === 'live' ? { label: 'Book a ride', onClick: () => navigate('/book/ride') } : undefined}
+            title={t(copy.emptyTitle)}
+            message={t(copy.emptyMessage)}
+            action={view === 'live' ? { label: t('bookings.bookRide'), onClick: () => navigate('/book/ride') } : undefined}
           />
         )
       )}
@@ -301,7 +304,7 @@ export function MyBookings() {
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium text-text-primary">{bookingCategoryLabel(booking.category)}</p>
               <p className="truncate text-xs text-text-secondary">
-                To {booking.drop.label} &middot; {new Date(booking.requestedAt).toLocaleString()}
+                {t('bookings.to', { place: booking.drop.label })} &middot; {new Date(booking.requestedAt).toLocaleString()}
               </p>
               <StatusBadge tone={statusTone(booking)} className="mt-1">
                 {tripStatusLabel(booking)}
@@ -315,7 +318,7 @@ export function MyBookings() {
                 ratingMarks.get(booking.id)!.stars !== null ? (
                   <p className="mt-1 flex items-center gap-1 text-xs text-text-secondary">
                     <Star className="h-3.5 w-3.5 fill-accent-orange text-accent-orange" />
-                    You rated this {ratingMarks.get(booking.id)!.stars} out of 5
+                    {t('bookings.youRated', { stars: ratingMarks.get(booking.id)!.stars })}
                   </p>
                 ) : new Date(ratingMarks.get(booking.id)!.rateableUntil) > new Date() ? (
                   <button
@@ -327,7 +330,7 @@ export function MyBookings() {
                     }}
                   >
                     <Star className="h-3.5 w-3.5" />
-                    Rate this trip
+                    {t('bookings.rateTrip')}
                   </button>
                 ) : null
               )}
@@ -337,7 +340,7 @@ export function MyBookings() {
               // is the map, and the whole row already opens it - this says so.
               <span className="flex shrink-0 items-center gap-1 text-xs font-semibold text-primary">
                 <MapPinned className="h-4 w-4" />
-                Track
+                {t('bookings.track')}
               </span>
             ) : (
               <AmountText amount={booking.finalFare ?? booking.fareEstimate} />
@@ -362,7 +365,7 @@ export function MyBookings() {
         <RatingPrompt
           key={ratingBookingId}
           bookingId={ratingBookingId}
-          counterpartLabel="your partner"
+          counterpartLabel={t('common.yourPartner')}
           onRated={() => {
             setRatingBookingId(null);
             list.reload();

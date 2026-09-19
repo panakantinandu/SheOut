@@ -2,6 +2,7 @@ import { Globe2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Card, IconCircle } from '@sheout/design-system';
 import { SERVICE_CENTRE_NAME, SERVICE_RADIUS_KM, currentPosition, isInServiceArea } from '../lib/geocode';
+import { useTranslation } from '@sheout/design-system';
 
 /**
  * Tells a customer who is physically outside the service area, up front,
@@ -27,6 +28,7 @@ import { SERVICE_CENTRE_NAME, SERVICE_RADIUS_KM, currentPosition, isInServiceAre
  * wrong place.
  */
 export function OutOfAreaBanner() {
+  const { t } = useTranslation();
   const [outside, setOutside] = useState(false);
 
   useEffect(() => {
@@ -50,12 +52,10 @@ export function OutOfAreaBanner() {
       <IconCircle color="orange" tone="soft" icon={<Globe2 />} />
       <div className="min-w-0 flex-1">
         <p className="font-heading font-semibold text-text-primary">
-          You are outside our service area
+          {t('serviceArea.youOutside')}
         </p>
         <p className="mt-0.5 text-sm text-text-secondary">
-          SheOut runs in {SERVICE_CENTRE_NAME} only, within about {SERVICE_RADIUS_KM}km of the city.
-          You can still book a trip for someone here - just set the pickup and drop yourself
-          instead of using your current location.
+          {t('serviceArea.youOutsideBody', { city: SERVICE_CENTRE_NAME, km: SERVICE_RADIUS_KM })}
         </p>
       </div>
     </Card>
