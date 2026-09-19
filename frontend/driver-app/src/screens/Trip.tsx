@@ -30,6 +30,11 @@ import { useShareLocation } from '../lib/LocationBroadcastContext';
 import { useTranslation } from '@sheout/design-system';
 
 const POLL_INTERVAL_MS = 4000;
+const JUST_ENDED_MS = 15 * 60 * 1000;
+
+function formatWhen(iso: string): string {
+  return new Date(iso).toLocaleString([], { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+}
 
 /**
  * How far she has to drift from the point the route was drawn for before it
@@ -133,6 +138,20 @@ export function Trip() {
   }, [riderVisible, bookingId, rider]);
   const awaitingPayment = booking?.status === 'COMPLETED' && !settled;
 
+  // Over, either way. From here the screen is the trip's record - opened from
+  // My Bookings or a notification - not a job to do.
+  const finished = booking?.status === 'COMPLETED' || booking?.status === 'CANCELLED';
+  const endedAt = booking?.completedAt ?? booking?.cancelledAt ?? null;
+  // The check drawing itself and "Done" belong to the moment a trip ends,
+  // not to every later look at it from history.
+  const justEnded = endedAt != null && Date.now() - new Date(endedAt).getTime() < JUST_ENDED_MS;
+
+  /** Back to wherever she came from - the list or the inbox - and to My Bookings on a cold open. */
+  function goBack() {
+    if (finished && (window.history.state?.idx ?? 0) > 0) navigate(-1);
+    else navigate(finished ? '/bookings' : '/home');
+  }
+
   // While the fare is outstanding, keep asking whether the hold on new
   // offers still stands, so the screen can tell her the moment it lifts.
   useEffect(() => {
@@ -156,18 +175,24 @@ export function Trip() {
   useEffect(() => {
     if (!bookingId) return;
     let cancelled = false;
+    let interval: ReturnType<typeof setInterval> | undefined;
 
     async function poll() {
       try {
         const result = await bookingApi.getById(bookingId!);
-        if (!cancelled) setBooking(result);
+        if (cancelled) return;
+        setBooking(result);
+        // A record, not a live trip: nothing on it will change again.
+        if (result.status === 'CANCELLED' || (result.status === 'COMPLETED' && result.paymentSettledAt)) {
+          clearInterval(interval);
+        }
       } catch (err) {
         if (!cancelled) setError(apiErrorText(err, 'trip.loadError'));
       }
     }
 
+    interval = setInterval(poll, POLL_INTERVAL_MS);
     poll();
-    const interval = setInterval(poll, POLL_INTERVAL_MS);
     return () => {
       cancelled = true;
       clearInterval(interval);
@@ -311,13 +336,17 @@ export function Trip() {
    */
   const markers: MapMarker[] = [];
   if (booking) {
-    if (phase === 'PICKUP') {
+    if (finished) {
+      // A record shows the whole trip, where it started and where it went.
+      markers.push({ key: 'pickup', lat: booking.pickup.lat, lng: booking.pickup.lng, label: t('trip.pickup'), kind: 'pickup' });
+      markers.push({ key: 'drop', lat: booking.drop.lat, lng: booking.drop.lng, label: t('trip.drop'), kind: 'drop' });
+    } else if (phase === 'PICKUP') {
       markers.push({ key: 'pickup', lat: booking.pickup.lat, lng: booking.pickup.lng, label: t('trip.pickup'), kind: 'pickup' });
     } else {
       markers.push({ key: 'drop', lat: booking.drop.lat, lng: booking.drop.lng, label: t('trip.drop'), kind: 'drop' });
     }
   }
-  if (myPosition) {
+  if (myPosition && !finished) {
     markers.push({ key: 'me', lat: myPosition.lat, lng: myPosition.lng, label: t('home.you'), kind: 'driver' });
   }
 
@@ -325,6 +354,7 @@ export function Trip() {
   const navigable = booking?.status === 'ACCEPTED' || booking?.status === 'IN_PROGRESS';
 
   function mapCaption(): string {
+    if (finished && booking) return t('trip.requestedOn', { when: formatWhen(booking.requestedAt) });
     if (!navigable) return t('home.positionNote');
     if (routeError) return t('trip.routeError');
     if (route?.distanceKm != null) {
@@ -340,7 +370,7 @@ export function Trip() {
 
   return (
     <div className="space-y-6">
-      <TopHeader variant="back" title={t('trip.title')} onBack={() => navigate('/home')} />
+      <TopHeader variant="back" title={finished ? t('trip.detailsTitle') : t('trip.title')} onBack={goBack} />
 
       <div className="space-y-1">
         <LiveMap markers={markers} route={route?.points} />
@@ -428,7 +458,13 @@ export function Trip() {
           <Card className="space-y-3">
             <div className="flex items-center justify-between">
               <p className="font-heading font-semibold text-text-primary">{booking.type === 'RIDE' ? t('trip.ride') : t('trip.delivery')}</p>
-              <StatusBadge tone={booking.status === 'COMPLETED' && !settled ? 'warning' : 'primary'}>
+              <StatusBadge
+                tone={
+                  booking.status === 'COMPLETED' ? (settled ? 'success' : 'warning')
+                    : booking.status === 'CANCELLED' ? 'danger'
+                      : 'primary'
+                }
+              >
                 {booking.status === 'COMPLETED' && !settled ? t('trip.awaitingPayment') : bookingStatusLabel(booking.status)}
               </StatusBadge>
             </div>
@@ -443,9 +479,28 @@ export function Trip() {
               </div>
             </div>
             <div className="flex justify-between border-t border-border pt-3 text-sm">
-              <span className="text-text-secondary">{t('trip.fare')}</span>
+              <span className="text-text-secondary">{booking.status === 'CANCELLED' ? t('trip.fareNotCharged') : t('trip.fare')}</span>
               <span className="font-heading font-semibold text-text-primary">₹{booking.finalFare ?? booking.fareEstimate}</span>
             </div>
+            {/* When it happened - the first thing anybody looks for in a
+                past trip, and what support will ask for. */}
+            {finished && (
+              <dl className="space-y-1.5 border-t border-border pt-3 text-sm" data-testid="trip-timeline">
+                {[
+                  ['trip.when.requested', booking.requestedAt],
+                  ['trip.when.started', booking.startedAt],
+                  ['trip.when.completed', booking.completedAt],
+                  ['trip.when.cancelled', booking.cancelledAt],
+                ]
+                  .filter((row): row is [string, string] => Boolean(row[1]))
+                  .map(([label, at]) => (
+                    <div key={label} className="flex justify-between gap-3">
+                      <dt className="text-text-secondary">{t(label)}</dt>
+                      <dd className="text-text-primary">{formatWhen(at)}</dd>
+                    </div>
+                  ))}
+              </dl>
+            )}
           </Card>
 
           {/* Who she is collecting - first name, photo and rating, released
@@ -479,7 +534,7 @@ export function Trip() {
             {/* Only once the fare is in. A trip is not complete while it is
                 unpaid, and drawing a success check over an unpaid fare is
                 what made ending a trip look like the end of the matter. */}
-            {booking.status === 'COMPLETED' && settled && (
+            {booking.status === 'COMPLETED' && settled && justEnded && (
               <Card className="flex flex-col items-center gap-2 py-6 text-center">
                 <SuccessCheck size={64} label={t('trip.completed')} />
                 <p className="font-heading font-semibold text-text-primary">{t('trip.completed')}</p>
@@ -488,7 +543,7 @@ export function Trip() {
                 </p>
               </Card>
             )}
-            {booking.status === 'COMPLETED' && settled && (
+            {booking.status === 'COMPLETED' && settled && justEnded && (
               <Button fullWidth variant="secondary" onClick={() => navigate('/home', { replace: true })}>
                 {t('trip.done')}
               </Button>

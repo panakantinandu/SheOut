@@ -39,6 +39,9 @@ interface BookingRepository extends JpaRepository<BookingEntity, UUID>, JpaSpeci
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<BookingEntity> findLockedById(UUID id);
 
+    /** Searches that outlived the search budget - see StaleSearchReaper. */
+    List<BookingEntity> findTop100ByStatusAndCreatedAtBeforeOrderByCreatedAtAsc(BookingStatus status, Instant cutoff);
+
     /** A rider's oldest ended-and-unpaid trip. Backed by idx_bookings_customer_unsettled. */
     Optional<BookingEntity> findFirstByCustomerIdAndStatusAndPaymentSettledAtIsNullOrderByCompletedAtAsc(
             UUID customerId, BookingStatus status);

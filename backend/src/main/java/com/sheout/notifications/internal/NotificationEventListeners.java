@@ -142,7 +142,10 @@ class NotificationEventListeners {
             dispatcher.deliver(event.driverId(), NotificationType.BOOKING_CANCELLED, OutboundMessage.of(
                     "Trip cancelled",
                     "The rider cancelled this trip. You do not need to go to the pickup.",
-                    "/home"));
+                    // The trip itself, which now shows as a record once it
+                    // has ended. Home said nothing about which trip, so the
+                    // tap looked like it had done nothing.
+                    "/trip/" + event.bookingId()));
         }
     }
 

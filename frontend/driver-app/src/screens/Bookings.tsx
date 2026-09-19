@@ -1,4 +1,4 @@
-import { Bike, CalendarX, MessageCircle, Package, SearchX, Star, UtensilsCrossed } from 'lucide-react';
+import { Bike, CalendarX, Package, SearchX, Star, UtensilsCrossed } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -193,9 +193,12 @@ export function Bookings() {
           <Card
             key={booking.id}
             className="flex items-center gap-3"
-            onClick={() => {
-              if (['MATCHED', 'ACCEPTED', 'IN_PROGRESS'].includes(booking.status)) navigate(`/trip/${booking.id}`);
-            }}
+            // Every trip opens: a live one as the job, a finished or
+            // cancelled one as its record - fare, times, payment, rider and
+            // messages. It used to open only live trips, so tapping any past
+            // one did nothing at all.
+            onClick={() => navigate(`/trip/${booking.id}`)}
+            data-testid="booking-row"
           >
             {categoryIcon(booking.category)}
             <div className="min-w-0 flex-1">
@@ -207,23 +210,12 @@ export function Bookings() {
               <StatusBadge tone={statusTone(booking)} className="mt-1">
                 {tripStatusLabel(booking)}
               </StatusBadge>
-              {/* A finished trip's chat is read-only but never deleted. If a
+              {/* A finished trip's chat is read-only but never deleted - if a
                   partner is ever accused of something that happened on a
-                  trip, the thread is her account of it - so it has to stay
-                  reachable from here, not only while the trip is live. */}
-              {['COMPLETED', 'CANCELLED'].includes(booking.status) && (
-                <button
-                  type="button"
-                  className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-primary"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate(`/chat/${booking.id}`);
-                  }}
-                >
-                  <MessageCircle className="h-3.5 w-3.5" />
-                  {t('bookings.messages')}
-                </button>
-              )}
+                  trip, the thread is her account of it. It is reached from
+                  the trip's own record (the message button on the rider
+                  card), not from a link here: a small "Messages" link sat in
+                  the middle of the row and took the tap meant for the trip. */}
               {/* Already rated, still rateable, or past its window - so
                   nobody is asked twice for the same trip. */}
               {booking.status === 'COMPLETED' && ratingMarks.has(booking.id) && (
@@ -235,7 +227,7 @@ export function Bookings() {
                 ) : new Date(ratingMarks.get(booking.id)!.rateableUntil) > new Date() ? (
                   <button
                     type="button"
-                    className="mt-1 ml-3 inline-flex items-center gap-1 text-xs font-semibold text-primary"
+                    className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-primary"
                     onClick={(e) => {
                       e.stopPropagation();
                       setRatingBookingId(booking.id);

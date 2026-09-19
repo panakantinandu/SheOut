@@ -105,6 +105,25 @@ export function Offer() {
     return () => clearInterval(tick);
   }, []);
 
+  // Opened from an old "New trip request" notification, the offer is long
+  // gone - but the trip may be hers. The server only shows a booking to its
+  // assigned partner, so if it answers, she took this one: show her the trip
+  // rather than a dead end. If it refuses, the request went to somebody else
+  // or nobody, and the closed card below says so.
+  useEffect(() => {
+    if (!unavailable || !bookingId || responding) return;
+    let cancelled = false;
+    bookingApi
+      .getById(bookingId)
+      .then((b) => {
+        if (!cancelled && b.driverId) navigate(`/trip/${bookingId}`, { replace: true });
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [unavailable, bookingId, responding, navigate]);
+
   async function handleAccept() {
     if (!bookingId) return;
     setResponding(true);
@@ -213,6 +232,9 @@ export function Offer() {
           <p className="text-sm text-text-secondary">{t('offer.unavailableBody')}</p>
           <Button fullWidth onClick={() => navigate('/home', { replace: true })}>
             {t('offer.backHome')}
+          </Button>
+          <Button fullWidth variant="secondary" onClick={() => navigate('/bookings', { replace: true })}>
+            {t('offer.myTrips')}
           </Button>
         </Card>
       )}
