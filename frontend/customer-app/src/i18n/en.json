@@ -437,7 +437,10 @@
     "activityEmptyMessage": "Money you add and trips you pay from your wallet appear here.",
     "moneyAdded": "Money added",
     "tripPayment": "Trip payment",
-    "balanceAfter": "Balance ₹{{amount}}"
+    "balanceAfter": "Balance ₹{{amount}}",
+    "nothingToPay": "No trip is waiting to be paid.",
+    "payTripDue": "Pay ₹{{amount}}",
+    "payTripError": "Could not check for unpaid trips. Please try again."
   },
   "tripPay": {
     "lowBalance": "Your wallet balance is too low for this fare. Add money, or pay online.",
