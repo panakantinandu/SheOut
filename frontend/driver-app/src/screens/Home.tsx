@@ -33,10 +33,13 @@ import {
   usersApi,
   verificationApi,
 } from '../api/client';
+import { apiErrorText } from '../lib/apiErrors';
+import { useAppDrawer } from '../components/AppDrawer';
 import type { AggregateRating, BookingSummary, DriverProfileSummary, PaymentHold, VerificationSummary } from '../api/types';
 import { RatingPrompt } from '../components/RatingPrompt';
 import { readPositionOnce, useShareLocation } from '../lib/LocationBroadcastContext';
 import { playOfferChime, unlockChime } from '../lib/offerChime';
+import { useTranslation } from '@sheout/design-system';
 
 const BOOKINGS_POLL_MS = 5000;
 const OFFER_POLL_MS = 4000;
@@ -54,6 +57,7 @@ function startOfDay(): Date {
  * broken one, and has nothing to do about either.
  */
 function LoadError({ title, detail, onRetry }: { title: string; detail: string; onRetry: () => void }) {
+  const { t } = useTranslation();
   return (
     <Card tone="danger" className="flex items-start gap-3">
       <IconCircle color="red" tone="soft" icon={<CloudOff />} />
@@ -62,7 +66,7 @@ function LoadError({ title, detail, onRetry }: { title: string; detail: string; 
         <p className="mt-0.5 text-xs text-text-secondary">{detail}</p>
       </div>
       <Button variant="secondary" size="md" icon={<RefreshCw className="h-4 w-4" />} onClick={onRetry}>
-        Try again
+        {t('common.tryAgain')}
       </Button>
     </Card>
   );
@@ -90,6 +94,8 @@ function LoadError({ title, detail, onRetry }: { title: string; detail: string; 
  * deliberate backend limitation, not a frontend shortcut.
  */
 export function Home() {
+  const { t } = useTranslation();
+  const drawer = useAppDrawer();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<DriverProfileSummary | null>(null);
   const [verification, setVerification] = useState<VerificationSummary | null>(null);
@@ -117,7 +123,7 @@ export function Home() {
     usersApi
       .getMyProfile()
       .then(setProfile)
-      .catch((err) => setProfileError(err instanceof ApiError ? err.message : 'Could not load your profile'));
+      .catch((err) => setProfileError(err instanceof ApiError ? err.message : t('profile.loadError')));
   }, []);
 
   /**
@@ -131,7 +137,7 @@ export function Home() {
       .getMyStatus()
       .then(setVerification)
       .catch((err) =>
-        setVerificationError(err instanceof ApiError ? err.message : 'Could not check your verification status')
+        setVerificationError(err instanceof ApiError ? err.message : t('home.verificationError'))
       );
   }, []);
 
@@ -297,7 +303,7 @@ export function Home() {
       // second-guess it with its own copy of the boundary.
       const here = await readPositionOnce(location.position);
       if (!here) {
-        setError('We need your location to send you nearby trips. Allow location access and try again.');
+        setError(t('home.needLocation'));
         return;
       }
       setProfile(await usersApi.setOnlineStatus('ONLINE', here));
@@ -318,10 +324,10 @@ export function Home() {
       // away, so it gets a standing explanation rather than a red line that
       // reads like something went wrong.
       if (err instanceof ApiError && err.body?.error === 'OUTSIDE_SERVICE_AREA') {
-        setOutOfArea(err.message);
+        setOutOfArea(t('apiError.OUTSIDE_SERVICE_AREA'));
         return;
       }
-      setError(err instanceof ApiError ? err.message : 'Could not update status');
+      setError(apiErrorText(err, 'home.statusError'));
     } finally {
       setTogglingOnline(false);
     }
@@ -342,11 +348,13 @@ export function Home() {
       <TopHeader
         variant="plain"
         centerTitle
-        title="Partner Dashboard"
+        title={t('home.title')}
+        // The drawer: language, payouts, support, the legal pages, log out.
+        onMenuClick={drawer.open}
         rightSlot={
           <button
             type="button"
-            aria-label={unreadCount ? `Notifications, ${unreadCount} unread` : 'Notifications'}
+            aria-label={unreadCount ? t('home.notificationsUnread', { count: unreadCount }) : t('notifications.title')}
             onClick={() => navigate('/notifications')}
             className="relative flex h-9 w-9 items-center justify-center rounded-full text-text-primary hover:bg-background"
           >
@@ -365,10 +373,10 @@ export function Home() {
       <Card variant="primary" className="relative overflow-hidden">
         <div className="relative z-10 max-w-[64%]">
           <p className="font-heading text-lg font-semibold">
-            {profile?.name ? `Welcome back, ${profile.name.split(' ')[0]}` : 'Welcome back'}
+            {profile?.name ? t('home.welcomeNamed', { name: profile.name.split(' ')[0] }) : t('home.welcome')}
           </p>
           <p className="mt-1 text-sm opacity-90">
-            {isOnline ? 'You are online and taking requests' : 'Go online when you are ready to drive'}
+            {isOnline ? t('home.bannerOnline') : t('home.bannerOffline')}
           </p>
         </div>
         <img
@@ -394,7 +402,7 @@ export function Home() {
         <Card tone="warning" className="flex items-start gap-3">
           <IconCircle color="orange" tone="soft" icon={<Globe2 />} />
           <div className="min-w-0 flex-1">
-            <p className="font-heading font-semibold text-text-primary">You are outside our service area</p>
+            <p className="font-heading font-semibold text-text-primary">{t('home.outsideArea')}</p>
             <p className="mt-0.5 text-xs text-text-secondary">{outOfArea}</p>
           </div>
         </Card>
@@ -409,23 +417,23 @@ export function Home() {
         <Card tone="danger" className="flex items-start gap-3">
           <IconCircle color="red" tone="soft" icon={<MapPinOff />} />
           <div className="flex-1">
-            <p className="font-heading font-semibold text-text-primary">Location not shared</p>
+            <p className="font-heading font-semibold text-text-primary">{t('home.locationNotShared')}</p>
             <p className="text-xs text-text-secondary">{location.error}</p>
           </div>
         </Card>
       )}
 
       {profileError ? (
-        <LoadError title="Could not load your profile" detail={profileError} onRetry={loadProfile} />
+        <LoadError title={t('profile.loadError')} detail={profileError} onRetry={loadProfile} />
       ) : !profile ? (
-        <SkeletonCard lines={2} label="Loading your profile" />
+        <SkeletonCard lines={2} label={t('home.loadingProfile')} />
       ) : (
       <Card className="flex items-center gap-3">
         {/* Her own photo, the one riders see. It used to be a generic person
             glyph even for partners who had uploaded one. */}
         <Avatar url={profile.profilePhotoUrl} name={profile.name} size="lg" />
         <div className="flex-1">
-          <p className="font-heading font-semibold text-text-primary">{profile.name || 'Add your name'}</p>
+          <p className="font-heading font-semibold text-text-primary">{profile.name || t('profile.addName')}</p>
           <div className="flex items-center gap-2">
             {/* Online/offline dot, as the mockup shows beside the name. Real
                 state from the profile, not decoration - and it breathes while
@@ -433,7 +441,7 @@ export function Home() {
                 app is awake and listening" without words. */}
             <span className="flex items-center gap-1.5 text-xs text-text-secondary">
               <StatusDot live={isOnline} />
-              {isOnline ? 'Online' : 'Offline'}
+              {isOnline ? t('home.online') : t('home.offline')}
             </span>
             {/* Real, from this partner's own ratings. See the file header. */}
             <span className="text-xs text-text-secondary">
@@ -441,7 +449,7 @@ export function Home() {
               <AggregateRatingText
                 averageStars={rating?.averageStars}
                 totalRatings={rating?.totalRatings}
-                emptyLabel="Not rated yet"
+                emptyLabel={t('home.notRated')}
               />{' '}
               &middot; {vehicleLabel(profile.vehicleType)}
             </span>
@@ -462,32 +470,32 @@ export function Home() {
         <div className="flex flex-1 flex-col items-center gap-1.5 p-3 text-center">
           <IconCircle size="sm" tone="soft" color="primary" icon={<IndianRupee />} />
           <AmountText amount={todayEarnings} size="sm" animate />
-          <p className="text-xs text-text-secondary">Earned Today</p>
+          <p className="text-xs text-text-secondary">{t('home.earnedToday')}</p>
         </div>
         <div className="w-px self-stretch bg-border" aria-hidden="true" />
         <div className="flex flex-1 flex-col items-center gap-1.5 p-3 text-center">
           <IconCircle size="sm" tone="soft" color="green" icon={<CheckCircle2 />} />
           <p className="font-heading text-sm font-semibold tabular-nums text-text-primary">{ridesShown}</p>
-          <p className="text-xs text-text-secondary">Rides Today</p>
+          <p className="text-xs text-text-secondary">{t('home.ridesToday')}</p>
         </div>
         <div className="w-px self-stretch bg-border" aria-hidden="true" />
         <div className="flex flex-1 flex-col items-center gap-1.5 p-3 text-center">
           <IconCircle size="sm" tone="soft" color="orange" icon={<ClipboardList />} />
           <p className="font-heading text-sm font-semibold tabular-nums text-text-primary">{activeTripsShown}</p>
-          <p className="text-xs text-text-secondary">Active Trips</p>
+          <p className="text-xs text-text-secondary">{t('home.activeTrips')}</p>
         </div>
       </Card>
 
       {verificationError ? (
-        <LoadError title="Could not check your verification" detail={verificationError} onRetry={loadVerification} />
+        <LoadError title={t('home.verificationError')} detail={verificationError} onRetry={loadVerification} />
       ) : !verification ? (
-        <SkeletonCard lines={2} label="Checking your verification" />
+        <SkeletonCard lines={2} label={t('home.checkingVerification')} />
       ) : !isVerified ? (
         <Card tone="warning" className="flex items-center gap-3">
           <IconCircle color="orange" tone="soft" icon={<ShieldCheck />} />
           <div className="flex-1">
-            <p className="font-heading font-semibold text-text-primary">Complete verification to go online</p>
-            <p className="text-xs text-text-secondary">Gender and police verification are both required first.</p>
+            <p className="font-heading font-semibold text-text-primary">{t('home.completeVerification')}</p>
+            <p className="text-xs text-text-secondary">{t('home.verificationRequired')}</p>
           </div>
           <Button size="md" onClick={() => navigate('/verification')}>
             Review
@@ -502,8 +510,8 @@ export function Home() {
       ) : (
         <Card variant={isOnline ? 'primary' : 'surface'} className="flex items-center justify-between">
           <div>
-            <p className="font-heading text-lg font-semibold">{isOnline ? "You're Online" : "You're Offline"}</p>
-            <p className="mt-1 text-sm opacity-80">{isOnline ? 'Looking for ride requests nearby' : 'Go online to start receiving requests'}</p>
+            <p className="font-heading text-lg font-semibold">{isOnline ? t('home.youreOnline') : t('home.youreOffline')}</p>
+            <p className="mt-1 text-sm opacity-80">{isOnline ? t('home.lookingForRequests') : t('home.goOnlineHint')}</p>
           </div>
           <Button
             variant={isOnline ? 'danger' : 'success'}
@@ -512,7 +520,7 @@ export function Home() {
             disabled={togglingOnline}
             onClick={handleToggleOnline}
           >
-            {togglingOnline ? '...' : isOnline ? 'Go Offline' : 'Go Online'}
+            {togglingOnline ? '...' : isOnline ? t('home.goOffline') : t('home.goOnline')}
           </Button>
         </Card>
       )}
@@ -530,14 +538,12 @@ export function Home() {
           <IconCircle tone="soft" color="orange" icon={<Hourglass className="h-5 w-5" />} />
           <div className="flex-1">
             <p className="font-heading font-semibold text-text-primary">
-              Waiting for ₹{paymentHold.amount.toFixed(0)} from your last rider
+              {t('home.holdTitle', { amount: paymentHold.amount.toFixed(0) })}
             </p>
             <p className="text-xs text-text-secondary">
-              New requests resume when she pays
               {paymentHold.holdUntil
-                ? `, or at ${new Date(paymentHold.holdUntil).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
-                : ''}
-              .
+                ? t('home.holdBodyUntil', { time: new Date(paymentHold.holdUntil).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) })
+                : t('home.holdBody')}
             </p>
           </div>
         </Card>
@@ -547,7 +553,7 @@ export function Home() {
         <Card className="flex items-center gap-3" onClick={() => navigate(`/trip/${activeTrip.id}`)}>
           <IconCircle tone="soft" icon={activeTrip.type === 'RIDE' ? <Bike className="h-5 w-5" /> : <Navigation2 className="h-5 w-5" />} />
           <div className="flex-1">
-            <p className="font-heading font-semibold text-text-primary">Active Trip - {bookingStatusLabel(activeTrip.status)}</p>
+            <p className="font-heading font-semibold text-text-primary">{t('home.activeTrip', { status: bookingStatusLabel(activeTrip.status) })}</p>
             <p className="truncate text-xs text-text-secondary">{activeTrip.drop.label}</p>
           </div>
         </Card>
@@ -561,16 +567,16 @@ export function Home() {
       {isOnline && location.position && (
         <div className="space-y-1">
           <LiveMap
-            markers={[{ key: 'me', lat: location.position.lat, lng: location.position.lng, label: 'You', kind: 'driver' }]}
+            markers={[{ key: 'me', lat: location.position.lat, lng: location.position.lng, label: t('home.you'), kind: 'driver' }]}
             className="h-52"
           />
-          <p className="text-xs text-text-secondary">Your position updates as your device reports movement.</p>
+          <p className="text-xs text-text-secondary">{t('home.positionNote')}</p>
         </div>
       )}
 
       {recentTrips.length > 0 && (
         <div>
-          <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">Recent trips</h2>
+          <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">{t('home.recentTrips')}</h2>
           <Card className="divide-y divide-border p-0">
             {recentTrips.map((trip) => (
               <div key={trip.id} className="flex items-center gap-3 p-4">
@@ -590,7 +596,7 @@ export function Home() {
           this is where she is asked. It asks about whatever is actually
           waiting, decided by the server, not by this screen's idea of what
           just finished. */}
-      <RatingPrompt counterpartLabel="your rider" onRated={loadRating} />
+      <RatingPrompt counterpartLabel={t('common.yourRider')} onRated={loadRating} />
     </div>
   );
 }

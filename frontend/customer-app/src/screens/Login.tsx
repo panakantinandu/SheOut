@@ -1,10 +1,12 @@
 import { useState, type FormEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { BrandHeader, Button, LegalConsentNotice, PhoneField, TextField, isCompletePhone, toE164 } from '@sheout/design-system';
+import { BrandHeader, Button, LANGUAGES, LanguagePicker, LegalConsentNotice, PhoneField, TextField, Trans, isCompletePhone, setAppLanguage, toE164, useAppLanguage } from '@sheout/design-system';
+import { Languages } from 'lucide-react';
 import { ApiError, authApi, usersApi } from '../api/client';
 import type { AuthSession } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { signInWithGoogle } from '../lib/googleAuth';
+import { useTranslation } from '@sheout/design-system';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
@@ -17,18 +19,7 @@ const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
  */
 type AuthMode = 'login' | 'signup';
 
-const AUTH_MODE_COPY: Record<AuthMode, { tab: string; heading: string; subtitle: string }> = {
-  login: {
-    tab: 'Login',
-    heading: 'Welcome Back!',
-    subtitle: 'Sign in to continue',
-  },
-  signup: {
-    tab: 'Sign Up',
-    heading: 'Get Started',
-    subtitle: 'Create your account to book safe rides',
-  },
-};
+const AUTH_MODES: AuthMode[] = ['login', 'signup'];
 
 /**
  * Official Google "G" logomark (4-color, standard OAuth-button asset) -
@@ -90,6 +81,9 @@ function GoogleIcon({ className }: { className?: string }) {
  * a pixel check once live.
  */
 export function Login() {
+  const { t } = useTranslation();
+  const [pickingLanguage, setPickingLanguage] = useState(false);
+  const lng = useAppLanguage();
   const navigate = useNavigate();
   const { login } = useAuth();
 
@@ -134,9 +128,9 @@ export function Login() {
     login(session);
 
     if (mode === 'signup' && !session.newAccount) {
-      setNotice('That number is already registered - signing you in instead.');
+      setNotice(t('login.alreadyRegistered'));
     } else if (mode === 'login' && session.newAccount) {
-      setNotice("We didn't find an account for that number, so we've created one.");
+      setNotice(t('login.createdForYou'));
     }
 
     let needsProfile = session.newAccount;
@@ -161,7 +155,7 @@ export function Login() {
     setError(null);
     setNotice(null);
     if (!isCompletePhone(phoneDigits)) {
-      setError('Enter a valid 10-digit mobile number');
+      setError(t('login.invalidPhone'));
       return;
     }
     setSubmitting(true);
@@ -169,7 +163,7 @@ export function Login() {
       await authApi.requestOtp(phoneNumber);
       setStep('otp');
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not send the code. Please check your connection and try again.');
+      setError(err instanceof ApiError ? err.message : t('login.sendError'));
     } finally {
       setSubmitting(false);
     }
@@ -183,7 +177,7 @@ export function Login() {
       const session = await authApi.verifyOtp(phoneNumber, code);
       await afterSignIn(session);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not verify code');
+      setError(err instanceof ApiError ? err.message : t('login.verifyError'));
     } finally {
       setSubmitting(false);
     }
@@ -192,7 +186,7 @@ export function Login() {
   async function handleGoogleSignIn() {
     setError(null);
     if (!GOOGLE_CLIENT_ID) {
-      setError('Google sign-in is not configured yet');
+      setError(t('login.googleNotConfigured'));
       return;
     }
     setGoogleLoading(true);
@@ -201,7 +195,7 @@ export function Login() {
       const session = await authApi.googleSignIn(accessToken);
       await afterSignIn(session);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Google sign-in failed');
+      setError(err instanceof ApiError ? err.message : err instanceof Error ? err.message : t('login.googleFailed'));
     } finally {
       setGoogleLoading(false);
     }
@@ -209,6 +203,28 @@ export function Login() {
 
   return (
     <div className="flex min-h-screen flex-col justify-center bg-gradient-to-br from-[#FEF8F8] via-[#FBF1F6] to-[#E9DEF5] px-screen py-10">
+      {/* Language, before anything else - she may not read English, and
+          the drawer where it otherwise lives is only there once signed in. */}
+      <div className="-mt-4 mb-2 flex justify-end">
+        <button
+          type="button"
+          onClick={() => setPickingLanguage(true)}
+          className="flex items-center gap-1.5 rounded-full border border-border bg-surface/80 px-3 py-1.5 text-xs font-semibold text-primary shadow-sm"
+          data-testid="login-language"
+        >
+          <Languages className="h-4 w-4" aria-hidden="true" />
+          {LANGUAGES.find((l) => l.code === lng)?.nativeName}
+        </button>
+      </div>
+      <LanguagePicker
+        open={pickingLanguage}
+        onClose={() => setPickingLanguage(false)}
+        onSelect={(code) => {
+          setAppLanguage(code);
+          setPickingLanguage(false);
+        }}
+      />
+
       <BrandHeader size="md" className="mb-6" />
 
       {(
@@ -217,8 +233,8 @@ export function Login() {
               a live toggle would just invite a mid-flow tab switch that
               changes nothing. Same pill vocabulary as MyBookings' tabs. */}
           {step === 'phone' && (
-            <div className="mb-5 flex gap-2" role="tablist" aria-label="Login or sign up">
-              {(Object.keys(AUTH_MODE_COPY) as AuthMode[]).map((m) => (
+            <div className="mb-5 flex gap-2" role="tablist" aria-label={t('login.modeAria')}>
+              {AUTH_MODES.map((m) => (
                 <button
                   key={m}
                   type="button"
@@ -231,14 +247,14 @@ export function Login() {
                       : 'flex-1 rounded-full border border-border px-4 py-2 text-sm font-medium text-text-secondary'
                   }
                 >
-                  {AUTH_MODE_COPY[m].tab}
+                  {t(`login.${m}.tab`)}
                 </button>
               ))}
             </div>
           )}
 
-          <h1 className="font-heading text-2xl font-bold text-text-primary">{AUTH_MODE_COPY[mode].heading}</h1>
-          <p className="mb-6 text-sm text-text-secondary">{AUTH_MODE_COPY[mode].subtitle}</p>
+          <h1 className="font-heading text-2xl font-bold text-text-primary">{t(`login.${mode}.heading`)}</h1>
+          <p className="mb-6 text-sm text-text-secondary">{t(`login.${mode}.subtitle`)}</p>
 
           {notice && (
             <p className="mb-4 rounded-input bg-primary-light px-4 py-3 text-sm font-medium text-primary">{notice}</p>
@@ -246,25 +262,25 @@ export function Login() {
 
           {step === 'phone' ? (
             <form onSubmit={handleSendOtp} className="space-y-4">
-              <PhoneField value={phoneDigits} onChange={setPhoneDigits} error={error ?? undefined} />
+              <PhoneField value={phoneDigits} onChange={setPhoneDigits} error={error ?? undefined} placeholder={t('login.phonePlaceholder')} />
               {/* Above the button, so it is read before the decision rather
                   than after it - see LegalConsentNotice. */}
               <LegalConsentNotice
-                actionLabel="Send OTP"
+                actionLabel={t('login.sendOtp')}
                 onOpenTerms={() => navigate('/terms')}
                 onOpenPrivacy={() => navigate('/privacy')}
               />
               <Button type="submit" fullWidth disabled={submitting}>
-                {submitting ? 'Sending...' : 'Send OTP'}
+                {submitting ? t('common.sending') : t('login.sendOtp')}
               </Button>
             </form>
           ) : (
             <form onSubmit={handleVerifyOtp} className="space-y-4">
-              <p className="text-center text-sm text-text-secondary">Enter the code sent to {phoneNumber}</p>
+              <p className="text-center text-sm text-text-secondary">{t('login.codeSentTo', { phone: phoneNumber })}</p>
               <TextField
                 type="text"
                 inputMode="numeric"
-                placeholder="6-digit code"
+                placeholder={t('login.codePlaceholder')}
                 value={code}
                 onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                 error={error ?? undefined}
@@ -273,14 +289,14 @@ export function Login() {
                 {/* "Verify", not "Login"/"Create Account": which of those it
                     turns out to be is decided by the account's real state
                     after verification, not by the tab the user picked. */}
-                {submitting ? 'Verifying...' : 'Verify'}
+                {submitting ? t('login.verifying') : t('login.verify')}
               </Button>
               <button
                 type="button"
                 onClick={() => setStep('phone')}
                 className="w-full text-center text-sm text-text-secondary underline"
               >
-                Change number
+                {t('login.changeNumber')}
               </button>
             </form>
           )}
@@ -290,7 +306,7 @@ export function Login() {
               {/* Rules either side of "or", as the mockup draws it. */}
               <div className="my-6 flex items-center gap-3">
                 <span className="h-px flex-1 bg-border" aria-hidden="true" />
-                <span className="text-xs font-medium text-text-secondary">or</span>
+                <span className="text-xs font-medium text-text-secondary">{t('login.or')}</span>
                 <span className="h-px flex-1 bg-border" aria-hidden="true" />
               </div>
 
@@ -302,7 +318,7 @@ export function Login() {
                 disabled={googleLoading}
                 onClick={handleGoogleSignIn}
               >
-                {googleLoading ? 'Signing in...' : 'Continue with Google'}
+                {googleLoading ? t('login.signingIn') : t('login.google')}
               </Button>
 
               {/* Points at the real toggle above rather than styling the
@@ -310,11 +326,11 @@ export function Login() {
               <p className="mt-6 text-center text-sm text-text-secondary">
                 {mode === 'login' ? (
                   <>
-                    New to SheOut? Tap <button type="button" onClick={() => setMode('signup')} className="font-semibold text-primary underline">Sign Up</button> above - we'll set up your account after the OTP.
+                    <Trans i18nKey="login.newHint" components={{ link: <button type="button" onClick={() => setMode('signup')} className="font-semibold text-primary underline" /> }} />
                   </>
                 ) : (
                   <>
-                    Already have an account? Tap <button type="button" onClick={() => setMode('login')} className="font-semibold text-primary underline">Login</button> above - same number, same OTP.
+                    <Trans i18nKey="login.existingHint" components={{ link: <button type="button" onClick={() => setMode('login')} className="font-semibold text-primary underline" /> }} />
                   </>
                 )}
               </p>

@@ -10,12 +10,14 @@ import {
   SupportTicketList,
   TopHeader,
   contentText,
+  useAppLanguage,
   faqItemsFromContent,
   useContentSection,
 } from '@sheout/design-system';
 import type { FaqItem, SupportTicketFilters } from '@sheout/design-system';
 import { contentApi, supportApi } from '../api/client';
 import type { SupportTicketCategory, SupportTicketStatus } from '../api/types';
+import { useTranslation } from '@sheout/design-system';
 
 const SUPPORT_EMAIL = 'support@sheout.app';
 
@@ -39,40 +41,18 @@ const SUPPORT_EMAIL = 'support@sheout.app';
  * as the fallback for a first open with no network. Operators edit the live
  * copy in the ops console; this list is not where to change an answer.
  */
-const FAQS_FALLBACK: FaqItem[] = [
-  {
-    question: 'How do I cancel a booking?',
-    answer:
-      'Open the trip from Bookings and use Cancel, any time before the trip starts. You will be asked why, in one '
-      + 'tap. Cancelling often enough is looked at by a person here, never acted on automatically.',
-  },
-  {
-    question: 'How do I contact my partner?',
-    answer:
-      'Through chat on the trip screen, from the moment she accepts until the trip ends. Phone numbers are never '
-      + 'shared in either direction, and cannot be sent through chat. If something needs a call, call us and we will '
-      + 'handle it.',
-  },
-  {
-    question: 'When do I see who is picking me up?',
-    answer:
-      'Once she accepts your trip. You will see her name, photo, vehicle and registration number, and her rating. '
-      + 'Nothing about her is shown before that, because until she accepts she may not be the one coming.',
-  },
-  {
-    question: 'Who can see my SOS alert?',
-    answer:
-      'The emergency contacts saved on your account are sent an SMS with your live location, and the alert is raised '
-      + 'to SheOut operators.',
-  },
-  {
-    question: 'How am I charged?',
-    answer:
-      'Per trip, by UPI or cash. No card is stored on your account - see Payment History for what you have paid.',
-  },
-];
+/** The built-in answers, in the current language. English is also the fallback for ops-edited copy. */
+function faqs(t: (key: string) => string): FaqItem[] {
+  return [1, 2, 3, 4, 5].map((n) => ({ question: t(`faq.q${n}`), answer: t(`faq.a${n}`) }));
+}
 
 export function HelpSupport() {
+  const { t } = useTranslation();
+  const lng = useAppLanguage();
+  // Operators edit the English in the console; other languages use the
+  // translated copy until the content module has per-language entries.
+  const fromContent = (section: Record<string, string>, key: string, fallbackKey: string) =>
+    lng === 'en' ? contentText(section, key, t(fallbackKey)) : t(fallbackKey);
   const navigate = useNavigate();
   const [supportPhone, setSupportPhone] = useState<string | null>(null);
   const [grievanceEmail, setGrievanceEmail] = useState<string | null>(null);
@@ -112,46 +92,46 @@ export function HelpSupport() {
 
   return (
     <div className="space-y-6">
-      <TopHeader variant="back" title="Help & Support" onBack={() => navigate('/profile')} />
+      <TopHeader variant="back" title={t('help.title')} onBack={() => navigate(-1)} />
 
       <Card className="space-y-3">
         <div className="flex items-center gap-3">
           <IconCircle size="lg" tone="soft" icon={<LifeBuoy />} />
           <div>
-            <p className="font-heading font-semibold text-text-primary">{contentText(intro, 'help.customer.intro.title', 'We are here to help')}</p>
-            <p className="text-sm text-text-secondary">{contentText(intro, 'help.customer.intro.subtitle', 'Tell us what happened and we will reply here.')}</p>
+            <p className="font-heading font-semibold text-text-primary">{fromContent(intro, 'help.customer.intro.title', 'help.introTitle')}</p>
+            <p className="text-sm text-text-secondary">{fromContent(intro, 'help.customer.intro.subtitle', 'help.introSubtitle')}</p>
           </div>
         </div>
         <Button fullWidth size="md" icon={<Plus className="h-4 w-4" />} onClick={() => navigate('/help/new')}>
-          Raise an issue
+          {t('help.raiseIssue')}
         </Button>
       </Card>
 
       <section>
-        <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">My tickets</h2>
+        <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">{t('help.myTickets')}</h2>
         <SupportTicketList audience="customer" fetchPage={fetchPage} onOpen={(id) => navigate(`/help/tickets/${id}`)} />
       </section>
 
       <section>
-        <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">Other ways to reach us</h2>
+        <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">{t('help.otherWays')}</h2>
         <Card className="divide-y divide-border p-0">
           <ListRow
             icon={<IconCircle color="red" tone="soft" size="sm" icon={<Siren />} />}
-            label="Emergency SOS"
-            sublabel="In danger right now? Alert your emergency contacts"
+            label={t('help.sosLabel')}
+            sublabel={t('help.sosSub')}
             onClick={() => navigate('/sos')}
           />
           {supportPhone && (
             <ListRow
               icon={<IconCircle tone="soft" size="sm" icon={<Phone />} />}
-              label="Call support"
+              label={t('help.callSupport')}
               sublabel={supportPhone}
               onClick={() => { window.location.href = `tel:${supportPhone}`; }}
             />
           )}
           <ListRow
             icon={<IconCircle tone="soft" size="sm" icon={<Mail />} />}
-            label="Email us"
+            label={t('help.emailUs')}
             sublabel={SUPPORT_EMAIL}
             onClick={() => { window.location.href = `mailto:${SUPPORT_EMAIL}`; }}
           />
@@ -159,15 +139,15 @@ export function HelpSupport() {
               account is handled, and data-rights requests. */}
           <ListRow
             icon={<IconCircle tone="soft" size="sm" icon={<Scale />} />}
-            label="Grievance Officer"
-            sublabel={grievanceEmail ?? 'Contact details are being set up'}
+            label={t('help.grievance')}
+            sublabel={grievanceEmail ?? t('help.grievancePending')}
             onClick={grievanceEmail ? () => { window.location.href = `mailto:${grievanceEmail}`; } : undefined}
             chevron={Boolean(grievanceEmail)}
           />
         </Card>
       </section>
 
-      <FaqList heading="Common questions" items={faqItemsFromContent(faqCopy, 'faq.customer.', FAQS_FALLBACK)} />
+      <FaqList heading={t('help.faqHeading')} items={lng === 'en' ? faqItemsFromContent(faqCopy, 'faq.customer.', faqs(t)) : faqs(t)} />
     </div>
   );
 }

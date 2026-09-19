@@ -2,6 +2,8 @@ import { CheckCircle2, MapPin, MessageCircle, Navigation } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
+  AggregateRatingText,
+  Avatar,
   Button,
   CancelReasonDialog,
   Card,
@@ -12,6 +14,7 @@ import {
   OpenInMapsButton,
   PICKUP_CODE_LENGTH,
   PickupCodeField,
+  SafetyText,
   SkeletonCard,
   StatusBadge,
   SuccessCheck,
@@ -19,10 +22,12 @@ import {
   bookingStatusLabel,
 } from '@sheout/design-system';
 import type { CancellationReason, MapMarker } from '@sheout/design-system';
-import { ApiError, bookingApi, chatApi } from '../api/client';
+import { ApiError, bookingApi, chatApi, dispatchApi, type AssignedRider } from '../api/client';
+import { apiErrorText } from '../lib/apiErrors';
 import type { BookingSummary, PaymentHold, TripRoute } from '../api/types';
 import { CollectPaymentCard } from '../components/CollectPaymentCard';
 import { useShareLocation } from '../lib/LocationBroadcastContext';
+import { useTranslation } from '@sheout/design-system';
 
 const POLL_INTERVAL_MS = 4000;
 
@@ -81,6 +86,9 @@ function metresBetween(a: { lat: number; lng: number }, b: { lat: number; lng: n
  * anything needing a voice goes to a person at SheOut on the support number.
  */
 export function Trip() {
+  const { t } = useTranslation();
+  /** Her rider's first name, photo and rating - released by the server from ACCEPTED onwards. */
+  const [rider, setRider] = useState<AssignedRider | null>(null);
   const { bookingId } = useParams<{ bookingId: string }>();
   const navigate = useNavigate();
   const [booking, setBooking] = useState<BookingSummary | null>(null);
@@ -116,6 +124,13 @@ export function Trip() {
 
   const phase = booking?.status === 'IN_PROGRESS' ? 'DROP' : 'PICKUP';
   const settled = paid || Boolean(booking?.paymentSettledAt);
+
+  // Who she is collecting, once the server will say - from ACCEPTED on.
+  const riderVisible = booking?.status === 'ACCEPTED' || booking?.status === 'IN_PROGRESS' || booking?.status === 'COMPLETED';
+  useEffect(() => {
+    if (!riderVisible || !bookingId || rider) return;
+    dispatchApi.getAssignedRider(bookingId).then(setRider).catch(() => undefined);
+  }, [riderVisible, bookingId, rider]);
   const awaitingPayment = booking?.status === 'COMPLETED' && !settled;
 
   // While the fare is outstanding, keep asking whether the hold on new
@@ -147,7 +162,7 @@ export function Trip() {
         const result = await bookingApi.getById(bookingId!);
         if (!cancelled) setBooking(result);
       } catch (err) {
-        if (!cancelled) setError(err instanceof ApiError ? err.message : 'Could not load trip');
+        if (!cancelled) setError(apiErrorText(err, 'trip.loadError'));
       }
     }
 
@@ -234,7 +249,7 @@ export function Trip() {
       setAskingWhy(false);
       navigate('/home', { replace: true });
     } catch (err) {
-      setCancelError(err instanceof ApiError ? err.message : 'Could not cancel trip');
+      setCancelError(apiErrorText(err, 'trip.cancelError'));
     } finally {
       setBusy(false);
     }
@@ -259,9 +274,9 @@ export function Trip() {
     } catch (err) {
       if (err instanceof ApiError && err.body?.error === 'PICKUP_VERIFICATION_LOCKED') {
         setCodeLocked(true);
-        setCodeError(err.message);
+        setCodeError(t('apiError.PICKUP_VERIFICATION_LOCKED'));
       } else {
-        setCodeError(err instanceof ApiError ? err.message : 'Could not confirm pickup');
+        setCodeError(apiErrorText(err, 'trip.confirmError'));
         // Cleared so she types four fresh digits rather than editing a
         // wrong code - which is how a second attempt becomes a third.
         setPickupCode('');
@@ -281,7 +296,7 @@ export function Trip() {
       // payment card below appears in place of the trip controls.
       setBooking(updated);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not complete trip');
+      setError(apiErrorText(err, 'trip.completeError'));
     } finally {
       setBusy(false);
     }
@@ -297,34 +312,35 @@ export function Trip() {
   const markers: MapMarker[] = [];
   if (booking) {
     if (phase === 'PICKUP') {
-      markers.push({ key: 'pickup', lat: booking.pickup.lat, lng: booking.pickup.lng, label: 'Pickup', kind: 'pickup' });
+      markers.push({ key: 'pickup', lat: booking.pickup.lat, lng: booking.pickup.lng, label: t('trip.pickup'), kind: 'pickup' });
     } else {
-      markers.push({ key: 'drop', lat: booking.drop.lat, lng: booking.drop.lng, label: 'Drop', kind: 'drop' });
+      markers.push({ key: 'drop', lat: booking.drop.lat, lng: booking.drop.lng, label: t('trip.drop'), kind: 'drop' });
     }
   }
   if (myPosition) {
-    markers.push({ key: 'me', lat: myPosition.lat, lng: myPosition.lng, label: 'You', kind: 'driver' });
+    markers.push({ key: 'me', lat: myPosition.lat, lng: myPosition.lng, label: t('home.you'), kind: 'driver' });
   }
 
   const destination = booking ? (phase === 'PICKUP' ? booking.pickup : booking.drop) : null;
   const navigable = booking?.status === 'ACCEPTED' || booking?.status === 'IN_PROGRESS';
 
   function mapCaption(): string {
-    if (!navigable) return 'Your position updates as your device reports movement.';
-    if (routeError) return 'Could not draw the road right now - open Google Maps for directions.';
+    if (!navigable) return t('home.positionNote');
+    if (routeError) return t('trip.routeError');
     if (route?.distanceKm != null) {
       const minutes = route.durationMinutes == null ? null : Math.round(route.durationMinutes);
-      return `${route.distanceKm} km${minutes == null ? '' : ` - about ${minutes} min`} to the ${
-        phase === 'PICKUP' ? 'pickup' : 'drop'
-      }.`;
+      const where = phase === 'PICKUP' ? t('trip.toPickup') : t('trip.toDrop');
+      return minutes == null
+        ? t('trip.routeKm', { km: route.distanceKm, where })
+        : t('trip.routeKmMin', { km: route.distanceKm, minutes, where });
     }
-    if (!myPosition) return location.error ?? 'Finding your location...';
-    return 'Working out the route...';
+    if (!myPosition) return location.error ?? t('trip.findingLocation');
+    return t('trip.workingOutRoute');
   }
 
   return (
     <div className="space-y-6">
-      <TopHeader variant="back" title="Trip" onBack={() => navigate('/home')} />
+      <TopHeader variant="back" title={t('trip.title')} onBack={() => navigate('/home')} />
 
       <div className="space-y-1">
         <LiveMap markers={markers} route={route?.points} />
@@ -332,7 +348,7 @@ export function Trip() {
       </div>
 
       {error && <p className="text-sm text-danger">{error}</p>}
-      {!booking && !error && <SkeletonCard lines={4} label="Loading this trip" />}
+      {!booking && !error && <SkeletonCard lines={4} label={t('trip.loading')} />}
 
       {booking && (
         <>
@@ -354,7 +370,7 @@ export function Trip() {
                 />
                 <div className="min-w-0 flex-1">
                   <p className="font-heading font-semibold text-text-primary">
-                    {phase === 'PICKUP' ? 'Go to pickup' : 'Go to drop'}
+                    {phase === 'PICKUP' ? t('trip.goToPickup') : t('trip.goToDrop')}
                   </p>
                   <p className="mt-0.5 text-sm text-text-secondary">{destination.label}</p>
                 </div>
@@ -365,7 +381,7 @@ export function Trip() {
                 label={destination.label}
                 variant={phase === 'PICKUP' ? 'primary' : 'secondary'}
               >
-                {phase === 'PICKUP' ? 'Navigate to pickup' : 'Navigate to drop'}
+                {phase === 'PICKUP' ? t('trip.navigateToPickup') : t('trip.navigateToDrop')}
               </OpenInMapsButton>
             </Card>
           )}
@@ -376,11 +392,11 @@ export function Trip() {
               <div className="flex items-start gap-3">
                 <IconCircle tone="soft" icon={<CheckCircle2 />} />
                 <div className="min-w-0 flex-1">
-                  <p className="font-heading font-semibold text-text-primary">Confirm pickup</p>
+                  <p className="font-heading font-semibold text-text-primary">{t('trip.confirmPickup')}</p>
                   <p className="mt-0.5 text-sm text-text-secondary">
                     {codeLocked
-                      ? 'This trip needs support to sort out before it can start.'
-                      : 'Ask your rider for her four-digit code and enter it here. The trip starts once it matches.'}
+                      ? <SafetyText k="pickupCode.locked" />
+                      : <SafetyText k="pickupCode.askForCode" />}
                   </p>
                 </div>
               </div>
@@ -401,7 +417,7 @@ export function Trip() {
                     disabled={busy || pickupCode.length !== PICKUP_CODE_LENGTH}
                     onClick={handleConfirmPickup}
                   >
-                    {busy ? 'Checking...' : 'Confirm Pickup & Start Trip'}
+                    {busy ? t('trip.checking') : t('trip.confirmAndStart')}
                   </Button>
                 </>
               )}
@@ -411,9 +427,9 @@ export function Trip() {
 
           <Card className="space-y-3">
             <div className="flex items-center justify-between">
-              <p className="font-heading font-semibold text-text-primary">{booking.type === 'RIDE' ? 'Ride' : 'Delivery'}</p>
+              <p className="font-heading font-semibold text-text-primary">{booking.type === 'RIDE' ? t('trip.ride') : t('trip.delivery')}</p>
               <StatusBadge tone={booking.status === 'COMPLETED' && !settled ? 'warning' : 'primary'}>
-                {booking.status === 'COMPLETED' && !settled ? 'Awaiting payment' : bookingStatusLabel(booking.status)}
+                {booking.status === 'COMPLETED' && !settled ? t('trip.awaitingPayment') : bookingStatusLabel(booking.status)}
               </StatusBadge>
             </div>
             <div className="space-y-2 text-sm">
@@ -427,19 +443,28 @@ export function Trip() {
               </div>
             </div>
             <div className="flex justify-between border-t border-border pt-3 text-sm">
-              <span className="text-text-secondary">Fare</span>
+              <span className="text-text-secondary">{t('trip.fare')}</span>
               <span className="font-heading font-semibold text-text-primary">₹{booking.finalFare ?? booking.fareEstimate}</span>
             </div>
           </Card>
 
-          <Card className="flex items-center justify-between">
-            {/* MOCK: no endpoint exists for a driver to look up the customer's profile by id. */}
-            <div>
-              <p className="font-heading font-semibold text-text-primary">Customer details unavailable (mock)</p>
-              <p className="text-xs text-text-secondary">Phone numbers are never shared. Message her instead.</p>
+          {/* Who she is collecting - first name, photo and rating, released
+              by the server once she has accepted. This was a placeholder
+              reading "Customer details unavailable (mock)". */}
+          <Card className="flex items-center gap-3" data-testid="trip-rider">
+            <Avatar url={rider?.photoUrl} name={rider?.firstName ?? undefined} size="md" />
+            <div className="min-w-0 flex-1">
+              <p className="font-heading font-semibold text-text-primary">{rider?.firstName || t('trip.yourRider')}</p>
+              <p className="text-xs text-text-secondary">
+                {rider ? (
+                  <AggregateRatingText averageStars={rider.averageStars} totalRatings={rider.totalRatings} emptyLabel={t('trip.newRider')} />
+                ) : null}
+                {rider ? ' · ' : ''}
+                {t('trip.noNumbers')}
+              </p>
             </div>
             <button
-              aria-label="Message your rider"
+              aria-label={t('trip.messageRider')}
               className="rounded-full p-2 text-primary hover:bg-background"
               onClick={() => navigate(`/chat/${bookingId}`)}
             >
@@ -456,16 +481,16 @@ export function Trip() {
                 what made ending a trip look like the end of the matter. */}
             {booking.status === 'COMPLETED' && settled && (
               <Card className="flex flex-col items-center gap-2 py-6 text-center">
-                <SuccessCheck size={64} label="Trip completed" />
-                <p className="font-heading font-semibold text-text-primary">Trip completed</p>
+                <SuccessCheck size={64} label={t('trip.completed')} />
+                <p className="font-heading font-semibold text-text-primary">{t('trip.completed')}</p>
                 <p className="text-sm text-text-secondary">
-                  Your earnings from this trip are in your wallet.
+                  {t('trip.earningsInWallet')}
                 </p>
               </Card>
             )}
             {booking.status === 'COMPLETED' && settled && (
               <Button fullWidth variant="secondary" onClick={() => navigate('/home', { replace: true })}>
-                Done
+                {t('trip.done')}
               </Button>
             )}
             {/* Unpaid. She is not offered new work until the fare lands or
@@ -473,27 +498,24 @@ export function Trip() {
                 and when. */}
             {booking.status === 'COMPLETED' && !settled && hold && (
               <p className="text-center text-sm text-text-secondary" data-testid="payment-hold">
-                New requests resume once your rider pays, or at{' '}
                 {hold.holdUntil
-                  ? new Date(hold.holdUntil).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
-                  : 'the latest in a few minutes'}
-                .
+                  ? t('home.holdBodyUntil', { time: new Date(hold.holdUntil).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) })
+                  : t('home.holdBody')}
               </p>
             )}
             {booking.status === 'COMPLETED' && !settled && hold === null && (
               <>
                 <p className="text-center text-sm text-text-secondary" data-testid="payment-overdue">
-                  Your rider hasn&apos;t paid yet. You can take new requests - SheOut holds this fare against her
-                  account, she can&apos;t book again until she pays, and it reaches your wallet when she does.
+                  {t('trip.overdue')}
                 </p>
                 <Button fullWidth variant="secondary" onClick={() => navigate('/home', { replace: true })}>
-                  Back to home
+                  {t('trip.backHome')}
                 </Button>
               </>
             )}
             {booking.status === 'IN_PROGRESS' && (
               <Button fullWidth variant="success" disabled={busy} onClick={handleComplete}>
-                {busy ? 'Ending trip...' : 'End trip and request payment'}
+                {busy ? t('trip.ending') : t('trip.endTrip')}
               </Button>
             )}
             {(booking.status === 'MATCHED' || booking.status === 'ACCEPTED') && (
@@ -503,7 +525,7 @@ export function Trip() {
                 disabled={busy}
                 onClick={() => { setCancelError(null); setAskingWhy(true); }}
               >
-                Cancel Trip
+                {t('trip.cancelTrip')}
               </Button>
             )}
             <ContactSupportButton phoneNumber={supportPhoneNumber} />

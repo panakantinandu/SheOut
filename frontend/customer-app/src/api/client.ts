@@ -184,6 +184,32 @@ export const authApi = {
   },
 };
 
+/**
+ * The signed-in account's own preferences and waitlist places. Scoped by the
+ * token - there is no account id to pass.
+ */
+export const preferencesApi = {
+  get(): Promise<{ language: string | null }> {
+    return request('/api/v1/users/me/preferences');
+  },
+  save(language: string): Promise<{ language: string }> {
+    return request('/api/v1/users/me/preferences/language', { method: 'PUT', body: { language } });
+  },
+  waitlistStatus(feature: 'seller'): Promise<WaitlistStatus> {
+    return request(`/api/v1/users/me/waitlist/${feature}`);
+  },
+  /** Idempotent - a second tap is still one sign-up. */
+  joinWaitlist(feature: 'seller'): Promise<WaitlistStatus> {
+    return request(`/api/v1/users/me/waitlist/${feature}`, { method: 'POST' });
+  },
+};
+
+export interface WaitlistStatus {
+  feature: string;
+  joined: boolean;
+  joinedAt: string | null;
+}
+
 export const usersApi = {
   getMyProfile(): Promise<CustomerProfileSummary> {
     return request('/api/v1/users/customer/me');

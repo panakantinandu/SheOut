@@ -23,11 +23,14 @@ class AccountDeletionProfileListener {
     private final DriverProfileRepository driverProfiles;
     private final EmergencyContactRepository emergencyContacts;
     private final DocumentStorage documentStorage;
+    private final AccountPreferenceService accountPreferences;
 
     AccountDeletionProfileListener(CustomerProfileRepository customerProfiles,
                                    DriverProfileRepository driverProfiles,
                                    EmergencyContactRepository emergencyContacts,
-                                   DocumentStorage documentStorage) {
+                                   DocumentStorage documentStorage,
+                                   AccountPreferenceService accountPreferences) {
+        this.accountPreferences = accountPreferences;
         this.customerProfiles = customerProfiles;
         this.driverProfiles = driverProfiles;
         this.emergencyContacts = emergencyContacts;
@@ -37,6 +40,10 @@ class AccountDeletionProfileListener {
     @EventListener
     @Transactional
     public void onAccountDeletionRequested(AccountDeletionRequested event) {
+        // Her language choice and waitlist places go entirely - nothing else
+        // is joined to them.
+        accountPreferences.forget(event.accountId());
+
         customerProfiles.findByAccountId(event.accountId()).ifPresent(profile -> {
             profile.setName(AccountDeletionRequested.DELETED_NAME);
             profile.setHomeAddress(null);

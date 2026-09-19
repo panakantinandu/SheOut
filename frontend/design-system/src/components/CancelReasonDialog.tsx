@@ -5,6 +5,7 @@ import {
   type CancellationReason,
   type CancellationReasonOption,
 } from '../lib/cancellation';
+import { useTranslation } from 'react-i18next';
 
 export interface CancelReasonDialogProps {
   open: boolean;
@@ -43,14 +44,17 @@ const NOTE_MAX = 500;
  */
 export function CancelReasonDialog({
   open,
-  title = 'Why are you cancelling?',
-  message = 'This helps us understand what went wrong. Your answer is not shown to the other person.',
+  title: titleProp,
+  message: messageProp,
   options,
   busy = false,
   error = null,
   onConfirm,
   onCancel,
 }: CancelReasonDialogProps) {
+  const { t } = useTranslation('ds');
+  const title = titleProp ?? t('cancelDialog.title');
+  const message = messageProp ?? t('cancelDialog.message');
   const [reason, setReason] = useState<CancellationReason | null>(null);
   const [note, setNote] = useState('');
 
@@ -124,14 +128,14 @@ export function CancelReasonDialog({
 
         {needsNote && (
           <label className="mt-3 block">
-            <span className="mb-1.5 block text-sm font-medium text-text-primary">Tell us what happened</span>
+            <span className="mb-1.5 block text-sm font-medium text-text-primary">{t('cancelDialog.noteLabel')}</span>
             <textarea
               className="min-h-[80px] w-full rounded-input border border-border bg-surface p-3 text-sm text-text-primary outline-none transition-colors focus:border-primary"
               maxLength={NOTE_MAX}
               value={note}
               disabled={busy}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="A sentence is enough"
+              placeholder={t('cancelDialog.notePlaceholder')}
             />
           </label>
         )}
@@ -148,7 +152,7 @@ export function CancelReasonDialog({
             disabled={!canConfirm}
             onClick={() => reason && onConfirm(reason, needsNote ? note.trim() : undefined)}
           >
-            {busy ? 'Cancelling...' : 'Cancel trip'}
+            {busy ? t('cancelDialog.cancelling') : t('cancelDialog.cancelTrip')}
           </Button>
         </div>
       </div>

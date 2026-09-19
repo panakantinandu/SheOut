@@ -11,8 +11,10 @@ import type { PickerMode } from '../components/LocationPicker';
 import { LocationRow } from '../components/LocationRow';
 import { ServiceAreaNotice } from '../components/ServiceAreaNotice';
 import { currentPosition, describePoint, isInServiceArea } from '../lib/geocode';
+import { apiErrorText } from '../lib/apiErrors';
 import { useFareQuote } from '../lib/useFareQuote';
 import type { GeoAddress } from '../api/types';
+import { useTranslation } from '@sheout/design-system';
 
 /**
  * One-tap shortcuts, shown above the search box before anything is typed.
@@ -36,6 +38,7 @@ const DROP_PRESETS: GeoAddress[] = [
  * nothing server-side - see useFareQuote.
  */
 export function RideBooking() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [pickup, setPickup] = useState<GeoAddress | null>(null);
   const [pickupError, setPickupError] = useState<string | null>(null);
@@ -61,7 +64,7 @@ export function RideBooking() {
     let cancelled = false;
     currentPosition()
       .then(async ({ lat, lng }) => {
-        const address = await describePoint(lat, lng, 'Your Current Location');
+        const address = await describePoint(lat, lng, t('booking.currentLocation'));
         if (!cancelled) setPickup(address);
       })
       .catch((err: Error) => {
@@ -80,7 +83,7 @@ export function RideBooking() {
       const booking = await bookingApi.create({ type: 'RIDE', category: 'BIKE', pickup, drop });
       navigate(`/tracking/${booking.id}`);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not create your booking. Please check your connection and try again.');
+      setError(apiErrorText(err, 'booking.createError'));
       // The banner above names the unpaid trip and links to it.
       if (err instanceof ApiError && err.body?.error === 'UNPAID_TRIP') setUnpaidCheck((n) => n + 1);
     } finally {
@@ -94,12 +97,12 @@ export function RideBooking() {
   const servableTrip = isInServiceArea(pickup) && isInServiceArea(drop);
 
   const markers: MapMarker[] = [];
-  if (pickup) markers.push({ key: 'pickup', lat: pickup.lat, lng: pickup.lng, label: 'Pickup', kind: 'pickup' });
-  if (drop) markers.push({ key: 'drop', lat: drop.lat, lng: drop.lng, label: 'Drop', kind: 'drop' });
+  if (pickup) markers.push({ key: 'pickup', lat: pickup.lat, lng: pickup.lng, label: t('booking.pickup'), kind: 'pickup' });
+  if (drop) markers.push({ key: 'drop', lat: drop.lat, lng: drop.lng, label: t('booking.drop'), kind: 'drop' });
 
   return (
     <div className="space-y-6">
-      <TopHeader variant="back" title="Bike Taxi" onBack={() => navigate(-1)} />
+      <TopHeader variant="back" title={t('home.serviceRide')} onBack={() => navigate(-1)} />
 
       <UnpaidTripBanner refreshKey={unpaidCheck} />
 
@@ -110,22 +113,22 @@ export function RideBooking() {
       <div className="space-y-1">
         <LiveMap markers={markers} />
         <p className="text-xs text-text-secondary">
-          {drop ? 'Pickup and drop shown below.' : 'Pick a destination to see it on the map.'}
+          {drop ? t('booking.mapBoth') : t('booking.mapPickDrop')}
         </p>
       </div>
 
       <Card className="space-y-1 divide-y divide-border p-0">
         <LocationRow
           icon={<IconCircle icon={<MapPin />} size="sm" />}
-          label="Pickup Location"
-          sublabel={pickup?.label ?? (pickupError ? 'Tap to choose your pickup point' : 'Finding your location...')}
+          label={t('booking.pickupLocation')}
+          sublabel={pickup?.label ?? (pickupError ? t('booking.tapToChoosePickup') : t('booking.findingLocation'))}
           onSearch={() => openPicker('pickup', 'search')}
           onMap={() => openPicker('pickup', 'map')}
         />
         <LocationRow
           icon={<IconCircle color="orange" icon={<MapPin />} size="sm" />}
-          label="Drop Location"
-          sublabel={drop?.label ?? 'Select Destination'}
+          label={t('booking.dropLocation')}
+          sublabel={drop?.label ?? t('booking.selectDestination')}
           onSearch={() => openPicker('drop', 'search')}
           onMap={() => openPicker('drop', 'map')}
         />
@@ -140,12 +143,12 @@ export function RideBooking() {
       {servableTrip && <FareEstimateCard state={fare} />}
 
       <Button fullWidth disabled={!pickup || !drop || !servableTrip || submitting} onClick={handleBookNow}>
-        {submitting ? 'Booking...' : 'Book Now'}
+        {submitting ? t('booking.booking') : t('booking.bookNow')}
       </Button>
 
       <LocationPicker
         open={picking !== null}
-        title={picking === 'pickup' ? 'Set pickup location' : 'Where to?'}
+        title={picking === 'pickup' ? t('booking.setPickup') : t('booking.whereTo')}
         presets={DROP_PRESETS}
         allowCurrentLocation={picking === 'pickup'}
         initialMode={pickerMode}

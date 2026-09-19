@@ -26,6 +26,9 @@ import { Tracking } from './screens/Tracking'
 import { Chat } from './screens/Chat'
 import { CompleteProfile } from './screens/CompleteProfile'
 import { Wallet } from './screens/Wallet'
+import { Seller } from './screens/Seller'
+import { Refer } from './screens/Refer'
+import { AppDrawerProvider } from './components/AppDrawer'
 
 // Screens with the bottom tab bar (Home/Bookings/Wallet/Profile/SOS) get
 // wrapped in AppShell; booking-flow and tracking screens push on top with
@@ -53,6 +56,7 @@ function publicPage(element: JSX.Element) {
 
 function App() {
   return (
+    <AppDrawerProvider>
     <Routes>
       <Route path="/" element={<Splash />} />
       <Route path="/login" element={<Login />} />
@@ -84,8 +88,12 @@ function App() {
       <Route path="/tracking/:bookingId" element={protectedOnly(<Tracking />)} />
       <Route path="/chat/:bookingId" element={protectedOnly(<Chat />)} />
 
+      <Route path="/seller" element={protectedOnly(<Seller />)} />
+      <Route path="/refer" element={protectedOnly(<Refer />)} />
+
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </AppDrawerProvider>
   )
 }
 

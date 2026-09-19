@@ -16,6 +16,8 @@ import { Offer } from './screens/Offer'
 import { Payouts } from './screens/Payouts'
 import { Profile } from './screens/Profile'
 import { Splash } from './screens/Splash'
+import { About } from './screens/About'
+import { AppDrawerProvider } from './components/AppDrawer'
 import { Trip } from './screens/Trip'
 import { Chat } from './screens/Chat'
 import { CompleteProfile } from './screens/CompleteProfile'
@@ -49,6 +51,7 @@ function publicPage(element: JSX.Element) {
 
 function App() {
   return (
+    <AppDrawerProvider>
     <Routes>
       <Route path="/" element={<Splash />} />
       <Route path="/login" element={<Login />} />
@@ -73,8 +76,11 @@ function App() {
       <Route path="/trip/:bookingId" element={protectedOnly(<Trip />)} />
       <Route path="/chat/:bookingId" element={protectedOnly(<Chat />)} />
 
+      <Route path="/about" element={protectedOnly(<About />)} />
+
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </AppDrawerProvider>
   )
 }
 

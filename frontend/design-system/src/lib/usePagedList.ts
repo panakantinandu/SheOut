@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { dsT } from '../i18n';
 
 /** The shape every paged endpoint in this API returns - see PageResponse.java. */
 export interface PagedResult<T> {
@@ -78,7 +79,7 @@ export function usePagedList<T>(
         setPage(0);
       } catch (err) {
         if (generation.current !== mine) return;
-        setError(err instanceof Error ? err.message : 'Could not load this list');
+        setError(err instanceof Error ? err.message : dsT('list.loadError', 'Could not load this list'));
       } finally {
         if (generation.current === mine) setLoading(false);
       }
@@ -108,7 +109,7 @@ export function usePagedList<T>(
       setPage(next);
     } catch (err) {
       if (generation.current !== mine) return;
-      setError(err instanceof Error ? err.message : 'Could not load more');
+      setError(err instanceof Error ? err.message : dsT('list.loadMoreError', 'Could not load more'));
     } finally {
       if (generation.current === mine) setLoadingMore(false);
     }

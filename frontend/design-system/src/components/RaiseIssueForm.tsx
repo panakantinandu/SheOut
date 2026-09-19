@@ -9,6 +9,7 @@ import {
   supportCategoryOptions,
   type SupportTicketCategory,
 } from '../lib/support';
+import { useTranslation } from 'react-i18next';
 
 export interface RaiseIssueValues {
   category: SupportTicketCategory;
@@ -51,15 +52,16 @@ export function RaiseIssueForm({
   error = null,
   onSubmit,
 }: RaiseIssueFormProps) {
+  const { t } = useTranslation('ds');
   const [category, setCategory] = useState<SupportTicketCategory | ''>('');
   const [subject, setSubject] = useState('');
   const [description, setDescription] = useState('');
   const [bookingId, setBookingId] = useState('');
   const [touched, setTouched] = useState(false);
 
-  const missing = !category ? 'Choose what this is about.'
-    : !subject.trim() ? 'Add a short subject.'
-    : !description.trim() ? 'Say what happened.'
+  const missing = !category ? t('raiseIssue.missingCategory')
+    : !subject.trim() ? t('raiseIssue.missingSubject')
+    : !description.trim() ? t('raiseIssue.missingDescription')
     : null;
 
   return (
@@ -78,9 +80,9 @@ export function RaiseIssueForm({
       }}
     >
       <SelectField
-        label="What is this about?"
+        label={t('raiseIssue.category')}
         name="category"
-        placeholder="Choose one"
+        placeholder={t('raiseIssue.choose')}
         value={category}
         onChange={(e) => setCategory(e.target.value as SupportTicketCategory | '')}
         options={supportCategoryOptions(audience)}
@@ -93,22 +95,22 @@ export function RaiseIssueForm({
       )}
 
       <TextField
-        label="Subject"
+        label={t('raiseIssue.subject')}
         name="subject"
-        placeholder="e.g. Charged twice for one trip"
+        placeholder={t('raiseIssue.subjectPlaceholder')}
         maxLength={SUPPORT_SUBJECT_MAX}
         value={subject}
         onChange={(e) => setSubject(e.target.value)}
       />
 
       <label className="block" htmlFor="description">
-        <span className="mb-1.5 block text-sm font-medium text-text-primary">What happened?</span>
+        <span className="mb-1.5 block text-sm font-medium text-text-primary">{t('raiseIssue.description')}</span>
         <textarea
           id="description"
           name="description"
           rows={5}
           maxLength={SUPPORT_TEXT_MAX}
-          placeholder="Tell us as much as you can - when, where, and what you would like us to do."
+          placeholder={t('raiseIssue.descriptionPlaceholder')}
           className="w-full resize-none rounded-input border border-border bg-surface px-4 py-3 text-sm text-text-primary outline-none transition-colors placeholder:text-text-secondary focus:border-primary"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
@@ -120,9 +122,9 @@ export function RaiseIssueForm({
 
       {bookingOptions.length > 0 && (
         <SelectField
-          label="Is this about a trip? (optional)"
+          label={t('raiseIssue.trip')}
           name="linkedBookingId"
-          placeholder="Not about a specific trip"
+          placeholder={t('raiseIssue.noTrip')}
           value={bookingId}
           onChange={(e) => setBookingId(e.target.value)}
           options={bookingOptions}
@@ -133,7 +135,7 @@ export function RaiseIssueForm({
       {error && <p className="text-sm text-danger">{error}</p>}
 
       <Button type="submit" fullWidth disabled={submitting}>
-        {submitting ? 'Sending...' : 'Send to support'}
+        {submitting ? t('common.sending') : t('raiseIssue.submit')}
       </Button>
     </form>
   );

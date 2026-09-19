@@ -5,6 +5,7 @@ import { Avatar, Card, ConfirmDialog, IconCircle, ListRow, PrivacyDataSection, T
 import { ApiError, privacyApi, supportApi, usersApi } from '../api/client';
 import type { CustomerProfileSummary } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
+import { useTranslation } from '@sheout/design-system';
 
 /**
  * REAL: name/phone fetched from GET /api/v1/users/customer/me. Log Out
@@ -16,6 +17,7 @@ import { useAuth } from '../auth/AuthContext';
  * that was the bug, not that they're unbuilt.)
  */
 export function Profile() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { logout } = useAuth();
   const [confirmingLogout, setConfirmingLogout] = useState(false);
@@ -31,7 +33,7 @@ export function Profile() {
     usersApi
       .getMyProfile()
       .then(setProfile)
-      .catch((err) => setError(err instanceof ApiError ? err.message : 'Could not load profile'));
+      .catch((err) => setError(err instanceof ApiError ? err.message : t('profile.loadError')));
   }, []);
 
   function handleLogout() {
@@ -41,14 +43,14 @@ export function Profile() {
 
   return (
     <div className="space-y-6">
-      <TopHeader variant="back" title="My Profile" onBack={() => navigate('/home')} />
+      <TopHeader variant="back" title={t('profile.title')} onBack={() => navigate('/home')} />
 
       <Card className="flex items-center gap-3">
         <Avatar url={profile?.profilePhotoUrl} name={profile?.name} size="lg" />
         <div>
-          <p className="font-heading font-semibold text-text-primary">{profile?.name || 'Add your name'}</p>
+          <p className="font-heading font-semibold text-text-primary">{profile?.name || t('profile.addName')}</p>
           <p className="text-sm text-text-secondary">
-            {profile ? profile.phoneNumber || 'Signed in with Google' : error || 'Loading...'}
+            {profile ? profile.phoneNumber || t('profile.googleSignIn') : error || t('common.loading')}
           </p>
         </div>
       </Card>
@@ -60,35 +62,35 @@ export function Profile() {
           named sections instead, the same heading-over-card shape Home and
           Wallet already use. */}
       <section>
-        <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">Account</h2>
+        <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">{t('profile.sectionAccount')}</h2>
         <Card className="divide-y divide-border p-0">
-          <ListRow icon={<IconCircle tone="soft" size="sm" icon={<User />} />} label="Personal Details" onClick={() => navigate('/profile/details')} />
-          <ListRow icon={<IconCircle tone="soft" size="sm" icon={<MapPin />} />} label="Saved Addresses" onClick={() => navigate('/profile/addresses')} />
+          <ListRow icon={<IconCircle tone="soft" size="sm" icon={<User />} />} label={t('profile.personalDetails')} onClick={() => navigate('/profile/details')} />
+          <ListRow icon={<IconCircle tone="soft" size="sm" icon={<MapPin />} />} label={t('addresses.title')} onClick={() => navigate('/profile/addresses')} />
         </Card>
       </section>
 
       <section>
-        <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">Safety</h2>
+        <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">{t('profile.sectionSafety')}</h2>
         <Card className="divide-y divide-border p-0">
-          <ListRow icon={<IconCircle tone="soft" size="sm" icon={<BadgeCheck />} />} label="Identity Verification" onClick={() => navigate('/verification')} />
-          <ListRow icon={<IconCircle color="red" tone="soft" size="sm" icon={<ShieldAlert />} />} label="Emergency Contacts" sublabel="Who an SOS alerts" onClick={() => navigate('/profile/emergency-contacts')} />
+          <ListRow icon={<IconCircle tone="soft" size="sm" icon={<BadgeCheck />} />} label={t('verification.title')} onClick={() => navigate('/verification')} />
+          <ListRow icon={<IconCircle color="red" tone="soft" size="sm" icon={<ShieldAlert />} />} label={t('profile.emergencyContacts')} sublabel={t('profile.emergencyContactsSub')} onClick={() => navigate('/profile/emergency-contacts')} />
         </Card>
       </section>
 
       <section>
-        <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">Payments</h2>
+        <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">{t('profile.sectionPayments')}</h2>
         <Card className="p-0">
-          <ListRow icon={<IconCircle tone="soft" size="sm" icon={<Receipt />} />} label="Payment History" onClick={() => navigate('/profile/payments')} />
+          <ListRow icon={<IconCircle tone="soft" size="sm" icon={<Receipt />} />} label={t('payments.history')} onClick={() => navigate('/profile/payments')} />
         </Card>
       </section>
 
       <section>
-        <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">Support</h2>
+        <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">{t('profile.sectionSupport')}</h2>
         <Card className="divide-y divide-border p-0">
-          <ListRow icon={<IconCircle tone="soft" size="sm" icon={<HelpCircle />} />} label="Help & Support" onClick={() => navigate('/help')} />
-          <ListRow icon={<IconCircle tone="soft" size="sm" icon={<Info />} />} label="About SheOut" onClick={() => navigate('/about')} />
-          <ListRow icon={<IconCircle tone="soft" size="sm" icon={<Lock />} />} label="Privacy Policy" onClick={() => navigate('/privacy')} />
-          <ListRow icon={<IconCircle tone="soft" size="sm" icon={<FileText />} />} label="Terms of Service" onClick={() => navigate('/terms')} />
+          <ListRow icon={<IconCircle tone="soft" size="sm" icon={<HelpCircle />} />} label={t('help.title')} onClick={() => navigate('/help')} />
+          <ListRow icon={<IconCircle tone="soft" size="sm" icon={<Info />} />} label={t('about.title')} onClick={() => navigate('/about')} />
+          <ListRow icon={<IconCircle tone="soft" size="sm" icon={<Lock />} />} label={t('legal.privacy')} onClick={() => navigate('/privacy')} />
+          <ListRow icon={<IconCircle tone="soft" size="sm" icon={<FileText />} />} label={t('legal.terms')} onClick={() => navigate('/terms')} />
         </Card>
       </section>
 
@@ -103,7 +105,7 @@ export function Profile() {
           logout();
           navigate('/login', {
             replace: true,
-            state: { notice: 'Your account has been deleted. Your personal details have been removed.' },
+            state: { notice: t('profile.deletedNotice') },
           });
         }}
       />
@@ -111,7 +113,7 @@ export function Profile() {
       <Card className="p-0">
         <ListRow
           icon={<IconCircle color="red" tone="soft" size="sm" icon={<LogOut />} />}
-          label="Log Out"
+          label={t('auth.logout')}
           chevron={false}
           onClick={() => setConfirmingLogout(true)}
         />
@@ -121,9 +123,9 @@ export function Profile() {
           no way back. */}
       <ConfirmDialog
         open={confirmingLogout}
-        title="Log out?"
-        message="You will need your mobile number and an OTP to sign back in."
-        confirmLabel="Log Out"
+        title={t('auth.logoutTitle')}
+        message={t('auth.logoutMessage')}
+        confirmLabel={t('auth.logout')}
         destructive
         onConfirm={handleLogout}
         onCancel={() => setConfirmingLogout(false)}

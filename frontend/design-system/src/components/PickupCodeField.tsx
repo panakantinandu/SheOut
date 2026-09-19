@@ -1,4 +1,5 @@
 import { TextField } from './TextField';
+import { useTranslation } from 'react-i18next';
 
 export interface PickupCodeFieldProps {
   value: string;
@@ -29,16 +30,17 @@ export const PICKUP_CODE_LENGTH = 4;
  * digits with complete confidence.
  */
 export function PickupCodeField({ value, onChange, error, disabled, onSubmit }: PickupCodeFieldProps) {
+  const { t } = useTranslation('safety');
   return (
     <TextField
       type="text"
       inputMode="numeric"
       autoComplete="off"
       name="pickup-code"
-      aria-label="Pickup code"
-      placeholder="4-digit code"
+      aria-label={t('pickupCode.fieldLabel')}
+      placeholder={t('pickupCode.fieldPlaceholder')}
       maxLength={PICKUP_CODE_LENGTH}
-      className="text-center font-heading text-2xl tracking-[0.5em]"
+      className="text-center font-heading text-2xl tracking-[0.5em] placeholder:text-base placeholder:tracking-normal"
       value={value}
       disabled={disabled}
       error={error}

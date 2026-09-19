@@ -4,8 +4,10 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { AmountText, Button, Card, CountdownRing, LiveMap, SkeletonCard, TopHeader } from '@sheout/design-system';
 import type { MapMarker } from '@sheout/design-system';
 import { ApiError, bookingApi, dispatchApi } from '../api/client';
+import { apiErrorText } from '../lib/apiErrors';
 import type { OfferSummary } from '../api/types';
 import { useShareLocation } from '../lib/LocationBroadcastContext';
+import { useTranslation } from '@sheout/design-system';
 
 const POLL_INTERVAL_MS = 3000;
 // Matches sheout.dispatch.offer-window-seconds's default (see render.yaml /
@@ -50,6 +52,7 @@ function distanceKm(a: { lat: number; lng: number }, b: { lat: number; lng: numb
  * unavailable state instead of a silent failure or a stuck screen.
  */
 export function Offer() {
+  const { t } = useTranslation();
   const { bookingId } = useParams<{ bookingId: string }>();
   const navigate = useNavigate();
   const [offer, setOffer] = useState<OfferSummary | null>(null);
@@ -81,7 +84,7 @@ export function Offer() {
         }
         setOffer(current);
       } catch {
-        if (!cancelled) setError('Could not load this request');
+        if (!cancelled) setError(t('offer.loadError'));
       }
     }
     poll();
@@ -112,7 +115,7 @@ export function Offer() {
       navigate(`/trip/${bookingId}`, { replace: true });
     } catch (err) {
       setUnavailable(true);
-      setError(err instanceof ApiError ? err.message : 'Could not accept - it may no longer be available');
+      setError(apiErrorText(err, 'offer.acceptError'));
     } finally {
       setResponding(false);
     }
@@ -136,14 +139,14 @@ export function Offer() {
   // judge an offer in fifteen seconds - every real driver app shows the
   // pickup on a map, and the mockup's New Request tile does too.
   const markers: MapMarker[] = [];
-  if (offer?.pickup) markers.push({ key: 'pickup', lat: offer.pickup.lat, lng: offer.pickup.lng, label: 'Pickup', kind: 'pickup' });
-  if (offer?.drop) markers.push({ key: 'drop', lat: offer.drop.lat, lng: offer.drop.lng, label: 'Drop', kind: 'drop' });
+  if (offer?.pickup) markers.push({ key: 'pickup', lat: offer.pickup.lat, lng: offer.pickup.lng, label: t('trip.pickup'), kind: 'pickup' });
+  if (offer?.drop) markers.push({ key: 'drop', lat: offer.drop.lat, lng: offer.drop.lng, label: t('trip.drop'), kind: 'drop' });
 
   return (
     <div className="space-y-6">
-      <TopHeader variant="back" title="New Request" onBack={() => navigate('/home')} />
+      <TopHeader variant="back" title={t('offer.title')} onBack={() => navigate('/home')} />
 
-      {!offer && !error && !unavailable && <SkeletonCard lines={3} label="Loading this request" />}
+      {!offer && !error && !unavailable && <SkeletonCard lines={3} label={t('offer.loading')} />}
       {error && <p className="text-sm text-danger">{error}</p>}
 
       {offer && !unavailable && (
@@ -160,7 +163,7 @@ export function Offer() {
             <div className="flex items-center gap-3 text-primary">
               <CountdownRing secondsLeft={secondsLeft} totalSeconds={OFFER_WINDOW_SECONDS} />
               <span className="text-sm font-semibold">
-                {secondsLeft > 0 ? 'Seconds to respond' : 'Time is up'}
+                {secondsLeft > 0 ? t('offer.secondsToRespond') : t('offer.timeUp')}
               </span>
             </div>
             {offer.fareEstimate != null && <AmountText amount={offer.fareEstimate} size="lg" />}
@@ -171,7 +174,7 @@ export function Offer() {
               <div className="flex items-start gap-2">
                 <Navigation className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                 <span className="min-w-0">
-                  <span className="block text-xs text-text-secondary">Pickup</span>
+                  <span className="block text-xs text-text-secondary">{t('trip.pickup')}</span>
                   <span className="block text-sm text-text-primary">{offer.pickup.label}</span>
                 </span>
               </div>
@@ -180,14 +183,14 @@ export function Offer() {
               <div className="flex items-start gap-2">
                 <Navigation className="mt-0.5 h-4 w-4 shrink-0 text-accent-orange" />
                 <span className="min-w-0">
-                  <span className="block text-xs text-text-secondary">Drop</span>
+                  <span className="block text-xs text-text-secondary">{t('trip.drop')}</span>
                   <span className="block text-sm text-text-primary">{offer.drop.label}</span>
                 </span>
               </div>
             )}
             {distance != null && (
               <div className="flex justify-between border-t border-border pt-3 text-sm">
-                <span className="text-text-secondary">Distance</span>
+                <span className="text-text-secondary">{t('offer.distance')}</span>
                 <span className="font-medium text-text-primary">{distance.toFixed(1)} km</span>
               </div>
             )}
@@ -198,7 +201,7 @@ export function Offer() {
               Decline
             </Button>
             <Button variant="success" fullWidth disabled={responding} onClick={handleAccept}>
-              {responding ? 'Accepting...' : 'Accept'}
+              {responding ? t('offer.accepting') : t('offer.accept')}
             </Button>
           </div>
         </>
@@ -206,10 +209,10 @@ export function Offer() {
 
       {unavailable && (
         <Card className="space-y-3 text-center">
-          <p className="font-heading font-semibold text-text-primary">This request is no longer available</p>
-          <p className="text-sm text-text-secondary">It expired or another driver accepted it first.</p>
+          <p className="font-heading font-semibold text-text-primary">{t('offer.unavailableTitle')}</p>
+          <p className="text-sm text-text-secondary">{t('offer.unavailableBody')}</p>
           <Button fullWidth onClick={() => navigate('/home', { replace: true })}>
-            Back to Home
+            {t('offer.backHome')}
           </Button>
         </Card>
       )}

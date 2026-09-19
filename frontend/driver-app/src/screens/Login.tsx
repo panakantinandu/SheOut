@@ -1,9 +1,11 @@
 import { useState, type FormEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { BrandHeader, Button, LegalConsentNotice, PhoneField, TextField, isCompletePhone, toE164 } from '@sheout/design-system';
+import { BrandHeader, Button, LANGUAGES, LanguagePicker, LegalConsentNotice, PhoneField, TextField, isCompletePhone, setAppLanguage, toE164, useAppLanguage } from '@sheout/design-system';
+import { Languages } from 'lucide-react';
 import { ApiError, authApi, usersApi } from '../api/client';
 import type { AuthSession } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
+import { useTranslation } from '@sheout/design-system';
 
 
 /**
@@ -20,18 +22,7 @@ import { useAuth } from '../auth/AuthContext';
  */
 type AuthMode = 'login' | 'register';
 
-const AUTH_MODE_COPY: Record<AuthMode, { tab: string; heading: string; subtitle: string }> = {
-  login: {
-    tab: 'Login',
-    heading: 'Partner Login',
-    subtitle: 'Sign in to start driving',
-  },
-  register: {
-    tab: 'Register',
-    heading: 'Become a Partner',
-    subtitle: 'Register to start earning with SheOut',
-  },
-};
+const AUTH_MODES: AuthMode[] = ['login', 'register'];
 
 /**
  * Same phone -> OTP flow as customer-app's Login, wired to role: DRIVER.
@@ -48,6 +39,9 @@ const AUTH_MODE_COPY: Record<AuthMode, { tab: string; heading: string; subtitle:
  * /home, unchanged.
  */
 export function Login() {
+  const { t } = useTranslation();
+  const [pickingLanguage, setPickingLanguage] = useState(false);
+  const lng = useAppLanguage();
   const navigate = useNavigate();
   const { login } = useAuth();
 
@@ -79,9 +73,9 @@ export function Login() {
     login(session);
 
     if (mode === 'register' && !session.newAccount) {
-      setNotice('That number is already registered - signing you in instead.');
+      setNotice(t('login.alreadyRegistered'));
     } else if (mode === 'login' && session.newAccount) {
-      setNotice("We didn't find a partner account for that number, so we've created one.");
+      setNotice(t('login.createdForYou'));
     }
     let needsProfile = session.newAccount;
     try {
@@ -105,7 +99,7 @@ export function Login() {
     setError(null);
     setNotice(null);
     if (!isCompletePhone(phoneDigits)) {
-      setError('Enter a valid 10-digit mobile number');
+      setError(t('login.invalidPhone'));
       return;
     }
     setSubmitting(true);
@@ -113,7 +107,7 @@ export function Login() {
       await authApi.requestOtp(phoneNumber);
       setStep('otp');
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not send the code. Please check your connection and try again.');
+      setError(err instanceof ApiError ? err.message : t('login.sendError'));
     } finally {
       setSubmitting(false);
     }
@@ -127,7 +121,7 @@ export function Login() {
       const session = await authApi.verifyOtp(phoneNumber, code);
       await afterSignIn(session);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not verify code');
+      setError(err instanceof ApiError ? err.message : t('login.verifyError'));
     } finally {
       setSubmitting(false);
     }
@@ -138,13 +132,35 @@ export function Login() {
       {/* Same lockup customer-app's Login uses, from the shared package -
           this screen used to show a 64px Logo.jpeg tile and a plain text
           heading, which read as a different product to the rider app. */}
+      {/* Language, before anything else - she may not read English, and
+          the drawer where it otherwise lives is only there once signed in. */}
+      <div className="-mt-4 mb-2 flex justify-end">
+        <button
+          type="button"
+          onClick={() => setPickingLanguage(true)}
+          className="flex items-center gap-1.5 rounded-full border border-border bg-surface/80 px-3 py-1.5 text-xs font-semibold text-primary shadow-sm"
+          data-testid="login-language"
+        >
+          <Languages className="h-4 w-4" aria-hidden="true" />
+          {LANGUAGES.find((l) => l.code === lng)?.nativeName}
+        </button>
+      </div>
+      <LanguagePicker
+        open={pickingLanguage}
+        onClose={() => setPickingLanguage(false)}
+        onSelect={(code) => {
+          setAppLanguage(code);
+          setPickingLanguage(false);
+        }}
+      />
+
       <BrandHeader size="md" className="mb-6" />
 
       {(
         <>
           {step === 'phone' && (
-            <div className="mb-5 flex gap-2" role="tablist" aria-label="Login or register">
-              {(Object.keys(AUTH_MODE_COPY) as AuthMode[]).map((m) => (
+            <div className="mb-5 flex gap-2" role="tablist" aria-label={t('login.modeAria')}>
+              {AUTH_MODES.map((m) => (
                 <button
                   key={m}
                   type="button"
@@ -157,14 +173,14 @@ export function Login() {
                       : 'flex-1 rounded-full border border-border px-4 py-2 text-sm font-medium text-text-secondary'
                   }
                 >
-                  {AUTH_MODE_COPY[m].tab}
+                  {t(`login.${m}.tab`)}
                 </button>
               ))}
             </div>
           )}
 
-          <h1 className="text-center font-heading text-2xl font-bold text-text-primary">{AUTH_MODE_COPY[mode].heading}</h1>
-          <p className="mb-8 text-center text-sm text-text-secondary">{AUTH_MODE_COPY[mode].subtitle}</p>
+          <h1 className="text-center font-heading text-2xl font-bold text-text-primary">{t(`login.${mode}.heading`)}</h1>
+          <p className="mb-8 text-center text-sm text-text-secondary">{t(`login.${mode}.subtitle`)}</p>
 
           {notice && (
             <p className="mb-4 rounded-input bg-primary-light px-4 py-3 text-center text-sm font-medium text-primary">{notice}</p>
@@ -173,16 +189,16 @@ export function Login() {
           {step === 'phone' ? (
             <>
               <form onSubmit={handleSendOtp} className="space-y-4">
-                <PhoneField value={phoneDigits} onChange={setPhoneDigits} error={error ?? undefined} />
+                <PhoneField value={phoneDigits} onChange={setPhoneDigits} error={error ?? undefined} placeholder={t('login.phonePlaceholder')} />
                 {/* Above the button, so it is read before the decision
                     rather than after it - see LegalConsentNotice. */}
                 <LegalConsentNotice
-                  actionLabel="Send OTP"
+                  actionLabel={t('login.sendOtp')}
                   onOpenTerms={() => navigate('/terms')}
                   onOpenPrivacy={() => navigate('/privacy')}
                 />
                 <Button type="submit" fullWidth disabled={submitting}>
-                  {submitting ? 'Sending...' : 'Send OTP'}
+                  {submitting ? t('common.sending') : t('login.sendOtp')}
                 </Button>
               </form>
 
@@ -191,29 +207,29 @@ export function Login() {
                   OTP-only, and a first-time number is routed to the profile
                   step after verification, not before it. */}
               <p className="mt-8 text-center text-xs font-medium text-text-secondary">
-                Empowering Women Partners
+                {t('splash.footer')}
               </p>
             </>
           ) : (
             <form onSubmit={handleVerifyOtp} className="space-y-4">
-              <p className="text-center text-sm text-text-secondary">Enter the code sent to {phoneNumber}</p>
+              <p className="text-center text-sm text-text-secondary">{t('login.codeSentTo', { phone: phoneNumber })}</p>
               <TextField
                 type="text"
                 inputMode="numeric"
-                placeholder="6-digit code"
+                placeholder={t('login.codePlaceholder')}
                 value={code}
                 onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                 error={error ?? undefined}
               />
               <Button type="submit" fullWidth disabled={submitting}>
-                {submitting ? 'Verifying...' : 'Login'}
+                {submitting ? t('login.verifying') : t('login.login.tab')}
               </Button>
               <button
                 type="button"
                 onClick={() => setStep('phone')}
                 className="w-full text-center text-sm text-text-secondary underline"
               >
-                Change number
+                {t('login.changeNumber')}
               </button>
             </form>
           )}

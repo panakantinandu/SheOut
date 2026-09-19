@@ -15,6 +15,7 @@ import {
   StatusBadge,
   TopHeader,
   bookingCategoryLabel,
+  bookingStatusLabel,
   isAwaitingPayment,
   tripStatusLabel,
   endOfDayIso,
@@ -26,13 +27,14 @@ import { bookingApi } from '../api/client';
 import type { BookingCategory, BookingStatus, BookingSummary } from '../api/types';
 import { RatingPrompt } from '../components/RatingPrompt';
 import { useRatingMarks } from '../lib/useRatingMarks';
+import { useTranslation } from '@sheout/design-system';
 
 type Tab = 'ALL' | 'RIDES' | 'PARCELS';
 
 const TABS: { key: Tab; label: string }[] = [
-  { key: 'ALL', label: 'All' },
-  { key: 'RIDES', label: 'Rides' },
-  { key: 'PARCELS', label: 'Parcels' },
+  { key: 'ALL', label: 'bookings.tabs.ALL' },
+  { key: 'RIDES', label: 'bookings.tabs.RIDES' },
+  { key: 'PARCELS', label: 'bookings.tabs.PARCELS' },
 ];
 
 /** Same grouping the rider app and the Earnings screen use, so a category cannot mean two things. */
@@ -83,6 +85,7 @@ function categoryIcon(category: BookingCategory) {
  * date range, a status and the address text to search by.
  */
 export function Bookings() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>('ALL');
   const [query, setQuery] = useState('');
@@ -124,50 +127,50 @@ export function Bookings() {
 
   return (
     <PullToRefresh onRefresh={list.reload} disabled={list.loading} className="space-y-6">
-      <TopHeader variant="back" title="My Bookings" onBack={() => navigate('/home')} />
+      <TopHeader variant="back" title={t('bookings.title')} onBack={() => navigate('/home')} />
 
       <div className="flex gap-2 overflow-x-auto">
-        {TABS.map((t) => (
+        {TABS.map((tabItem) => (
           <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
+            key={tabItem.key}
+            onClick={() => setTab(tabItem.key)}
             className={
-              tab === t.key
+              tab === tabItem.key
                 ? 'shrink-0 rounded-full bg-primary px-4 py-1.5 text-sm font-semibold text-text-inverse'
                 : 'shrink-0 rounded-full border border-border px-4 py-1.5 text-sm font-medium text-text-secondary'
             }
           >
-            {t.label}
+            {t(tabItem.label)}
           </button>
         ))}
       </div>
 
       <ListFilterBar
-        search={{ value: query, placeholder: 'Search pickup or drop', onChange: setQuery }}
+        search={{ value: query, placeholder: t('bookings.searchPlaceholder'), onChange: setQuery }}
         activeCount={activeFilters}
         onClearAll={clearAll}
       >
         <SelectField
-          label="Status"
-          placeholder="Any status"
+          label={t('bookings.status')}
+          placeholder={t('bookings.anyStatus')}
           value={status}
           onChange={(e) => setStatus(e.target.value as BookingStatus | '')}
-          options={STATUS_OPTIONS}
+          options={STATUS_OPTIONS.map((o) => ({ value: o.value, label: bookingStatusLabel(o.value) }))}
         />
         <DateRangeFields value={dates} onChange={setDates} />
       </ListFilterBar>
 
       {list.error && <p className="text-sm text-danger">{list.error}</p>}
-      {list.loading && <SkeletonList rows={4} label="Loading your trips" />}
+      {list.loading && <SkeletonList rows={4} label={t('bookings.loading')} />}
 
       {!list.loading && list.items.length === 0 && !list.error && (
         isNarrowed ? (
           <ListEmptyState
             icon={<SearchX />}
-            title="No results match your filters"
-            message="Your trip history is still here. Try a wider date range, a different status, or clear the filters."
+            title={t('bookings.noResults')}
+            message={t('bookings.filteredEmpty')}
             action={{
-              label: 'Clear filters and search',
+              label: t('bookings.clearAll'),
               onClick: () => {
                 clearAll();
                 setQuery('');
@@ -179,8 +182,8 @@ export function Bookings() {
           <ListEmptyState
             illustrated
             icon={<CalendarX />}
-            title="No trips yet"
-            message="Go online and the trips you complete will appear here."
+            title={t('bookings.emptyTitle')}
+            message={t('bookings.emptyMessage')}
           />
         )
       )}
@@ -198,7 +201,7 @@ export function Bookings() {
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium text-text-primary">{bookingCategoryLabel(booking.category)}</p>
               <p className="truncate text-xs text-text-secondary">
-                {booking.pickup.label} to {booking.drop.label} &middot;{' '}
+                {t('bookings.fromTo', { from: booking.pickup.label, to: booking.drop.label })} &middot;{' '}
                 {new Date(booking.requestedAt).toLocaleString()}
               </p>
               <StatusBadge tone={statusTone(booking)} className="mt-1">
@@ -218,7 +221,7 @@ export function Bookings() {
                   }}
                 >
                   <MessageCircle className="h-3.5 w-3.5" />
-                  Messages
+                  {t('bookings.messages')}
                 </button>
               )}
               {/* Already rated, still rateable, or past its window - so
@@ -227,7 +230,7 @@ export function Bookings() {
                 ratingMarks.get(booking.id)!.stars !== null ? (
                   <p className="mt-1 flex items-center gap-1 text-xs text-text-secondary">
                     <Star className="h-3.5 w-3.5 fill-accent-orange text-accent-orange" />
-                    You rated this {ratingMarks.get(booking.id)!.stars} out of 5
+                    {t('bookings.youRated', { stars: ratingMarks.get(booking.id)!.stars })}
                   </p>
                 ) : new Date(ratingMarks.get(booking.id)!.rateableUntil) > new Date() ? (
                   <button
@@ -239,7 +242,7 @@ export function Bookings() {
                     }}
                   >
                     <Star className="h-3.5 w-3.5" />
-                    Rate this trip
+                    {t('bookings.rateTrip')}
                   </button>
                 ) : null
               )}
@@ -264,7 +267,7 @@ export function Bookings() {
         <RatingPrompt
           key={ratingBookingId}
           bookingId={ratingBookingId}
-          counterpartLabel="your rider"
+          counterpartLabel={t('common.yourRider')}
           onRated={() => {
             setRatingBookingId(null);
             list.reload();

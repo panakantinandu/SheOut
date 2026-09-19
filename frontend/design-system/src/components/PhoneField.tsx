@@ -48,7 +48,7 @@ export interface PhoneFieldProps
  * behaviour, not of code, and it is noted at the markup there.
  */
 export const PhoneField = forwardRef<HTMLInputElement, PhoneFieldProps>(
-  ({ value, onChange, placeholder = 'Mobile Number', ...props }, ref) => (
+  ({ value, onChange, placeholder, ...props }, ref) => (
     <TextField
       ref={ref}
       type="tel"

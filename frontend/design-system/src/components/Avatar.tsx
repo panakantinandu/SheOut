@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { User } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export interface AvatarProps {
   /** Null, empty, or a URL that fails to load all fall back to the silhouette. */
@@ -53,6 +54,7 @@ const ICON_SIZES = {
  * in a list. The old glyph remains for accounts with no name either.
  */
 export function Avatar({ url, name, size = 'md', className }: AvatarProps) {
+  const { t } = useTranslation('ds');
   const [failed, setFailed] = useState(false);
   const showPhoto = Boolean(url) && !failed;
   const initials = (name ?? '')
@@ -74,7 +76,7 @@ export function Avatar({ url, name, size = 'md', className }: AvatarProps) {
       {showPhoto ? (
         <img
           src={url as string}
-          alt={name ? `${name}'s photo` : 'Profile photo'}
+          alt={name ? t('avatar.named', { name }) : t('avatar.unnamed')}
           className="h-full w-full object-cover"
           onError={() => setFailed(true)}
         />

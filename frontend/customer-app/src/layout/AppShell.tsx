@@ -2,6 +2,7 @@ import { Calendar, Home, Siren, User, Wallet } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { BottomNavBar, PageTransition } from '@sheout/design-system';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from '@sheout/design-system';
 
 /**
  * Wraps every authenticated screen that shows the bottom nav (Home,
@@ -11,15 +12,16 @@ import { useLocation, useNavigate } from 'react-router-dom';
  * a back-arrow header instead of the tab bar on those.
  */
 export function AppShell({ children }: { children: ReactNode }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
 
   const items = [
-    { key: 'home', label: 'Home', icon: <Home />, path: '/home' },
-    { key: 'bookings', label: 'Bookings', icon: <Calendar />, path: '/bookings' },
-    { key: 'sos', label: 'SOS', icon: <Siren />, path: '/sos', raised: true },
-    { key: 'wallet', label: 'Wallet', icon: <Wallet />, path: '/wallet' },
-    { key: 'profile', label: 'Profile', icon: <User />, path: '/profile' },
+    { key: 'home', label: t('nav.home'), icon: <Home />, path: '/home' },
+    { key: 'bookings', label: t('nav.bookings'), icon: <Calendar />, path: '/bookings' },
+    { key: 'sos', label: t('nav.sos'), icon: <Siren />, path: '/sos', raised: true },
+    { key: 'wallet', label: t('nav.wallet'), icon: <Wallet />, path: '/wallet' },
+    { key: 'profile', label: t('nav.profile'), icon: <User />, path: '/profile' },
   ];
 
   return (

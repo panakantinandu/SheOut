@@ -14,6 +14,7 @@ import {
 } from '@sheout/design-system';
 import { ApiError, usersApi } from '../api/client';
 import type { EmergencyContact } from '../api/types';
+import { SafetyText, useSafetyString, useTranslation } from '@sheout/design-system';
 
 const RELATIONSHIPS = ['Mother', 'Father', 'Sister', 'Brother', 'Partner', 'Friend'];
 
@@ -33,6 +34,8 @@ const RELATIONSHIPS = ['Mother', 'Father', 'Sister', 'Brother', 'Partner', 'Frie
  * alert going to a stranger, or to nobody.
  */
 export function EmergencyContacts() {
+  const { t } = useTranslation();
+  const safety = useSafetyString();
   const navigate = useNavigate();
   const [contacts, setContacts] = useState<EmergencyContact[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -49,7 +52,7 @@ export function EmergencyContacts() {
     usersApi
       .getMyEmergencyContacts()
       .then(setContacts)
-      .catch((err) => setLoadError(err instanceof ApiError ? err.message : 'Could not load your contacts'));
+      .catch((err) => setLoadError(err instanceof ApiError ? err.message : t('contacts.loadError')));
   }
 
   useEffect(load, []);
@@ -57,11 +60,11 @@ export function EmergencyContacts() {
   async function handleAdd() {
     setFormError(null);
     if (!name.trim()) {
-      setFormError('Enter their name.');
+      setFormError(t('contacts.nameRequired'));
       return;
     }
     if (!isCompletePhone(digits)) {
-      setFormError('Enter their 10-digit mobile number.');
+      setFormError(t('contacts.phoneRequired'));
       return;
     }
     setSaving(true);
@@ -77,7 +80,7 @@ export function EmergencyContacts() {
       setRelationship(RELATIONSHIPS[0]);
       setAdding(false);
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : 'Could not save that contact. Please try again.');
+      setFormError(err instanceof ApiError ? err.message : t('contacts.saveError'));
     } finally {
       setSaving(false);
     }
@@ -91,33 +94,32 @@ export function EmergencyContacts() {
       await usersApi.removeEmergencyContact(target.id);
       setContacts((prev) => (prev ?? []).filter((c) => c.id !== target.id));
     } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : 'Could not remove that contact. Please try again.');
+      setLoadError(err instanceof ApiError ? err.message : t('contacts.removeError'));
     }
   }
 
   return (
     <div className="space-y-6">
-      <TopHeader variant="back" title="Emergency Contacts" onBack={() => navigate('/profile')} />
+      <TopHeader variant="back" title={t('profile.emergencyContacts')} onBack={() => navigate(-1)} />
 
       <Card className="space-y-2">
         <p className="text-sm text-text-primary">
-          If you raise an SOS, everyone here is sent an SMS with your location.
+          <SafetyText k="contacts.whatSosDoes" />
         </p>
         <p className="text-xs text-text-secondary">
-          They are never messaged at any other time. Please tell them you have added their number - it is their
-          number, not yours, and they have not agreed to anything with us.
+          <SafetyText k="contacts.tellThem" />
         </p>
       </Card>
 
       {loadError && <p className="text-sm text-danger">{loadError}</p>}
 
       {contacts === null && !loadError ? (
-        <p className="text-center text-sm text-text-secondary">Loading your contacts...</p>
+        <p className="text-center text-sm text-text-secondary">{t('contacts.loading')}</p>
       ) : contacts && contacts.length === 0 ? (
         <Card tone="warning" className="space-y-1 text-center">
-          <p className="font-heading font-semibold text-text-primary">No contacts yet</p>
+          <p className="font-heading font-semibold text-text-primary">{t('contacts.emptyTitle')}</p>
           <p className="text-sm text-text-secondary">
-            SOS cannot reach anyone until you add at least one person.
+            <SafetyText k="contacts.emptyWarning" />
           </p>
         </Card>
       ) : (
@@ -128,12 +130,12 @@ export function EmergencyContacts() {
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-text-primary">{contact.name}</p>
                 <p className="truncate text-xs text-text-secondary">
-                  {contact.relationship} &middot; {contact.phoneNumber}
+                  {t(`contacts.rel.${contact.relationship}`, { defaultValue: contact.relationship })} &middot; {contact.phoneNumber}
                 </p>
               </div>
               <button
                 type="button"
-                aria-label={`Remove ${contact.name}`}
+                aria-label={t('contacts.removeAria', { name: contact.name })}
                 onClick={() => setRemoving(contact)}
                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-danger hover:bg-danger/10"
               >
@@ -146,19 +148,19 @@ export function EmergencyContacts() {
 
       {adding ? (
         <Card className="space-y-4">
-          <p className="font-heading font-semibold text-text-primary">Add a contact</p>
+          <p className="font-heading font-semibold text-text-primary">{t('contacts.add')}</p>
           <TextField
-            label="Their name"
-            placeholder="e.g. Asha"
+            label={t('contacts.theirName')}
+            placeholder={t('contacts.namePlaceholder')}
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
           <div>
-            <span className="mb-1.5 block text-sm font-medium text-text-primary">Their mobile number</span>
-            <PhoneField value={digits} onChange={setDigits} />
+            <span className="mb-1.5 block text-sm font-medium text-text-primary">{t('contacts.theirPhone')}</span>
+            <PhoneField value={digits} onChange={setDigits} placeholder={t('login.phonePlaceholder')} />
           </div>
           <div>
-            <span className="mb-1.5 block text-sm font-medium text-text-primary">Relationship</span>
+            <span className="mb-1.5 block text-sm font-medium text-text-primary">{t('contacts.relationship')}</span>
             <div className="flex flex-wrap gap-2">
               {RELATIONSHIPS.map((option) => (
                 <button
@@ -171,7 +173,7 @@ export function EmergencyContacts() {
                       : 'rounded-full border border-border px-3 py-1.5 text-sm font-medium text-text-secondary'
                   }
                 >
-                  {option}
+                  {t(`contacts.rel.${option}`)}
                 </button>
               ))}
             </div>
@@ -187,28 +189,28 @@ export function EmergencyContacts() {
                 setFormError(null);
               }}
             >
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button fullWidth disabled={saving} onClick={handleAdd}>
-              {saving ? 'Saving...' : 'Save contact'}
+              {saving ? t('common.saving') : t('contacts.save')}
             </Button>
           </div>
         </Card>
       ) : (
         <Button fullWidth icon={<Plus className="h-4 w-4" />} onClick={() => setAdding(true)}>
-          Add a contact
+          {t('contacts.add')}
         </Button>
       )}
 
       <ConfirmDialog
         open={removing !== null}
-        title="Remove this contact?"
+        title={t('contacts.removeTitle')}
         message={
           removing
-            ? `${removing.name} will no longer be told if you raise an SOS.`
+            ? safety('contacts.removeWarning', { name: removing.name })
             : ''
         }
-        confirmLabel="Remove"
+        confirmLabel={t('contacts.remove')}
         destructive
         onConfirm={handleRemove}
         onCancel={() => setRemoving(null)}

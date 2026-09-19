@@ -1,4 +1,5 @@
 import { Star } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export interface StarRatingProps {
   /** 1-5, or null when nothing has been chosen yet. */
@@ -36,14 +37,16 @@ export function StarRating({
   onChange,
   size = 'md',
   disabled = false,
-  label = 'Rating',
+  label: labelProp,
 }: StarRatingProps) {
+  const { t } = useTranslation('ds');
+  const label = labelProp ?? t('rating.label');
   const interactive = Boolean(onChange) && !disabled;
   const starClass = SIZES[size];
 
   if (!interactive) {
     return (
-      <div className="flex items-center gap-0.5" role="img" aria-label={`${label}: ${value ?? 'not rated'} out of 5`}>
+      <div className="flex items-center gap-0.5" role="img" aria-label={t('rating.aria', { label, value: value ?? t('rating.none') })}>
         {STARS.map((star) => (
           <Star
             key={star}
@@ -105,9 +108,11 @@ export interface AggregateRatingProps {
 export function AggregateRatingText({
   averageStars,
   totalRatings,
-  emptyLabel = 'Not rated yet',
+  emptyLabel: emptyLabelProp,
   className,
 }: AggregateRatingProps) {
+  const { t } = useTranslation('ds');
+  const emptyLabel = emptyLabelProp ?? t('rating.notRated');
   if (averageStars == null || !totalRatings) {
     return <span className={className}>{emptyLabel}</span>;
   }

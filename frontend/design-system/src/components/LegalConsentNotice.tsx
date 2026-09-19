@@ -1,3 +1,4 @@
+import { Trans } from 'react-i18next';
 export interface LegalConsentNoticeProps {
   /** What the button beneath it says, so the sentence matches the action. */
   actionLabel: string;
@@ -30,15 +31,15 @@ export function LegalConsentNotice({
 }: LegalConsentNoticeProps) {
   return (
     <p className={className ?? 'text-center text-xs leading-relaxed text-text-secondary'}>
-      By tapping &ldquo;{actionLabel}&rdquo; you agree to our{' '}
-      <button type="button" onClick={onOpenTerms} className="font-semibold text-primary underline">
-        Terms of Service
-      </button>{' '}
-      and confirm you have read the{' '}
-      <button type="button" onClick={onOpenPrivacy} className="font-semibold text-primary underline">
-        Privacy Policy
-      </button>
-      , including that SheOut is women only and that a government ID is reviewed by a person before your first trip.
+      <Trans
+        ns="ds"
+        i18nKey="consent.text"
+        values={{ action: actionLabel }}
+        components={{
+          terms: <button type="button" onClick={onOpenTerms} className="font-semibold text-primary underline" />,
+          privacy: <button type="button" onClick={onOpenPrivacy} className="font-semibold text-primary underline" />,
+        }}
+      />
     </p>
   );
 }

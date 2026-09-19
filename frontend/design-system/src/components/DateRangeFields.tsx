@@ -1,4 +1,5 @@
 import { TextField } from './TextField';
+import { useTranslation } from 'react-i18next';
 
 export interface DateRangeValue {
   /** yyyy-mm-dd, as a native date input gives it. Empty string means unset. */
@@ -25,7 +26,9 @@ export interface DateRangeFieldsProps {
  * "to", which would silently produce an empty list and look like lost
  * history.
  */
-export function DateRangeFields({ value, onChange, label = 'Date range' }: DateRangeFieldsProps) {
+export function DateRangeFields({ value, onChange, label: labelProp }: DateRangeFieldsProps) {
+  const { t } = useTranslation('ds');
+  const label = labelProp ?? t('filters.dateRange');
   return (
     <div>
       <span className="mb-1.5 block text-sm font-medium text-text-primary">{label}</span>
@@ -33,7 +36,7 @@ export function DateRangeFields({ value, onChange, label = 'Date range' }: DateR
         <div className="min-w-0 flex-1">
           <TextField
             type="date"
-            aria-label="From date"
+            aria-label={t('filters.from')}
             value={value.from}
             max={value.to || undefined}
             onChange={(e) => onChange({ ...value, from: e.target.value })}
@@ -43,7 +46,7 @@ export function DateRangeFields({ value, onChange, label = 'Date range' }: DateR
         <div className="min-w-0 flex-1">
           <TextField
             type="date"
-            aria-label="To date"
+            aria-label={t('filters.to')}
             value={value.to}
             min={value.from || undefined}
             onChange={(e) => onChange({ ...value, to: e.target.value })}

@@ -5,6 +5,7 @@ import { dateOfBirthProblem, emailProblem, latestAdultBirthDate } from '../lib/p
 import { Avatar } from './Avatar';
 import { Button } from './Button';
 import { TextField } from './TextField';
+import { useTranslation } from 'react-i18next';
 
 export interface ProfileBasics {
   name: string;
@@ -46,6 +47,7 @@ export function ProfileCompletionForm({
   children,
   extraFieldsValid = true,
 }: ProfileCompletionFormProps) {
+  const { t } = useTranslation('ds');
   const [values, setValues] = useState<ProfileBasics>(initial);
   const [touched, setTouched] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -55,7 +57,7 @@ export function ProfileCompletionForm({
   const [preview, setPreview] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
-  const nameProblem = values.name.trim() ? null : 'Enter your name.';
+  const nameProblem = values.name.trim() ? null : t('profileForm.nameRequired');
   const dobProblem = dateOfBirthProblem(values.dateOfBirth);
   const mailProblem = emailProblem(values.email);
   const photoOnFile = hasPhoto || preview !== null;
@@ -64,7 +66,7 @@ export function ProfileCompletionForm({
     if (!file) return;
     setPhotoError(null);
     if (file.type && !file.type.startsWith('image/')) {
-      setPhotoError('Choose a photo.');
+      setPhotoError(t('profileForm.choosePhoto'));
       return;
     }
     setUploading(true);
@@ -74,7 +76,7 @@ export function ProfileCompletionForm({
       setPreview(localUrl);
     } catch (err) {
       URL.revokeObjectURL(localUrl);
-      setPhotoError(err instanceof Error ? err.message : 'Could not upload that photo. Please try again.');
+      setPhotoError(err instanceof Error ? err.message : t('profileForm.uploadError'));
     } finally {
       setUploading(false);
       if (fileInput.current) fileInput.current.value = '';
@@ -86,7 +88,7 @@ export function ProfileCompletionForm({
     setTouched(true);
     setError(null);
     if (!photoOnFile) {
-      setPhotoError('Add a profile photo to continue.');
+      setPhotoError(t('profileForm.photoRequired'));
       return;
     }
     if (nameProblem || dobProblem || mailProblem || !extraFieldsValid) return;
@@ -94,7 +96,7 @@ export function ProfileCompletionForm({
     try {
       await onSubmit({ name: values.name.trim(), dateOfBirth: values.dateOfBirth, email: values.email.trim() });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save your profile. Please try again.');
+      setError(err instanceof Error ? err.message : t('profileForm.saveError'));
     } finally {
       setSaving(false);
     }
@@ -109,7 +111,7 @@ export function ProfileCompletionForm({
           type="file"
           accept="image/*"
           className="hidden"
-          aria-label="Profile photo"
+          aria-label={t('avatar.unnamed')}
           data-testid="photo-input"
           onChange={(e) => choosePhoto(e.target.files?.[0])}
         />
@@ -121,14 +123,14 @@ export function ProfileCompletionForm({
           disabled={uploading}
           onClick={() => fileInput.current?.click()}
         >
-          {uploading ? 'Uploading...' : photoOnFile ? 'Change photo' : 'Add photo'}
+          {uploading ? t('profileForm.uploading') : photoOnFile ? t('profileForm.changePhoto') : t('profileForm.addPhoto')}
         </Button>
         <p className="text-center text-xs text-text-secondary">{photoReason}</p>
         {photoError && <p className="text-center text-sm text-danger">{photoError}</p>}
       </div>
 
       <TextField
-        label="Your name"
+        label={t('profileForm.name')}
         name="name"
         autoComplete="name"
         maxLength={150}
@@ -137,7 +139,7 @@ export function ProfileCompletionForm({
         error={touched && nameProblem ? nameProblem : undefined}
       />
       <TextField
-        label="Date of birth"
+        label={t('profileForm.dob')}
         name="dateOfBirth"
         type="date"
         autoComplete="bday"
@@ -147,21 +149,21 @@ export function ProfileCompletionForm({
         error={touched && dobProblem ? dobProblem : undefined}
       />
       <TextField
-        label="Email (optional)"
+        label={t('profileForm.email')}
         name="email"
         type="email"
         autoComplete="email"
         maxLength={254}
-        placeholder="For receipts and support replies"
+        placeholder={t('profileForm.emailPlaceholder')}
         value={values.email}
         onChange={(e) => setValues({ ...values, email: e.target.value })}
         error={touched && mailProblem ? mailProblem : undefined}
       />
       {children}
-      <p className="text-xs text-text-secondary">SheOut is only for people aged 18 and over.</p>
+      <p className="text-xs text-text-secondary">{t('profileForm.ageNote')}</p>
       {error && <p className="text-sm text-danger" role="alert">{error}</p>}
       <Button type="submit" fullWidth disabled={saving || uploading}>
-        {saving ? 'Saving...' : submitLabel}
+        {saving ? t('common.saving') : submitLabel}
       </Button>
     </form>
   );

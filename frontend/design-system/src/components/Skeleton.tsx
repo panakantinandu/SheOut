@@ -1,5 +1,6 @@
 import { cn } from '../lib/cn';
 import { Card } from './Card';
+import { useTranslation } from 'react-i18next';
 
 export interface SkeletonProps {
   className?: string;
@@ -47,7 +48,9 @@ export interface SkeletonListProps {
  * The standard stand-in for a list that is loading: a card of rows in the
  * same shape the real ones will take.
  */
-export function SkeletonList({ rows = 4, withIcon = true, className, label = 'Loading' }: SkeletonListProps) {
+export function SkeletonList({ rows = 4, withIcon = true, className, label: labelProp }: SkeletonListProps) {
+  const { t } = useTranslation('ds');
+  const label = labelProp ?? t('common.loading');
   return (
     <>
       <span className="sr-only" role="status">
@@ -77,7 +80,9 @@ export interface SkeletonCardProps {
 }
 
 /** The same idea for a single card - a profile, a summary, a form about to arrive. */
-export function SkeletonCard({ lines = 3, className, label = 'Loading' }: SkeletonCardProps) {
+export function SkeletonCard({ lines = 3, className, label: labelProp }: SkeletonCardProps) {
+  const { t } = useTranslation('ds');
+  const label = labelProp ?? t('common.loading');
   return (
     <>
       <span className="sr-only" role="status">

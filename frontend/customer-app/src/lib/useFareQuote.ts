@@ -1,3 +1,4 @@
+import { i18next } from '@sheout/design-system';
 import { useEffect, useState } from 'react';
 import { ApiError, bookingApi } from '../api/client';
 import { isInServiceArea } from './geocode';
@@ -69,7 +70,7 @@ export function useFareQuote({ type, category, pickup, drop }: FareQuoteInput): 
           setState({
             quote: null,
             loading: false,
-            error: err instanceof ApiError ? err.message : 'Could not estimate the fare',
+            error: err instanceof ApiError ? err.message : i18next.t('fare.estimateError'),
           });
         }
       }

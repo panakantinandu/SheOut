@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { Button } from './Button';
+import { useTranslation } from 'react-i18next';
 
 export interface ConfirmDialogProps {
   open: boolean;
@@ -30,12 +31,13 @@ export function ConfirmDialog({
   open,
   title,
   message,
-  confirmLabel = 'Confirm',
-  cancelLabel = 'Cancel',
+  confirmLabel,
+  cancelLabel,
   destructive = false,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const { t } = useTranslation('ds');
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -70,10 +72,10 @@ export function ConfirmDialog({
         {message && <p className="mt-2 max-h-[55vh] overflow-y-auto whitespace-pre-line text-sm text-text-secondary">{message}</p>}
         <div className="mt-5 flex gap-3">
           <Button variant="secondary" fullWidth onClick={onCancel}>
-            {cancelLabel}
+            {cancelLabel ?? t('common.cancel')}
           </Button>
           <Button variant={destructive ? 'danger' : 'primary'} fullWidth onClick={onConfirm}>
-            {confirmLabel}
+            {confirmLabel ?? t('common.confirm')}
           </Button>
         </div>
       </div>

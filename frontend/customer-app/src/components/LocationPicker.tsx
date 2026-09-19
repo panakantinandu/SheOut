@@ -5,13 +5,14 @@ import type { MapMarker } from '@sheout/design-system';
 import type { GeoAddress } from '../api/types';
 import {
   CITY_CENTRE,
-  OUT_OF_AREA_MESSAGE,
+  outOfAreaMessage,
   currentPosition,
   describePoint,
   isInServiceArea,
   reverseGeocode,
   searchPlaces,
 } from '../lib/geocode';
+import { useTranslation } from '@sheout/design-system';
 
 /** Nominatim asks for roughly one request a second; this stays well inside that. */
 const SEARCH_DEBOUNCE_MS = 500;
@@ -56,6 +57,7 @@ export function LocationPicker({
   onSelect,
   onClose,
 }: LocationPickerProps) {
+  const { t } = useTranslation();
   const [mode, setMode] = useState<PickerMode>(initialMode);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<GeoAddress[]>([]);
@@ -110,8 +112,8 @@ export function LocationPicker({
       if ((err as Error).name === 'AbortError') return;
       setPinError(
         (err as Error).message === 'No address found at that point'
-          ? 'No address found at that point. Move the pin somewhere closer to a road or landmark.'
-          : 'Could not look up that point. Check your connection and try again.'
+          ? t('picker.noAddress')
+          : t('picker.lookupError')
       );
     } finally {
       if (!controller.signal.aborted) setResolving(false);
@@ -141,12 +143,12 @@ export function LocationPicker({
         // is a normal answer here, not a fault - and the pin always works.
         setError(
           found.length === 0
-            ? 'No results. Try a different search, or drop a pin on the map.'
+            ? t('picker.noResults')
             : null
         );
       } catch (err) {
         if ((err as Error).name !== 'AbortError') {
-          setError('Could not search right now. Check your connection, or drop a pin on the map instead.');
+          setError(t('picker.searchError'));
         }
       } finally {
         if (!controller.signal.aborted) setSearching(false);
@@ -163,10 +165,10 @@ export function LocationPicker({
       // The device can be anywhere. Someone opening the app from another
       // city should be told so here, not after filling in both ends.
       if (!isInServiceArea({ lat, lng })) {
-        setError(`You appear to be outside our service area. ${OUT_OF_AREA_MESSAGE}`);
+        setError(`${t('picker.youOutside')} ${outOfAreaMessage()}`);
         return;
       }
-      onSelect(await describePoint(lat, lng, 'Your Current Location'));
+      onSelect(await describePoint(lat, lng, t('booking.currentLocation')));
       onClose();
     } catch (err) {
       setError((err as Error).message);
@@ -183,7 +185,7 @@ export function LocationPicker({
         <h2 className="flex-1 font-heading text-lg font-semibold text-text-primary">{title}</h2>
         <button
           type="button"
-          aria-label="Close"
+          aria-label={t('common.close')}
           onClick={onClose}
           className="flex h-9 w-9 items-center justify-center rounded-full text-text-primary hover:bg-surface"
         >
@@ -198,8 +200,8 @@ export function LocationPicker({
             building the map has never heard of. */}
         <div className="flex gap-2">
           {([
-            { key: 'search', label: 'Search', icon: <Search className="h-4 w-4" /> },
-            { key: 'map', label: 'Pick on map', icon: <MapPinned className="h-4 w-4" /> },
+            { key: 'search', label: t('picker.search'), icon: <Search className="h-4 w-4" /> },
+            { key: 'map', label: t('picker.pickOnMap'), icon: <MapPinned className="h-4 w-4" /> },
           ] as const).map((tab) => (
             <button
               key={tab.key}
@@ -236,19 +238,19 @@ export function LocationPicker({
         <TextField
           autoFocus
           icon={<Search className="h-4 w-4 text-text-secondary" />}
-          placeholder="Search for an area, street or landmark"
+          placeholder={t('picker.searchPlaceholder')}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
 
         {allowCurrentLocation && (
           <Button variant="secondary" fullWidth disabled={locating} onClick={handleUseCurrent} icon={<Crosshair className="h-4 w-4" />}>
-            {locating ? 'Finding you...' : 'Use my current location'}
+            {locating ? t('picker.findingYou') : t('picker.useCurrent')}
           </Button>
         )}
 
         {error && <p className="text-sm text-danger">{error}</p>}
-        {searching && <p className="text-sm text-text-secondary">Searching...</p>}
+        {searching && <p className="text-sm text-text-secondary">{t('picker.searching')}</p>}
 
         {results.length > 0 && (
           // Out-of-area matches are shown, not hidden. Hiding a real address
@@ -279,7 +281,7 @@ export function LocationPicker({
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm text-text-primary">{place.label}</span>
                     {!servable && (
-                      <span className="block text-xs font-medium text-danger">Outside service area</span>
+                      <span className="block text-xs font-medium text-danger">{t('picker.outsideArea')}</span>
                     )}
                   </span>
                 </button>
@@ -290,7 +292,7 @@ export function LocationPicker({
 
         {presets.length > 0 && query.trim().length < 3 && (
           <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-secondary">Popular places</p>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-secondary">{t('picker.popular')}</p>
             <Card className="divide-y divide-border p-0">
               {presets.map((preset) => (
                 <button
@@ -312,7 +314,7 @@ export function LocationPicker({
         </>
         )}
 
-        <p className="text-center text-xs text-text-secondary">Search results &copy; OpenStreetMap contributors</p>
+        <p className="text-center text-xs text-text-secondary">{t('picker.osm')}</p>
       </div>
     </div>
   );
@@ -341,8 +343,9 @@ function MapPane({
   onPick: (lat: number, lng: number) => void;
   onConfirm: (address: GeoAddress) => void;
 }) {
+  const { t } = useTranslation();
   const markers: MapMarker[] = pin
-    ? [{ key: 'pin', lat: pin.lat, lng: pin.lng, label: 'Selected point', kind: markerKind }]
+    ? [{ key: 'pin', lat: pin.lat, lng: pin.lng, label: t('picker.selectedPoint'), kind: markerKind }]
     : [];
 
   // Captured once, when the map opens: the pin already set for this field if
@@ -362,24 +365,24 @@ function MapPane({
         className="h-72"
       />
       <p className="text-xs text-text-secondary">
-        Tap anywhere on the map to drop a pin, or drag the pin to move it.
+        {t('picker.mapHint')}
       </p>
 
       {!pin ? (
         <Card className="text-center">
-          <p className="text-sm text-text-secondary">No pin yet. Tap the map to choose a point.</p>
+          <p className="text-sm text-text-secondary">{t('picker.noPin')}</p>
         </Card>
       ) : resolving ? (
         <Card className="flex items-center gap-3">
           <IconCircle tone="soft" size="sm" icon={<MapPin />} />
-          <p className="text-sm text-text-secondary">Looking up this address...</p>
+          <p className="text-sm text-text-secondary">{t('picker.lookingUp')}</p>
         </Card>
       ) : error ? (
         <Card tone="danger" className="space-y-3">
-          <p className="text-sm font-medium text-text-primary">Could not name this point</p>
+          <p className="text-sm font-medium text-text-primary">{t('picker.cannotName')}</p>
           <p className="text-xs text-text-secondary">{error}</p>
           <Button variant="secondary" fullWidth onClick={() => onPick(pin.lat, pin.lng)}>
-            Try again
+            {t('common.tryAgain')}
           </Button>
         </Card>
       ) : address ? (
@@ -395,16 +398,16 @@ function MapPane({
               icon={<MapPin />}
             />
             <div className="min-w-0 flex-1">
-              <p className="text-xs text-text-secondary">Pin dropped at</p>
+              <p className="text-xs text-text-secondary">{t('picker.pinAt')}</p>
               <p className="text-sm font-medium text-text-primary">{address.label}</p>
             </div>
           </div>
           {isInServiceArea(address) ? (
             <Button fullWidth onClick={() => onConfirm(address)}>
-              Use this location
+              {t('picker.useThis')}
             </Button>
           ) : (
-            <p className="text-xs font-medium text-danger">{OUT_OF_AREA_MESSAGE}</p>
+            <p className="text-xs font-medium text-danger">{outOfAreaMessage()}</p>
           )}
         </Card>
       ) : null}

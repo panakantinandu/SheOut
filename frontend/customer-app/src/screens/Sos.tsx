@@ -1,17 +1,13 @@
 import { Bell, CheckCircle2, ChevronRight, MapPin, MessageSquareText, Phone, Share2, Users } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Button, Card, IconCircle, ListRow, TopHeader } from '@sheout/design-system';
+import { Button, Card, IconCircle, ListRow, SafetyText, TopHeader, i18next, useSafetyString } from '@sheout/design-system';
 import { ApiError, notificationsApi, usersApi } from '../api/client';
 import type { EmergencyContact, SosResponse } from '../api/types';
 import { localEmergencyNumber, mapsLink, openSmsComposer, shareViaDevice } from '../lib/emergency';
+import { useTranslation } from '@sheout/design-system';
 
-const SAFETY_FEATURES = [
-  'Live Location Sharing',
-  '24/7 Support',
-  'Verified Women Partners',
-  'Emergency Contacts',
-];
+const SAFETY_FEATURES = ['liveLocation', 'support', 'verifiedPartners', 'emergencyContacts'] as const;
 
 /**
  * The mockup's three circular actions, in its order and colours. Filled
@@ -19,9 +15,9 @@ const SAFETY_FEATURES = [
  * lists, since here the circle is the button itself.
  */
 const ACTIONS = [
-  { key: 'share', label: 'Share Location', bg: 'bg-primary', icon: <MapPin className="h-6 w-6" /> },
-  { key: 'call', label: 'Call Emergency', bg: 'bg-danger', icon: <Phone className="h-6 w-6" /> },
-  { key: 'contact', label: 'Call Contact', bg: 'bg-accent-orange', icon: <Users className="h-6 w-6" /> },
+  { key: 'share', bg: 'bg-primary', icon: <MapPin className="h-6 w-6" /> },
+  { key: 'call', bg: 'bg-danger', icon: <Phone className="h-6 w-6" /> },
+  { key: 'contact', bg: 'bg-accent-orange', icon: <Users className="h-6 w-6" /> },
 ] as const;
 
 interface Position {
@@ -32,20 +28,29 @@ interface Position {
 function getCurrentPosition(): Promise<Position> {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
-      reject(new Error('This browser cannot read your location.'));
+      reject(new Error(i18next.t('sos.noGeolocation', { ns: 'safety' })));
       return;
     }
     navigator.geolocation.getCurrentPosition(
       (p) => resolve({ lat: p.coords.latitude, lng: p.coords.longitude }),
-      () => reject(new Error('Could not get your location - allow location access and try again.')),
+      () => reject(new Error(i18next.t('sos.locationDenied', { ns: 'safety' }))),
       // A slightly stale fix now beats a perfect one in ten seconds.
       { timeout: 8000, maximumAge: 30000, enableHighAccuracy: true }
     );
   });
 }
 
-function alertMessage(name: string | undefined, position: Position): string {
-  return `SOS - ${name ?? 'I'} need${name ? 's' : ''} help. My location: ${mapsLink(position.lat, position.lng)} (sent from SheOut)`;
+/**
+ * The text her contacts receive. In her app language, and - when that is not
+ * English - with the English after it, because the person she is texting may
+ * not read the language she uses the app in.
+ */
+function alertMessage(name: string | undefined, position: Position, lng: string): string {
+  const link = mapsLink(position.lat, position.lng);
+  const key = name ? 'sos.smsNamed' : 'sos.smsUnnamed';
+  const own = i18next.t(key, { ns: 'safety', name, link, lng });
+  if (lng === 'en') return own;
+  return `${own}\n\n${i18next.t(key, { ns: 'safety', name, link, lng: 'en' })}`;
 }
 
 /**
@@ -70,6 +75,11 @@ function alertMessage(name: string | undefined, position: Position): string {
  * everywhere.
  */
 export function Sos() {
+  const { t } = useTranslation();
+  // Safety copy: an unreviewed translation always carries the English
+  // beneath it - see SafetyText.
+  const s = useSafetyString();
+  const { i18n } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const bookingId = (location.state as { bookingId?: string } | null)?.bookingId;
@@ -111,7 +121,7 @@ export function Sos() {
       setLastPosition(position);
     } catch (err) {
       setSending(false);
-      setError(`${err instanceof Error ? err.message : 'Could not get your location.'} If you are in danger, call ${emergency.number}.`);
+      setError(`${err instanceof Error ? err.message : s('sos.noLocation')}\n${s('sos.ifInDanger', { number: emergency.number })}`);
       return;
     }
     try {
@@ -121,7 +131,7 @@ export function Sos() {
       setError(
         err instanceof ApiError
           ? err.message
-          : `Could not reach SheOut. Text your contacts from your phone below, or call ${emergency.number}.`
+          : s('sos.cannotReachSheout', { number: emergency.number })
       );
       setResult({
         alertId: '',
@@ -147,7 +157,7 @@ export function Sos() {
       setLastPosition(position);
       await share(position);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not get your location.');
+      setError(err instanceof Error ? err.message : s('sos.noLocation'));
     } finally {
       setSharing(false);
     }
@@ -155,9 +165,9 @@ export function Sos() {
 
   async function share(position: Position) {
     const url = mapsLink(position.lat, position.lng);
-    const outcome = await shareViaDevice('My location', `${myName ?? 'I'} ${myName ? 'is' : 'am'} here:`, url);
+    const outcome = await shareViaDevice(t('sos.shareTitle'), myName ? t('sos.shareTextNamed', { name: myName }) : t('sos.shareText'), url);
     if (outcome === 'shared') {
-      setNotice('Location shared.');
+      setNotice(t('sos.shared'));
       return;
     }
     if (outcome === 'cancelled') return;
@@ -166,21 +176,21 @@ export function Sos() {
     setShareFallback(true);
     try {
       await navigator.clipboard?.writeText(url);
-      setNotice('Your location link is copied - paste it anywhere, or use the buttons below.');
+      setNotice(t('sos.linkCopied'));
     } catch {
-      setNotice('Use the buttons below to send your location.');
+      setNotice(t('sos.useButtons'));
     }
   }
 
   function textContacts() {
     if (!lastPosition || contactNumbers.length === 0) return;
-    openSmsComposer(contactNumbers, alertMessage(myName, lastPosition));
+    openSmsComposer(contactNumbers, alertMessage(myName, lastPosition, i18n.language));
   }
 
   function handleCallContact() {
     if (contacts === null) return;
     if (contacts.length === 0) {
-      setError('No emergency contacts saved yet. Tap Safety Features below to add one.');
+      setError(s('sos.noContactsSaved'));
       return;
     }
     window.location.href = `tel:${contacts[0].phoneNumber}`;
@@ -190,30 +200,30 @@ export function Sos() {
     if (response.reason === 'NO_EMERGENCY_CONTACTS') {
       return {
         tone: 'danger',
-        text: `Your alert is recorded with SheOut, but you have no emergency contacts saved, so nobody was texted. Share your location below or call ${emergency.number}.`,
+        text: s('sos.resultNoContacts', { number: emergency.number }),
       };
     }
     if (response.reason === 'CONTACTS_RECENTLY_ALERTED') {
       return {
         tone: 'success',
-        text: `Alert recorded with your latest location. Your contacts were texted less than a minute ago. Call ${emergency.number} if you need help right now.`,
+        text: s('sos.resultRecent', { number: emergency.number }),
       };
     }
     if (response.contactsNotified === 0) {
       return {
         tone: 'danger',
-        text: `Your alert is recorded with SheOut, but our text to your ${response.contactsTotal === 1 ? 'contact' : `${response.contactsTotal} contacts`} didn't go through. Send it from your own phone now - it takes one tap.`,
+        text: s('sos.resultNoneReached', { count: response.contactsTotal }),
       };
     }
     if (response.contactsNotified < response.contactsTotal) {
       return {
         tone: 'danger',
-        text: `Texted ${response.contactsNotified} of ${response.contactsTotal} contacts. Send it from your phone to reach everyone.`,
+        text: s('sos.resultSomeReached', { notified: response.contactsNotified, total: response.contactsTotal }),
       };
     }
     return {
       tone: 'success',
-      text: `Your location was texted to ${response.contactsNotified === 1 ? 'your emergency contact' : `all ${response.contactsNotified} emergency contacts`}.`,
+      text: s('sos.resultAllReached', { count: response.contactsNotified }),
     };
   }
 
@@ -221,7 +231,7 @@ export function Sos() {
 
   return (
     <div className="space-y-6">
-      <TopHeader variant="back" title="SOS" onBack={() => navigate('/home')} />
+      <TopHeader variant="back" title={t('home.sos')} onBack={() => navigate('/home')} />
 
       {/* The circle IS the trigger, as in the mockup - there is no separate
           button beneath it. */}
@@ -230,7 +240,7 @@ export function Sos() {
           type="button"
           onClick={handleSendSos}
           disabled={sending}
-          aria-label={sending ? 'Sending SOS alert' : 'Send SOS alert'}
+          aria-label={sending ? t('sos.sendingAria') : t('sos.sendAria')}
           className="relative flex h-44 w-44 items-center justify-center rounded-full transition-transform active:scale-95 disabled:opacity-70"
           data-testid="sos-button"
         >
@@ -242,17 +252,19 @@ export function Sos() {
           </span>
         </button>
 
-        <p className="font-heading text-lg font-semibold text-text-primary">In Emergency?</p>
+        <p className="font-heading text-lg font-semibold text-text-primary">
+          <SafetyText k="sos.inEmergency" />
+        </p>
         <p className="text-sm text-text-secondary">
-          {sending ? 'Sending SOS alert...' : 'Press SOS to alert your emergency contacts with your location'}
+          {sending ? <SafetyText k="sos.sending" /> : <SafetyText k="sos.pressToAlert" />}
         </p>
 
         {message && (
-          <p className={`text-sm font-medium ${message.tone === 'success' ? 'text-success' : 'text-danger'}`} data-testid="sos-result">
+          <p className={`whitespace-pre-line text-sm font-medium ${message.tone === 'success' ? 'text-success' : 'text-danger'}`} data-testid="sos-result">
             {message.text}
           </p>
         )}
-        {error && <p className="text-sm font-medium text-danger">{error}</p>}
+        {error && <p className="whitespace-pre-line text-sm font-medium text-danger">{error}</p>}
         {notice && <p className="text-sm font-medium text-success">{notice}</p>}
       </div>
 
@@ -263,7 +275,9 @@ export function Sos() {
         <Card tone="brand" className="space-y-3" data-testid="sos-fallback">
           {contactNumbers.length > 0 && (
             <Button fullWidth icon={<MessageSquareText className="h-4 w-4" />} onClick={textContacts} data-testid="sos-text-from-phone">
-              Text {contactNumbers.length === 1 ? contacts![0].name : `all ${contactNumbers.length} contacts`} from your phone
+              {contactNumbers.length === 1
+                ? <SafetyText k="sos.textOneFromPhone" values={{ name: contacts![0].name }} englishClassName="font-normal" />
+                : <SafetyText k="sos.textAllFromPhone" values={{ count: contactNumbers.length }} englishClassName="font-normal" />}
             </Button>
           )}
           <Button
@@ -272,7 +286,7 @@ export function Sos() {
             icon={<Share2 className="h-4 w-4" />}
             onClick={() => lastPosition && void share(lastPosition)}
           >
-            Share location another way
+            <SafetyText k="sos.shareAnotherWay" englishClassName="font-normal" />
           </Button>
           <Button
             fullWidth
@@ -282,7 +296,7 @@ export function Sos() {
               window.location.href = `tel:${emergency.number}`;
             }}
           >
-            Call {emergency.number}
+            <SafetyText k="sos.callNumber" values={{ number: emergency.number }} englishClassName="font-normal" />
           </Button>
         </Card>
       )}
@@ -311,10 +325,10 @@ export function Sos() {
               </span>
               <span className="text-center text-xs font-semibold leading-tight text-text-primary">
                 {action.key === 'share' && sharing
-                  ? 'Getting location...'
+                  ? <SafetyText k="sos.gettingLocation" />
                   : action.key === 'call'
-                    ? `Call ${emergency.number}`
-                    : action.label}
+                    ? <SafetyText k="sos.callNumber" values={{ number: emergency.number }} />
+                    : <SafetyText k={action.key === 'share' ? 'sos.shareLocation' : 'sos.callContact'} />}
               </span>
             </button>
           ))}
@@ -329,18 +343,18 @@ export function Sos() {
           onClick={() => navigate('/profile/emergency-contacts')}
           className="mb-3 flex w-full items-center justify-between text-left"
         >
-          <h2 className="font-heading text-base font-semibold text-text-primary">Safety Features</h2>
+          <h2 className="font-heading text-base font-semibold text-text-primary">{t('sos.safetyFeatures')}</h2>
           <ChevronRight className="h-5 w-5 text-text-secondary" aria-hidden="true" />
         </button>
         <Card className="space-y-3">
           {SAFETY_FEATURES.map((feature) => (
-            <ListRow key={feature} padded={false} icon={<IconCircle tone="soft" color="green" size="sm" icon={<CheckCircle2 />} />} label={feature} chevron={false} />
+            <ListRow key={feature} padded={false} icon={<IconCircle tone="soft" color="green" size="sm" icon={<CheckCircle2 />} />} label={t(`sos.features.${feature}`)} chevron={false} />
           ))}
           {contacts !== null && (
             <p className="text-xs text-text-secondary">
               {contacts.length === 0
-                ? 'You have no emergency contacts yet - add at least one.'
-                : `SOS alerts go to ${contacts.map((c) => c.name).join(', ')}.`}
+                ? <SafetyText k="sos.noContactsYet" />
+                : <SafetyText k="sos.alertsGoTo" values={{ names: contacts.map((c) => c.name).join(', ') }} />}
             </p>
           )}
         </Card>

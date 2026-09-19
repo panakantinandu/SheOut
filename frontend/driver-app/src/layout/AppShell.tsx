@@ -2,17 +2,19 @@ import { ClipboardList, Home, User, Wallet } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { BottomNavBar, PageTransition } from '@sheout/design-system';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from '@sheout/design-system';
 
 /** Wraps every authenticated dashboard-level screen. Tab order/naming matches the mockup: Home/Earnings/Bookings/Profile. */
 export function AppShell({ children }: { children: ReactNode }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
 
   const items = [
-    { key: 'home', label: 'Home', icon: <Home />, path: '/home' },
-    { key: 'earnings', label: 'Earnings', icon: <Wallet />, path: '/earnings' },
-    { key: 'bookings', label: 'Bookings', icon: <ClipboardList />, path: '/bookings' },
-    { key: 'profile', label: 'Profile', icon: <User />, path: '/profile' },
+    { key: 'home', label: t('nav.home'), icon: <Home />, path: '/home' },
+    { key: 'earnings', label: t('nav.earnings'), icon: <Wallet />, path: '/earnings' },
+    { key: 'bookings', label: t('nav.bookings'), icon: <ClipboardList />, path: '/bookings' },
+    { key: 'profile', label: t('nav.profile'), icon: <User />, path: '/profile' },
   ];
 
   return (

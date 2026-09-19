@@ -46,6 +46,8 @@ export const spacing = {
 };
 
 export const fonts = {
-  heading: ['Poppins', 'sans-serif'],
-  body: ['Inter', 'sans-serif'],
+  // Noto after the brand faces: Poppins and Inter have no Telugu or Devanagari,
+  // so those scripts fall through to Noto rather than to whatever the phone has.
+  heading: ['Poppins', 'Noto Sans Telugu', 'Noto Sans Devanagari', 'sans-serif'],
+  body: ['Inter', 'Noto Sans Telugu', 'Noto Sans Devanagari', 'sans-serif'],
 };

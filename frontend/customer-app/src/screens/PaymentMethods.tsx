@@ -22,6 +22,7 @@ import {
 import type { DateRangeValue, StatusTone } from '@sheout/design-system';
 import { paymentsApi } from '../api/client';
 import type { PaymentStatus } from '../api/types';
+import { useTranslation } from '@sheout/design-system';
 
 const TONES: Record<PaymentStatus, StatusTone> = {
   PENDING: 'warning',
@@ -31,13 +32,7 @@ const TONES: Record<PaymentStatus, StatusTone> = {
   WAIVED: 'primary',
 };
 
-const STATUS_OPTIONS: { value: PaymentStatus; label: string }[] = [
-  { value: 'CAPTURED', label: 'Paid' },
-  { value: 'PENDING', label: 'Awaiting payment' },
-  { value: 'FAILED', label: 'Failed' },
-  { value: 'REFUNDED', label: 'Refunded' },
-  { value: 'WAIVED', label: 'Settled earlier' },
-];
+const STATUS_VALUES: PaymentStatus[] = ['CAPTURED', 'PENDING', 'FAILED', 'REFUNDED', 'WAIVED'];
 
 /**
  * What the customer has actually been charged, paged and filtered.
@@ -54,6 +49,7 @@ const STATUS_OPTIONS: { value: PaymentStatus; label: string }[] = [
  * actually reaches for when hunting a charge they half-remember.
  */
 export function PaymentMethods() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [status, setStatus] = useState<PaymentStatus | ''>('');
   const [dates, setDates] = useState<DateRangeValue>({ from: '', to: '' });
@@ -93,46 +89,45 @@ export function PaymentMethods() {
 
   return (
     <div className="space-y-6">
-      <TopHeader variant="back" title="Payment History" onBack={() => navigate('/profile')} />
+      <TopHeader variant="back" title={t('payments.history')} onBack={() => navigate(-1)} />
 
       <Card>
-        <p className="text-sm text-text-primary">Each trip is paid in the app - from your SheOut wallet, or online by UPI, card or netbanking.</p>
+        <p className="text-sm text-text-primary">{t('payments.howPaid')}</p>
         <p className="mt-1 text-xs text-text-secondary">
-          No card or UPI ID is stored on your account - there is nothing saved to manage here, so this shows what you
-          have actually been charged.
+          {t('payments.nothingStored')}
         </p>
       </Card>
 
       <ListFilterBar activeCount={activeFilters} onClearAll={clearAll}>
         <SelectField
-          label="Status"
-          placeholder="Any status"
+          label={t('payments.status')}
+          placeholder={t('payments.anyStatus')}
           value={status}
           onChange={(e) => setStatus(e.target.value as PaymentStatus | '')}
-          options={STATUS_OPTIONS}
+          options={STATUS_VALUES.map((value) => ({ value, label: paymentStatusLabel(value) }))}
         />
         <DateRangeFields value={dates} onChange={setDates} />
         <div>
-          <span className="mb-1.5 block text-sm font-medium text-text-primary">Amount range</span>
+          <span className="mb-1.5 block text-sm font-medium text-text-primary">{t('payments.amountRange')}</span>
           <div className="flex items-center gap-2">
             <div className="min-w-0 flex-1">
               <TextField
                 type="number"
                 inputMode="numeric"
-                aria-label="Minimum amount"
-                placeholder="Min ₹"
+                aria-label={t('payments.minAmount')}
+                placeholder={t('payments.min')}
                 value={minAmount}
                 min={0}
                 onChange={(e) => setMinAmount(e.target.value)}
               />
             </div>
-            <span className="shrink-0 text-sm text-text-secondary">to</span>
+            <span className="shrink-0 text-sm text-text-secondary">{t('payments.to')}</span>
             <div className="min-w-0 flex-1">
               <TextField
                 type="number"
                 inputMode="numeric"
-                aria-label="Maximum amount"
-                placeholder="Max ₹"
+                aria-label={t('payments.maxAmount')}
+                placeholder={t('payments.max')}
                 value={maxAmount}
                 min={0}
                 onChange={(e) => setMaxAmount(e.target.value)}
@@ -143,22 +138,22 @@ export function PaymentMethods() {
       </ListFilterBar>
 
       {list.error && <p className="text-sm text-danger">{list.error}</p>}
-      {list.loading && <SkeletonList rows={4} label="Loading your payment history" />}
+      {list.loading && <SkeletonList rows={4} label={t('payments.loading')} />}
 
       {!list.loading && list.items.length === 0 && !list.error && (
         activeFilters > 0 ? (
           <ListEmptyState
             icon={<SearchX />}
-            title="No results match your filters"
-            message="Your payments are still here. Try a wider date range, a different status, or clear the filters."
-            action={{ label: 'Clear filters', onClick: clearAll }}
+            title={t('list.noResults')}
+            message={t('payments.filteredEmpty')}
+            action={{ label: t('list.clearFilters'), onClick: clearAll }}
           />
         ) : (
           <ListEmptyState
             illustrated
             icon={<ReceiptText />}
-            title="No payments yet"
-            message="Payments appear here once a trip is completed."
+            title={t('payments.emptyTitle')}
+            message={t('payments.emptyMessage')}
           />
         )
       )}
@@ -171,7 +166,7 @@ export function PaymentMethods() {
               <p className="truncate font-medium text-text-primary">
                 {payment.status === 'CAPTURED' || payment.status === 'REFUNDED'
                   ? paymentMethodLabel(payment.method)
-                  : 'Trip fare'}
+                  : t('payments.tripFare')}
               </p>
               <p className="text-xs text-text-secondary">{new Date(payment.createdAt).toLocaleString()}</p>
             </div>

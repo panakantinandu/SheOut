@@ -13,6 +13,7 @@ import {
   LiveMap,
   OpenInMapsButton,
   PickupCodeCard,
+  SafetyText,
   SkeletonCard,
   StatusBadge,
   SuccessCheck,
@@ -25,7 +26,21 @@ import { ApiError, bookingApi, chatApi, dispatchApi } from '../api/client';
 import type { AssignedDriver, BookingStatus, BookingSummary, DriverLocation } from '../api/types';
 import { RatingPrompt } from '../components/RatingPrompt';
 import { TripPaymentCard } from '../components/TripPaymentCard';
-import { mockAction } from '../lib/mockAction';
+import { apiErrorText } from '../lib/apiErrors';
+import { mapsLink, shareViaDevice } from '../lib/emergency';
+import { useTranslation } from '@sheout/design-system';
+
+/** A conservative city speed for a two-wheeler, for the "about N min" line. */
+const CITY_SPEED_KMH = 20;
+
+/** Great-circle distance - an honest lower bound on the road distance. */
+function straightLineKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  const rad = (d: number) => (d * Math.PI) / 180;
+  const dLat = rad(b.lat - a.lat);
+  const dLng = rad(b.lng - a.lng);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 6371 * 2 * Math.asin(Math.sqrt(h));
+}
 
 const POLL_INTERVAL_MS = 3000;
 
@@ -69,27 +84,12 @@ const CLIENT_GRACE_SECONDS = 15;
  * doing at that moment: the radius really does expand between rounds, which
  * is why "Expanding the search area" is not a placating lie.
  */
-const SEARCH_STAGES: { afterSeconds: number; title: string; detail: string }[] = [
-  {
-    afterSeconds: 0,
-    title: 'Searching for a nearby driver...',
-    detail: 'This usually takes under a minute.',
-  },
-  {
-    afterSeconds: 15,
-    title: 'Still searching...',
-    detail: 'We are offering your trip to the closest partners first.',
-  },
-  {
-    afterSeconds: 35,
-    title: 'Expanding the search area...',
-    detail: 'Nobody very close by has taken it, so we are looking further out.',
-  },
-  {
-    afterSeconds: 60,
-    title: 'Still looking, hang on...',
-    detail: 'This one is taking longer than usual. We will tell you either way.',
-  },
+// Copy for each stage lives in the translations under tracking.search.<key>.
+const SEARCH_STAGES: { afterSeconds: number; key: string }[] = [
+  { afterSeconds: 0, key: 'searching' },
+  { afterSeconds: 15, key: 'stillSearching' },
+  { afterSeconds: 35, key: 'expanding' },
+  { afterSeconds: 60, key: 'stillLooking' },
 ];
 
 function searchStage(seconds: number) {
@@ -140,6 +140,8 @@ const DRIVER_LOCATION_POLL_MS = 7000;
  * who can hear both sides.
  */
 export function Tracking() {
+  const { t } = useTranslation();
+  const [shareNote, setShareNote] = useState<string | null>(null);
   const { bookingId } = useParams<{ bookingId: string }>();
   const navigate = useNavigate();
   const [booking, setBooking] = useState<BookingSummary | null>(null);
@@ -242,7 +244,7 @@ export function Tracking() {
         const result = await bookingApi.getById(bookingId!);
         if (!cancelled) setBooking(result);
       } catch (err) {
-        if (!cancelled) setError(err instanceof ApiError ? err.message : 'Could not load booking');
+        if (!cancelled) setError(apiErrorText(err, 'tracking.loadError'));
       }
     }
 
@@ -386,6 +388,35 @@ export function Tracking() {
    * needed: dispatch's own deadline has already passed, so the sweeper
    * settles that booking on its own within a tick or two.
    */
+  /**
+   * Share the trip with someone who should know where she is - the partner's
+   * name and registration, where she is going, and a map link to the
+   * partner's live position (or the pickup, before anyone is assigned).
+   * Through the phone's own share sheet; nothing is published and there is no
+   * public trip page. This replaced a button that showed a "not available"
+   * message.
+   */
+  async function shareTrip() {
+    if (!booking) return;
+    const text = driver
+      ? t('tracking.shareText', {
+          name: driver.name ?? t('tracking.yourPartner'),
+          vehicle: driver.vehicleRegistrationNumber ? ` (${driver.vehicleRegistrationNumber})` : '',
+          drop: booking.drop.label,
+          link: driverLocation ? mapsLink(driverLocation.lat, driverLocation.lng) : mapsLink(booking.pickup.lat, booking.pickup.lng),
+        })
+      : t('tracking.shareTextNoDriver', { drop: booking.drop.label, link: mapsLink(booking.pickup.lat, booking.pickup.lng) });
+    const outcome = await shareViaDevice(t('tracking.shareTrip'), text, '');
+    if (outcome === 'unsupported') {
+      try {
+        await navigator.clipboard?.writeText(text);
+        setShareNote(t('tracking.shareCopied'));
+      } catch {
+        setShareNote(text);
+      }
+    }
+  }
+
   async function handleTryAgain() {
     if (!booking) return;
     setRebooking(true);
@@ -401,7 +432,7 @@ export function Tracking() {
       // away from a trip that is now live.
       navigate(`/tracking/${fresh.id}`, { replace: true });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not book that again');
+      setError(apiErrorText(err, 'tracking.rebookError'));
     } finally {
       setRebooking(false);
     }
@@ -425,7 +456,7 @@ export function Tracking() {
       setAskingWhy(false);
       navigate('/home', { replace: true });
     } catch (err) {
-      setCancelError(err instanceof ApiError ? err.message : 'Could not cancel booking');
+      setCancelError(apiErrorText(err, 'tracking.cancelError'));
     } finally {
       setCancelling(false);
     }
@@ -463,11 +494,11 @@ export function Tracking() {
     && DRIVER_DETAILS_STATUSES.includes(booking?.status as BookingStatus);
   const markers: MapMarker[] = [];
   if (booking) {
-    markers.push({ key: 'pickup', lat: booking.pickup.lat, lng: booking.pickup.lng, label: 'Pickup', kind: 'pickup' });
-    markers.push({ key: 'drop', lat: booking.drop.lat, lng: booking.drop.lng, label: 'Drop', kind: 'drop' });
+    markers.push({ key: 'pickup', lat: booking.pickup.lat, lng: booking.pickup.lng, label: t('booking.pickup'), kind: 'pickup' });
+    markers.push({ key: 'drop', lat: booking.drop.lat, lng: booking.drop.lng, label: t('booking.drop'), kind: 'drop' });
   }
   if (driverLocation) {
-    markers.push({ key: 'driver', lat: driverLocation.lat, lng: driverLocation.lng, label: 'Driver', kind: 'driver' });
+    markers.push({ key: 'driver', lat: driverLocation.lat, lng: driverLocation.lng, label: t('tracking.driver'), kind: 'driver' });
   }
   // Unchanged for every normal case: cancelling during a live search still
   // works exactly as it did, reason dialog and all. Only suppressed once the
@@ -482,12 +513,12 @@ export function Tracking() {
         variant="back"
         title={
           searchFailed
-            ? 'No Drivers Found'
+            ? t('tracking.header.noDrivers')
             : isFinished
-              ? (booking?.status === 'CANCELLED' ? 'Trip Cancelled' : paymentDue ? 'Payment Due' : 'Trip Completed')
+              ? (booking?.status === 'CANCELLED' ? t('tracking.header.cancelled') : paymentDue ? t('tracking.header.paymentDue') : t('tracking.header.completed'))
               : hasDriver
-                ? 'On the Way'
-                : 'Finding a Driver'
+                ? t('tracking.header.onTheWay')
+                : t('tracking.header.finding')
         }
         onBack={() => navigate('/home')}
       />
@@ -495,24 +526,23 @@ export function Tracking() {
       {error && <p className="text-sm text-danger">{error}</p>}
 
       {!booking ? (
-        <SkeletonCard lines={4} label="Loading your trip" />
+        <SkeletonCard lines={4} label={t('tracking.loading')} />
       ) : searchFailed ? (
         /* The search is over and found nobody. Two ways forward and no
            spinner - which is the entire point of the status existing. */
         <Card tone="warning" className="flex items-start gap-3">
           <IconCircle size="lg" tone="soft" color="orange" icon={<SearchX />} />
           <div className="flex-1">
-            <p className="font-heading font-semibold text-text-primary">No drivers available right now</p>
+            <p className="font-heading font-semibold text-text-primary">{t('tracking.noDriversTitle')}</p>
             <p className="mt-1 text-sm text-text-secondary">
-              We could not find anyone free near {booking.pickup.label}. Nothing has been charged, and you can try
-              again straight away.
+              {t('tracking.noDriversBody', { place: booking.pickup.label })}
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               <Button size="md" disabled={rebooking} onClick={handleTryAgain}>
-                {rebooking ? 'Booking...' : 'Try Again'}
+                {rebooking ? t('booking.booking') : t('tracking.tryAgain')}
               </Button>
               <Button size="md" variant="secondary" disabled={rebooking} onClick={() => navigate('/home')}>
-                Cancel
+                {t('common.cancel')}
               </Button>
             </div>
           </div>
@@ -524,9 +554,9 @@ export function Tracking() {
         <Card tone="warning" className="flex items-start gap-3" data-testid="trip-payment-due-banner">
           <IconCircle size="lg" tone="soft" color="orange" icon={<WalletIcon />} />
           <div className="flex-1">
-            <p className="font-heading font-semibold text-text-primary">You&apos;ve arrived - payment due</p>
+            <p className="font-heading font-semibold text-text-primary">{t('tracking.arrivedTitle')}</p>
             <p className="mt-1 text-sm text-text-secondary">
-              Pay below to finish this trip. You can book your next ride once it is paid.
+              {t('tracking.arrivedBody')}
             </p>
           </div>
         </Card>
@@ -542,20 +572,20 @@ export function Tracking() {
             // Drawn once when the trip is paid - not confetti: this is the
             // end of an ordinary journey, and the same screen shows after one
             // that went badly.
-            <SuccessCheck size={48} label="Trip complete" />
+            <SuccessCheck size={48} label={t('tracking.header.completed')} />
           )}
           <div className="flex-1">
             <p className="font-heading font-semibold text-text-primary">
-              {booking.status === 'CANCELLED' ? 'This trip was cancelled' : 'Trip completed'}
+              {booking.status === 'CANCELLED' ? t('tracking.cancelledTitle') : t('tracking.completedTitle')}
             </p>
             <p className="mt-1 text-sm text-text-secondary">
               {booking.status === 'CANCELLED'
-                ? 'No driver is on the way. Book again whenever you are ready.'
-                : 'Paid, and on its way to your partner. Thanks for riding with SheOut.'}
+                ? t('tracking.cancelledBody')
+                : t('tracking.completedBody')}
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               <Button size="md" variant="secondary" onClick={() => navigate('/home')}>
-                {booking.status === 'CANCELLED' ? 'Book another ride' : 'Back to home'}
+                {booking.status === 'CANCELLED' ? t('tracking.bookAnother') : t('tracking.backHome')}
               </Button>
               {/* The thread is read-only now, but it is not gone. If there is
                   ever a disagreement about what was agreed on this trip, it
@@ -563,7 +593,7 @@ export function Tracking() {
                   reachable after the trip, not only during it. */}
               {booking.driverId && (
                 <Button size="md" variant="secondary" onClick={() => navigate(`/chat/${booking.id}`)}>
-                  View messages
+                  {t('tracking.viewMessages')}
                 </Button>
               )}
             </div>
@@ -582,12 +612,12 @@ export function Tracking() {
               actually happening - somebody has the request and is deciding -
               without naming her, because she has not agreed to come yet. */}
           <p className="font-heading font-semibold text-text-primary">
-            {booking.status === 'MATCHED' ? 'A partner is confirming...' : searchStage(searchedSeconds).title}
+            {booking.status === 'MATCHED' ? t('tracking.confirming') : t(`tracking.search.${searchStage(searchedSeconds).key}.title`)}
           </p>
           <p className="mt-1 text-sm text-text-secondary">
             {booking.status === 'MATCHED'
-              ? 'Someone nearby has your request. You will see who as soon as she accepts.'
-              : searchStage(searchedSeconds).detail}
+              ? t('tracking.confirmingBody')
+              : t(`tracking.search.${searchStage(searchedSeconds).key}.detail`)}
           </p>
 
           {/* A real bar against the real budget, so the wait has a visible
@@ -599,7 +629,7 @@ export function Tracking() {
             aria-valuemin={0}
             aria-valuemax={searchTimeoutSeconds}
             aria-valuenow={Math.min(searchedSeconds, searchTimeoutSeconds)}
-            aria-label="Time spent searching"
+            aria-label={t('tracking.searchProgress')}
           >
             <div
               className="h-full rounded-full bg-primary transition-[width] duration-1000 ease-linear"
@@ -622,7 +652,7 @@ export function Tracking() {
                 accepted. Nothing here is rendered during MATCHED: the
                 request is not even made - see DRIVER_DETAILS_STATUSES. */}
             <p className="truncate font-heading font-semibold text-text-primary">
-              {driver?.name || 'Your partner'}
+              {driver?.name || t('tracking.yourPartner')}
             </p>
             {/* Rendered only once the server has actually released her
                 details. Showing "New partner" while waiting would assert
@@ -633,7 +663,7 @@ export function Tracking() {
                 <AggregateRatingText
                   averageStars={driver.averageStars}
                   totalRatings={driver.totalRatings}
-                  emptyLabel="New partner"
+                  emptyLabel={t('tracking.newPartner')}
                 />
                 {driver.vehicleType && <> &middot; {vehicleLabel(driver.vehicleType)}</>}
               </p>
@@ -649,7 +679,7 @@ export function Tracking() {
           </div>
           {/* The one way to reach her. Not a call, and not a number. */}
           <button
-            aria-label="Message your partner"
+            aria-label={t('tracking.messagePartner')}
             className="rounded-full p-2 text-primary hover:bg-background"
             onClick={() => navigate(`/chat/${bookingId}`)}
           >
@@ -676,12 +706,12 @@ export function Tracking() {
           />
           <div className="min-w-0 flex-1">
             <p className="font-heading font-semibold text-text-primary">
-              {booking?.status === 'IN_PROGRESS' ? 'On your way' : 'Coming to collect you'}
+              {booking?.status === 'IN_PROGRESS' ? t('tracking.onYourWay') : t('tracking.comingToCollect')}
             </p>
             <p className="mt-1 text-sm text-text-secondary">
               {booking?.status === 'IN_PROGRESS'
-                ? 'Your trip has started. The map now follows you to your drop.'
-                : 'Watch her approach on the map. Have your code ready to read out.'}
+                ? t('tracking.onYourWayBody')
+                : <SafetyText k="pickupCode.haveReady" />}
             </p>
           </div>
         </Card>
@@ -691,12 +721,12 @@ export function Tracking() {
         <LiveMap markers={markers} />
         <p className="text-xs text-text-secondary">
           {isFinished
-            ? 'Where this trip would have started and ended.'
+            ? t('tracking.mapFinished')
             : driverLocation
-              ? `Driver position updated ${secondsAgo(driverLocation.recordedAt)}s ago - refreshes every ${DRIVER_LOCATION_POLL_MS / 1000}s`
+              ? t('tracking.mapUpdated', { seconds: secondsAgo(driverLocation.recordedAt), every: DRIVER_LOCATION_POLL_MS / 1000 })
               : hasDriver
-                ? 'Waiting for the driver to report a position...'
-                : 'Showing your pickup and drop. The driver appears once one is assigned.'}
+                ? t('tracking.mapWaiting')
+                : t('tracking.mapPreview')}
         </p>
         {/* Her partner's last reported position, in the map she already
             knows how to read. A small Leaflet view in a card is fine for a
@@ -708,11 +738,11 @@ export function Tracking() {
           <OpenInMapsButton
             lat={driverLocation.lat}
             lng={driverLocation.lng}
-            label="Your partner"
+            label={t('tracking.yourPartner')}
             variant="secondary"
             className="mt-2"
           >
-            Open her position in Google Maps
+            {t('tracking.openInMaps')}
           </OpenInMapsButton>
         )}
       </div>
@@ -734,26 +764,38 @@ export function Tracking() {
           {/* A cancelled trip was never charged. Showing a rupee figure
               with no qualifier reads as a bill. */}
           <span className="text-sm text-text-secondary">
-            {booking.status === 'CANCELLED' || searchFailed ? 'Estimated fare - not charged' : 'Estimated Fare'}
+            {booking.status === 'CANCELLED' || searchFailed ? t('tracking.fareNotCharged') : t('fare.estimated')}
           </span>
           <AmountText amount={booking.finalFare ?? booking.fareEstimate} size="lg" />
         </Card>
       )}
 
-      {booking && hasDriver && (
-        <Card>
-          <div className="flex justify-between text-sm">
-            <div>
-              <p className="text-text-secondary">Arriving in</p>
-              <p className="font-heading font-semibold text-text-primary">-- min (mock)</p>
+      {/* How far away she is, from her last real position - to the pickup
+          while she is coming, to the drop once the trip has started. This
+          used to be a placeholder reading "-- min (mock)". Straight-line
+          distance and a city-traffic speed: an honest "about", labelled as
+          one, rather than a routed ETA the app does not have. */}
+      {booking && hasDriver && driverLocation && (booking.status === 'ACCEPTED' || booking.status === 'IN_PROGRESS') && (() => {
+        const target = booking.status === 'IN_PROGRESS' ? booking.drop : booking.pickup;
+        const km = straightLineKm(driverLocation, target);
+        const minutes = Math.max(1, Math.round((km / CITY_SPEED_KMH) * 60));
+        return (
+          <Card data-testid="trip-eta">
+            <div className="flex justify-between text-sm">
+              <div>
+                <p className="text-text-secondary">
+                  {booking.status === 'IN_PROGRESS' ? t('tracking.etaToDrop') : t('tracking.etaToPickup')}
+                </p>
+                <p className="font-heading font-semibold text-text-primary">{t('tracking.aboutMinutes', { count: minutes })}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-text-secondary">{t('tracking.distance')}</p>
+                <p className="font-heading font-semibold text-text-primary">{t('fare.approxKm', { km: km.toFixed(1) })}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-text-secondary">Distance</p>
-              <p className="font-heading font-semibold text-text-primary">-- km (mock)</p>
-            </div>
-          </div>
-        </Card>
-      )}
+          </Card>
+        );
+      })()}
 
       {/* Hidden once the trip is over. Sharing a live location for a
           cancelled trip, or offering to message a driver who was never
@@ -763,17 +805,18 @@ export function Tracking() {
       <div className="flex justify-around">
         <button
           className="flex flex-col items-center gap-1 text-xs text-text-secondary"
-          onClick={() => mockAction('Share Live location', 'the map above is live for you, but a shareable trip link is not available yet')}
+          onClick={shareTrip}
+          data-testid="share-trip"
         >
           <IconCircle tone="soft" icon={<Radio />} />
-          Share Live
+          {t('tracking.shareTrip')}
         </button>
         <button
           className="flex flex-col items-center gap-1 text-xs text-danger"
           onClick={() => navigate('/sos', { state: { bookingId } })}
         >
           <IconCircle color="red" tone="soft" icon={<ShieldAlert />} />
-          SOS
+          {t('home.sos')}
         </button>
         {/* Was "Call", and it dialled nothing. It now reaches a person at
             SheOut rather than the partner - which is what a rider wanting to
@@ -786,7 +829,7 @@ export function Tracking() {
             onClick={() => { window.location.href = `tel:${supportPhoneNumber}`; }}
           >
             <IconCircle tone="soft" icon={<Headphones />} />
-            Support
+            {t('tracking.support')}
           </button>
         ) : (
           <button
@@ -794,15 +837,17 @@ export function Tracking() {
             onClick={() => navigate(`/chat/${bookingId}`)}
           >
             <IconCircle tone="soft" icon={<MessageCircle />} />
-            Chat
+            {t('chat.title')}
           </button>
         )}
       </div>
       )}
 
+      {shareNote && <p className="text-center text-xs text-text-secondary" data-testid="share-note">{shareNote}</p>}
+
       {canCancel && (
         <Button variant="danger" fullWidth disabled={cancelling} onClick={() => { setCancelError(null); setAskingWhy(true); }}>
-          Cancel Ride
+          {t('tracking.cancelRide')}
         </Button>
       )}
 
@@ -825,7 +870,7 @@ export function Tracking() {
           to deal with it before she could pay. My Bookings still offers to
           rate a trip that is left unpaid here. */}
       {booking?.status === 'COMPLETED' && tripPaid && (
-        <RatingPrompt bookingId={bookingId} counterpartLabel="your partner" />
+        <RatingPrompt bookingId={bookingId} counterpartLabel={t('common.yourPartner')} />
       )}
     </div>
   );

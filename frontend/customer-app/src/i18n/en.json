@@ -1,0 +1,594 @@
+{
+  "notifications": {
+    "title": "Notifications"
+  },
+  "serviceArea": {
+    "bothOutside": "Your pickup and drop are outside our service area",
+    "pickupOutside": "Your pickup is outside our service area",
+    "dropOutside": "Your drop is outside our service area",
+    "message": "SheOut currently operates only in and around {{city}} - this location is outside our service area right now.",
+    "youOutside": "You are outside our service area",
+    "youOutsideBody": "SheOut runs in {{city}} only, within about {{km}}km of the city. You can still book a trip for someone here - just set the pickup and drop yourself instead of using your current location."
+  },
+  "fare": {
+    "errorNote": "{{error}}. You can still book - the fare is confirmed on booking.",
+    "estimated": "Estimated Fare",
+    "calculating": "Calculating...",
+    "approxKm": "approx. {{km}} km",
+    "estimateError": "Could not estimate the fare"
+  },
+  "location": {
+    "pickOnMap": "Pick {{what}} on the map"
+  },
+  "home": {
+    "threeWomen": "Three women standing together",
+    "serviceRide": "Bike Taxi",
+    "serviceParcel": "Parcel Delivery",
+    "greeting": "Hello, {{name}} 👋",
+    "there": "there",
+    "subtitle": "Your safety, our priority",
+    "bannerTitle": "Ride with confidence",
+    "bannerSubtitle": "Safe rides, verified women partners",
+    "services": "Services",
+    "communityTitle": "Women Supporting Women",
+    "communitySubtitle": "Safe · Empowered · Together",
+    "quickAccess": "Quick Access",
+    "sos": "SOS",
+    "liveTrack": "Live Track",
+    "wallet": "Wallet",
+    "history": "History"
+  },
+  "about": {
+    "title": "About SheOut",
+    "version": "Version {{version}}",
+    "body": "Rides and deliveries built around women's safety - women riders, women drivers.",
+    "feature1Title": "Verified drivers",
+    "feature1Body": "Every driver passes an ID and police-verification review before they can accept a trip.",
+    "feature2Title": "Emergency contacts",
+    "feature2Body": "Add contacts to your account and one tap on SOS sends them your location by SMS."
+  },
+  "common": {
+    "continue": "Continue",
+    "saved": "Saved.",
+    "saveChanges": "Save Changes",
+    "saving": "Saving...",
+    "yourPartner": "your partner",
+    "loading": "Loading...",
+    "uploading": "Uploading...",
+    "sending": "Sending...",
+    "close": "Close",
+    "tryAgain": "Try again",
+    "cancel": "Cancel"
+  },
+  "completeProfile": {
+    "title": "Complete your profile",
+    "subtitle": "A few details before your first ride."
+  },
+  "profile": {
+    "loadError": "Could not load your profile",
+    "photoReason": "Your partner sees your photo so she knows she is picking up the right person.",
+    "uploadError": "Could not upload that photo. Please try again.",
+    "saveError": "Could not save your profile. Please try again.",
+    "personalDetails": "Personal Details",
+    "mobile": "Mobile Number",
+    "mobileFixed": "Your number identifies your account and cannot be changed here.",
+    "title": "My Profile",
+    "addName": "Add your name",
+    "googleSignIn": "Signed in with Google",
+    "sectionAccount": "Account",
+    "sectionSafety": "Safety",
+    "sectionPayments": "Payments",
+    "sectionSupport": "Support",
+    "emergencyContacts": "Emergency Contacts",
+    "emergencyContactsSub": "Who an SOS alerts",
+    "deletedNotice": "Your account has been deleted. Your personal details have been removed.",
+    "loading": "Loading your details"
+  },
+  "help": {
+    "toPlace": "to {{place}}",
+    "sent": "Sent. Support will reply here.",
+    "sendError": "Could not send that. Check your connection and try again.",
+    "raiseIssue": "Raise an issue",
+    "openSos": "Open SOS",
+    "ticketNotFound": "This ticket could not be found.",
+    "ticketLoadError": "Could not load this ticket. Check your connection and try again.",
+    "replyError": "Could not send that. Try again.",
+    "yourTicket": "Your ticket",
+    "loadingTicket": "Loading this ticket",
+    "raisedOn": "raised {{date}}",
+    "title": "Help & Support",
+    "introTitle": "We are here to help",
+    "introSubtitle": "Tell us what happened and we will reply here.",
+    "myTickets": "My tickets",
+    "otherWays": "Other ways to reach us",
+    "sosLabel": "Emergency SOS",
+    "sosSub": "In danger right now? Alert your emergency contacts",
+    "callSupport": "Call support",
+    "emailUs": "Email us",
+    "grievance": "Grievance Officer",
+    "grievancePending": "Contact details are being set up",
+    "faqHeading": "Common questions"
+  },
+  "addresses": {
+    "loadError": "Could not load addresses",
+    "saveError": "Could not save addresses",
+    "title": "Saved Addresses",
+    "loading": "Loading your addresses",
+    "home": "Home",
+    "homePlaceholder": "Add a home address",
+    "work": "Work",
+    "workPlaceholder": "Add a work address",
+    "save": "Save Addresses",
+    "note": "Home and Work are the two addresses your account stores. They are labels for now - booking still asks you to pick pickup and drop points."
+  },
+  "rating": {
+    "sendError": "Could not send that rating"
+  },
+  "chat": {
+    "loadError": "Could not load this conversation",
+    "sendError": "Could not send that message",
+    "title": "Chat",
+    "noNumbers": "Phone numbers cannot be shared here. If something needs a call, we will make it."
+  },
+  "verification": {
+    "title": "Identity Verification",
+    "loadError": "Could not load your verification status",
+    "tooLarge": "That file is larger than 10MB. Please upload a smaller photo.",
+    "submitted": "Document submitted. Our team will review it shortly.",
+    "uploadError": "Could not upload your document. Please try again.",
+    "loading": "Loading your verification",
+    "idVerification": "ID verification",
+    "verifiedBody": "You're verified and can book rides and deliveries.",
+    "reviewBody": "Your document is with our team. This usually takes a few hours.",
+    "rejectedBody": "Your last document could not be accepted. Please upload a clearer photo.",
+    "pendingBody": "SheOut is women-only. Upload a government ID so we can confirm your identity before your first booking.",
+    "replace": "Replace your document",
+    "upload": "Upload your ID",
+    "acceptedIds": "Aadhaar, passport, driving licence or voter ID. Make sure your name and photo are readable.",
+    "uploadDifferent": "Upload a different document",
+    "choose": "Choose document",
+    "privacyNote": "Your document is only used to confirm your identity and is reviewed by a person, never automatically."
+  },
+  "payments": {
+    "history": "Payment History",
+    "howPaid": "Each trip is paid in the app - from your SheOut wallet, or online by UPI, card or netbanking.",
+    "nothingStored": "No card or UPI ID is stored on your account - there is nothing saved to manage here, so this shows what you have actually been charged.",
+    "status": "Status",
+    "anyStatus": "Any status",
+    "amountRange": "Amount range",
+    "minAmount": "Minimum amount",
+    "min": "Min ₹",
+    "to": "to",
+    "maxAmount": "Maximum amount",
+    "max": "Max ₹",
+    "loading": "Loading your payment history",
+    "filteredEmpty": "Your payments are still here. Try a wider date range, a different status, or clear the filters.",
+    "emptyTitle": "No payments yet",
+    "emptyMessage": "Payments appear here once a trip is completed.",
+    "tripFare": "Trip fare"
+  },
+  "legal": {
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service"
+  },
+  "auth": {
+    "logout": "Log Out",
+    "logoutTitle": "Log out?",
+    "logoutMessage": "You will need your mobile number and an OTP to sign back in."
+  },
+  "faq": {
+    "q1": "How do I cancel a booking?",
+    "a1": "Open the trip from Bookings and use Cancel, any time before the trip starts. You will be asked why, in one tap. Cancelling often enough is looked at by a person here, never acted on automatically.",
+    "q2": "How do I contact my partner?",
+    "a2": "Through chat on the trip screen, from the moment she accepts until the trip ends. Phone numbers are never shared in either direction, and cannot be sent through chat. If something needs a call, call us and we will handle it.",
+    "q3": "When do I see who is picking me up?",
+    "a3": "Once she accepts your trip. You will see her name, photo, vehicle and registration number, and her rating. Nothing about her is shown before that, because until she accepts she may not be the one coming.",
+    "q4": "Who can see my SOS alert?",
+    "a4": "The emergency contacts saved on your account are sent an SMS with your live location, and the alert is raised to SheOut operators. If the SMS cannot be sent, the SOS screen lets you text them from your own phone.",
+    "q5": "How am I charged?",
+    "a5": "Per trip, in the app - from your SheOut wallet, or online by UPI, card or netbanking. Cash is not accepted. See Payment History for what you have paid."
+  },
+  "list": {
+    "noResults": "No results match your filters",
+    "clearFilters": "Clear filters"
+  },
+  "login": {
+    "login": {
+      "tab": "Login",
+      "heading": "Welcome Back!",
+      "subtitle": "Sign in to continue"
+    },
+    "signup": {
+      "tab": "Sign Up",
+      "heading": "Get Started",
+      "subtitle": "Create your account to book safe rides"
+    },
+    "alreadyRegistered": "That number is already registered - signing you in instead.",
+    "createdForYou": "We didn't find an account for that number, so we've created one.",
+    "invalidPhone": "Enter a valid 10-digit mobile number",
+    "sendError": "Could not send the code. Please check your connection and try again.",
+    "verifyError": "Could not verify code",
+    "googleNotConfigured": "Google sign-in is not configured yet",
+    "googleFailed": "Google sign-in failed",
+    "modeAria": "Login or sign up",
+    "phonePlaceholder": "Mobile Number",
+    "sendOtp": "Send OTP",
+    "codeSentTo": "Enter the code sent to {{phone}}",
+    "codePlaceholder": "6-digit code",
+    "verifying": "Verifying...",
+    "verify": "Verify",
+    "changeNumber": "Change number",
+    "or": "or",
+    "signingIn": "Signing in...",
+    "google": "Continue with Google",
+    "newHint": "New to SheOut? Tap <link>Sign Up</link> above - we'll set up your account after the OTP.",
+    "existingHint": "Already have an account? Tap <link>Login</link> above - same number, same OTP.",
+    "googleLoadError": "Could not load Google sign-in - check your connection",
+    "googleUnavailable": "Google sign-in is unavailable",
+    "googleCancelled": "Google sign-in was cancelled"
+  },
+  "drawer": {
+    "language": "Language",
+    "refer": "Refer a Friend",
+    "seller": "SheOut Seller",
+    "comingSoon": "Coming soon",
+    "rate": "Rate the App",
+    "rateSoon": "Rating opens once SheOut is in the app stores. Thank you for wanting to!",
+    "helpAndInfo": "Help & info",
+    "support": "Contact Support",
+    "version": "SheOut version {{version}}",
+    "languageSaved": "Language changed",
+    "languageSavedLocally": "Language changed on this phone. It will be saved to your account next time."
+  },
+  "seller": {
+    "title": "SheOut Seller",
+    "comingSoon": "Coming soon",
+    "headline": "Become a SheOut Seller",
+    "subhead": "Sell what you make or offer - from home, to women across the city, delivered by women.",
+    "howItWorks": "How it will work",
+    "steps": {
+      "profile": {
+        "title": "Create Profile",
+        "body": "Set up your shop with your name, photo and what you offer."
+      },
+      "products": {
+        "title": "Add Products",
+        "body": "List products or services with photos and prices."
+      },
+      "orders": {
+        "title": "Receive Orders",
+        "body": "Customers order in the SheOut app and you get notified."
+      },
+      "paid": {
+        "title": "Get Paid",
+        "body": "Payments go straight to your SheOut wallet."
+      },
+      "delivers": {
+        "title": "SheOut Delivers",
+        "body": "Our women partners pick up and deliver to your customers."
+      }
+    },
+    "categoriesTitle": "What you could sell",
+    "categories": {
+      "fashion": "Fashion & Saree",
+      "beauty": "Beauty Services",
+      "tailoring": "Tailoring",
+      "mehandi": "Mehandi",
+      "gifts": "Gifts",
+      "ornaments": "Ornaments"
+    },
+    "notifyMe": "Notify me when this launches",
+    "notifying": "Saving...",
+    "notifyNote": "We only record that you are interested. No shop is created and nothing is shared.",
+    "notifyError": "Could not save that. Please try again.",
+    "joinedTitle": "You're on the list",
+    "joinedBody": "We'll tell you first when SheOut Seller launches."
+  },
+  "refer": {
+    "headline": "Invite a friend to SheOut",
+    "subhead": "Safe rides with verified women partners - share it with someone who needs it.",
+    "notYet": "Referral rewards are not live yet. When they are, your invite link and rewards will show here. Until then you can still share SheOut.",
+    "share": "Share SheOut",
+    "shareText": "I ride with SheOut - safe rides and deliveries by verified women partners.",
+    "copied": "Link copied - paste it anywhere to share."
+  },
+  "booking": {
+    "pickup": "Pickup",
+    "drop": "Drop",
+    "mapBoth": "Pickup and drop shown below.",
+    "mapPickDrop": "Pick a destination to see it on the map.",
+    "pickupLocation": "Pickup Location",
+    "tapToChoosePickup": "Tap to choose your pickup point",
+    "findingLocation": "Finding your location...",
+    "dropLocation": "Drop Location",
+    "selectDestination": "Select Destination",
+    "setPickup": "Set pickup location",
+    "whereTo": "Where to?",
+    "currentLocation": "Your Current Location",
+    "createError": "Could not create your booking. Please check your connection and try again.",
+    "booking": "Booking...",
+    "bookNow": "Book Now"
+  },
+  "apiError": {
+    "UNPAID_TRIP": "Your last trip is still unpaid. Pay for it from your wallet or online, then book again.",
+    "OUTSIDE_SERVICE_AREA": "SheOut only operates in and around Hyderabad right now. Pickup and drop must both be inside the service area.",
+    "INSUFFICIENT_BALANCE": "Your SheOut wallet does not have enough for this fare. Add money or pay online.",
+    "PAYMENT_NOT_VERIFIED": "This payment could not be verified. If money left your account, contact support with your trip.",
+    "PAYMENT_NOT_CAPTURED": "The payment did not go through. Nothing was taken. You can try again.",
+    "INVALID_AMOUNT": "Add between ₹10 and ₹10,000, keeping your balance at or under ₹10,000.",
+    "CASH_NOT_ACCEPTED": "Cash is no longer accepted. Pay in the app.",
+    "TRIP_NOT_ENDED": "This trip has not ended yet, so there is nothing to pay.",
+    "INVALID_PICKUP_CODE": "That code doesn't match. Ask your rider to read it out again.",
+    "PICKUP_CODE_REQUIRED": "Enter the four-digit pickup code.",
+    "PICKUP_VERIFICATION_LOCKED": "Too many wrong codes for this trip. Contact support."
+  },
+  "picker": {
+    "noAddress": "No address found at that point. Move the pin somewhere closer to a road or landmark.",
+    "lookupError": "Could not look up that point. Check your connection and try again.",
+    "noResults": "No results. Try a different search, or drop a pin on the map.",
+    "searchError": "Could not search right now. Check your connection, or drop a pin on the map instead.",
+    "youOutside": "You appear to be outside our service area.",
+    "search": "Search",
+    "pickOnMap": "Pick on map",
+    "searchPlaceholder": "Search for an area, street or landmark",
+    "findingYou": "Finding you...",
+    "useCurrent": "Use my current location",
+    "searching": "Searching...",
+    "outsideArea": "Outside service area",
+    "popular": "Popular places",
+    "osm": "Search results © OpenStreetMap contributors",
+    "selectedPoint": "Selected point",
+    "mapHint": "Tap anywhere on the map to drop a pin, or drag the pin to move it.",
+    "noPin": "No pin yet. Tap the map to choose a point.",
+    "lookingUp": "Looking up this address...",
+    "cannotName": "Could not name this point",
+    "pinAt": "Pin dropped at",
+    "useThis": "Use this location"
+  },
+  "contacts": {
+    "loadError": "Could not load your contacts",
+    "nameRequired": "Enter their name.",
+    "phoneRequired": "Enter their 10-digit mobile number.",
+    "saveError": "Could not save that contact. Please try again.",
+    "removeError": "Could not remove that contact. Please try again.",
+    "loading": "Loading your contacts...",
+    "emptyTitle": "No contacts yet",
+    "removeAria": "Remove {{name}}",
+    "add": "Add a contact",
+    "theirName": "Their name",
+    "namePlaceholder": "e.g. Asha",
+    "theirPhone": "Their mobile number",
+    "relationship": "Relationship",
+    "save": "Save contact",
+    "removeTitle": "Remove this contact?",
+    "remove": "Remove",
+    "rel": {
+      "Mother": "Mother",
+      "Father": "Father",
+      "Sister": "Sister",
+      "Brother": "Brother",
+      "Partner": "Partner",
+      "Friend": "Friend"
+    }
+  },
+  "delivery": {
+    "parcel": {
+      "title": "Parcel Delivery",
+      "details": "Package Details (optional)",
+      "detailsPlaceholder": "e.g. small box, handle with care",
+      "cta": "Continue"
+    },
+    "lunchbox": {
+      "title": "Lunch Box Delivery",
+      "details": "Meal Notes (optional)",
+      "detailsPlaceholder": "e.g. less spicy",
+      "cta": "Place Order"
+    },
+    "mealType": "Meal Type",
+    "veg": "Veg",
+    "nonVeg": "Non-Veg",
+    "choosePlan": "Choose Plan",
+    "plan": {
+      "DAILY": "Daily",
+      "WEEKLY": "Weekly",
+      "MONTHLY": "Monthly"
+    }
+  },
+  "geo": {
+    "unsupported": "This browser cannot share your location. Search for your pickup point instead.",
+    "blocked": "Location permission is blocked. Allow it in your browser settings, or search for your pickup point.",
+    "unavailable": "Your location is unavailable right now. Try again, or search for your pickup point.",
+    "timeout": "Finding your location took too long. Try again, or search for your pickup point."
+  },
+  "payment": {
+    "windowLoadError": "Could not load the payment window. Check your connection and try again.",
+    "didNotGoThrough": "The payment did not go through."
+  },
+  "wallet": {
+    "loadError": "Could not load your wallet.",
+    "capHint": "Your wallet can hold up to ₹{{max}}. You can add up to ₹{{room}}.",
+    "rangeHint": "Enter an amount from ₹{{min}} to ₹{{max}}.",
+    "checkoutDescription": "Add money to SheOut wallet",
+    "checkoutFailed": "{{reason}} Nothing was added - you can try again.",
+    "added": "₹{{amount}} added to your wallet.",
+    "notVerified": "We could not verify that payment. If money left your account, it will be added shortly or refunded - contact support if not.",
+    "addError": "Could not add money right now. Please try again.",
+    "title": "Wallet",
+    "loading": "Loading your wallet",
+    "balance": "SheOut wallet balance",
+    "addMoney": "Add Money",
+    "needForTrip": "Add at least ₹{{amount}} to pay for your trip. You'll go straight back to it.",
+    "addMoneyTitle": "Add money",
+    "amount": "Amount (₹)",
+    "amountPlaceholder": "₹{{min}} to ₹{{max}}",
+    "opening": "Opening payment...",
+    "addAmount": "Add ₹{{amount}}",
+    "add": "Add",
+    "razorpayNote": "Paid securely through Razorpay by UPI, card or netbanking. Money is added once your bank confirms it.",
+    "payTrip": "Pay a Trip",
+    "tripPayments": "Trip Payments",
+    "closedLoopNote": "Your wallet pays only for your own SheOut trips, and each fare goes to your partner's SheOut wallet. It can't be sent to other people or withdrawn.",
+    "activity": "Wallet activity",
+    "activityLoading": "Loading your wallet activity",
+    "activityEmptyTitle": "No activity yet",
+    "activityEmptyMessage": "Money you add and trips you pay from your wallet appear here.",
+    "moneyAdded": "Money added",
+    "tripPayment": "Trip payment",
+    "balanceAfter": "Balance ₹{{amount}}"
+  },
+  "tripPay": {
+    "lowBalance": "Your wallet balance is too low for this fare. Add money, or pay online.",
+    "walletError": "Could not pay from your wallet. Please try again.",
+    "deliveryFare": "Delivery fare",
+    "rideFare": "Ride fare",
+    "checkoutFailed": "{{reason}} Nothing was taken - you can try again.",
+    "onlineUnavailable": "Online payment is not available right now. Please try again in a minute, or pay from your wallet.",
+    "gettingReady": "Getting your fare ready...",
+    "paid": "Paid",
+    "settledEarlier": "Settled earlier",
+    "cashToPartner": "Cash to your partner",
+    "payForTrip": "Pay for this trip",
+    "paying": "Paying...",
+    "payFromWallet": "Pay from SheOut wallet",
+    "payFromWalletBalance": "Pay from wallet (balance ₹{{amount}})",
+    "addToWallet": "Add ₹{{amount}} or more to your wallet",
+    "payOnline": "Pay online - UPI, card or netbanking",
+    "appOnlyNote": "Pay only in the app - never in cash or to your partner's own account. Your fare goes to her SheOut wallet, and you can book your next trip once it is paid."
+  },
+  "unpaid": {
+    "title": "Pay ₹{{amount}} for your last trip",
+    "body": "You can book your next ride once it is paid."
+  },
+  "sos": {
+    "shareTitle": "My location",
+    "shareText": "I am here:",
+    "shareTextNamed": "{{name}} is here:",
+    "shared": "Location shared.",
+    "linkCopied": "Your location link is copied - paste it anywhere, or use the buttons below.",
+    "useButtons": "Use the buttons below to send your location.",
+    "sendingAria": "Sending SOS alert",
+    "sendAria": "Send SOS alert",
+    "safetyFeatures": "Safety Features",
+    "features": {
+      "liveLocation": "Live Location Sharing",
+      "support": "24/7 Support",
+      "verifiedPartners": "Verified Women Partners",
+      "emergencyContacts": "Emergency Contacts"
+    }
+  },
+  "bookings": {
+    "all": {
+      "title": "My Bookings",
+      "emptyTitle": "No bookings yet",
+      "emptyMessage": "Your rides and deliveries will appear here once you book your first one."
+    },
+    "live": {
+      "title": "Live Tracking",
+      "emptyTitle": "Nothing in progress",
+      "emptyMessage": "You have no trip running right now. Book a ride or a delivery and you can follow it on the map from here."
+    },
+    "history": {
+      "title": "Trip History",
+      "emptyTitle": "No past trips yet",
+      "emptyMessage": "Trips you finish or cancel move here, so you can look back at what you paid."
+    },
+    "tabs": {
+      "ALL": "All",
+      "RIDES": "Rides",
+      "PARCELS": "Parcels"
+    },
+    "liveNote": "Trips happening now. Finished trips are under History.",
+    "historyNote": "Trips already finished or cancelled. Anything running now is under Live Track.",
+    "seeAll": "See all",
+    "searchPlaceholder": "Search pickup or drop",
+    "loading": "Loading your trips",
+    "filteredEmpty": "Your trips are still here. Try a wider date range, a different status, or clear the filters.",
+    "clearAll": "Clear filters and search",
+    "bookRide": "Book a ride",
+    "to": "To {{place}}",
+    "youRated": "You rated this {{stars}} out of 5",
+    "rateTrip": "Rate this trip",
+    "track": "Track"
+  },
+  "tracking": {
+    "search": {
+      "searching": {
+        "title": "Searching for a nearby driver...",
+        "detail": "This usually takes under a minute."
+      },
+      "stillSearching": {
+        "title": "Still searching...",
+        "detail": "We are offering your trip to the closest partners first."
+      },
+      "expanding": {
+        "title": "Expanding the search area...",
+        "detail": "Nobody very close by has taken it, so we are looking further out."
+      },
+      "stillLooking": {
+        "title": "Still looking, hang on...",
+        "detail": "This one is taking longer than usual. We will tell you either way."
+      }
+    },
+    "loadError": "Could not load booking",
+    "rebookError": "Could not book that again",
+    "cancelError": "Could not cancel booking",
+    "driver": "Driver",
+    "header": {
+      "noDrivers": "No Drivers Found",
+      "cancelled": "Trip Cancelled",
+      "paymentDue": "Payment Due",
+      "completed": "Trip Completed",
+      "onTheWay": "On the Way",
+      "finding": "Finding a Driver"
+    },
+    "loading": "Loading your trip",
+    "noDriversTitle": "No drivers available right now",
+    "noDriversBody": "We could not find anyone free near {{place}}. Nothing has been charged, and you can try again straight away.",
+    "tryAgain": "Try Again",
+    "arrivedTitle": "You've arrived - payment due",
+    "arrivedBody": "Pay below to finish this trip. You can book your next ride once it is paid.",
+    "cancelledTitle": "This trip was cancelled",
+    "completedTitle": "Trip completed",
+    "cancelledBody": "No driver is on the way. Book again whenever you are ready.",
+    "completedBody": "Paid, and on its way to your partner. Thanks for riding with SheOut.",
+    "bookAnother": "Book another ride",
+    "backHome": "Back to home",
+    "viewMessages": "View messages",
+    "confirming": "A partner is confirming...",
+    "confirmingBody": "Someone nearby has your request. You will see who as soon as she accepts.",
+    "searchProgress": "Time spent searching",
+    "yourPartner": "Your partner",
+    "newPartner": "New partner",
+    "messagePartner": "Message your partner",
+    "onYourWay": "On your way",
+    "comingToCollect": "Coming to collect you",
+    "onYourWayBody": "Your trip has started. The map now follows you to your drop.",
+    "mapFinished": "Where this trip would have started and ended.",
+    "mapUpdated": "Driver position updated {{seconds}}s ago - refreshes every {{every}}s",
+    "mapWaiting": "Waiting for the driver to report a position...",
+    "mapPreview": "Showing your pickup and drop. The driver appears once one is assigned.",
+    "openInMaps": "Open her position in Google Maps",
+    "fareNotCharged": "Estimated fare - not charged",
+    "etaToPickup": "Arriving in",
+    "etaToDrop": "To your drop",
+    "aboutMinutes_one": "about {{count}} min",
+    "aboutMinutes_other": "about {{count}} min",
+    "distance": "Distance",
+    "shareTrip": "Share trip",
+    "shareText": "I'm on a SheOut ride with {{name}}{{vehicle}}, going to {{drop}}. Her live position: {{link}}",
+    "shareTextNoDriver": "I've booked a SheOut ride to {{drop}}. My pickup: {{link}}",
+    "shareCopied": "Trip details copied - paste them to anyone you want to keep informed.",
+    "support": "Support",
+    "cancelRide": "Cancel Ride"
+  },
+  "nav": {
+    "home": "Home",
+    "bookings": "Bookings",
+    "sos": "SOS",
+    "wallet": "Wallet",
+    "profile": "Profile"
+  },
+  "splash": {
+    "footer": "Safe · Fast · Women Focused"
+  }
+}

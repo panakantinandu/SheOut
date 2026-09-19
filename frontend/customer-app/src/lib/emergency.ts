@@ -66,7 +66,9 @@ export function openSmsComposer(phoneNumbers: string[], body: string): void {
 export async function shareViaDevice(title: string, text: string, url: string): Promise<'shared' | 'cancelled' | 'unsupported'> {
   if (typeof navigator.share !== 'function') return 'unsupported';
   try {
-    await navigator.share({ title, text, url });
+    // No url when there is none: an empty one is read as this page's own
+    // address, which only works for someone signed in as her.
+    await navigator.share(url ? { title, text, url } : { title, text });
     return 'shared';
   } catch (err) {
     // AbortError is her closing the sheet. Anything else - most often a lost

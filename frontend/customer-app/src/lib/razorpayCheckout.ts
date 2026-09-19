@@ -1,3 +1,4 @@
+import { i18next } from '@sheout/design-system';
 import type { CheckoutDetails, CheckoutResult } from '../api/types';
 
 const CHECKOUT_SCRIPT_URL = 'https://checkout.razorpay.com/v1/checkout.js';
@@ -45,7 +46,7 @@ function loadCheckoutScript(): Promise<void> {
       script.onerror = () => {
         script.remove();
         scriptLoad = null;
-        reject(new Error('Could not load the payment window. Check your connection and try again.'));
+        reject(new Error(i18next.t('payment.windowLoadError')));
       };
       document.body.appendChild(script);
     });
@@ -75,7 +76,7 @@ export async function openRazorpayCheckout(
 ): Promise<CheckoutOutcome> {
   await loadCheckoutScript();
   const Razorpay = window.Razorpay;
-  if (!Razorpay) throw new Error('Could not load the payment window. Please try again.');
+  if (!Razorpay) throw new Error(i18next.t('payment.windowLoadError'));
 
   return new Promise<CheckoutOutcome>((resolve) => {
     let lastFailure: string | null = null;
@@ -103,7 +104,7 @@ export async function openRazorpayCheckout(
       },
     });
     checkout.on('payment.failed', (response) => {
-      lastFailure = response.error?.description ?? 'The payment did not go through.';
+      lastFailure = response.error?.description ?? i18next.t('payment.didNotGoThrough');
     });
     checkout.open();
   });
