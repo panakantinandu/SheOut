@@ -163,7 +163,12 @@ export function Home() {
     let cancelled = false;
     async function poll() {
       try {
-        const [result, hold] = await Promise.all([bookingApi.listMine(), bookingApi.getPaymentHold()]);
+        // The hold is extra information; a failure fetching it must never
+        // stop the trip list itself from refreshing.
+        const [result, hold] = await Promise.all([
+          bookingApi.listMine(),
+          bookingApi.getPaymentHold().catch(() => null),
+        ]);
         if (!cancelled) {
           setBookings(result);
           setPaymentHold(hold);
