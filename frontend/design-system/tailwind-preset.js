@@ -79,6 +79,13 @@ export default {
           from: { strokeDashoffset: '48' },
           to: { strokeDashoffset: '0' },
         },
+        // The tab you have just landed on, springing up once as it takes
+        // the pill. Overshoots and settles - a tap should feel answered.
+        'nav-pop': {
+          '0%': { transform: 'scale(1)' },
+          '45%': { transform: 'scale(1.22)' },
+          '100%': { transform: 'scale(1)' },
+        },
         'pop-in': {
           from: { transform: 'scale(0.86)', opacity: '0' },
           to: { transform: 'scale(1)', opacity: '1' },
@@ -90,6 +97,7 @@ export default {
         'fade-slide-in': 'fade-slide-in 200ms ease-out both',
         'draw-check': 'draw-check 420ms ease-out 120ms both',
         'pop-in': 'pop-in 220ms ease-out both',
+        'nav-pop': 'nav-pop 320ms cubic-bezier(0.34, 1.56, 0.64, 1) both',
       },
     },
   },
