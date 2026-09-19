@@ -5,6 +5,7 @@ import type {
   BookingCategory,
   BookingStatus,
   BookingSummary,
+  PaymentHold,
   CancellationReason,
   ChatMessage,
   ChatThreadResponse,
@@ -310,6 +311,14 @@ export const dispatchApi = {
 
 export const bookingApi = {
   /**
+   * The ended trip still waiting for the rider's payment that is keeping new
+   * offers away, or null. Lifts on its own at holdUntil.
+   */
+  async getPaymentHold(): Promise<PaymentHold | null> {
+    return (await request<PaymentHold | undefined>('/api/v1/bookings/me/payment-hold')) ?? null;
+  },
+
+  /**
    * The partner's own trips, paged and filtered. Same endpoint the rider
    * app calls - it is scoped by the token, so a DRIVER token returns the
    * trips they drove.
@@ -575,15 +584,8 @@ export const paymentsApi = {
   getForBooking(bookingId: string): Promise<PaymentSummary> {
     return request(`/api/v1/payments/bookings/${bookingId}`);
   },
-
-  /**
-   * She confirms the rider handed her the fare in cash. Only the partner on
-   * the trip may - the rider cannot mark her own fare paid. 409 once it is
-   * already paid, online or otherwise.
-   */
-  confirmCash(bookingId: string): Promise<PaymentSummary> {
-    return request(`/api/v1/payments/bookings/${bookingId}/cash`, { method: 'POST' });
-  },
+  // No cash confirmation any more: every fare is paid by the rider in her
+  // app and lands in the partner's wallet. See the backend's PaymentController.
 };
 
 export const payoutsApi = {

@@ -15,6 +15,7 @@ import com.sheout.booking.internal.fare.RouteProvider;
 import com.sheout.booking.BookingSummary;
 import com.sheout.booking.BookingType;
 import com.sheout.booking.GeoAddress;
+import com.sheout.booking.PaymentHold;
 import com.sheout.booking.RequestBookingCommand;
 import com.sheout.booking.internal.BookingService;
 import com.sheout.sharedkernel.Result;
@@ -46,6 +47,7 @@ import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -188,6 +190,24 @@ public class BookingController {
                 ? bookingService.pageForDriver(caller.accountId(), query, pageable)
                 : bookingService.pageForCustomer(caller.accountId(), query, pageable);
         return ResponseEntity.ok(PageResponse.from(result, summary -> summary));
+    }
+
+    /**
+     * The caller's unpaid ended trip, if one is holding her back - 204 when
+     * nothing is.
+     * <p>
+     * A rider's hold stands until she pays; the app uses it to send her to
+     * the trip that needs paying instead of letting her fill in a whole new
+     * booking only to be refused at the end. A partner's hold is the one
+     * keeping new offers away, with the time it lifts on its own.
+     */
+    @GetMapping("/api/v1/bookings/me/payment-hold")
+    public ResponseEntity<PaymentHold> myPaymentHold() {
+        CurrentAccount caller = requireAuthenticated();
+        Optional<PaymentHold> hold = caller.role() == AccountRole.DRIVER
+                ? bookingService.findPaymentHoldForDriver(caller.accountId())
+                : bookingService.findPaymentHoldForCustomer(caller.accountId());
+        return hold.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.noContent().build());
     }
 
     @GetMapping("/api/v1/bookings/{bookingId}")
@@ -421,6 +441,11 @@ public class BookingController {
             case PICKUP_VERIFICATION_LOCKED -> new ApiException(
                     HttpStatus.CONFLICT, "PICKUP_VERIFICATION_LOCKED",
                     "Too many wrong codes for this trip. Call support and they will sort it out with you.");
+            // Its own code so the app can take her straight to the trip that
+            // needs paying rather than showing a dead-end error.
+            case UNPAID_TRIP -> new ApiException(
+                    HttpStatus.CONFLICT, "UNPAID_TRIP",
+                    "Your last trip is still unpaid. Pay for it from your wallet or online, then book again.");
         };
     }
 

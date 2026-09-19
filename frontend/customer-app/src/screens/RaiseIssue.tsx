@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button, RaiseIssueForm, TopHeader, bookingCategoryLabel, showToast } from '@sheout/design-system';
 import type { RaiseIssueValues, SelectOption } from '@sheout/design-system';
 import { ApiError, bookingApi, supportApi } from '../api/client';
+import { localEmergencyNumber } from '../lib/emergency';
 
 /**
  * Raising a support ticket.
@@ -70,7 +71,7 @@ export function RaiseIssue() {
             <p className="font-semibold">Are you in danger right now?</p>
             <p className="text-text-secondary">
               A ticket is read when support reaches it. If you need help this minute, use SOS to alert your
-              emergency contacts, or call 112.
+              emergency contacts, or call {localEmergencyNumber().number}.
             </p>
             <Button type="button" variant="danger" size="md" onClick={() => navigate('/sos')}>
               Open SOS

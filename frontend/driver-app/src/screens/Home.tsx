@@ -1,4 +1,4 @@
-import { Bell, Bike, CheckCircle2, ClipboardList, CloudOff, Globe2, IndianRupee, MapPinOff, Navigation2, Power, RefreshCw, ShieldCheck } from 'lucide-react';
+import { Bell, Bike, CheckCircle2, ClipboardList, CloudOff, Globe2, Hourglass, IndianRupee, MapPinOff, Navigation2, Power, RefreshCw, ShieldCheck } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -33,7 +33,7 @@ import {
   usersApi,
   verificationApi,
 } from '../api/client';
-import type { AggregateRating, BookingSummary, DriverProfileSummary, VerificationSummary } from '../api/types';
+import type { AggregateRating, BookingSummary, DriverProfileSummary, PaymentHold, VerificationSummary } from '../api/types';
 import { RatingPrompt } from '../components/RatingPrompt';
 import { readPositionOnce, useShareLocation } from '../lib/LocationBroadcastContext';
 import { playOfferChime, unlockChime } from '../lib/offerChime';
@@ -94,6 +94,8 @@ export function Home() {
   const [profile, setProfile] = useState<DriverProfileSummary | null>(null);
   const [verification, setVerification] = useState<VerificationSummary | null>(null);
   const [bookings, setBookings] = useState<BookingSummary[]>([]);
+  /** A just-ended trip still waiting for the rider's payment - no new offers until it clears. */
+  const [paymentHold, setPaymentHold] = useState<PaymentHold | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [verificationError, setVerificationError] = useState<string | null>(null);
@@ -161,8 +163,11 @@ export function Home() {
     let cancelled = false;
     async function poll() {
       try {
-        const result = await bookingApi.listMine();
-        if (!cancelled) setBookings(result);
+        const [result, hold] = await Promise.all([bookingApi.listMine(), bookingApi.getPaymentHold()]);
+        if (!cancelled) {
+          setBookings(result);
+          setPaymentHold(hold);
+        }
       } catch {
         // Transient poll failure - next tick retries.
       }
@@ -182,7 +187,9 @@ export function Home() {
 
   const { todayEarnings, completedRides, activeTripsCount, recentTrips } = useMemo(() => {
     const today = startOfDay();
-    const completed = bookings.filter((b) => b.status === 'COMPLETED' && b.completedAt);
+    // Paid trips only. A fare still waiting for the rider is not earned yet,
+    // and counting it would show her money that may never arrive.
+    const completed = bookings.filter((b) => b.status === 'COMPLETED' && b.completedAt && b.paymentSettledAt);
     const completedToday = completed.filter((b) => new Date(b.completedAt!) >= today);
     const todaySum = completedToday.reduce((sum, b) => sum + (b.finalFare ?? b.fareEstimate), 0);
     const active = bookings.filter((b) => b.status === 'MATCHED' || b.status === 'ACCEPTED' || b.status === 'IN_PROGRESS').length;
@@ -502,6 +509,32 @@ export function Home() {
           >
             {togglingOnline ? '...' : isOnline ? 'Go Offline' : 'Go Online'}
           </Button>
+        </Card>
+      )}
+
+      {/* Why no requests are arriving, if a fare is outstanding. The server
+          keeps offers away until the rider pays or the hold runs out; this
+          says so rather than leaving her online and wondering. */}
+      {paymentHold && !activeTrip && (
+        <Card
+          tone="warning"
+          className="flex items-center gap-3"
+          onClick={() => navigate(`/trip/${paymentHold.bookingId}`)}
+          data-testid="dashboard-payment-hold"
+        >
+          <IconCircle tone="soft" color="orange" icon={<Hourglass className="h-5 w-5" />} />
+          <div className="flex-1">
+            <p className="font-heading font-semibold text-text-primary">
+              Waiting for ₹{paymentHold.amount.toFixed(0)} from your last rider
+            </p>
+            <p className="text-xs text-text-secondary">
+              New requests resume when she pays
+              {paymentHold.holdUntil
+                ? `, or at ${new Date(paymentHold.holdUntil).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
+                : ''}
+              .
+            </p>
+          </div>
         </Card>
       )}
 

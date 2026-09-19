@@ -380,6 +380,14 @@ public class DispatchService {
         if (authApi.findAccount(driverId).map(AccountSummary::blocked).orElse(true)) {
             return false;
         }
+        // A trip she has just ended is still waiting for the rider's
+        // payment. She is not sent to someone else until it lands - or until
+        // the hold runs out, so a rider who never pays cannot keep her off
+        // the road. Checked here, the one availability gate, so it covers
+        // both new offers and accepting one already on her screen.
+        if (bookingApi.findPaymentHoldForDriver(driverId).isPresent()) {
+            return false;
+        }
         return driverProfileApi.isCurrentlyVerified(driverId);
     }
 

@@ -123,7 +123,8 @@ export function Earnings() {
   }, [load]);
 
   const { periodTotal, allTimeTotal, completedTrips, byGroup, trips } = useMemo(() => {
-    const completed = (bookings ?? []).filter((b) => b.status === 'COMPLETED' && b.completedAt);
+    // Paid trips only - a fare the rider has not paid yet is not earned.
+    const completed = (bookings ?? []).filter((b) => b.status === 'COMPLETED' && b.completedAt && b.paymentSettledAt);
     // A custom range overrides the period preset when one is set - two date
     // filters both narrowing at once would leave a driver unable to tell
     // which one produced the number.

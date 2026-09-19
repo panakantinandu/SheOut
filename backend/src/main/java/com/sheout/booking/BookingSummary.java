@@ -27,6 +27,17 @@ public record BookingSummary(
         Instant acceptedAt,
         Instant startedAt,
         Instant completedAt,
-        Instant cancelledAt
+        Instant cancelledAt,
+        /**
+         * When the rider's payment was captured. A COMPLETED booking with
+         * this null has ended but is not paid, and is shown that way in both
+         * apps - see paymentPending().
+         */
+        Instant paymentSettledAt
 ) {
+
+    /** Ended by the partner, not yet paid for. */
+    public boolean paymentPending() {
+        return status == BookingStatus.COMPLETED && paymentSettledAt == null;
+    }
 }

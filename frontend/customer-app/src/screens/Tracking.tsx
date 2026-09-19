@@ -1,4 +1,4 @@
-import { CheckCircle2, Headphones, MessageCircle, Navigation, Radio, SearchX, ShieldAlert, Star, XCircle } from 'lucide-react';
+import { CheckCircle2, Headphones, MessageCircle, Navigation, Radio, SearchX, ShieldAlert, Star, Wallet as WalletIcon, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
@@ -446,6 +446,8 @@ export function Tracking() {
   // stop claiming to search either way. The booking itself is untouched by
   // that, which is why Try Again still works from here.
   const isFinished = terminalStatus || clientGaveUp;
+  /** Ended by the partner, not yet paid - not complete. */
+  const paymentDue = booking?.status === 'COMPLETED' && !tripPaid && !booking.paymentSettledAt;
   const searchFailed = noDrivers || clientGaveUp;
   /**
    * A partner has confirmed she is coming.
@@ -482,7 +484,7 @@ export function Tracking() {
           searchFailed
             ? 'No Drivers Found'
             : isFinished
-              ? (booking?.status === 'CANCELLED' ? 'Trip Cancelled' : 'Trip Completed')
+              ? (booking?.status === 'CANCELLED' ? 'Trip Cancelled' : paymentDue ? 'Payment Due' : 'Trip Completed')
               : hasDriver
                 ? 'On the Way'
                 : 'Finding a Driver'
@@ -515,17 +517,33 @@ export function Tracking() {
             </div>
           </div>
         </Card>
+      ) : isFinished && paymentDue ? (
+        /* Arrived, not finished. The trip is over only once it is paid, so
+           this does not say "completed" or draw a success tick over a fare
+           still owed - the payment card below is the job in front of her. */
+        <Card tone="warning" className="flex items-start gap-3" data-testid="trip-payment-due-banner">
+          <IconCircle size="lg" tone="soft" color="orange" icon={<WalletIcon />} />
+          <div className="flex-1">
+            <p className="font-heading font-semibold text-text-primary">You&apos;ve arrived - payment due</p>
+            <p className="mt-1 text-sm text-text-secondary">
+              Pay below to finish this trip. You can book your next ride once it is paid.
+            </p>
+          </div>
+        </Card>
       ) : isFinished ? (
         <Card
           tone={booking.status === 'CANCELLED' ? 'danger' : 'success'}
           className="flex items-start gap-3"
+          data-testid={booking.status === 'COMPLETED' ? 'trip-complete' : undefined}
         >
-          <IconCircle
-            size="lg"
-            tone="soft"
-            color={booking.status === 'CANCELLED' ? 'red' : 'green'}
-            icon={booking.status === 'CANCELLED' ? <XCircle /> : <CheckCircle2 />}
-          />
+          {booking.status === 'CANCELLED' ? (
+            <IconCircle size="lg" tone="soft" color="red" icon={<XCircle />} />
+          ) : (
+            // Drawn once when the trip is paid - not confetti: this is the
+            // end of an ordinary journey, and the same screen shows after one
+            // that went badly.
+            <SuccessCheck size={48} label="Trip complete" />
+          )}
           <div className="flex-1">
             <p className="font-heading font-semibold text-text-primary">
               {booking.status === 'CANCELLED' ? 'This trip was cancelled' : 'Trip completed'}
@@ -533,7 +551,7 @@ export function Tracking() {
             <p className="mt-1 text-sm text-text-secondary">
               {booking.status === 'CANCELLED'
                 ? 'No driver is on the way. Book again whenever you are ready.'
-                : 'Thanks for riding with SheOut.'}
+                : 'Paid, and on its way to your partner. Thanks for riding with SheOut.'}
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               <Button size="md" variant="secondary" onClick={() => navigate('/home')}>

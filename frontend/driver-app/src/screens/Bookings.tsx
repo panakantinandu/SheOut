@@ -15,14 +15,15 @@ import {
   StatusBadge,
   TopHeader,
   bookingCategoryLabel,
-  bookingStatusLabel,
+  isAwaitingPayment,
+  tripStatusLabel,
   endOfDayIso,
   startOfDayIso,
   usePagedList,
 } from '@sheout/design-system';
 import type { DateRangeValue, StatusTone } from '@sheout/design-system';
 import { bookingApi } from '../api/client';
-import type { BookingCategory, BookingStatus } from '../api/types';
+import type { BookingCategory, BookingStatus, BookingSummary } from '../api/types';
 import { RatingPrompt } from '../components/RatingPrompt';
 import { useRatingMarks } from '../lib/useRatingMarks';
 
@@ -55,7 +56,10 @@ const STATUS_OPTIONS: { value: BookingStatus; label: string }[] = [
   // cannot appear today is not one to render badly if it ever does.
 ];
 
-function statusTone(status: BookingStatus): StatusTone {
+function statusTone(booking: BookingSummary): StatusTone {
+  const { status } = booking;
+  // Ended but unpaid is not a success yet - see isAwaitingPayment.
+  if (isAwaitingPayment(booking)) return 'warning';
   if (status === 'COMPLETED') return 'success';
   if (status === 'CANCELLED') return 'danger';
   // Warning, not danger - nothing was anybody's fault here.
@@ -197,8 +201,8 @@ export function Bookings() {
                 {booking.pickup.label} to {booking.drop.label} &middot;{' '}
                 {new Date(booking.requestedAt).toLocaleString()}
               </p>
-              <StatusBadge tone={statusTone(booking.status)} className="mt-1">
-                {bookingStatusLabel(booking.status)}
+              <StatusBadge tone={statusTone(booking)} className="mt-1">
+                {tripStatusLabel(booking)}
               </StatusBadge>
               {/* A finished trip's chat is read-only but never deleted. If a
                   partner is ever accused of something that happened on a

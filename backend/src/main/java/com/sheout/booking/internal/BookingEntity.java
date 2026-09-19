@@ -76,6 +76,13 @@ public class BookingEntity extends BaseEntity {
     private Instant completedAt;
     private Instant cancelledAt;
 
+    /**
+     * When the rider's payment for this trip was captured. Null on a
+     * COMPLETED booking means the partner has ended the trip and it is still
+     * unpaid - see V23. Set only by payments, through BookingApi.
+     */
+    private Instant paymentSettledAt;
+
     /** All three are null unless this booking was cancelled - see V9. */
     @Enumerated(EnumType.STRING)
     @Column(length = 40)
@@ -196,6 +203,14 @@ public class BookingEntity extends BaseEntity {
 
     public void setCompletedAt(Instant completedAt) {
         this.completedAt = completedAt;
+    }
+
+    public Instant getPaymentSettledAt() {
+        return paymentSettledAt;
+    }
+
+    public void setPaymentSettledAt(Instant paymentSettledAt) {
+        this.paymentSettledAt = paymentSettledAt;
     }
 
     public Instant getCancelledAt() {

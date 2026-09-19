@@ -1,11 +1,13 @@
 package com.sheout.booking.internal;
 
+import com.sheout.booking.BookingStatus;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Lock;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -36,4 +38,12 @@ interface BookingRepository extends JpaRepository<BookingEntity, UUID>, JpaSpeci
      */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<BookingEntity> findLockedById(UUID id);
+
+    /** A rider's oldest ended-and-unpaid trip. Backed by idx_bookings_customer_unsettled. */
+    Optional<BookingEntity> findFirstByCustomerIdAndStatusAndPaymentSettledAtIsNullOrderByCompletedAtAsc(
+            UUID customerId, BookingStatus status);
+
+    /** A partner's newest ended-and-unpaid trip that ended after the cutoff. Backed by idx_bookings_driver_unsettled. */
+    Optional<BookingEntity> findFirstByDriverIdAndStatusAndPaymentSettledAtIsNullAndCompletedAtAfterOrderByCompletedAtDesc(
+            UUID driverId, BookingStatus status, Instant completedAfter);
 }
