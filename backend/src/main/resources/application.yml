@@ -29,6 +29,20 @@ spring:
       ddl-auto: validate
     open-in-view: false
 
+  # Mail is off until spring.mail.host is set (see sheout.notifications.email).
+  # This is the one setting every real provider needs and none of them supply
+  # by default: STARTTLS on submission port 587, which Gmail and SendGrid both
+  # require before they will accept a login. It is offered, not demanded - a
+  # server that does not advertise STARTTLS is still talked to in the clear,
+  # which is what a local test SMTP server is. Credentials are sent only when
+  # SPRING_MAIL_USERNAME and SPRING_MAIL_PASSWORD are both set.
+  mail:
+    properties:
+      mail:
+        smtp:
+          starttls:
+            enable: true
+
   data:
     redis:
       # Same reasoning as datasource.url - required, no default. Paste
