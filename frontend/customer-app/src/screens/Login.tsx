@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { BrandHeader, Button, LANGUAGES, LanguagePicker, LegalConsentNotice, PhoneField, TextField, Trans, isCompletePhone, setAppLanguage, toE164, useAppLanguage, ResendCode, useOtpSender, i18next } from '@sheout/design-system';
-import { Languages } from 'lucide-react';
+import { BrandHeader, Button, LANGUAGES, LanguagePicker, LegalConsentNotice, PhoneField, TextField, Trans, isCompletePhone, setAppLanguage, toE164, useAppLanguage, ResendCode, useOtpSender, i18next, AuthBackdrop, Card, OtpCodeField, OTP_CODE_LENGTH } from '@sheout/design-system';
+import { Languages, ShieldCheck, BadgeCheck, Siren } from 'lucide-react';
 import { ApiError, authApi, takeSessionEndedReason, usersApi } from '../api/client';
 import type { AuthSession } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
@@ -202,8 +202,7 @@ export function Login() {
     }
   }
 
-  async function handleVerifyOtp(e: FormEvent) {
-    e.preventDefault();
+  async function submitOtp() {
     setError(null);
     setSubmitting(true);
     try {
@@ -234,8 +233,17 @@ export function Login() {
     }
   }
 
+  function handleVerifyOtp(e: FormEvent) {
+    e.preventDefault();
+    void submitOtp();
+  }
+
   return (
-    <div className="flex min-h-screen flex-col justify-center bg-gradient-to-br from-[#FEF8F8] via-[#FBF1F6] to-[#E9DEF5] px-screen py-10">
+    // The colour behind the form drifts; everything on top of it arrives in
+    // order - mark, then the form, then what SheOut promises.
+    <div className="relative flex min-h-screen flex-col justify-center overflow-hidden bg-gradient-to-br from-[#FEF8F8] via-[#FBF1F6] to-[#E9DEF5] px-screen py-10">
+      <AuthBackdrop />
+      <div className="relative z-10">
       {/* Language, before anything else - she may not read English, and
           the drawer where it otherwise lives is only there once signed in. */}
       <div className="-mt-4 mb-2 flex justify-end">
@@ -258,10 +266,9 @@ export function Login() {
         }}
       />
 
-      <BrandHeader size="md" className="mb-6" />
+      <BrandHeader size="md" float className="mb-5 motion-safe:animate-fade-slide-in" />
 
-      {(
-        <>
+      <Card className="space-y-4 p-5 motion-safe:animate-fade-slide-in" style={{ animationDelay: '120ms' }}>
           {/* Only on phone entry: once an OTP is out, the choice is made and
               a live toggle would just invite a mid-flow tab switch that
               changes nothing. Same pill vocabulary as MyBookings' tabs. */}
@@ -310,13 +317,15 @@ export function Login() {
           ) : (
             <form onSubmit={handleVerifyOtp} className="space-y-4">
               <p className="text-center text-sm text-text-secondary">{t('login.codeSentTo', { phone: phoneNumber })}</p>
-              <TextField
-                type="text"
-                inputMode="numeric"
-                placeholder={t('login.codePlaceholder')}
+              <OtpCodeField
                 value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                onChange={(next) => {
+                  setCode(next);
+                  setError(null);
+                }}
                 error={error ?? undefined}
+                disabled={submitting}
+                onComplete={() => void submitOtp()}
               />
               <Button type="submit" fullWidth disabled={submitting}>
                 {/* "Verify", not "Login"/"Create Account": which of those it
@@ -370,8 +379,39 @@ export function Login() {
               </p>
             </>
           )}
-        </>
+      </Card>
+
+      {/* Three things SheOut promises, under the form where they answer the
+          question somebody signing up is actually asking. Facts, not slogans:
+          every one of them is something the app does. Only while she is
+          choosing to sign in: the code step is one job. */}
+      {step === 'phone' && (
+      <div
+        className="mt-5 flex items-start justify-center gap-2 motion-safe:animate-fade-slide-in"
+        style={{ animationDelay: '240ms' }}
+        data-testid="login-trust"
+      >
+        <span className="flex flex-1 flex-col items-center gap-1.5 text-center">
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-surface/80 text-primary shadow-sm">
+            <ShieldCheck className="h-4 w-4" aria-hidden="true" />
+          </span>
+          <span className="text-[11px] font-medium leading-tight text-text-secondary">{t('login.trust.women')}</span>
+        </span>
+        <span className="flex flex-1 flex-col items-center gap-1.5 text-center">
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-surface/80 text-primary shadow-sm">
+            <BadgeCheck className="h-4 w-4" aria-hidden="true" />
+          </span>
+          <span className="text-[11px] font-medium leading-tight text-text-secondary">{t('login.trust.verified')}</span>
+        </span>
+        <span className="flex flex-1 flex-col items-center gap-1.5 text-center">
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-surface/80 text-primary shadow-sm">
+            <Siren className="h-4 w-4" aria-hidden="true" />
+          </span>
+          <span className="text-[11px] font-medium leading-tight text-text-secondary">{t('login.trust.sos')}</span>
+        </span>
+      </div>
       )}
+      </div>
     </div>
   );
 }

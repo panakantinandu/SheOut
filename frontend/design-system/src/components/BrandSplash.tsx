@@ -18,6 +18,12 @@ export interface BrandSplashProps {
   footerLine: string;
   /** Fades the whole screen out as it hands over to the next one. */
   fading: boolean;
+  /**
+   * How long this splash is held, in milliseconds. The progress line fills
+   * over exactly that time, so it is a real answer to "how long" rather than
+   * a spinner that turns whatever happens.
+   */
+  durationMs?: number;
 }
 
 /**
@@ -28,11 +34,23 @@ export interface BrandSplashProps {
  * used to open on a logo JPEG on a plain page, which read as a different,
  * unfinished product.
  * <p>
+ * IT ARRIVES RATHER THAN APPEARING. Everything used to be painted at once
+ * and sit there: a still picture, indistinguishable from a screenshot or a
+ * frozen app. Now the wave rises, the mark settles and breathes, the wordmark
+ * and the services follow a beat behind, and a line fills along the bottom
+ * for as long as the screen is actually held. The order is deliberate -
+ * brand first, then what the app does - and the whole sequence is under a
+ * second, inside a splash that was already this long.
+ * <p>
+ * All of it is CSS and motion-safe: with reduced motion asked for, every
+ * piece is simply in its final position, and the screen is the still picture
+ * it used to be, which is the right answer for somebody who asked for that.
+ * <p>
  * FLAGGED - APPROXIMATED, NOT MEASURED: the wave's curve and the skyline's
  * building sizes are drawn to read as "an organic wave" and "a faint
  * skyline", not traced from the mockup.
  */
-export function BrandSplash({ tagline, badge, items, footerLine, fading }: BrandSplashProps) {
+export function BrandSplash({ tagline, badge, items, footerLine, fading, durationMs = 2200 }: BrandSplashProps) {
   return (
     <div
       // Warm pink-to-lavender wash, sampled from the mockup's splash tile.
@@ -41,10 +59,22 @@ export function BrandSplash({ tagline, badge, items, footerLine, fading }: Brand
       }`}
       data-testid="splash"
     >
+      {/* A wash of brand colour behind the mark, drifting. It is what stops
+          the top half of the screen being flat white space. */}
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute -left-16 -top-24 h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(74,26,158,0.16),transparent_70%)] motion-safe:animate-drift"
+      />
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute -right-20 top-10 h-64 w-64 rounded-full bg-[radial-gradient(circle,rgba(249,103,23,0.16),transparent_70%)] motion-safe:animate-drift-slow"
+      />
+
       <svg
         viewBox="0 0 400 100"
         preserveAspectRatio="none"
-        className="absolute inset-x-0 bottom-[30%] h-24 w-full text-primary/10"
+        className="absolute inset-x-0 bottom-[30%] h-24 w-full text-primary/10 motion-safe:animate-fade-slide-in"
+        style={{ animationDelay: '220ms' }}
         aria-hidden="true"
       >
         <rect x="-10" y="45" width="34" height="55" fill="currentColor" />
@@ -66,7 +96,7 @@ export function BrandSplash({ tagline, badge, items, footerLine, fading }: Brand
       <svg
         viewBox="0 0 400 300"
         preserveAspectRatio="none"
-        className="absolute inset-x-0 bottom-0 h-[38%] w-full"
+        className="absolute inset-x-0 bottom-0 h-[38%] w-full motion-safe:animate-rise-in"
         aria-hidden="true"
       >
         <defs>
@@ -81,9 +111,12 @@ export function BrandSplash({ tagline, badge, items, footerLine, fading }: Brand
 
       <div className="relative z-10 flex min-h-screen flex-col items-center px-screen py-10">
         <div className="flex flex-1 flex-col items-center justify-center gap-3 pb-12">
-          <BrandHeader size="lg" tagline={tagline} />
+          <BrandHeader size="lg" tagline={tagline} float />
           {badge && (
-            <span className="rounded-full bg-primary px-4 py-1 text-xs font-bold uppercase tracking-widest text-text-inverse shadow-card">
+            <span
+              className="rounded-full bg-primary px-4 py-1 text-xs font-bold uppercase tracking-widest text-text-inverse shadow-card motion-safe:animate-fade-slide-in"
+              style={{ animationDelay: '320ms' }}
+            >
               {badge}
             </span>
           )}
@@ -94,13 +127,28 @@ export function BrandSplash({ tagline, badge, items, footerLine, fading }: Brand
             {items.map((item, i) => (
               <div
                 key={item.key}
-                className={`flex flex-1 flex-col items-center gap-2 px-2 ${i > 0 ? 'border-l border-text-inverse/25' : ''}`}
+                className={`flex flex-1 flex-col items-center gap-2 px-2 motion-safe:animate-fade-slide-in ${
+                  i > 0 ? 'border-l border-text-inverse/25' : ''
+                }`}
+                // One after another, left to right: the eye follows the row
+                // instead of being handed all three at once.
+                style={{ animationDelay: `${420 + i * 90}ms` }}
               >
                 <span className="text-text-inverse [&>svg]:h-7 [&>svg]:w-7">{item.icon}</span>
                 <span className="text-center text-xs font-semibold text-text-inverse">{item.label}</span>
               </div>
             ))}
           </div>
+
+          {/* How long this screen has left. Held open exactly as long as the
+              bar takes to fill, so it never sits full or vanishes half-drawn. */}
+          <span className="h-1 w-24 overflow-hidden rounded-full bg-text-inverse/25" aria-hidden="true">
+            <span
+              className="block h-full w-full origin-left scale-x-0 rounded-full bg-text-inverse/80 motion-safe:animate-[fill-bar_linear_forwards]"
+              style={{ animationDuration: `${durationMs}ms` }}
+            />
+          </span>
+
           <p className="text-xs font-medium uppercase tracking-wide text-text-inverse/70">{footerLine}</p>
         </div>
       </div>

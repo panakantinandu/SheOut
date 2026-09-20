@@ -275,7 +275,8 @@
     "resendIn": "You can ask for a new code in {{seconds}}s",
     "noCode": "Didn’t get it?",
     "reused": "We’ve already sent a code to {{phone}}. Enter it below.",
-    "resent": "New code sent to {{phone}}."
+    "resent": "New code sent to {{phone}}.",
+    "fieldLabel": "Six-digit code"
   },
   "map": {
     "recentre": "Recentre map",
