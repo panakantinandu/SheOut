@@ -6,6 +6,7 @@ import com.sheout.driververification.AccountVerified;
 import com.sheout.driververification.VerificationApi;
 import com.sheout.driververification.VerificationStatus;
 import com.sheout.driververification.VerificationSummary;
+import com.sheout.sharedkernel.storage.DocumentRules;
 import com.sheout.sharedkernel.storage.DocumentStorage;
 import com.sheout.sharedkernel.storage.DocumentUpload;
 import com.sheout.sharedkernel.Result;
@@ -53,6 +54,25 @@ public class VerificationService implements VerificationApi {
      * the queue as a row an operator cannot action.
      */
     @Transactional
+    /** The first thing wrong with either document, or null when both are usable. */
+    private static VerificationError firstProblem(DocumentUpload... uploads) {
+        for (DocumentUpload upload : uploads) {
+            if (upload == null) {
+                continue;
+            }
+            DocumentRules.Problem problem = DocumentRules.check(upload);
+            if (problem == null) {
+                continue;
+            }
+            return switch (problem) {
+                case UNSUPPORTED_TYPE -> VerificationError.DOCUMENT_TYPE_UNSUPPORTED;
+                case TOO_SMALL -> VerificationError.DOCUMENT_TOO_SMALL;
+                case TOO_LARGE -> VerificationError.DOCUMENT_TOO_LARGE;
+            };
+        }
+        return null;
+    }
+
     public Result<VerificationSummary, VerificationError> submitDocument(
             UUID accountId, DocumentUpload upload, DocumentUpload rcUpload) {
         Optional<VerificationRecordEntity> found = repository.findByAccountId(accountId);
@@ -69,6 +89,14 @@ public class VerificationService implements VerificationApi {
         // she cannot have.
         if (record.getRole() == AccountRole.DRIVER && rcUpload == null) {
             return Result.failure(VerificationError.RC_DOCUMENT_REQUIRED);
+        }
+
+        // Checked before a byte is stored, and for both documents, so a
+        // partner is never told her ID was fine and her RC was not after
+        // one of them has already been filed against her record.
+        VerificationError badUpload = firstProblem(upload, rcUpload);
+        if (badUpload != null) {
+            return Result.failure(badUpload);
         }
 
         String storageKey;

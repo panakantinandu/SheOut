@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Button } from './Button';
+import { Overlay } from './Overlay';
 import {
   reasonRequiresNote,
   type CancellationReason,
@@ -58,20 +59,6 @@ export function CancelReasonDialog({
   const [reason, setReason] = useState<CancellationReason | null>(null);
   const [note, setNote] = useState('');
 
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !busy) onCancel();
-    };
-    document.addEventListener('keydown', onKey);
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [open, busy, onCancel]);
-
   // A fresh dialog every time it opens. Leaving the last attempt's reason
   // selected would let a mis-tap confirm an answer the person never gave.
   useEffect(() => {
@@ -81,23 +68,18 @@ export function CancelReasonDialog({
     }
   }, [open]);
 
-  if (!open) return null;
-
   const needsNote = reasonRequiresNote(reason);
   const canConfirm = reason !== null && (!needsNote || note.trim().length > 0) && !busy;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-text-primary/40 px-4 py-6 sm:items-center"
-      role="dialog"
-      aria-modal="true"
-      aria-label={title}
-      onClick={() => { if (!busy) onCancel(); }}
+    <Overlay
+      className="px-4 py-6"
+      align="sheet"
+      label={title}
+      open={open}
+      onDismiss={busy ? undefined : onCancel}
     >
-      <div
-        className="max-h-full w-full max-w-sm overflow-y-auto rounded-card bg-surface p-5 shadow-card"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="max-h-[88vh] w-full overflow-y-auto rounded-card bg-surface p-5 shadow-card motion-safe:animate-sheet-up">
         <p className="font-heading text-lg font-semibold text-text-primary">{title}</p>
         <p className="mt-2 text-sm text-text-secondary">{message}</p>
 
@@ -144,7 +126,7 @@ export function CancelReasonDialog({
 
         <div className="mt-5 flex gap-3">
           <Button variant="secondary" fullWidth disabled={busy} onClick={onCancel}>
-            Keep trip
+            {t('cancelDialog.keepTrip')}
           </Button>
           <Button
             variant="danger"
@@ -156,6 +138,6 @@ export function CancelReasonDialog({
           </Button>
         </div>
       </div>
-    </div>
+    </Overlay>
   );
 }

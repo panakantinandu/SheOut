@@ -51,3 +51,45 @@ export const fonts = {
   heading: ['Poppins', 'Noto Sans Telugu', 'Noto Sans Devanagari', 'sans-serif'],
   body: ['Inter', 'Noto Sans Telugu', 'Noto Sans Devanagari', 'sans-serif'],
 };
+
+/**
+ * The same roles, for a dark screen.
+ * <p>
+ * NOT THE LIGHT PALETTE INVERTED. A deep aubergine ground rather than black,
+ * because pure black against a bright phone screen at night is the thing
+ * that makes text shimmer; and the brand purple lightens to a lavender,
+ * because #4A1A9E on a dark ground is a smudge rather than a colour.
+ * <p>
+ * textInverse flips to near-black, which is the piece that is easy to get
+ * wrong: a filled button here is lavender, green or amber, and the label on
+ * top of it has to be ink to be readable. That one token keeps every filled
+ * control legible without a dark variant on each of them.
+ */
+export const darkColors = {
+  primary: '#B69BFF',
+  primaryDark: '#9B79FF',
+  primaryLight: '#2A2142',
+  accentOrange: '#FFB545',
+  accentGreen: '#35D07F',
+  accentRed: '#FF6B72',
+  background: '#131020',
+  surface: '#1B1730',
+  border: '#2E2847',
+  textPrimary: '#F2EFF9',
+  textSecondary: '#A79FC0',
+  textInverse: '#18122B',
+  brandOrange: '#FF8A4C',
+};
+
+export const darkShadows = {
+  card: '0 4px 16px rgba(0, 0, 0, 0.45)',
+  raised: '0 10px 24px rgba(0, 0, 0, 0.55)',
+};
+
+/** "#4A1A9E" -> "74 26 158", the form a CSS variable needs to keep /opacity working. */
+export function rgbChannels(hex) {
+  const value = hex.replace('#', '');
+  const full = value.length === 3 ? value.split('').map((c) => c + c).join('') : value;
+  const number = parseInt(full, 16);
+  return [(number >> 16) & 255, (number >> 8) & 255, number & 255].join(' ');
+}

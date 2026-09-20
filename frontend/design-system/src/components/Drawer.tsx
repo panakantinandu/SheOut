@@ -1,5 +1,6 @@
 import { ChevronRight, X } from 'lucide-react';
 import { useEffect, useRef, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../lib/cn';
 
@@ -63,7 +64,12 @@ export function Drawer({ open, onClose, header, sections, footer }: DrawerProps)
     };
   }, [open, onClose]);
 
-  return (
+  if (typeof document === 'undefined') return null;
+
+  // Into the body, for the reason set out in Overlay: a page that arrives
+  // with a transform would otherwise become the containing block and the
+  // "full screen" drawer would cover only the page's content column.
+  return createPortal(
     <div className={cn('fixed inset-0 z-50', open ? 'pointer-events-auto' : 'pointer-events-none')} aria-hidden={!open}>
       <div
         className={cn(
@@ -138,6 +144,7 @@ export function Drawer({ open, onClose, header, sections, footer }: DrawerProps)
 
         {footer && <div className="border-t border-border px-5 py-3 text-xs text-text-secondary">{footer}</div>}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

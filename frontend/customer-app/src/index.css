@@ -1,3 +1,6 @@
+/* The palette, light and dark - must come before Tailwind's own layers. */
+@import '@sheout/design-system/theme.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -5,6 +8,15 @@
 @layer base {
   body {
     @apply bg-background text-text-primary font-sans;
+  }
+
+  /*
+   * The strip behind a phone's status bar and the pull-to-refresh area:
+   * without this they stay white in dark mode, which shows as a bright
+   * band above the app.
+   */
+  html {
+    @apply bg-background;
   }
 
   /*

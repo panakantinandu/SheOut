@@ -1,6 +1,20 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <!-- Before the first paint: the app opens in the theme she chose rather
+         than flashing white and correcting itself. Mirrors applyTheme in
+         the design system's theme.ts, which is where the real version is. -->
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('sheout_theme');
+          if (t === 'dark' || t === 'light') {
+            document.documentElement.setAttribute('data-theme', t);
+            document.documentElement.style.colorScheme = t;
+          }
+        } catch (e) {}
+      })();
+    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#ffffff" />

@@ -241,7 +241,7 @@ export function Login() {
   return (
     // The colour behind the form drifts; everything on top of it arrives in
     // order - mark, then the form, then what SheOut promises.
-    <div className="relative flex min-h-screen flex-col justify-center overflow-hidden bg-gradient-to-br from-[#FEF8F8] via-[#FBF1F6] to-[#E9DEF5] px-screen py-10">
+    <div className="relative flex min-h-screen flex-col justify-center overflow-hidden bg-brand-wash px-screen py-10">
       <AuthBackdrop />
       <div className="relative z-10">
       {/* Language, before anything else - she may not read English, and

@@ -1,4 +1,13 @@
-import { colors, radii, shadows, spacing, fonts } from './tokens.js';
+import { radii, spacing, fonts } from './tokens.js';
+
+/**
+ * Every colour is a CSS variable, not a hex value, so one stylesheet can
+ * repaint the whole app for a dark screen without a second set of classes.
+ * The variable holds channels ("74 26 158") rather than a colour, which is
+ * what lets Tailwind keep its opacity suffixes working - bg-primary/40 still
+ * means what it says. The values themselves live in theme.css, from tokens.js.
+ */
+const token = (name) => `rgb(var(--c-${name}) / <alpha-value>)`;
 
 /**
  * Shared Tailwind preset - both apps' tailwind.config.js do
@@ -17,24 +26,24 @@ export default {
     extend: {
       colors: {
         primary: {
-          DEFAULT: colors.primary,
-          dark: colors.primaryDark,
-          light: colors.primaryLight,
+          DEFAULT: token('primary'),
+          dark: token('primary-dark'),
+          light: token('primary-light'),
         },
         accent: {
-          orange: colors.accentOrange,
-          'brand-orange': colors.brandOrange,
-          green: colors.accentGreen,
-          red: colors.accentRed,
+          orange: token('accent-orange'),
+          'brand-orange': token('brand-orange'),
+          green: token('accent-green'),
+          red: token('accent-red'),
         },
-        danger: colors.accentRed,
-        background: colors.background,
-        surface: colors.surface,
-        border: colors.border,
+        danger: token('accent-red'),
+        background: token('background'),
+        surface: token('surface'),
+        border: token('border'),
         text: {
-          primary: colors.textPrimary,
-          secondary: colors.textSecondary,
-          inverse: colors.textInverse,
+          primary: token('text-primary'),
+          secondary: token('text-secondary'),
+          inverse: token('text-inverse'),
         },
       },
       borderRadius: {
@@ -42,9 +51,16 @@ export default {
         input: radii.input,
         chip: radii.chip,
       },
+      backgroundImage: {
+        // Sign-in and the introduction. A gradient rather than a flat colour,
+        // and a variable rather than three hexes in a class name, so the
+        // dark theme can restate it in one place - see theme.css.
+        'brand-wash': 'var(--brand-wash)',
+      },
+
       boxShadow: {
-        card: shadows.card,
-        raised: shadows.raised,
+        card: 'var(--shadow-card)',
+        raised: 'var(--shadow-raised)',
       },
       spacing: {
         screen: spacing.screen,
@@ -123,6 +139,16 @@ export default {
           from: { transform: 'scale(0.86)', opacity: '0' },
           to: { transform: 'scale(1)', opacity: '1' },
         },
+        // The dark layer behind a sheet or dialog, arriving.
+        'fade-in': {
+          from: { opacity: '0' },
+          to: { opacity: '1' },
+        },
+        // A sheet rising from the bottom edge of the screen.
+        'sheet-up': {
+          from: { transform: 'translateY(12%)', opacity: '0' },
+          to: { transform: 'translateY(0)', opacity: '1' },
+        },
       },
       animation: {
         shimmer: 'shimmer 1.6s linear infinite',
@@ -136,6 +162,8 @@ export default {
         'rise-in': 'rise-in 620ms cubic-bezier(0.22, 1, 0.36, 1) both',
         caret: 'caret 1.1s step-end infinite',
         'nav-pop': 'nav-pop 320ms cubic-bezier(0.34, 1.56, 0.64, 1) both',
+        'fade-in': 'fade-in 160ms ease-out both',
+        'sheet-up': 'sheet-up 260ms cubic-bezier(0.22, 1, 0.36, 1) both',
       },
     },
   },

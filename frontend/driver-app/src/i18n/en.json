@@ -200,7 +200,8 @@
     "panBody": "For tax on your payouts. Tax is deducted and reported against a PAN when we pay you, so adding it now keeps that from holding up money you have earned. It is not part of your verification, and you can add it later.",
     "removePan": "Remove PAN",
     "updatePan": "Update PAN",
-    "savePan": "Save PAN"
+    "savePan": "Save PAN",
+    "fileHint": "A clear photo (JPG, PNG or HEIC) or a PDF. Make sure the whole document is in the frame and readable."
   },
   "faq": {
     "q1": "Why can I not go online?",

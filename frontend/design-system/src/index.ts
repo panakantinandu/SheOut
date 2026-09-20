@@ -14,6 +14,7 @@ export * from './i18n';
 export { SafetyText, useSafetyString } from './i18n/SafetyText';
 export * from './legal/content';
 export * from './components';
+export * from './lib/theme';
 export * from './tokens';
 
 // Re-exported so screens can reuse the brand illustration for their own

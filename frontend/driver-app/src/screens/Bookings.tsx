@@ -260,6 +260,10 @@ export function Bookings() {
           key={ratingBookingId}
           bookingId={ratingBookingId}
           counterpartLabel={t('common.yourRider')}
+          tripSummary={(() => {
+            const trip = list.items.find((item) => item.id === ratingBookingId);
+            return trip ? `${trip.pickup.label} → ${trip.drop.label}` : null;
+          })()}
           onRated={() => {
             setRatingBookingId(null);
             list.reload();

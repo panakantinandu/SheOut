@@ -1,0 +1,77 @@
+/*
+ * The palette, as variables, so one stylesheet repaints the whole app.
+ *
+ * Generated in spirit from tokens.js - the hexes there are the source of
+ * truth and these are the same values as RGB channels, which is the form
+ * Tailwind's opacity suffixes need (bg-primary/40 multiplies the alpha
+ * into rgb(...)). Both apps import this before Tailwind's layers.
+ *
+ * WHICH THEME WINS. An explicit choice always beats the device: [data-theme]
+ * on <html> is set by the theme toggle and read back from localStorage
+ * before first paint (see applyTheme). With no choice stored, the device's
+ * own setting decides, which is why the media query is guarded against
+ * [data-theme=light] - somebody who chose light on a phone that is in
+ * dark mode must get light.
+ */
+:root {
+  --c-primary: 74 26 158;
+  --c-primary-dark: 54 17 111;
+  --c-primary-light: 237 229 250;
+  --c-accent-orange: 252 163 37;
+  --c-accent-green: 26 182 90;
+  --c-accent-red: 250 42 54;
+  --c-brand-orange: 249 103 23;
+  --c-background: 251 250 253;
+  --c-surface: 255 255 255;
+  --c-border: 232 227 241;
+  --c-text-primary: 36 26 51;
+  --c-text-secondary: 124 118 144;
+  --c-text-inverse: 255 255 255;
+  --shadow-card: 0 4px 16px rgba(36, 26, 51, 0.08);
+  --shadow-raised: 0 10px 24px rgba(123, 63, 228, 0.30);
+  /* The soft sunrise behind sign-in and the introduction. */
+  --brand-wash: linear-gradient(135deg, #FEF8F8 0%, #FBF1F6 50%, #E9DEF5 100%);
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --c-primary: 182 155 255;
+    --c-primary-dark: 155 121 255;
+    --c-primary-light: 42 33 66;
+    --c-accent-orange: 255 181 69;
+    --c-accent-green: 53 208 127;
+    --c-accent-red: 255 107 114;
+    --c-brand-orange: 255 138 76;
+    --c-background: 19 16 32;
+    --c-surface: 27 23 48;
+    --c-border: 46 40 71;
+    --c-text-primary: 242 239 249;
+    --c-text-secondary: 167 159 192;
+    --c-text-inverse: 24 18 43;
+    --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.45);
+    --shadow-raised: 0 10px 24px rgba(0, 0, 0, 0.55);
+    --brand-wash: linear-gradient(135deg, #1A1330 0%, #1E1438 50%, #241A44 100%);
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme='dark'] {
+  --c-primary: 182 155 255;
+  --c-primary-dark: 155 121 255;
+  --c-primary-light: 42 33 66;
+  --c-accent-orange: 255 181 69;
+  --c-accent-green: 53 208 127;
+  --c-accent-red: 255 107 114;
+  --c-brand-orange: 255 138 76;
+  --c-background: 19 16 32;
+  --c-surface: 27 23 48;
+  --c-border: 46 40 71;
+  --c-text-primary: 242 239 249;
+  --c-text-secondary: 167 159 192;
+  --c-text-inverse: 24 18 43;
+  --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.45);
+  --shadow-raised: 0 10px 24px rgba(0, 0, 0, 0.55);
+  --brand-wash: linear-gradient(135deg, #1A1330 0%, #1E1438 50%, #241A44 100%);
+  color-scheme: dark;
+}

@@ -40,7 +40,11 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           // only acknowledge one. Three per cent: felt rather than seen.
           // motion-safe, so somebody who asked for less movement gets none.
           'transition-[color,background-color,transform] duration-100 motion-safe:active:scale-[0.97]',
-          'disabled:opacity-50 disabled:pointer-events-none',
+          // A disabled button is grey, not a paler version of the live one.
+          // A washed-out purple pill still reads as "press me" - it was the
+          // first thing on the rating sheet and looked broken rather than
+          // waiting for an answer. Colour is the difference, not opacity.
+          'disabled:pointer-events-none disabled:border-transparent disabled:bg-border disabled:text-text-secondary',
           variantClasses[variant],
           sizeClasses[size],
           fullWidth && 'w-full',

@@ -1,7 +1,7 @@
 import { BadgeCheck, LogOut, MapPin, Receipt, ShieldAlert, User, Smartphone } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Avatar, Card, ConfirmDialog, IconCircle, ListRow, PrivacyDataSection, TopHeader } from '@sheout/design-system';
+import { Avatar, Card, ConfirmDialog, IconCircle, ListRow, PrivacyDataSection, ThemeToggle, TopHeader } from '@sheout/design-system';
 import { useAppDrawer } from '../components/AppDrawer';
 import { ApiError, privacyApi, supportApi, usersApi } from '../api/client';
 import type { CustomerProfileSummary } from '../api/types';
@@ -19,6 +19,7 @@ import { useTranslation } from '@sheout/design-system';
  */
 export function Profile() {
   const { t } = useTranslation();
+  const { t: ds } = useTranslation('ds');
   const navigate = useNavigate();
   const drawer = useAppDrawer();
   const { logout } = useAuth();
@@ -87,6 +88,16 @@ export function Profile() {
         </Card>
       </section>
 
+
+      {/* Per device, not per account: the right answer in bed on a phone is
+          not the right answer at a desk - see ThemeToggle. */}
+      <section data-testid="appearance">
+        <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">{ds('theme.label')}</h2>
+        <Card className="space-y-3">
+          <p className="text-sm text-text-secondary">{ds('theme.description')}</p>
+          <ThemeToggle />
+        </Card>
+      </section>
 
       <PrivacyDataSection
         audience="customer"

@@ -870,7 +870,13 @@ export function Tracking() {
           to deal with it before she could pay. My Bookings still offers to
           rate a trip that is left unpaid here. */}
       {booking?.status === 'COMPLETED' && tripPaid && (
-        <RatingPrompt bookingId={bookingId} counterpartLabel={t('common.yourPartner')} />
+        <RatingPrompt
+          bookingId={bookingId}
+          counterpartLabel={t('common.yourPartner')}
+          counterpartName={driver?.name ?? null}
+          counterpartPhotoUrl={driver?.photoUrl ?? null}
+          tripSummary={booking ? `${booking.pickup.label} → ${booking.drop.label}` : null}
+        />
       )}
     </div>
   );

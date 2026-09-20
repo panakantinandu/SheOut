@@ -79,6 +79,12 @@ public class VerificationController {
                     new ApiException(HttpStatus.BAD_REQUEST, "Bad Request", "Decision must be VERIFIED or REJECTED");
             case RC_DOCUMENT_REQUIRED -> new ApiException(HttpStatus.BAD_REQUEST, "RC_DOCUMENT_REQUIRED",
                     "Add a photo of your vehicle's registration certificate as well as your ID.");
+            case DOCUMENT_TYPE_UNSUPPORTED -> new ApiException(HttpStatus.BAD_REQUEST, "DOCUMENT_TYPE_UNSUPPORTED",
+                    "Send a photo (JPG, PNG, HEIC or WebP) or a PDF. Other kinds of file cannot be opened for review.");
+            case DOCUMENT_TOO_SMALL -> new ApiException(HttpStatus.BAD_REQUEST, "DOCUMENT_TOO_SMALL",
+                    "That file is too small to read. Photograph the whole document in good light, or send the original PDF.");
+            case DOCUMENT_TOO_LARGE -> new ApiException(HttpStatus.BAD_REQUEST, "DOCUMENT_TOO_LARGE",
+                    "That file is larger than 10 MB. A photo taken with your phone's camera will be well under it.");
         };
     }
 

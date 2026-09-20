@@ -9,7 +9,8 @@
     ".": "./src/index.ts",
     "./preview": "./src/preview/DesignSystemPreview.tsx",
     "./tailwind-preset": "./tailwind-preset.js",
-    "./push-worker-plugin": "./push/vite-plugin.mjs"
+    "./push-worker-plugin": "./push/vite-plugin.mjs",
+    "./theme.css": "./src/theme.css"
   },
   "dependencies": {
     "@sentry/react": "^10.74.0",
