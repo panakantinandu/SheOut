@@ -1,7 +1,10 @@
 package com.sheout.auth.internal;
 
 import com.sheout.auth.AccountRole;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 import java.util.List;
@@ -23,6 +26,18 @@ interface AccountRepository extends JpaRepository<AccountEntity, UUID>, JpaSpeci
     List<AccountEntity> findByPhoneNumberOrderByCreatedAtAsc(String phoneNumber);
 
     Optional<AccountEntity> findByEmailAndRole(String email, AccountRole role);
+
+    /**
+     * Addresses of accounts in a role, a page at a time, for an announcement.
+     * <p>
+     * An account has an email when she signed in with Google - it is how she
+     * signed in, not something she typed into her profile - so this is where
+     * most addresses actually are. Blocked accounts are left out: somebody
+     * who has lost access to SheOut should not keep hearing from it.
+     */
+    @Query("select a.email from AccountEntity a where a.role = :role and a.email is not null "
+            + "and a.email <> '' and a.blockedAt is null order by a.id")
+    List<String> findEmailAddresses(@Param("role") AccountRole role, Pageable pageable);
 
     List<AccountEntity> findByEmailOrderByCreatedAtAsc(String email);
 
