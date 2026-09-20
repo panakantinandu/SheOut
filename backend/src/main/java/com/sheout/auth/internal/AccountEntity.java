@@ -28,6 +28,17 @@ public class AccountEntity extends BaseEntity {
     private AccountRole role;
 
     /**
+     * When she accepted the Terms and Privacy Policy, and which version she
+     * saw. Null for accounts created before consent was recorded - which is
+     * "no record", not a refusal.
+     */
+    @Column(name = "terms_accepted_at")
+    private Instant termsAcceptedAt;
+
+    @Column(name = "terms_version", length = 40)
+    private String termsVersion;
+
+    /**
      * Non-null means blocked. The same shape SosAlertEntity uses for
      * resolution: the timestamp is the flag, and who did it and why sit
      * beside it so the decision is answerable later. See V8.
@@ -86,6 +97,19 @@ public class AccountEntity extends BaseEntity {
      */
     void promoteToAdmin() {
         this.role = AccountRole.ADMIN;
+    }
+
+    /** Idempotent: the first acceptance is the one that counts, and stands. */
+    void acceptTerms(String version) {
+        if (termsAcceptedAt != null) {
+            return;
+        }
+        this.termsAcceptedAt = Instant.now();
+        this.termsVersion = version;
+    }
+
+    boolean hasAcceptedTerms() {
+        return termsAcceptedAt != null;
     }
 
     public boolean isBlocked() {

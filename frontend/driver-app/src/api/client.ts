@@ -226,6 +226,15 @@ export const authApi = {
    * request carries the token, which the next line takes away, and signing
    * out never waits on the network.
    */
+  /**
+   * Records that she agreed to the Terms and Privacy Policy, with the date
+   * and version, against her account. Sent when she ticks the box while
+   * finishing a new account - see ConsentCheckbox.
+   */
+  acceptConsent(): Promise<void> {
+    return request('/api/v1/auth/consent', { method: 'POST' });
+  },
+
   logout(): void {
     void request('/api/v1/auth/logout', { method: 'POST' }).catch(() => undefined);
     setStoredToken(null);

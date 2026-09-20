@@ -1,6 +1,7 @@
 package com.sheout.auth.internal.web;
 
 import com.sheout.auth.AccountSession;
+import com.sheout.auth.AuthApi;
 import com.sheout.auth.CurrentAccount;
 import com.sheout.auth.CurrentAccountContext;
 import com.sheout.auth.SessionRevocation;
@@ -27,9 +28,26 @@ import java.util.UUID;
 public class SessionController {
 
     private final SessionService sessions;
+    private final AuthApi authApi;
 
-    public SessionController(SessionService sessions) {
+    public SessionController(SessionService sessions, AuthApi authApi) {
         this.sessions = sessions;
+        this.authApi = authApi;
+    }
+
+    /**
+     * She has read the Terms and the Privacy Policy and said so.
+     * <p>
+     * Recorded against the account with the version she saw, once - a later
+     * call leaves the original date alone, because that is the date she
+     * actually agreed. Sent from the sign-up screen, where the box is
+     * unticked until she ticks it.
+     */
+    @PostMapping("/api/v1/auth/consent")
+    public ResponseEntity<Void> acceptTerms() {
+        CurrentAccount caller = requireCaller();
+        authApi.acceptTerms(caller.accountId());
+        return ResponseEntity.noContent().build();
     }
 
     /** Signing out for real: the token stops working here, not just on this phone. */

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { BrandHeader, ProfileCompletionForm } from '@sheout/design-system';
-import { ApiError, usersApi } from '../api/client';
+import { BrandHeader, ProfileCompletionForm, ConsentCheckbox } from '@sheout/design-system';
+import { ApiError, authApi, usersApi } from '../api/client';
 import type { CustomerProfileSummary } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { markProfileComplete } from '../auth/ProtectedRoute';
@@ -16,11 +16,17 @@ import { useTranslation } from '@sheout/design-system';
  */
 export function CompleteProfile() {
   const { t } = useTranslation();
+  const { t: ds } = useTranslation('ds');
   const notice = (useLocation().state as { notice?: string } | null)?.notice ?? null;
   const navigate = useNavigate();
   const { accountId } = useAuth();
   const [profile, setProfile] = useState<CustomerProfileSummary | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  /**
+   * Unticked until she ticks it. The server refuses to finish an account
+   * without a consent record, so this is the ask, not the enforcement.
+   */
+  const [consent, setConsent] = useState(false);
 
   useEffect(() => {
     usersApi
@@ -44,6 +50,8 @@ export function CompleteProfile() {
       {loadError && <p className="text-sm text-danger">{loadError}</p>}
       {profile && (
         <ProfileCompletionForm
+          extraFieldsValid={consent}
+          extraFieldsProblem={ds('consent.required')}
           initial={{ name: profile.name ?? '', dateOfBirth: profile.dateOfBirth ?? '', email: profile.email ?? '' }}
           photoUrl={profile.profilePhotoUrl}
           hasPhoto={profile.hasProfilePhoto}
@@ -58,20 +66,32 @@ export function CompleteProfile() {
           }}
           onSubmit={async (values) => {
             try {
+              await authApi.acceptConsent();
               await usersApi.updateMyProfile({
                 name: values.name,
                 dateOfBirth: values.dateOfBirth,
                 email: values.email || undefined,
-                homeAddress: profile.homeAddress ?? undefined,
-                workAddress: profile.workAddress ?? undefined,
+                // Passed through untouched: this screen is not where saved
+                // places are edited - see SavedAddresses.
+                home: profile.home,
+                work: profile.work,
               });
             } catch (err) {
               throw new Error(err instanceof ApiError ? err.message : t('profile.saveError'));
             }
             if (accountId) markProfileComplete(accountId);
-            navigate('/home', { replace: true });
+            // Straight into the introduction: this is her first moment in the
+            // app, and it is the only time it is shown.
+            navigate('/welcome', { replace: true });
           }}
-        />
+        >
+          <ConsentCheckbox
+            checked={consent}
+            onChange={setConsent}
+            onOpenTerms={() => navigate('/terms')}
+            onOpenPrivacy={() => navigate('/privacy')}
+          />
+        </ProfileCompletionForm>
       )}
     </div>
   );

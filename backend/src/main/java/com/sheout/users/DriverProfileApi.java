@@ -16,6 +16,9 @@ public interface DriverProfileApi {
      */
     List<DriverProfileSummary> findFlaggedForReview();
 
+    /** Email addresses of partners, a page at a time - see CustomerProfileApi.findEmailAddresses. */
+    List<String> findEmailAddresses(int page, int size);
+
     /** An operator has reviewed this account and is satisfied. Idempotent. */
     void clearReviewFlag(UUID accountId);
 

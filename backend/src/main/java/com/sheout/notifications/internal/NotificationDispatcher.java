@@ -112,6 +112,16 @@ public class NotificationDispatcher {
         return reached;
     }
 
+    /**
+     * One email, through the same channel every other email uses. For the
+     * announcement mailing, which needs the outcome per address rather than
+     * the whole deliver() flow - a broadcast has no inbox row per recipient
+     * and no fallback to SMS.
+     */
+    Result<Void, SendFailure> sendEmail(String address, OutboundMessage message) {
+        return send(NotificationChannelType.EMAIL, address, message);
+    }
+
     private Result<Void, SendFailure> send(NotificationChannelType type, String address, OutboundMessage message) {
         NotificationChannel channel = channels.get(type);
         if (channel == null) {

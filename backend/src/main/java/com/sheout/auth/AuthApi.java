@@ -18,6 +18,16 @@ public interface AuthApi {
     Optional<AccountSummary> findAccount(UUID accountId);
 
     /**
+     * Records that this account accepted the Terms and Privacy Policy now.
+     * Idempotent - the first acceptance stands, so a later profile edit does
+     * not rewrite the date she actually agreed.
+     */
+    void acceptTerms(UUID accountId);
+
+    /** Whether there is a consent record for this account at all. */
+    boolean hasAcceptedTerms(UUID accountId);
+
+    /**
      * Whether two accounts belong to the same person - the same phone number
      * or the same Google email. One person can hold a rider account and a
      * partner account (one per app), and must never be matched with herself.

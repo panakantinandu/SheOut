@@ -11,6 +11,7 @@ import com.sheout.auth.internal.otp.OtpService;
 import com.sheout.auth.internal.security.JwtService;
 import com.sheout.privacy.AccountDeletionRequested;
 import com.sheout.sharedkernel.Result;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.EventListener;
 import com.sheout.sharedkernel.event.DomainEventPublisher;
 import org.slf4j.Logger;
@@ -34,17 +35,23 @@ public class AuthService implements AuthApi {
     private final OtpService otpService;
     private final JwtService jwtService;
     private final DomainEventPublisher eventPublisher;
+    private final String termsVersion;
 
     public AuthService(AccountRepository accountRepository,
                         SessionService sessions,
                         OtpService otpService,
                         JwtService jwtService,
-                        DomainEventPublisher eventPublisher) {
+                        DomainEventPublisher eventPublisher,
+                        // The wording she agreed to. Bumped when the documents
+                        // change, so an old acceptance is not read as consent
+                        // to something she never saw.
+                        @Value("${sheout.legal.terms-version:2026-09-20}") String termsVersion) {
         this.accountRepository = accountRepository;
         this.sessions = sessions;
         this.otpService = otpService;
         this.jwtService = jwtService;
         this.eventPublisher = eventPublisher;
+        this.termsVersion = termsVersion;
     }
 
     /**
@@ -262,6 +269,20 @@ public class AuthService implements AuthApi {
             accountRepository.save(account);
             sessions.revokeAll(event.accountId(), SessionRevocation.ACCOUNT_DELETED);
         });
+    }
+
+    @Override
+    @Transactional
+    public void acceptTerms(UUID accountId) {
+        accountRepository.findById(accountId).ifPresent(account -> {
+            account.acceptTerms(termsVersion);
+            accountRepository.save(account);
+        });
+    }
+
+    @Override
+    public boolean hasAcceptedTerms(UUID accountId) {
+        return accountRepository.findById(accountId).map(AccountEntity::hasAcceptedTerms).orElse(false);
     }
 
     @Override

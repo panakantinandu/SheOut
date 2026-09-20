@@ -29,6 +29,14 @@ export interface ProfileCompletionFormProps {
   children?: ReactNode;
   /** True when the extra fields in children are filled in. */
   extraFieldsValid?: boolean;
+  /**
+   * What is still missing in those extra fields, said in this app's words.
+   * Shown once she has tried to submit - a button that does nothing and says
+   * nothing reads as the app ignoring her.
+   */
+  extraFieldsProblem?: string | null;
+  /** Called on every attempt, valid or not, so children can show their own errors. */
+  onAttemptSubmit?: () => void;
 }
 
 /**
@@ -46,6 +54,8 @@ export function ProfileCompletionForm({
   photoReason,
   children,
   extraFieldsValid = true,
+  extraFieldsProblem,
+  onAttemptSubmit,
 }: ProfileCompletionFormProps) {
   const { t } = useTranslation('ds');
   const [values, setValues] = useState<ProfileBasics>(initial);
@@ -87,6 +97,7 @@ export function ProfileCompletionForm({
     e.preventDefault();
     setTouched(true);
     setError(null);
+    onAttemptSubmit?.();
     if (!photoOnFile) {
       setPhotoError(t('profileForm.photoRequired'));
       return;
@@ -160,6 +171,11 @@ export function ProfileCompletionForm({
         error={touched && mailProblem ? mailProblem : undefined}
       />
       {children}
+      {touched && !extraFieldsValid && extraFieldsProblem && (
+        <p className="text-sm text-danger" role="alert" data-testid="extra-fields-problem">
+          {extraFieldsProblem}
+        </p>
+      )}
       <p className="text-xs text-text-secondary">{t('profileForm.ageNote')}</p>
       {error && <p className="text-sm text-danger" role="alert">{error}</p>}
       <Button type="submit" fullWidth disabled={saving || uploading}>

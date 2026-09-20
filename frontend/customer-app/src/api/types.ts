@@ -27,8 +27,14 @@ export interface CustomerProfileSummary {
   name: string | null;
   /** Null for a Google-signed-in account - phone signup is the only path that collects one. */
   phoneNumber: string | null;
-  homeAddress: string | null;
-  workAddress: string | null;
+  /**
+    * Home and Work as places: a label and, once she has put it on the map,
+    * a point. lat/lng are null for an address typed in before saved places
+    * had coordinates - it still shows, and still cannot be tapped into a
+    * booking.
+    */
+  home: SavedPlace | null;
+  work: SavedPlace | null;
   /** YYYY-MM-DD. Null for an account that has not completed its profile since dates of birth were required. */
   dateOfBirth: string | null;
   email: string | null;
@@ -426,4 +432,11 @@ export interface AccountSession {
   lastActiveAt: string;
   /** The device asking. Signing it out is signing out. */
   current: boolean;
+}
+
+/** One of her saved places - see CustomerProfileSummary.home / .work. */
+export interface SavedPlace {
+  label: string;
+  lat: number | null;
+  lng: number | null;
 }

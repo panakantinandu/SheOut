@@ -61,8 +61,10 @@ export function PersonalDetails() {
                     name: values.name,
                     dateOfBirth: values.dateOfBirth,
                     email: values.email || undefined,
-                    homeAddress: profile.homeAddress ?? undefined,
-                    workAddress: profile.workAddress ?? undefined,
+                // Passed through untouched: this screen is not where saved
+                // places are edited - see SavedAddresses.
+                home: profile.home,
+                work: profile.work,
                   })
                 );
                 setSaved(true);

@@ -14,6 +14,7 @@ import { currentPosition, describePoint, isInServiceArea } from '../lib/geocode'
 import { apiErrorText } from '../lib/apiErrors';
 import { useFareQuote } from '../lib/useFareQuote';
 import { useNearbyDrivers } from '../lib/useNearbyDrivers';
+import { useSavedPlaces } from '../lib/useSavedPlaces';
 import type { BookingCategory, GeoAddress } from '../api/types';
 import { useTranslation } from '@sheout/design-system';
 
@@ -137,6 +138,8 @@ export function DeliveryBooking() {
 
   // Partners who could take this right now, at approximate positions -
   // "yes, there really are people near you" before she commits to booking.
+  // Her own Home and Work, offered first in the picker.
+  const savedPlaces = useSavedPlaces();
   const nearby = useNearbyDrivers(pickup, config.category, t('booking.nearbyPartner'));
   const markers: MapMarker[] = [...nearby];
   if (pickup) markers.push({ key: 'pickup', lat: pickup.lat, lng: pickup.lng, label: t('booking.pickup'), kind: 'pickup' });
@@ -253,6 +256,7 @@ export function DeliveryBooking() {
       <LocationPicker
         open={picking !== null}
         title={picking === 'pickup' ? t('booking.setPickup') : t('booking.whereTo')}
+        saved={savedPlaces}
         presets={DROP_PRESETS}
         allowCurrentLocation={picking === 'pickup'}
         initialMode={pickerMode}
