@@ -13,6 +13,7 @@ import com.sheout.privacy.AccountDeletionRequested;
 import com.sheout.sharedkernel.Result;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.EventListener;
+import org.springframework.data.domain.PageRequest;
 import com.sheout.sharedkernel.event.DomainEventPublisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -283,6 +284,12 @@ public class AuthService implements AuthApi {
     @Override
     public boolean hasAcceptedTerms(UUID accountId) {
         return accountRepository.findById(accountId).map(AccountEntity::hasAcceptedTerms).orElse(false);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<String> findEmailAddresses(AccountRole role, int page, int size) {
+        return accountRepository.findEmailAddresses(role, PageRequest.of(page, size));
     }
 
     @Override

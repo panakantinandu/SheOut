@@ -3,6 +3,7 @@ package com.sheout.auth;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -26,6 +27,20 @@ public interface AuthApi {
 
     /** Whether there is a consent record for this account at all. */
     boolean hasAcceptedTerms(UUID accountId);
+
+    /**
+     * Email addresses of accounts in a role, a page at a time, for an
+     * announcement.
+     * <p>
+     * An account carries an email when she signed in with Google, which is a
+     * different place from the address she may have typed into her profile -
+     * and for most people it is the only one on file. A broadcast that reads
+     * only profiles silently misses them. Blocked accounts are left out.
+     * <p>
+     * Addresses only: a broadcast has no business reading names or anything
+     * else about the people it goes to.
+     */
+    List<String> findEmailAddresses(AccountRole role, int page, int size);
 
     /**
      * Whether two accounts belong to the same person - the same phone number
