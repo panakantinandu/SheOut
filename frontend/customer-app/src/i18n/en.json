@@ -156,7 +156,8 @@
     "acceptedIds": "Aadhaar, passport, driving licence or voter ID. Make sure your name and photo are readable.",
     "uploadDifferent": "Upload a different document",
     "choose": "Choose document",
-    "privacyNote": "Your document is only used to confirm your identity and is reviewed by a person, never automatically."
+    "privacyNote": "Your document is only used to confirm your identity and is reviewed by a person, never automatically.",
+    "fileHint": "A clear photo (JPG, PNG or HEIC) or a PDF. Make sure the whole document is in the frame and readable."
   },
   "payments": {
     "history": "Payment History",

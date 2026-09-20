@@ -116,6 +116,9 @@ export function Verification() {
               <p className="text-sm text-text-secondary">
                 {t('verification.acceptedIds')}
               </p>
+              {/* What the server will actually take, said before she picks
+                  rather than after it is refused - see DocumentRules. */}
+              <p className="text-xs text-text-secondary">{t('verification.fileHint')}</p>
 
               <input
                 ref={fileRef}

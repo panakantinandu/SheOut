@@ -85,7 +85,7 @@ export function Onboarding() {
   const last = index === slides.length - 1;
 
   return (
-    <div className="relative flex min-h-screen flex-col bg-gradient-to-br from-[#FEF8F8] via-[#FBF1F6] to-[#E9DEF5]">
+    <div className="relative flex min-h-screen flex-col bg-brand-wash">
       <div className="flex justify-end px-screen pt-4">
         <button
           type="button"

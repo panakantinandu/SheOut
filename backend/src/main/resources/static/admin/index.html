@@ -4,6 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SheOut Ops Console</title>
+<script>
+  (function () {
+    try {
+      var t = localStorage.getItem('sheout.admin.theme');
+      if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {}
+  })();
+</script>
 <!--
   Deliberately one dependency-free static file served by the backend itself,
   rather than a fourth React app. No build step, no deploy of its own, and
@@ -40,8 +48,58 @@
     --green: #12734A;   --green-bg: #E9F6EF;  --green-line: #B6DFC9;
     --red:   #B3251C;   --red-bg:   #FCEDEB;  --red-line:   #F0C2BC;
 
+    --panel-soft: #FAFBFC;
+    --hover: #FAFAFD;
+    --skel-a: #EDEFF3;  --skel-b: #F6F7F9;
+    --blue: #1D4ED8;    --blue-bg: #EAF0FE;   --blue-line: #C5D6FB;
+    --brand-line: #D9CCF3;
+    --block: #7F1D1D;
+
     --radius: 10px;
     --shadow: 0 1px 2px rgba(27,29,33,.06), 0 4px 12px rgba(27,29,33,.05);
+    color-scheme: light;
+  }
+
+  /*
+   * The same console at night.
+   *
+   * An operator reading a verification queue at 2am is looking at a screen
+   * that is otherwise the brightest thing in the room. The brand stays a
+   * mid purple rather than lightening, because every button here puts white
+   * text on it and a lavender would make those labels unreadable - which is
+   * the mistake the apps avoid the other way round, by darkening their
+   * label colour instead.
+   *
+   * data-theme is set before first paint by the script in <head>, so the
+   * console never flashes white on the way in.
+   */
+  :root[data-theme="dark"] {
+    --brand: #7C55E8;
+    --brand-dark: #6A44D6;
+    --brand-tint: #241C3D;
+    --accent: #FFB545;
+
+    --bg: #121118;
+    --panel: #1B1A23;
+    --panel-soft: #201F2A;
+    --hover: #262533;
+    --line: #2F2E3C;
+    --line-soft: #26252F;
+    --text: #ECEAF2;
+    --muted: #A09BAF;
+    --muted-soft: #7C7789;
+
+    --amber: #F5C46B;   --amber-bg: #2E2413;  --amber-line: #4A3A1C;
+    --green: #5FD39B;   --green-bg: #12291F;  --green-line: #1E4534;
+    --red:   #FF8078;   --red-bg:   #2D1817;  --red-line:   #4A2523;
+
+    --skel-a: #26252F;  --skel-b: #2F2E3A;
+    --blue: #8FB0FF;    --blue-bg: #18213A;   --blue-line: #2A3760;
+    --brand-line: #3A2F63;
+    --block: #FF8078;
+
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 4px 12px rgba(0,0,0,.35);
+    color-scheme: dark;
   }
   * { box-sizing: border-box; }
   /* Must beat the class rules below: .login-wrap and .shell both set
@@ -100,7 +158,7 @@
   .me .phone { font-weight: 650; font-size: 13px; word-break: break-all; }
   .me button {
     margin-top: 10px; width: 100%; padding: 7px 10px; border-radius: 8px;
-    border: 1px solid var(--line); background: #fff; color: var(--text); cursor: pointer;
+    border: 1px solid var(--line); background: var(--panel); color: var(--text); cursor: pointer;
   }
   .me button:hover { border-color: var(--muted-soft); }
   .me .push-row { display: flex; align-items: center; gap: 8px; margin: 10px 0 2px; font-size: 12px; color: var(--muted); }
@@ -117,14 +175,14 @@
 
   .btn {
     padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line);
-    background: #fff; color: var(--text); cursor: pointer; font-weight: 550;
+    background: var(--panel); color: var(--text); cursor: pointer; font-weight: 550;
   }
   .btn:hover { border-color: var(--muted-soft); }
   .btn-primary { background: var(--brand); border-color: var(--brand); color: #fff; }
   .btn-primary:hover { background: var(--brand-dark); border-color: var(--brand-dark); }
   .btn-approve { background: var(--green); border-color: var(--green); color: #fff; }
   .btn-approve:hover { filter: brightness(.94); }
-  .btn-reject { background: #fff; border-color: var(--red-line); color: var(--red); }
+  .btn-reject { background: var(--panel); border-color: var(--red-line); color: var(--red); }
   .btn-reject:hover { background: var(--red-bg); }
   .btn[disabled] { opacity: .55; cursor: not-allowed; }
 
@@ -141,7 +199,7 @@
   th {
     text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .05em;
     color: var(--muted); font-weight: 700; padding: 10px 14px;
-    border-bottom: 1px solid var(--line); white-space: nowrap; background: #FAFBFC;
+    border-bottom: 1px solid var(--line); white-space: nowrap; background: var(--panel-soft);
   }
   th.sortable { cursor: pointer; user-select: none; }
   th.sortable:hover { color: var(--text); }
@@ -150,7 +208,7 @@
   td { padding: 11px 14px; border-bottom: 1px solid var(--line-soft); vertical-align: middle; }
   tr:last-child td { border-bottom: 0; }
   tbody tr.clickable { cursor: pointer; }
-  tbody tr.clickable:hover { background: #FAFAFD; }
+  tbody tr.clickable:hover { background: var(--hover); }
   .num { font-variant-numeric: tabular-nums; }
   .subtle { color: var(--muted); font-size: 12px; }
   .strong { font-weight: 600; }
@@ -165,8 +223,8 @@
   .b-grey  { color: var(--muted); background: var(--bg);       border-color: var(--line); }
   /* Account type, deliberately not in the amber/green/red status palette -
      a role is not a status and must not read like one. */
-  .b-role-driver   { color: #1D4ED8; background: #EAF0FE; border-color: #C5D6FB; }
-  .b-role-customer { color: var(--brand); background: var(--brand-tint); border-color: #D9CCF3; }
+  .b-role-driver   { color: var(--blue); background: var(--blue-bg); border-color: var(--blue-line); }
+  .b-role-customer { color: var(--brand); background: var(--brand-tint); border-color: var(--brand-line); }
 
   /* Blocked is neither a role nor one of the three status tones, and must
      not be mistaken for either. Status badges are pale tints; a role badge
@@ -174,7 +232,7 @@
      in the console, so a blocked account is unmistakable at a glance down a
      column of otherwise pale pills. */
   .b-blocked {
-    color: #fff; background: #7F1D1D; border-color: #7F1D1D;
+    color: var(--panel); background: var(--block); border-color: var(--block);
     letter-spacing: .02em; text-transform: uppercase; font-size: 10.5px;
   }
 
@@ -191,7 +249,7 @@
   .filters .f > span { font-size: 11px; font-weight: 650; color: var(--muted); }
   .filters input, .filters select {
     padding: 7px 9px; border: 1px solid var(--line); border-radius: 8px;
-    font: inherit; font-size: 13px; background: #fff; color: var(--text);
+    font: inherit; font-size: 13px; background: var(--panel); color: var(--text);
   }
   .filters input:focus, .filters select:focus { outline: none; border-color: var(--brand); }
   .filters .f.wide input { min-width: 230px; }
@@ -208,7 +266,7 @@
   .pager .controls { margin-left: auto; display: flex; align-items: center; gap: 6px; }
   .pager button {
     padding: 6px 11px; border: 1px solid var(--line); border-radius: 8px;
-    background: #fff; color: var(--text); cursor: pointer;
+    background: var(--panel); color: var(--text); cursor: pointer;
   }
   .pager button:hover:not([disabled]) { border-color: var(--muted-soft); }
   .pager button[disabled] { opacity: .45; cursor: not-allowed; }
@@ -219,7 +277,7 @@
   .state svg { width: 40px; height: 40px; color: var(--muted-soft); margin-bottom: 10px; }
   .state h3 { font-size: 14px; color: var(--text); font-weight: 650; margin-bottom: 3px; }
   .state p { margin: 0; font-size: 13px; }
-  .skel { height: 11px; border-radius: 6px; background: linear-gradient(90deg,#EDEFF3 25%,#F6F7F9 37%,#EDEFF3 63%);
+  .skel { height: 11px; border-radius: 6px; background: linear-gradient(90deg,var(--skel-a) 25%,var(--skel-b) 37%,var(--skel-a) 63%);
           background-size: 400% 100%; animation: sh 1.3s ease infinite; }
   @keyframes sh { 0% { background-position: 100% 50% } 100% { background-position: 0 50% } }
 
@@ -231,7 +289,7 @@
     position: fixed; inset: 0; background: rgba(27,29,33,.46); z-index: 50;
     display: flex; align-items: center; justify-content: center; padding: 20px;
   }
-  .modal { background: #fff; border-radius: 12px; width: 100%; max-width: 460px; box-shadow: 0 18px 48px rgba(0,0,0,.22); }
+  .modal { background: var(--panel); border-radius: 12px; width: 100%; max-width: 460px; box-shadow: 0 18px 48px rgba(0,0,0,.22); }
   .modal.wide { max-width: 680px; }
   .modal-head { padding: 18px 20px 0; }
   .modal-head h3 { font-size: 16px; font-weight: 700; }
@@ -241,7 +299,7 @@
   .modal label { display: block; font-size: 12px; color: var(--muted); margin: 12px 0 5px; font-weight: 600; }
   .modal textarea, .modal input {
     width: 100%; padding: 9px 11px; border: 1px solid var(--line); border-radius: 8px;
-    font: inherit; background: #fff; color: var(--text);
+    font: inherit; background: var(--panel); color: var(--text);
   }
   .modal textarea { min-height: 74px; resize: vertical; }
 
@@ -258,9 +316,12 @@
   .check .row { display: flex; gap: 8px; flex-wrap: wrap; }
 
   .doc { margin-top: 4px; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--bg); }
-  .doc img { display: block; width: 100%; max-height: 330px; object-fit: contain; background: #fff; }
-  .doc .fallback { padding: 16px; font-size: 12.5px; color: var(--muted); }
-  .doc .fallback code { word-break: break-all; background: #fff; padding: 2px 5px; border-radius: 4px; border: 1px solid var(--line); }
+  .doc img { display: block; width: 100%; max-height: 330px; object-fit: contain; background: var(--panel-soft); }
+  .doc .fallback { padding: 16px; font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+  .doc .doc-pdf { display: block; width: 100%; height: 330px; border: 0; background: var(--panel-soft); }
+  .doc .doc-foot { padding: 7px 12px; border-top: 1px solid var(--line); font-size: 12px; background: var(--panel); }
+  .doc .doc-foot a { color: var(--brand); font-weight: 600; }
+  .doc .fallback code { word-break: break-all; background: var(--panel); padding: 2px 5px; border-radius: 4px; border: 1px solid var(--line); }
   /* Side by side, because the whole point is reading one against the other.
      Stacks on a narrow window rather than squeezing both into unreadable
      columns. */
@@ -278,11 +339,11 @@
   .banner-info .btn { margin-left: auto; }
 
   .thread { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
-  .msg { border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; background: #fff; max-width: 88%; }
+  .msg { border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; background: var(--panel); max-width: 88%; }
   .msg .who { font-size: 11.5px; font-weight: 650; color: var(--muted); margin-bottom: 2px; display: flex; gap: 8px; align-items: center; }
   .msg .body { white-space: pre-wrap; word-break: break-word; font-size: 13px; }
   .msg.raiser { align-self: flex-start; background: var(--bg); }
-  .msg.staff { align-self: flex-end; background: var(--brand-tint); border-color: #D9CCF3; }
+  .msg.staff { align-self: flex-end; background: var(--brand-tint); border-color: var(--brand-line); }
   /* Internal notes must never be mistaken for a reply the rider can read,
      so they look nothing like one: amber, dashed, and labelled. */
   .msg.internal { align-self: stretch; max-width: none; background: var(--amber-bg); border: 1px dashed var(--amber-line); }
@@ -293,7 +354,7 @@
   .controls-grid .check { margin-top: 0; }
   .modal select {
     width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px;
-    font: inherit; background: #fff; color: var(--text); margin-bottom: 8px;
+    font: inherit; background: var(--panel); color: var(--text); margin-bottom: 8px;
   }
   .modal .toggle { display: flex; align-items: center; gap: 8px; margin: 8px 0 0; font-size: 12.5px; color: var(--text); font-weight: 550; }
   .modal .toggle input { width: auto; margin: 0; }
@@ -308,7 +369,7 @@
   .content-wrap { padding: 4px 16px 16px; }
   .content-group { margin-top: 18px; }
   .content-group > h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 700; margin: 0 0 8px; }
-  .cb { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; background: #fff; }
+  .cb { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; background: var(--panel); }
   .cb.dirty { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-tint); }
   .cb .where { font-weight: 600; font-size: 13px; }
   .cb .key { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; color: var(--muted-soft); }
@@ -325,7 +386,7 @@
   .toasts { position: fixed; right: 18px; bottom: 18px; z-index: 60; display: flex; flex-direction: column; gap: 9px; max-width: 380px; }
   .toast {
     padding: 12px 14px; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.16);
-    font-size: 13px; display: flex; gap: 10px; align-items: flex-start; background: #fff; border-left: 4px solid var(--muted);
+    font-size: 13px; display: flex; gap: 10px; align-items: flex-start; background: var(--panel); border-left: 4px solid var(--muted);
     animation: rise .18s ease;
   }
   @keyframes rise { from { opacity: 0; transform: translateY(6px) } }
@@ -347,7 +408,14 @@
 
   /* Phone entry, mirroring the apps' PhoneField: a fixed +91 chip outside
      the input, and ten digits inside it. */
-  .phone-field { display: flex; align-items: stretch; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: #fff; }
+  .theme-row { display: flex; gap: 4px; border: 1px solid var(--line); border-radius: 999px; padding: 3px; margin-bottom: 8px; }
+  .theme-row button {
+    flex: 1; border: 0; background: none; color: var(--muted); font: inherit; font-size: 12px; font-weight: 600;
+    padding: 6px 4px; border-radius: 999px; cursor: pointer;
+  }
+  .theme-row button[aria-checked="true"] { background: var(--brand); color: #fff; }
+
+  .phone-field { display: flex; align-items: stretch; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--panel); }
   .phone-field:focus-within { border-color: var(--brand); }
   .phone-field .cc {
     display: flex; align-items: center; padding: 0 11px; font-size: 13px; font-weight: 650;
@@ -480,6 +548,11 @@
       <div class="push-row" id="pushRow" hidden>
         <span id="pushText">SOS alerts on this device are off</span>
         <button id="pushBtn" type="button" hidden>Turn on</button>
+      </div>
+      <div class="theme-row" role="radiogroup" aria-label="Appearance">
+        <button type="button" data-theme-choice="light" aria-checked="false" role="radio">Light</button>
+        <button type="button" data-theme-choice="dark" aria-checked="false" role="radio">Dark</button>
+        <button type="button" data-theme-choice="system" aria-checked="false" role="radio">System</button>
       </div>
       <button id="logout" type="button">Log out</button>
     </div>
@@ -1471,34 +1544,76 @@ function ratingCell(stats) {
  * of them getting it wrong would run whatever the URL said inside a
  * signed-in admin's session. Nothing is interpolated into markup here.
  */
-function renderDocument(box, url, alt) {
+async function renderDocument(box, url, alt) {
   if (!box) return;
   // Local deployments store documents on disk and hand back a file:// URL,
-  // which a browser will not render from a page. Show the image when it can
-  // be shown and the path when it cannot, rather than an empty frame that
-  // looks broken.
+  // which a browser will not render from a page. Show the path rather than
+  // an empty frame that looks broken.
   if (String(url || '').startsWith('file:')) {
     box.innerHTML = `<div class="fallback">Stored on the server's local disk, which a browser cannot display directly.<br><code>${esc(url)}</code></div>`;
     return;
   }
+
+  box.innerHTML = '<div class="fallback">Loading the document…</div>';
+
+  // FETCHED, NOT JUST DROPPED INTO AN <img>. Two things an <img> cannot do:
+  // it cannot say why nothing appeared, and it cannot show a PDF - and both
+  // happen here for real. The ID is whatever she photographed or scanned,
+  // so a PDF is ordinary; and a document uploaded before a storage change
+  // is gone, which used to render as a silently broken image frame with no
+  // hint that the file, rather than the console, was the problem.
+  let response;
+  try {
+    response = await fetch(url);
+  } catch (err) {
+    box.innerHTML = '<div class="fallback">Could not reach the server for this document. Check the connection and reopen this review.</div>';
+    return;
+  }
+
+  if (response.status === 404 || response.status === 410) {
+    box.innerHTML = `<div class="fallback"><strong>This document is no longer stored.</strong><br>
+      It was submitted before the current document storage, so the file itself is gone even though the record says one was sent.
+      Ask her to submit it again from the app, then review it here. Do not approve on the strength of a missing document.</div>`;
+    return;
+  }
+  if (!response.ok) {
+    box.innerHTML = `<div class="fallback">Could not load this document (${response.status}). <a href="${esc(url)}" target="_blank" rel="noreferrer">Open it directly</a>.</div>`;
+    return;
+  }
+
+  const type = (response.headers.get('content-type') || '').toLowerCase();
+  const blobUrl = URL.createObjectURL(await response.blob());
   box.textContent = '';
-  const img = document.createElement('img');
-  img.alt = alt;
-  img.addEventListener('error', () => {
-    const fallback = document.createElement('div');
-    fallback.className = 'fallback';
-    fallback.append('Could not load this image. ');
-    const link = document.createElement('a');
-    link.href = url;
-    link.target = '_blank';
-    link.rel = 'noreferrer';
-    link.textContent = 'Open it directly';
-    fallback.append(link, '.');
-    box.textContent = '';
-    box.append(fallback);
-  });
-  img.src = url;
-  box.append(img);
+
+  if (type.startsWith('image/')) {
+    const img = document.createElement('img');
+    img.alt = alt;
+    img.src = blobUrl;
+    box.append(img);
+  } else if (type.includes('pdf')) {
+    const frame = document.createElement('iframe');
+    frame.src = blobUrl;
+    frame.title = alt;
+    frame.className = 'doc-pdf';
+    box.append(frame);
+  } else {
+    const unknown = document.createElement('div');
+    unknown.className = 'fallback';
+    unknown.textContent = `This file is a ${type || 'file of an unknown type'}, which cannot be shown here. `;
+    box.append(unknown);
+  }
+
+  // Always: the frame is small and an operator checking a face against a
+  // name needs to be able to look at it properly.
+  const foot = document.createElement('div');
+  foot.className = 'doc-foot';
+  const open = document.createElement('a');
+  open.href = blobUrl;
+  open.target = '_blank';
+  open.rel = 'noreferrer';
+  open.textContent = 'Open full size';
+  foot.append(open);
+  box.append(foot);
 }
 
 function openDriver(r) {
@@ -2419,6 +2534,36 @@ if ('serviceWorker' in navigator) {
     if (tab === 'sos') render();
   });
 }
+
+/**
+ * Light, dark, or whatever the operating system is doing.
+ *
+ * Stored per browser rather than per account: it is about this screen in
+ * this room, and the same operator on a laptop at a desk and a tablet in a
+ * dark office wants different answers. "System" is the default and removes
+ * the attribute rather than resolving it, so a machine that switches at
+ * sunset takes the console with it.
+ */
+function applyTheme(choice) {
+  if (choice === 'system') document.documentElement.removeAttribute('data-theme');
+  else document.documentElement.setAttribute('data-theme', choice);
+  for (const button of document.querySelectorAll('[data-theme-choice]')) {
+    button.setAttribute('aria-checked', String(button.dataset.themeChoice === choice));
+  }
+  try { localStorage.setItem('sheout.admin.theme', choice); } catch (e) {}
+}
+
+for (const button of document.querySelectorAll('[data-theme-choice]')) {
+  button.addEventListener('click', () => applyTheme(button.dataset.themeChoice));
+}
+applyTheme((() => {
+  try {
+    const stored = localStorage.getItem('sheout.admin.theme');
+    return stored === 'dark' || stored === 'light' ? stored : 'system';
+  } catch (e) {
+    return 'system';
+  }
+})());
 
 function start() {
   $('loginWrap').hidden = true;

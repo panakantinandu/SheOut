@@ -36,7 +36,8 @@
     "noteLabel": "Tell us what happened",
     "notePlaceholder": "A sentence is enough",
     "cancelling": "Cancelling...",
-    "cancelTrip": "Cancel trip"
+    "cancelTrip": "Cancel trip",
+    "keepTrip": "Keep trip"
   },
   "rating": {
     "title": "How was your trip?",
@@ -45,7 +46,20 @@
     "label": "Rating",
     "notRated": "Not rated yet",
     "none": "not rated",
-    "aria": "{{label}}: {{value}} out of 5"
+    "aria": "{{label}}: {{value}} out of 5",
+    "them": "them",
+    "titleNamed": "How was your trip with {{name}}?",
+    "commentLabel": "Anything you want to add? (optional)",
+    "whatWentWell": "What went well?",
+    "whatWentWrong": "What went wrong?",
+    "submit": "Submit rating",
+    "stars": {
+      "1": "Bad",
+      "2": "Not good",
+      "3": "Okay",
+      "4": "Good",
+      "5": "Excellent"
+    }
   },
   "chat": {
     "loading": "Loading messages...",
@@ -284,5 +298,12 @@
   "map": {
     "recentre": "Recentre map",
     "unavailable": "The map can’t load right now. Everything you need is still on this screen."
+  },
+  "theme": {
+    "label": "Appearance",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System",
+    "description": "Choose how SheOut looks on this device."
   }
 }

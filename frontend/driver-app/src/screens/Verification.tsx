@@ -258,6 +258,7 @@ export function Verification() {
               <p className="text-xs text-text-secondary">
                 {t('verification.yourIdBody')}
               </p>
+              <p className="text-xs text-text-secondary">{t('verification.fileHint')}</p>
               <input
                 ref={idInputRef}
                 type="file"
@@ -284,6 +285,7 @@ export function Verification() {
               <p className="text-xs text-text-secondary">
                 {t('verification.yourRcBody')}
               </p>
+              <p className="text-xs text-text-secondary">{t('verification.fileHint')}</p>
               <input
                 ref={rcInputRef}
                 type="file"

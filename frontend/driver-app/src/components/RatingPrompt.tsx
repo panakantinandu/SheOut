@@ -12,6 +12,11 @@ export interface RatingPromptProps {
    */
   bookingId?: string;
   counterpartLabel?: string;
+  /** Her name and face, when the screen asking already knows them. */
+  counterpartName?: string | null;
+  counterpartPhotoUrl?: string | null;
+  /** The trip in one line, so she knows which one this is about. */
+  tripSummary?: string | null;
   /** Called once a rating actually lands, so a caller can refresh what it shows. */
   onRated?: (rating: Rating) => void;
 }
@@ -31,7 +36,14 @@ export interface RatingPromptProps {
  * way to rate later from her bookings, because that is when she has a
  * moment.
  */
-export function RatingPrompt({ bookingId, counterpartLabel: counterpartLabelProp, onRated }: RatingPromptProps) {
+export function RatingPrompt({
+  bookingId,
+  counterpartLabel: counterpartLabelProp,
+  counterpartName = null,
+  counterpartPhotoUrl = null,
+  tripSummary = null,
+  onRated,
+}: RatingPromptProps) {
   const { t } = useTranslation();
   const counterpartLabel = counterpartLabelProp ?? t('common.yourRider');
   const [slot, setSlot] = useState<Rating | null>(null);
@@ -90,6 +102,9 @@ export function RatingPrompt({ bookingId, counterpartLabel: counterpartLabelProp
     <RatingDialog
       open={slot !== null && !dismissed}
       counterpartLabel={counterpartLabel}
+      counterpartName={counterpartName}
+      counterpartPhotoUrl={counterpartPhotoUrl}
+      tripSummary={tripSummary}
       busy={busy}
       error={error}
       tagOptions={tagOptions}

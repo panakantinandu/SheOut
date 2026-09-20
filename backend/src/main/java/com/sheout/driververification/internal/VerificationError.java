@@ -18,6 +18,15 @@ public enum VerificationError {
      */
     RC_DOCUMENT_REQUIRED,
 
+    /** Not a photo or a PDF - see DocumentRules. */
+    DOCUMENT_TYPE_UNSUPPORTED,
+
+    /** Too small to read a name or a face from. */
+    DOCUMENT_TOO_SMALL,
+
+    /** Larger than the server accepts. */
+    DOCUMENT_TOO_LARGE,
+
     /** Gender review attempted while status isn't UNDER_REVIEW (must be submitted first). */
     NOT_UNDER_REVIEW,
 

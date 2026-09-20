@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Download, Mail, Trash2 } from 'lucide-react';
 import { Button } from './Button';
+import { Overlay } from './Overlay';
 import { Card } from './Card';
 import { ConfirmDialog } from './ConfirmDialog';
 import { IconCircle } from './IconCircle';
@@ -129,14 +130,13 @@ export function PrivacyDataSection({
       />
 
       {step === 'type' && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-text-primary/40 px-6"
-          role="dialog"
-          aria-modal="true"
-          aria-label={t('privacy.confirmAria')}
-          onClick={() => !deleting && setStep('idle')}
+        <Overlay
+          open
+          label={t('privacy.confirmAria')}
+          className="px-6"
+          onDismiss={deleting ? undefined : () => setStep('idle')}
         >
-          <div className="w-full max-w-xs rounded-card bg-surface p-5 shadow-card" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-xs rounded-card bg-surface p-5 shadow-card motion-safe:animate-pop-in">
             <p className="font-heading text-lg font-semibold text-text-primary">{t('privacy.typeToConfirm')}</p>
             <p className="mt-2 text-sm text-text-secondary">
               {t('privacy.permanent')}
@@ -163,7 +163,7 @@ export function PrivacyDataSection({
               </Button>
             </div>
           </div>
-        </div>
+        </Overlay>
       )}
     </section>
   );

@@ -1,5 +1,6 @@
 import { Crosshair, MapPin, MapPinned, Search, X, Home, Briefcase } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Button, Card, IconCircle, LiveMap, TextField } from '@sheout/design-system';
 import type { MapMarker } from '@sheout/design-system';
 import type { GeoAddress } from '../api/types';
@@ -192,6 +193,7 @@ export function LocationPicker({
   if (!open) return null;
 
   return (
+    createPortal(
     <div className="fixed inset-0 z-50 flex flex-col bg-background">
       <div className="flex items-center gap-3 px-screen pt-6">
         <h2 className="flex-1 font-heading text-lg font-semibold text-text-primary">{title}</h2>
@@ -354,7 +356,9 @@ export function LocationPicker({
 
         <p className="text-center text-xs text-text-secondary">{t('picker.osm')}</p>
       </div>
-    </div>
+    </div>,
+    document.body
+    )
   );
 }
 

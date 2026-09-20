@@ -9,6 +9,7 @@ import {
   IconCircle,
   ListRow,
   PrivacyDataSection,
+  ThemeToggle,
   StatusBadge,
   TopHeader,
   vehicleLabel,
@@ -30,6 +31,7 @@ import { useTranslation } from '@sheout/design-system';
  */
 export function Profile() {
   const { t } = useTranslation();
+  const { t: ds } = useTranslation('ds');
   const navigate = useNavigate();
   const drawer = useAppDrawer();
   const { logout } = useAuth();
@@ -233,6 +235,16 @@ export function Profile() {
           onClick={() => navigate('/payouts')}
         />
       </Card>
+
+      {/* Per device, not per account: the right answer in bed on a phone is
+          not the right answer at a desk - see ThemeToggle. */}
+      <section data-testid="appearance">
+        <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">{ds('theme.label')}</h2>
+        <Card className="space-y-3">
+          <p className="text-sm text-text-secondary">{ds('theme.description')}</p>
+          <ThemeToggle />
+        </Card>
+      </section>
 
       <PrivacyDataSection
         audience="driver"

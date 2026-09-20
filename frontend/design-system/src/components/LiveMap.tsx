@@ -12,7 +12,8 @@ import * as Sentry from '@sentry/react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../lib/cn';
-import { SHEOUT_MAP_STYLE } from '../lib/mapStyle';
+import { SHEOUT_MAP_STYLE, SHEOUT_MAP_STYLE_DARK } from '../lib/mapStyle';
+import { useTheme } from '../lib/theme';
 import { tokens } from '../tokens';
 
 const { colors } = tokens;
@@ -149,6 +150,7 @@ export function LiveMap(props: LiveMapProps) {
 function LoadedMap({ markers, route, className, autoFit = true, onPick, center, zoom }: LiveMapProps & { className: string }) {
   const status = useApiLoadingStatus();
   const authFailed = useMapsAuthFailed();
+  const [, , theme] = useTheme();
   const [initialCenter] = useState(() => center ?? (markers[0] ? { lat: markers[0].lat, lng: markers[0].lng } : HYDERABAD));
   const [initialZoom] = useState(() => zoom ?? (center || markers[0] ? 14 : 11));
 
@@ -162,7 +164,10 @@ function LoadedMap({ markers, route, className, autoFit = true, onPick, center, 
         defaultCenter={initialCenter}
         defaultZoom={initialZoom}
         mapId={MAP_ID}
-        styles={MAP_ID ? undefined : SHEOUT_MAP_STYLE}
+        // The map follows the app: a white rectangle in a dark app at 11pm
+        // is the brightest thing on the screen and the one thing she is
+        // looking at for the longest.
+        styles={MAP_ID ? undefined : theme === 'dark' ? SHEOUT_MAP_STYLE_DARK : SHEOUT_MAP_STYLE}
         disableDefaultUI
         scaleControl={false}
         clickableIcons={false}

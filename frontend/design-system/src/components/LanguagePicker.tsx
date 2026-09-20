@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LANGUAGES, type AppLanguage, useAppLanguage } from '../i18n';
 import { cn } from '../lib/cn';
+import { Overlay } from './Overlay';
 import { IconCircle } from './IconCircle';
 
 export interface LanguagePickerProps {
@@ -24,34 +25,11 @@ export function LanguagePicker({ open, onClose, onSelect }: LanguagePickerProps)
   const { t } = useTranslation('ds');
   const current = useAppLanguage();
 
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', onKey);
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [open, onClose]);
-
-  if (!open) return null;
-
   return (
-    <div
-      className="fixed inset-0 z-[60] flex items-end justify-center bg-text-primary/40"
-      role="dialog"
-      aria-modal="true"
-      aria-label={t('language.title')}
-      onClick={onClose}
-      data-testid="language-picker"
-    >
+    <Overlay open={open} label={t('language.title')} align="sheet" onDismiss={onClose}>
       <div
-        className="w-full max-w-md animate-fade-slide-in rounded-t-[28px] bg-surface px-screen pb-8 pt-3 shadow-card"
-        onClick={(e) => e.stopPropagation()}
+        className="w-full rounded-t-[28px] bg-surface px-screen pb-8 pt-3 shadow-card motion-safe:animate-sheet-up"
+        data-testid="language-picker"
       >
         <span className="mx-auto mb-4 block h-1.5 w-10 rounded-full bg-border" aria-hidden="true" />
         <div className="mb-4 flex items-center gap-3">
@@ -93,6 +71,6 @@ export function LanguagePicker({ open, onClose, onSelect }: LanguagePickerProps)
           })}
         </ul>
       </div>
-    </div>
+    </Overlay>
   );
 }

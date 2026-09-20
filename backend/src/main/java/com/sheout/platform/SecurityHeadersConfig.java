@@ -149,6 +149,11 @@ public class SecurityHeadersConfig {
                 + "; img-src 'self' https: data: blob:"
                 + "; connect-src 'self' " + FIREBASE_CONNECT
                 + "; worker-src 'self'"
+                // A submitted ID can be a PDF, which is shown in a frame
+                // built from a blob this page fetched itself. Same origin
+                // and blobs only - frame-ancestors below still refuses to
+                // let the console itself be framed by anybody.
+                + "; frame-src 'self' blob:"
                 + "; frame-ancestors 'none'"
                 + "; base-uri 'none'"
                 + "; form-action 'self'";

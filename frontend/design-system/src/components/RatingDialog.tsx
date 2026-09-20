@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
+import { Avatar } from './Avatar';
 import { Button } from './Button';
+import { Overlay } from './Overlay';
 import { StarRating } from './StarRating';
 import { useTranslation } from 'react-i18next';
 
@@ -24,6 +26,11 @@ export interface RatingDialogProps {
   message?: string;
   /** Who is being rated, e.g. "your partner" - used in the placeholder. */
   counterpartLabel?: string;
+  /** Her name, when this screen knows it. The sheet then asks about a person, not "them". */
+  counterpartName?: string | null;
+  counterpartPhotoUrl?: string | null;
+  /** The trip in one line, e.g. "Kavuri Hills → Kondapur". Shown so she knows which one this is about. */
+  tripSummary?: string | null;
   busy?: boolean;
   error?: string | null;
   /**
@@ -42,26 +49,37 @@ const COMMENT_MAX = 500;
 /**
  * Asks how the trip went, once it is over.
  * <p>
- * Built on the same bones as ConfirmDialog and CancelReasonDialog - backdrop
- * click and Escape both get you out, body scroll locked - so it feels like
- * the same app rather than a bolted-on survey.
+ * A SHEET AT THE BOTTOM OF THE SCREEN, not a box in the middle of the page.
+ * It used to be a centred card inside the page's own stacking context, which
+ * put it halfway down a scrolled tracking screen with the dim layer stopping
+ * short of the header - see Overlay, which is where that is now fixed. It
+ * also opens where her thumb already is, at the end of a trip, on a phone.
  * <p>
- * Skipping is a real, equal-sized button and not a small grey link in a
- * corner. Rating is optional, and a dialog that makes the way out hard to
- * find is coercion dressed as a prompt: people tap a star at random to make
- * it go away, and the averages quietly fill up with noise. The comment box
- * only appears once stars are chosen, so the common case - four stars, done
- * - stays two taps.
+ * IT SAYS WHO AND WHICH TRIP. Five grey stars under "How was your trip?" is
+ * a survey; her partner's face and "Kavuri Hills to Kondapur" is a question
+ * about something that just happened to her. The score means nothing unless
+ * she is sure which trip she is scoring - and after a day of errands she is
+ * not.
  * <p>
- * No preselected default. A dialog that opens on five stars collects five
- * stars from everyone who taps submit without reading it, which is exactly
- * the population whose opinion the average most needs to be free of.
+ * EACH STAR SAYS WHAT IT MEANS. "Good" and "Not good" under the stars, as
+ * she taps them, so three stars means the same thing to her as it does to
+ * the person reading the average. Nothing is preselected: a dialog that
+ * opens on five stars collects five stars from everyone who taps submit
+ * without reading it, which is exactly the population the average most
+ * needs to be free of.
+ * <p>
+ * Skipping stays a real, reachable button. Rating is optional, and a sheet
+ * that hides the way out is coercion dressed as a prompt: people tap a star
+ * at random to make it go away and the averages fill up with noise.
  */
 export function RatingDialog({
   open,
   title: titleProp,
   message: messageProp,
-  counterpartLabel = 'them',
+  counterpartLabel,
+  counterpartName = null,
+  counterpartPhotoUrl = null,
+  tripSummary = null,
   busy = false,
   error = null,
   tagOptions = null,
@@ -69,6 +87,7 @@ export function RatingDialog({
   onSkip,
 }: RatingDialogProps) {
   const { t } = useTranslation('ds');
+  const who = counterpartLabel ?? t('rating.them');
   const title = titleProp ?? t('rating.title');
   const message = messageProp ?? t('rating.message');
   const [stars, setStars] = useState<number | null>(null);
@@ -89,20 +108,6 @@ export function RatingDialog({
   }, [band]);
 
   useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !busy) onSkip();
-    };
-    document.addEventListener('keydown', onKey);
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [open, busy, onSkip]);
-
-  useEffect(() => {
     if (open) {
       setStars(null);
       setComment('');
@@ -110,25 +115,34 @@ export function RatingDialog({
     }
   }, [open]);
 
-  if (!open) return null;
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-text-primary/40 px-4 py-6 sm:items-center"
-      role="dialog"
-      aria-modal="true"
-      aria-label={title}
-      onClick={() => { if (!busy) onSkip(); }}
-    >
-      <div
-        className="max-h-full w-full max-w-sm overflow-y-auto rounded-card bg-surface p-5 shadow-card"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <p className="font-heading text-lg font-semibold text-text-primary">{title}</p>
-        <p className="mt-2 text-sm text-text-secondary">{message}</p>
+    <Overlay open={open} label={title} align="sheet" onDismiss={busy ? undefined : onSkip}>
+      <div className="max-h-[92vh] overflow-y-auto rounded-t-[28px] bg-surface px-5 pb-6 pt-3 shadow-card motion-safe:animate-sheet-up">
+        {/* The grabber: what every sheet on a phone has, so this reads as
+            something she can push back down rather than something stuck. */}
+        <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-border" aria-hidden="true" />
 
-        <div className="mt-5 flex justify-center">
+        <div className="flex flex-col items-center text-center">
+          {(counterpartName || counterpartPhotoUrl) && (
+            <Avatar url={counterpartPhotoUrl ?? null} name={counterpartName ?? ''} size="lg" />
+          )}
+          <h2 className="mt-3 font-heading text-xl font-bold text-text-primary">
+            {counterpartName ? t('rating.titleNamed', { name: counterpartName }) : title}
+          </h2>
+          {tripSummary && (
+            <p className="mt-1 text-sm font-medium text-text-secondary" data-testid="rating-trip">
+              {tripSummary}
+            </p>
+          )}
+        </div>
+
+        <div className="mt-5 flex flex-col items-center gap-2">
           <StarRating value={stars} onChange={setStars} size="lg" disabled={busy} label={title} />
+          {/* Reserved whether or not a star has been tapped, so the sheet does
+              not jump under her thumb the moment she taps one. */}
+          <p className="h-5 text-sm font-semibold text-primary" aria-live="polite" data-testid="rating-meaning">
+            {stars === null ? '' : t(`rating.stars.${stars}`)}
+          </p>
         </div>
 
         {/* One tap each, and none of them required. Almost nobody writes a
@@ -136,67 +150,83 @@ export function RatingDialog({
             can act on - and a question that costs a tap gets answered where
             a textarea does not. */}
         {offered.length > 0 && (
-          <div className="mt-4 flex flex-wrap justify-center gap-2">
-            {offered.map((option) => {
-              const chosen = tags.includes(option.code);
-              return (
-                <button
-                  key={option.code}
-                  type="button"
-                  disabled={busy}
-                  aria-pressed={chosen}
-                  onClick={() =>
-                    setTags((current) =>
-                      current.includes(option.code)
-                        ? current.filter((code) => code !== option.code)
-                        : [...current, option.code]
-                    )
-                  }
-                  className={
-                    'rounded-full border px-3 py-1.5 text-sm transition-colors ' +
-                    (chosen
-                      ? 'border-primary bg-primary text-white'
-                      : 'border-border bg-surface text-text-primary')
-                  }
-                >
-                  {option.label}
-                </button>
-              );
-            })}
+          <div className="mt-4">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-secondary">
+              {band === 'positive' ? t('rating.whatWentWell') : t('rating.whatWentWrong')}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {offered.map((option) => {
+                const chosen = tags.includes(option.code);
+                return (
+                  <button
+                    key={option.code}
+                    type="button"
+                    disabled={busy}
+                    aria-pressed={chosen}
+                    onClick={() =>
+                      setTags((current) =>
+                        current.includes(option.code)
+                          ? current.filter((code) => code !== option.code)
+                          : [...current, option.code]
+                      )
+                    }
+                    className={
+                      'rounded-full border px-3.5 py-2 text-sm font-medium transition-colors ' +
+                      (chosen
+                        ? 'border-primary bg-primary text-text-inverse'
+                        : 'border-border bg-background text-text-primary')
+                    }
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )}
 
         {stars !== null && (
           <label className="mt-4 block">
-            <span className="mb-1.5 block text-sm font-medium text-text-primary">
-              Anything you want to add? (optional)
-            </span>
+            <span className="mb-1.5 block text-sm font-medium text-text-primary">{t('rating.commentLabel')}</span>
             <textarea
-              className="min-h-[72px] w-full rounded-input border border-border bg-surface p-3 text-sm text-text-primary outline-none transition-colors focus:border-primary"
+              className="min-h-[76px] w-full rounded-input border border-border bg-background p-3 text-sm text-text-primary outline-none transition-colors focus:border-primary"
               maxLength={COMMENT_MAX}
               value={comment}
               disabled={busy}
               onChange={(e) => setComment(e.target.value)}
-              placeholder={t('rating.commentPlaceholder', { who: counterpartLabel })}
+              placeholder={t('rating.commentPlaceholder', { who })}
             />
           </label>
         )}
 
-        {error && <p className="mt-3 text-sm text-danger">{error}</p>}
+        <p className="mt-4 text-center text-xs leading-relaxed text-text-secondary">{message}</p>
 
-        <div className="mt-5 flex gap-3">
-          <Button variant="secondary" fullWidth disabled={busy} onClick={onSkip}>
-            {t('common.notNow')}
-          </Button>
+        {error && (
+          <p className="mt-3 text-center text-sm text-danger" role="alert">
+            {error}
+          </p>
+        )}
+
+        <div className="mt-4 space-y-2">
           <Button
             fullWidth
+            size="lg"
             disabled={stars === null || busy}
             onClick={() => stars !== null && onSubmit(stars, comment.trim() || undefined, tags)}
           >
-            {busy ? t('common.sending') : t('common.submit')}
+            {busy ? t('common.sending') : t('rating.submit')}
           </Button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={onSkip}
+            className="block w-full py-2.5 text-center text-sm font-semibold text-text-secondary disabled:opacity-50"
+            data-testid="rating-skip"
+          >
+            {t('common.notNow')}
+          </button>
         </div>
       </div>
-    </div>
+    </Overlay>
   );
 }

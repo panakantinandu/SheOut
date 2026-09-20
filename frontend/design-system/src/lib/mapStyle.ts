@@ -40,3 +40,34 @@ export const SHEOUT_MAP_STYLE: google.maps.MapTypeStyle[] = [
   { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#d5e3f1' }] },
   { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#8aa2bd' }] },
 ];
+
+/**
+ * The same map, at night.
+ * <p>
+ * The same decisions as the light style - no points of interest, no transit,
+ * parks kept as shapes to orient by - on a dark ground, so a tracking screen
+ * at 11pm is not a white rectangle in a dark app. Roads are lighter than the
+ * land rather than darker, because on a dark map the road network is what
+ * has to read first, and water is a deep blue that cannot be mistaken for
+ * land.
+ */
+export const SHEOUT_MAP_STYLE_DARK: google.maps.MapTypeStyle[] = [
+  { elementType: 'geometry', stylers: [{ color: '#1a1530' }] },
+  { elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#9d95b8' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#14101f' }, { weight: 3 }] },
+
+  { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ visibility: 'on' }, { color: '#1d2a26' }] },
+  { featureType: 'transit', stylers: [{ visibility: 'off' }] },
+  { featureType: 'administrative.land_parcel', stylers: [{ visibility: 'off' }] },
+  { featureType: 'administrative', elementType: 'geometry', stylers: [{ visibility: 'off' }] },
+
+  { featureType: 'road', elementType: 'geometry.fill', stylers: [{ color: '#2b2445' }] },
+  { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#221c39' }] },
+  { featureType: 'road.highway', elementType: 'geometry.fill', stylers: [{ color: '#3a2f5c' }] },
+  { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#241d3c' }] },
+  { featureType: 'road.local', elementType: 'labels.text.fill', stylers: [{ color: '#8c84a6' }] },
+
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#121a2e' }] },
+];
