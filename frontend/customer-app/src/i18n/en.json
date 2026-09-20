@@ -230,6 +230,11 @@
       "SIGNED_IN_ELSEWHERE": "You were signed in on another device.",
       "ACCOUNT_BLOCKED": "This account has been blocked by SheOut. Please contact support if you think this is a mistake.",
       "ACCOUNT_DELETED": "This account has been deleted."
+    },
+    "trust": {
+      "women": "Women drivers only",
+      "verified": "ID-checked partners",
+      "sos": "SOS on every trip"
     }
   },
   "drawer": {

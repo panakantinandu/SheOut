@@ -86,6 +86,39 @@ export default {
           '45%': { transform: 'scale(1.22)' },
           '100%': { transform: 'scale(1)' },
         },
+        // The brand mark breathing on the entry screens. Six pixels, four
+        // seconds: enough that the screen is alive, little enough that it is
+        // never the thing you are looking at.
+        float: {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-6px)' },
+        },
+        // Two soft colour washes drifting behind the sign-in card. Transform
+        // only, so it costs the compositor and not the CPU on a cheap phone.
+        drift: {
+          '0%, 100%': { transform: 'translate3d(0, 0, 0) scale(1)' },
+          '50%': { transform: 'translate3d(6%, -4%, 0) scale(1.12)' },
+        },
+        'drift-slow': {
+          '0%, 100%': { transform: 'translate3d(0, 0, 0) scale(1.05)' },
+          '50%': { transform: 'translate3d(-7%, 5%, 0) scale(0.95)' },
+        },
+        // The splash's wave settling in from below as the app opens.
+        'rise-in': {
+          from: { transform: 'translateY(18%)', opacity: '0' },
+          to: { transform: 'translateY(0)', opacity: '1' },
+        },
+        // The splash's progress line, filling over exactly as long as the
+        // splash is held - an honest bar, not a spinner that means nothing.
+        'fill-bar': {
+          from: { transform: 'scaleX(0)' },
+          to: { transform: 'scaleX(1)' },
+        },
+        // The cursor in the empty box of the code field.
+        caret: {
+          '0%, 45%': { opacity: '1' },
+          '55%, 100%': { opacity: '0' },
+        },
         'pop-in': {
           from: { transform: 'scale(0.86)', opacity: '0' },
           to: { transform: 'scale(1)', opacity: '1' },
@@ -97,6 +130,11 @@ export default {
         'fade-slide-in': 'fade-slide-in 200ms ease-out both',
         'draw-check': 'draw-check 420ms ease-out 120ms both',
         'pop-in': 'pop-in 220ms ease-out both',
+        float: 'float 4s ease-in-out infinite',
+        drift: 'drift 22s ease-in-out infinite',
+        'drift-slow': 'drift-slow 28s ease-in-out infinite',
+        'rise-in': 'rise-in 620ms cubic-bezier(0.22, 1, 0.36, 1) both',
+        caret: 'caret 1.1s step-end infinite',
         'nav-pop': 'nav-pop 320ms cubic-bezier(0.34, 1.56, 0.64, 1) both',
       },
     },

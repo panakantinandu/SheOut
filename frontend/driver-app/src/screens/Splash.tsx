@@ -40,6 +40,9 @@ export function Splash() {
 
   return (
     <BrandSplash
+      // The bar fills over exactly as long as this screen is held, so it
+      // reaches the end as the app opens rather than at some other moment.
+      durationMs={FADE_START_MS}
       fading={fading}
       badge={t('splash.badge')}
       items={[

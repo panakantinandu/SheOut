@@ -15,6 +15,13 @@ export interface BrandHeaderProps {
   footer?: string;
   /** The line between the orange rules. Defaults to the brand line. */
   tagline?: string;
+  /**
+   * Lets the mark breathe - a six-pixel rise and fall over four seconds, on
+   * the two screens where it is the whole picture (splash and sign-in).
+   * Off everywhere else: a logo moving above a form somebody is filling in
+   * is a distraction, not a flourish.
+   */
+  float?: boolean;
   className?: string;
 }
 
@@ -34,7 +41,7 @@ export interface BrandHeaderProps {
  * file, which is the concrete reason its Login could not show the mark;
  * importing it here means neither app needs one.
  */
-export function BrandHeader({ size = 'md', footer, tagline: taglineProp, className }: BrandHeaderProps) {
+export function BrandHeader({ size = 'md', footer, tagline: taglineProp, float = false, className }: BrandHeaderProps) {
   const { t } = useTranslation('ds');
   const tagline = taglineProp ?? t('brand.tagline');
   const large = size === 'lg';
@@ -42,7 +49,7 @@ export function BrandHeader({ size = 'md', footer, tagline: taglineProp, classNa
   return (
     <div className={cn('flex flex-col items-center', large ? 'gap-3' : 'mx-auto gap-2', className)}>
       {large ? (
-        <div className="relative flex w-full items-center justify-center">
+        <div className={cn('relative flex w-full items-center justify-center', float && 'motion-safe:animate-float')}>
           <span
             className="absolute h-56 w-56 max-h-[70vw] max-w-[70vw] rounded-full bg-accent-orange/20 blur-3xl"
             aria-hidden="true"
@@ -50,7 +57,11 @@ export function BrandHeader({ size = 'md', footer, tagline: taglineProp, classNa
           <img src={illustration} alt="SheOut" className="relative w-[58%] max-w-xs object-contain" />
         </div>
       ) : (
-        <img src={illustration} alt="SheOut" className="h-28 w-28 object-contain" />
+        <img
+          src={illustration}
+          alt="SheOut"
+          className={cn('h-28 w-28 object-contain', float && 'motion-safe:animate-float')}
+        />
       )}
 
       {/* "SHE" purple, "OUT" orange - both sampled from the mockup. The
