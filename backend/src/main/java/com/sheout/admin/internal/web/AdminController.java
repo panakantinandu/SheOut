@@ -15,10 +15,14 @@ import com.sheout.booking.BookingStatus;
 import com.sheout.notifications.SosAlertSummary;
 import com.sheout.notifications.SosError;
 import com.sheout.sharedkernel.Result;
+import com.sheout.notifications.Announcement;
+import com.sheout.notifications.AnnouncementApi;
+import com.sheout.notifications.AnnouncementAudience;
 import com.sheout.sharedkernel.web.ApiException;
 import com.sheout.sharedkernel.web.PageResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -62,8 +66,10 @@ public class AdminController {
     private static final int MAX_RECENT_BOOKINGS = 200;
 
     private final AdminService adminService;
+    private final AnnouncementApi announcements;
 
-    public AdminController(AdminService adminService) {
+    public AdminController(AdminService adminService, AnnouncementApi announcements) {
+        this.announcements = announcements;
         this.adminService = adminService;
     }
 
@@ -155,6 +161,39 @@ public class AdminController {
      * The account list. blocked is three-state: omit it for every account,
      * true for only blocked, false for only active.
      */
+    /**
+     * Sends one message to everybody in an audience.
+     * <p>
+     * Push goes to the audience's FCM topic - one call, whoever is listening
+     * - and email goes out in paced batches. SMS is sent only when the
+     * operator explicitly ticks it: every SMS must match a DLT-approved
+     * template and costs money per message, so it is for a safety advisory,
+     * not for news.
+     */
+    @PostMapping("/announcements")
+    public ResponseEntity<Announcement> broadcast(@Valid @RequestBody BroadcastRequest request) {
+        CurrentAccount caller = requireAdmin();
+        return ResponseEntity.ok(announcements.broadcast(
+                request.title().trim(), request.body().trim(), request.audience(),
+                Boolean.TRUE.equals(request.sendSms()), caller.accountId()));
+    }
+
+    /** What has been broadcast, newest first, with what actually went out. */
+    @GetMapping("/announcements")
+    public ResponseEntity<List<Announcement>> announcementHistory() {
+        requireAdmin();
+        return ResponseEntity.ok(announcements.history(50));
+    }
+
+    public record BroadcastRequest(
+            @NotBlank @Size(max = 120) String title,
+            @NotBlank @Size(max = 1000) String body,
+            @NotNull AnnouncementAudience audience,
+            /** Off unless ticked - see the method's note. */
+            Boolean sendSms
+    ) {
+    }
+
     @GetMapping("/accounts")
     public ResponseEntity<PageResponse<AccountOpsRow>> accounts(
             @RequestParam(required = false) Integer page,

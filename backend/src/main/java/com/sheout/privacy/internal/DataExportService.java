@@ -122,7 +122,7 @@ class DataExportService {
                     .orElse(null);
         }
         return customerProfileApi.findByAccountId(id)
-                .map(p -> new DataExport.Profile(p.name(), p.dateOfBirth(), p.email(), p.homeAddress(), p.workAddress(),
+                .map(p -> new DataExport.Profile(p.name(), p.dateOfBirth(), p.email(), p.home() == null ? null : p.home().label(), p.work() == null ? null : p.work().label(),
                         null, null, null, p.hasProfilePhoto()))
                 .orElse(null);
     }

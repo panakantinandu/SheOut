@@ -13,7 +13,10 @@
     "close": "Close"
   },
   "consent": {
-    "text": "By tapping “{{action}}” you agree to our <terms>Terms of Service</terms> and confirm you have read the <privacy>Privacy Policy</privacy>, including that SheOut is women only and that a government ID is reviewed by a person before your first trip."
+    "text": "By tapping “{{action}}” you agree to our <terms>Terms of Service</terms> and confirm you have read the <privacy>Privacy Policy</privacy>, including that SheOut is women only and that a government ID is reviewed by a person before your first trip.",
+    "checkbox": "I agree to the <terms>Terms of Service</terms> and have read the <privacy>Privacy Policy</privacy>, including that SheOut is women only and that a government ID is reviewed by a person before my first trip.",
+    "checkboxAria": "Agree to the Terms of Service and Privacy Policy",
+    "required": "Please tick the box to agree to the Terms of Service and Privacy Policy."
   },
   "legal": {
     "englishOnly": "This document is available in English only for now. A translated version is being prepared."

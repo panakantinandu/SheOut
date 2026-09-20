@@ -19,8 +19,9 @@ public record CustomerProfileSummary(
         UUID accountId,
         String name,
         String phoneNumber,
-        String homeAddress,
-        String workAddress,
+        /** Home and Work as places, not sentences - see SavedPlace. Null when unset. */
+        SavedPlace home,
+        SavedPlace work,
         /** Null for an account that has not completed its profile since dates of birth were required. */
         LocalDate dateOfBirth,
         /** Optional; null when none is set. */
@@ -32,6 +33,8 @@ public record CustomerProfileSummary(
          */
         String profilePhotoUrl,
         boolean hasProfilePhoto,
+        /** False until she has been shown the introduction - see the apps' Onboarding screen. */
+        boolean onboardingSeen,
         /** Name, date of birth and photo are all on file - what the apps' completion screen checks. */
         boolean profileComplete,
         boolean verified,

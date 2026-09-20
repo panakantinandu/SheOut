@@ -15,6 +15,7 @@ import { Terms } from './screens/Terms'
 import { Notifications } from './screens/Notifications'
 import { PaymentMethods } from './screens/PaymentMethods'
 import { Devices } from './screens/Devices'
+import { Onboarding } from './screens/Onboarding'
 import { PersonalDetails } from './screens/PersonalDetails'
 import { SavedAddresses } from './screens/SavedAddresses'
 import { Verification } from './screens/Verification'
@@ -74,6 +75,7 @@ function App() {
           they are drill-downs, not tab destinations, so no AppShell. */}
       <Route path="/notifications" element={protectedOnly(<Notifications />)} />
       <Route path="/complete-profile" element={protectedOnly(<CompleteProfile />)} />
+      <Route path="/welcome" element={protectedOnly(<Onboarding />)} />
       <Route path="/profile/details" element={protectedOnly(<PersonalDetails />)} />
       <Route path="/profile/addresses" element={protectedOnly(<SavedAddresses />)} />
       <Route path="/profile/payments" element={protectedOnly(<PaymentMethods />)} />

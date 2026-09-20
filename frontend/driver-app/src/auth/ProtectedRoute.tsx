@@ -18,8 +18,20 @@ const ALWAYS_REACHABLE = ['/complete-profile', '/trip/', '/offer/', '/chat/', '/
  */
 let profileCompleteForAccount: { accountId: string; complete: boolean } | null = null;
 
+/**
+ * Guards currently on screen.
+ * <p>
+ * React reuses this component across routes - every protected route renders
+ * the same guard in the same place in the tree - so a guard that already
+ * decided "not complete" keeps that decision when she moves to the next
+ * screen, and the initial state is never read again. Without this, finishing
+ * the profile form bounced straight back to it until the app was reloaded.
+ */
+const watchers = new Set<(known: boolean) => void>();
+
 export function markProfileComplete(accountId: string) {
   profileCompleteForAccount = { accountId, complete: true };
+  watchers.forEach((tell) => tell(true));
 }
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
@@ -28,6 +40,14 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
   const cached = profileCompleteForAccount?.accountId === accountId ? profileCompleteForAccount.complete : null;
   const [complete, setComplete] = useState<boolean | null>(cached);
   const exempt = ALWAYS_REACHABLE.some((path) => location.pathname.startsWith(path));
+
+  useEffect(() => {
+    const tell = (known: boolean) => setComplete(known);
+    watchers.add(tell);
+    return () => {
+      watchers.delete(tell);
+    };
+  }, []);
 
   useEffect(() => {
     if (!isAuthenticated || !accountId || complete !== null) return;

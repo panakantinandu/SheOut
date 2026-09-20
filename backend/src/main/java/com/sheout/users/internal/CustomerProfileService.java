@@ -2,11 +2,13 @@ package com.sheout.users.internal;
 
 import com.sheout.auth.AccountSummary;
 import com.sheout.auth.AuthApi;
+import com.sheout.users.SavedPlace;
 import com.sheout.sharedkernel.Result;
 import com.sheout.users.CustomerProfileApi;
 import com.sheout.users.CustomerProfileSummary;
 import com.sheout.users.EmergencyContact;
 import com.sheout.users.EmergencyContactsApi;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,10 +43,25 @@ public class CustomerProfileService implements CustomerProfileApi, EmergencyCont
     }
 
     @Override
+    public List<String> findEmailAddresses(int page, int size) {
+        return customerProfileRepository.findEmailAddresses(PageRequest.of(page, size));
+    }
+
+    @Override
     public List<CustomerProfileSummary> findFlaggedForReview() {
         return customerProfileRepository.findByFlaggedAtIsNotNullOrderByFlaggedAtAsc().stream()
                 .map(this::toSummary)
                 .toList();
+    }
+
+    /** Recorded when she finishes or skips the introduction, so it is shown once. */
+    @Transactional
+    public Optional<CustomerProfileSummary> markOnboardingSeen(UUID accountId) {
+        return customerProfileRepository.findByAccountId(accountId).map(profile -> {
+            profile.markOnboardingSeen();
+            customerProfileRepository.save(profile);
+            return toSummary(profile);
+        });
     }
 
     @Override
@@ -64,7 +81,7 @@ public class CustomerProfileService implements CustomerProfileApi, EmergencyCont
      */
     @Transactional
     public Result<CustomerProfileSummary, CustomerProfileError> updateProfile(
-            UUID accountId, String name, String homeAddress, String workAddress, LocalDate dateOfBirth, String email) {
+            UUID accountId, String name, SavedPlace home, SavedPlace work, LocalDate dateOfBirth, String email) {
         Optional<CustomerProfileEntity> found = customerProfileRepository.findByAccountId(accountId);
         if (found.isEmpty()) {
             return Result.failure(CustomerProfileError.PROFILE_NOT_FOUND);
@@ -86,9 +103,16 @@ public class CustomerProfileService implements CustomerProfileApi, EmergencyCont
         if (!profile.hasProfilePhoto()) {
             return Result.failure(CustomerProfileError.PROFILE_PHOTO_REQUIRED);
         }
+        // Only on the way in. Once she is signed up, editing her name must
+        // not re-open a question she has already answered.
+        if (!profile.isProfileComplete() && !authApi.hasAcceptedTerms(accountId)) {
+            return Result.failure(CustomerProfileError.CONSENT_REQUIRED);
+        }
         profile.setName(name);
-        profile.setHomeAddress(homeAddress);
-        profile.setWorkAddress(workAddress);
+        profile.setHomeAddress(home == null ? null : home.label());
+        profile.setHomePoint(home == null ? null : home.lat(), home == null ? null : home.lng());
+        profile.setWorkAddress(work == null ? null : work.label());
+        profile.setWorkPoint(work == null ? null : work.lat(), work == null ? null : work.lng());
         profile.setDateOfBirth(dateOfBirth);
         profile.setEmail(normalisedEmail.get().isEmpty() ? null : normalisedEmail.get());
         customerProfileRepository.save(profile);
@@ -165,6 +189,11 @@ public class CustomerProfileService implements CustomerProfileApi, EmergencyCont
         return Result.success(null);
     }
 
+    /** No label means nothing saved; a label with no point is a note she typed before places had coordinates. */
+    private static SavedPlace savedPlace(String label, Double lat, Double lng) {
+        return label == null || label.isBlank() ? null : new SavedPlace(label, lat, lng);
+    }
+
     private CustomerProfileSummary toSummary(CustomerProfileEntity profile) {
         String phoneNumber = authApi.findAccount(profile.getAccountId())
                 .map(AccountSummary::phoneNumber)
@@ -173,12 +202,13 @@ public class CustomerProfileService implements CustomerProfileApi, EmergencyCont
                 profile.getAccountId(),
                 profile.getName(),
                 phoneNumber,
-                profile.getHomeAddress(),
-                profile.getWorkAddress(),
+                savedPlace(profile.getHomeAddress(), profile.getHomeLat(), profile.getHomeLng()),
+                savedPlace(profile.getWorkAddress(), profile.getWorkLat(), profile.getWorkLng()),
                 profile.getDateOfBirth(),
                 profile.getEmail(),
                 displayablePhotoUrl(profile.getProfilePhotoKey()),
                 profile.hasProfilePhoto(),
+                profile.hasSeenOnboarding(),
                 profile.isProfileComplete(),
                 profile.isVerified(),
                 profile.getTrustStats(),

@@ -14,6 +14,7 @@ import com.sheout.users.DriverProfileSummary;
 import com.sheout.users.OnlineStatus;
 import com.sheout.users.VehicleType;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,6 +50,11 @@ public class DriverProfileService implements DriverProfileApi {
     @Override
     public Optional<DriverProfileSummary> findByAccountId(UUID accountId) {
         return driverProfileRepository.findByAccountId(accountId).map(this::toSummary);
+    }
+
+    @Override
+    public List<String> findEmailAddresses(int page, int size) {
+        return driverProfileRepository.findEmailAddresses(PageRequest.of(page, size));
     }
 
     @Override

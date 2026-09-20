@@ -1,4 +1,4 @@
-import { Crosshair, MapPin, MapPinned, Search, X } from 'lucide-react';
+import { Crosshair, MapPin, MapPinned, Search, X, Home, Briefcase } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button, Card, IconCircle, LiveMap, TextField } from '@sheout/design-system';
 import type { MapMarker } from '@sheout/design-system';
@@ -24,6 +24,11 @@ export interface LocationPickerProps {
   title: string;
   /** Shown as one-tap shortcuts above the search results. */
   presets?: GeoAddress[];
+  /**
+   * Her own saved places, above everything else: the two addresses she uses
+   * most should be one tap, not a search she has already done twice.
+   */
+  saved?: SavedShortcut[];
   /** Offers "Use my current location" - only meaningful for pickup. */
   allowCurrentLocation?: boolean;
   /** Which tab to open on. The map icon beside a field opens straight on 'map'. */
@@ -46,12 +51,19 @@ export interface LocationPickerProps {
  * collected somewhere else, could not book at all. Both ends are now
  * searchable and both have a way forward when the device says no.
  */
+export interface SavedShortcut {
+  kind: 'home' | 'work';
+  name: string;
+  address: GeoAddress;
+}
+
 export function LocationPicker({
   open,
   title,
   presets = [],
   allowCurrentLocation = false,
   initialMode = 'search',
+  saved = [],
   markerKind = 'drop',
   startAt = null,
   onSelect,
@@ -288,6 +300,32 @@ export function LocationPicker({
               );
             })}
           </Card>
+        )}
+
+        {saved.length > 0 && query.trim().length < 3 && (
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-secondary">{t('picker.saved')}</p>
+            <Card className="divide-y divide-border p-0" data-testid="picker-saved">
+              {saved.map((shortcut) => (
+                <button
+                  key={shortcut.kind}
+                  type="button"
+                  onClick={() => {
+                    onSelect(shortcut.address);
+                    onClose();
+                  }}
+                  className="flex w-full items-center gap-3 p-4 text-left"
+                  data-testid={`picker-saved-${shortcut.kind}`}
+                >
+                  <IconCircle tone="soft" size="sm" icon={shortcut.kind === 'home' ? <Home /> : <Briefcase />} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-medium text-text-primary">{shortcut.name}</span>
+                    <span className="block truncate text-xs text-text-secondary">{shortcut.address.label}</span>
+                  </span>
+                </button>
+              ))}
+            </Card>
+          </div>
         )}
 
         {presets.length > 0 && query.trim().length < 3 && (

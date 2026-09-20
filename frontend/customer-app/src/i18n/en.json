@@ -58,7 +58,8 @@
     "sending": "Sending...",
     "close": "Close",
     "tryAgain": "Try again",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "next": "Next"
   },
   "completeProfile": {
     "title": "Complete your profile",
@@ -119,7 +120,15 @@
     "work": "Work",
     "workPlaceholder": "Add a work address",
     "save": "Save Addresses",
-    "note": "Home and Work are the two addresses your account stores. They are labels for now - booking still asks you to pick pickup and drop points."
+    "note": "Saved addresses are only yours. Partners see a pickup or drop only once you book a trip.",
+    "intro": "Set Home and Work once, then pick them with one tap when you book.",
+    "notSet": "Not set yet",
+    "needsPin": "Saved as text - set it on the map to use it when booking",
+    "set": "Set",
+    "change": "Change",
+    "remove": "Remove",
+    "setHome": "Set your Home address",
+    "setWork": "Set your Work address"
   },
   "rating": {
     "sendError": "Could not send that rating"
@@ -356,7 +365,8 @@
     "lookingUp": "Looking up this address...",
     "cannotName": "Could not name this point",
     "pinAt": "Pin dropped at",
-    "useThis": "Use this location"
+    "useThis": "Use this location",
+    "saved": "Saved places"
   },
   "contacts": {
     "loadError": "Could not load your contacts",
@@ -623,5 +633,29 @@
     "confirmMessage": "The {{device}} will have to sign in again.",
     "confirmThisTitle": "Sign out?",
     "confirmThisMessage": "This is the device you are using. You will be signed out here."
+  },
+  "onboarding": {
+    "skip": "Skip",
+    "start": "Get started",
+    "goTo": "Go to screen {{number}}",
+    "what": {
+      "title": "Rides and parcels, by women",
+      "body": "Book a bike taxi or send a parcel across the city. Every partner who takes your trip is a woman."
+    },
+    "safety": {
+      "title": "Safety is the product",
+      "body": "Not a setting you have to find - it is how every trip works.",
+      "verified": "ID-checked partners",
+      "contacts": "Emergency contacts",
+      "sos": "SOS on every trip"
+    },
+    "booking": {
+      "title": "Booking takes three taps",
+      "body": "Pick where you are going, see the fare before you book, and follow your partner on the map until she arrives."
+    },
+    "ready": {
+      "title": "You are all set",
+      "body": "Add money to your SheOut wallet whenever you like - every fare is paid in the app, never in cash."
+    }
   }
 }

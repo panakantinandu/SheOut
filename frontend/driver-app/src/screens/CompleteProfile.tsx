@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { BrandHeader, ProfileCompletionForm } from '@sheout/design-system';
-import { ApiError, usersApi } from '../api/client';
+import { BrandHeader, ProfileCompletionForm, ConsentCheckbox } from '@sheout/design-system';
+import { ApiError, authApi, usersApi } from '../api/client';
 import type { DriverProfileSummary, VehicleType } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { markProfileComplete } from '../auth/ProtectedRoute';
@@ -16,11 +16,17 @@ import { useTranslation } from '@sheout/design-system';
  */
 export function CompleteProfile() {
   const { t } = useTranslation();
+  const { t: ds } = useTranslation('ds');
   const notice = (useLocation().state as { notice?: string } | null)?.notice ?? null;
   const navigate = useNavigate();
   const { accountId } = useAuth();
   const [profile, setProfile] = useState<DriverProfileSummary | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  /**
+   * Unticked until she ticks it. The server refuses to finish an account
+   * without a consent record, so this is the ask, not the enforcement.
+   */
+  const [consent, setConsent] = useState(false);
   const [vehicle, setVehicle] = useState<{ vehicleType: VehicleType; registration: string }>({
     vehicleType: 'BIKE',
     registration: '',
@@ -57,7 +63,9 @@ export function CompleteProfile() {
           hasPhoto={profile.hasProfilePhoto}
           photoReason={t('profile.photoReason')}
           submitLabel={t('common.continue')}
-          extraFieldsValid={vehicle.registration.trim().length > 0}
+          extraFieldsValid={vehicle.registration.trim().length > 0 && consent}
+          extraFieldsProblem={vehicle.registration.trim().length === 0 ? null : ds('consent.required')}
+          onAttemptSubmit={() => setShowVehicleErrors(true)}
           onUploadPhoto={async (file) => {
             try {
               setProfile(await usersApi.uploadMyPhoto(file));
@@ -66,8 +74,8 @@ export function CompleteProfile() {
             }
           }}
           onSubmit={async (values) => {
-            setShowVehicleErrors(true);
             try {
+              await authApi.acceptConsent();
               await usersApi.updateMyProfile({
                 name: values.name,
                 dateOfBirth: values.dateOfBirth,
@@ -87,6 +95,12 @@ export function CompleteProfile() {
             registration={vehicle.registration}
             onChange={setVehicle}
             showErrors={showVehicleErrors}
+          />
+          <ConsentCheckbox
+            checked={consent}
+            onChange={setConsent}
+            onOpenTerms={() => navigate('/terms')}
+            onOpenPrivacy={() => navigate('/privacy')}
           />
         </ProfileCompletionForm>
       )}

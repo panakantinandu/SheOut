@@ -7,6 +7,9 @@ import com.sheout.sharedkernel.Result;
 import com.sheout.sharedkernel.storage.DocumentUpload;
 import com.sheout.sharedkernel.web.ApiException;
 import com.sheout.users.CustomerProfileSummary;
+import com.sheout.users.SavedPlace;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 import com.sheout.users.EmergencyContact;
 import com.sheout.users.internal.CustomerProfileError;
 import com.sheout.users.internal.CustomerProfileService;
@@ -54,7 +57,7 @@ public class CustomerProfileController {
     public ResponseEntity<CustomerProfileSummary> updateMyProfile(@Valid @RequestBody UpdateProfileRequest request) {
         CurrentAccount caller = requireCustomer();
         Result<CustomerProfileSummary, CustomerProfileError> result = customerProfileService.updateProfile(
-                caller.accountId(), request.name(), request.homeAddress(), request.workAddress(),
+                caller.accountId(), request.name(), toPlace(request.home()), toPlace(request.work()),
                 request.dateOfBirth(), request.email());
         if (result.isFailure()) {
             throw toApiException(result.error());
@@ -63,6 +66,18 @@ public class CustomerProfileController {
     }
 
     /** Her profile photo - uploaded before the profile is saved, which requires one. */
+    /**
+     * She has seen the introduction - finished it or skipped it, which are
+     * the same thing as far as showing it again goes.
+     */
+    @PostMapping("/api/v1/users/customer/me/onboarding-seen")
+    public ResponseEntity<CustomerProfileSummary> onboardingSeen() {
+        CurrentAccount caller = requireCustomer();
+        return customerProfileService.markOnboardingSeen(caller.accountId())
+                .map(ResponseEntity::ok)
+                .orElseThrow(() -> ApiException.notFound("No customer profile found for this account"));
+    }
+
     @PostMapping(value = "/api/v1/users/customer/me/photo", consumes = "multipart/form-data")
     public ResponseEntity<CustomerProfileSummary> uploadMyPhoto(@RequestParam("file") MultipartFile file) {
         CurrentAccount caller = requireCustomer();
@@ -129,6 +144,8 @@ public class CustomerProfileController {
                     "You must be 18 or older to use SheOut.");
             case INVALID_EMAIL -> new ApiException(HttpStatus.BAD_REQUEST, "INVALID_EMAIL",
                     "That email address does not look right. Leave it empty if you would rather not add one.");
+            case CONSENT_REQUIRED -> new ApiException(HttpStatus.BAD_REQUEST, "CONSENT_REQUIRED",
+                    "Please agree to the Terms of Service and Privacy Policy to finish setting up your account.");
         };
     }
 
@@ -137,10 +154,23 @@ public class CustomerProfileController {
      * service's own check if a client sends an explicit null past this - the
      * rule lives there, not here. email is optional; blank clears it.
      */
+    /** A saved place off the wire: the label she sees, and where it is. */
+    public record SavedPlaceRequest(
+            @NotBlank @Size(max = 500) String label,
+            @DecimalMin("-90.0") @DecimalMax("90.0") Double lat,
+            @DecimalMin("-180.0") @DecimalMax("180.0") Double lng
+    ) {
+    }
+
+    /** Absent stays absent: sending no home address is how she clears one. */
+    private static SavedPlace toPlace(SavedPlaceRequest request) {
+        return request == null ? null : new SavedPlace(request.label(), request.lat(), request.lng());
+    }
+
     public record UpdateProfileRequest(
             @NotBlank @Size(max = 150) String name,
-            @Size(max = 500) String homeAddress,
-            @Size(max = 500) String workAddress,
+            @Valid SavedPlaceRequest home,
+            @Valid SavedPlaceRequest work,
             @NotNull LocalDate dateOfBirth,
             @Size(max = 254) String email
     ) {

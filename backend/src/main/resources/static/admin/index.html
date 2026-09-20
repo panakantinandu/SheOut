@@ -462,6 +462,10 @@
         Feedback <span class="count" id="cFeedback">–</span>
       </button>
       <div class="label">App</div>
+      <button data-tab="announcements" aria-current="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 11-5.8-1.6"/></svg>
+        Announcements <span class="count" id="cAnnouncements">–</span>
+      </button>
       <button data-tab="content" aria-current="false">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
         Content <span class="count" id="cContent">–</span>
@@ -1136,6 +1140,17 @@ const VIEWS = {
    * made it, and the version check means a save can never silently overwrite
    * someone else's. A modal on every edit would be clicked through unread.
    */
+  announcements: {
+    title: 'Announcements',
+    desc: 'One message to everybody in an audience. Push reaches every phone with the app installed through a single call; email goes to everyone who has an address on file, in paced batches. SMS is off unless you tick it.',
+    cardTitle: 'Send an announcement',
+    hint: 'Sent announcements are listed underneath',
+    custom: true,
+    paint: paintAnnouncements,
+    columns: [],
+    load: () => api('/admin/announcements'),
+  },
+
   content: {
     title: 'Content',
     desc: 'Text shown in the rider and partner apps. Edit a block and save it; the apps pick up the change within about five minutes. Plain text only - line breaks are kept, nothing else is formatted.',
@@ -1867,6 +1882,84 @@ function compareContentKeys(a, b) {
   return 0;
 }
 
+/**
+ * Compose at the top, history underneath.
+ * <p>
+ * The counts in the history are what actually went out, recorded at the time
+ * - "push accepted" is per audience, not per phone, because a topic broadcast
+ * is one call that FCM fans out and never reports a device count. A number
+ * there would be invented, and an operator deciding whether anybody heard
+ * deserves the real answer.
+ */
+function paintAnnouncements(sent) {
+  const rows = (sent || []).map(a => `
+    <tr>
+      <td><span class="strong">${esc(a.title)}</span><div class="subtle">${esc(a.body)}</div></td>
+      <td>${audienceBadge(a.audience)}</td>
+      <td class="num">${a.pushAccepted > 0 ? `<span class="badge b-green">push sent</span>` : '<span class="badge b-grey">no push</span>'}${a.pushFailed > 0 ? ` <span class="badge b-red">${a.pushFailed} failed</span>` : ''}</td>
+      <td class="num">${a.emailsSent} sent${a.emailsFailed > 0 ? ` <span class="badge b-red">${a.emailsFailed} failed</span>` : ''}</td>
+      <td class="num">${a.smsRequested ? `${a.smsSent} sent` : '<span class="subtle">not requested</span>'}</td>
+      <td><span class="subtle">${time(a.sentAt)}</span>${a.note ? `<div class="subtle">${esc(a.note)}</div>` : ''}</td>
+    </tr>`).join('');
+
+  $('rows').innerHTML = `<tr><td class="content-cell">
+    <div class="cb" id="announceBox">
+      <div class="where">New announcement</div>
+      <input id="annTitle" maxlength="120" placeholder="Title - what this is about" style="width:100%;margin-top:8px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font:inherit" />
+      <textarea id="annBody" maxlength="1000" rows="4" placeholder="Message - plain text, no formatting"></textarea>
+      <div class="foot">
+        <label>Audience
+          <select id="annAudience" style="margin-left:6px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;font:inherit">
+            <option value="ALL_CUSTOMERS">All riders</option>
+            <option value="ALL_DRIVERS">All partners</option>
+            <option value="BOTH">Everyone</option>
+          </select>
+        </label>
+        <label style="display:flex;align-items:center;gap:6px">
+          <input type="checkbox" id="annSms" />
+          Also send SMS (safety advisories only - charged per message, must match a DLT-approved template)
+        </label>
+        <button class="btn primary" id="annSend" style="margin-left:auto">Send announcement</button>
+      </div>
+    </div>
+
+    <table style="margin-top:14px">
+      <thead><tr><th>Message</th><th>Audience</th><th>Push</th><th>Email</th><th>SMS</th><th>Sent</th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="6"><div class="state"><h3>Nothing sent yet</h3><p>Announcements you send appear here with what actually went out.</p></div></td></tr>'}</tbody>
+    </table>
+  </td></tr>`;
+
+  $('annSend').addEventListener('click', async () => {
+    const title = $('annTitle').value.trim();
+    const body = $('annBody').value.trim();
+    if (!title || !body) return toast('bad', 'A title and a message are both needed');
+    const audience = $('annAudience').value;
+    const sendSms = $('annSms').checked;
+    const who = { ALL_CUSTOMERS: 'all riders', ALL_DRIVERS: 'all partners', BOTH: 'everyone' }[audience];
+    // Deliberately blocking: this reaches every phone at once and cannot be
+    // taken back, which is worth one confirmation.
+    if (!confirm(`Send "${title}" to ${who}?${sendSms ? '\n\nSMS is ticked - this will be charged per message.' : ''}`)) return;
+    $('annSend').disabled = true;
+    try {
+      const result = await api('/admin/announcements', { method: 'POST', body: JSON.stringify({ title, body, audience, sendSms }) });
+      toast('ok', 'Announcement sent', `Push ${result.pushAccepted > 0 ? 'sent' : 'not sent'} · ${result.emailsSent} emails`);
+      $('annTitle').value = '';
+      $('annBody').value = '';
+      render();
+    } catch (err) {
+      toast('bad', 'Could not send that announcement', err.message);
+    } finally {
+      $('annSend').disabled = false;
+    }
+  });
+}
+
+function audienceBadge(audience) {
+  if (audience === 'ALL_CUSTOMERS') return '<span class="badge b-role-customer">All riders</span>';
+  if (audience === 'ALL_DRIVERS') return '<span class="badge b-grey">All partners</span>';
+  return '<span class="badge b-green">Everyone</span>';
+}
+
 function paintContent(blocks) {
   const area = stateFor('content').area || '';
   const shown = blocks.filter(b => !area || b.key.startsWith(area + '.')).sort((a, b) => compareContentKeys(a.key, b.key));
@@ -2021,8 +2114,9 @@ async function render(opts = {}) {
     try {
       const blocks = await view.load(stateFor(tab));
       if (isStale()) return;
-      paintContent(blocks);
-      $('cContent').textContent = blocks.length;
+      (view.paint || paintContent)(blocks);
+      if (tab === 'content') $('cContent').textContent = blocks.length;
+      if (tab === 'announcements') $('cAnnouncements').textContent = blocks.length;
     } catch (err) {
       if (err.message === 'unauthorized' || isStale()) return;
       $('rows').innerHTML = `<tr><td><div class="state"><h3>Could not load this section</h3><p>${esc(err.message)}</p></div></td></tr>`;

@@ -20,6 +20,7 @@ import org.springframework.stereotype.Component;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -103,29 +104,54 @@ public class FcmPushChannel implements NotificationChannel {
         return NotificationChannelType.PUSH;
     }
 
+    /**
+     * Puts a device in the group its app's announcements go to.
+     * <p>
+     * Subscribing at registration is what makes a broadcast one call instead
+     * of a loop over every token: FCM fans the message out itself. Called on
+     * every app start, and subscribing a token that is already subscribed is
+     * free, so this needs no record of who is in which topic.
+     * <p>
+     * A failure here is logged and swallowed. Not being in the announcements
+     * topic must never stop a device registering for the notifications that
+     * matter - a trip, an SOS, a payment.
+     */
+    public void subscribeToTopic(String deviceToken, String topic) {
+        if (messaging == null) {
+            return;
+        }
+        try {
+            messaging.subscribeToTopic(List.of(deviceToken), topic);
+        } catch (FirebaseMessagingException | RuntimeException e) {
+            log.warn("Could not subscribe a device to {}: {}", topic, e.getMessage());
+        }
+    }
+
+    /**
+     * One message to everybody in a topic - the whole point of topics. What
+     * comes back is FCM's acceptance of the broadcast, not a count of phones
+     * it reached; FCM does not tell anybody that, and pretending otherwise
+     * would put an invented number in the admin console.
+     */
+    public Result<Void, SendFailure> sendToTopic(String topic, OutboundMessage message) {
+        if (messaging == null) {
+            return Result.failure(SendFailure.of(NotificationError.NOT_CONFIGURED, notConfiguredReason));
+        }
+        try {
+            messaging.send(buildMessage(message).setTopic(topic).build());
+            return Result.success(null);
+        } catch (FirebaseMessagingException | RuntimeException e) {
+            log.error("Broadcast to topic {} failed: {}", topic, e.getMessage());
+            return Result.failure(SendFailure.of(NotificationError.PROVIDER_ERROR, "Could not reach FCM: " + e.getMessage()));
+        }
+    }
+
     @Override
     public Result<Void, SendFailure> send(String deviceToken, OutboundMessage message) {
         if (messaging == null) {
             return Result.failure(SendFailure.of(NotificationError.NOT_CONFIGURED, notConfiguredReason));
         }
-        boolean alert = message.urgency() == OutboundMessage.Urgency.ALERT;
-        Message.Builder fcm = Message.builder()
-                .setToken(deviceToken)
-                .putData("title", message.title())
-                .putData("urgency", message.urgency().name())
-                .setWebpushConfig(WebpushConfig.builder()
-                        .putHeader("Urgency", alert ? "high" : "normal")
-                        .putHeader("TTL", String.valueOf(alert ? ALERT_TTL_SECONDS : NORMAL_TTL_SECONDS))
-                        .build());
-        if (message.body() != null) {
-            fcm.putData("body", message.body());
-        }
-        if (message.link() != null) {
-            fcm.putData("link", message.link());
-        }
-        if (message.tag() != null) {
-            fcm.putData("tag", message.tag());
-        }
+        Message.Builder fcm = buildMessage(message).setToken(deviceToken);
         try {
             messaging.send(fcm.build());
             return Result.success(null);
@@ -148,5 +174,26 @@ public class FcmPushChannel implements NotificationChannel {
             log.error("Push send failed - {}", e.getMessage());
             return Result.failure(SendFailure.of(NotificationError.PROVIDER_ERROR, "Could not reach FCM: " + e.getMessage()));
         }
+    }
+
+    private Message.Builder buildMessage(OutboundMessage message) {
+        boolean alert = message.urgency() == OutboundMessage.Urgency.ALERT;
+        Message.Builder fcm = Message.builder()
+                .putData("title", message.title())
+                .putData("urgency", message.urgency().name())
+                .setWebpushConfig(WebpushConfig.builder()
+                        .putHeader("Urgency", alert ? "high" : "normal")
+                        .putHeader("TTL", String.valueOf(alert ? ALERT_TTL_SECONDS : NORMAL_TTL_SECONDS))
+                        .build());
+        if (message.body() != null) {
+            fcm.putData("body", message.body());
+        }
+        if (message.link() != null) {
+            fcm.putData("link", message.link());
+        }
+        if (message.tag() != null) {
+            fcm.putData("tag", message.tag());
+        }
+        return fcm;
     }
 }

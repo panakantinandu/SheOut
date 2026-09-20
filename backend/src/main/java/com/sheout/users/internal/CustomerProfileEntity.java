@@ -49,6 +49,28 @@ public class CustomerProfileEntity extends BaseEntity {
     @Column(length = 500)
     private String workAddress;
 
+    /**
+     * Where Home and Work actually are. Null for an address saved as text
+     * before this existed, or for one she has not placed on the map yet -
+     * see V29. The label without a point is a note to herself; with one it
+     * can be tapped into a booking.
+     */
+    /** When she was shown the introduction. Null means she has not been. */
+    @Column(name = "onboarding_seen_at")
+    private Instant onboardingSeenAt;
+
+    @Column(name = "home_lat")
+    private Double homeLat;
+
+    @Column(name = "home_lng")
+    private Double homeLng;
+
+    @Column(name = "work_lat")
+    private Double workLat;
+
+    @Column(name = "work_lng")
+    private Double workLng;
+
     @Column(nullable = false)
     private boolean verified = false;
 
@@ -127,6 +149,44 @@ public class CustomerProfileEntity extends BaseEntity {
 
     public void setWorkAddress(String workAddress) {
         this.workAddress = workAddress;
+    }
+
+    public boolean hasSeenOnboarding() {
+        return onboardingSeenAt != null;
+    }
+
+    /** Once. A second call leaves the first date alone. */
+    void markOnboardingSeen() {
+        if (onboardingSeenAt == null) {
+            onboardingSeenAt = Instant.now();
+        }
+    }
+
+    public Double getHomeLat() {
+        return homeLat;
+    }
+
+    public Double getHomeLng() {
+        return homeLng;
+    }
+
+    public Double getWorkLat() {
+        return workLat;
+    }
+
+    public Double getWorkLng() {
+        return workLng;
+    }
+
+    /** Both together or neither: a point without its label is unreadable, a label without its point unusable. */
+    public void setHomePoint(Double lat, Double lng) {
+        this.homeLat = lat;
+        this.homeLng = lng;
+    }
+
+    public void setWorkPoint(Double lat, Double lng) {
+        this.workLat = lat;
+        this.workLng = lng;
     }
 
     public boolean isVerified() {
