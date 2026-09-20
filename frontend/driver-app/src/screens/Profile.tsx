@@ -1,4 +1,4 @@
-import { Bike, Camera, FileText, HelpCircle, Landmark, Lock, LogOut, ShieldCheck, User } from 'lucide-react';
+import { Bike, Camera, Landmark, LogOut, ShieldCheck, User } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -15,6 +15,7 @@ import {
   ProfileCompletionForm,
   shrinkPhoto,
 } from '@sheout/design-system';
+import { useAppDrawer } from '../components/AppDrawer';
 import { ApiError, privacyApi, supportApi, usersApi } from '../api/client';
 import type { DriverProfileSummary, VehicleType } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
@@ -30,6 +31,7 @@ import { useTranslation } from '@sheout/design-system';
 export function Profile() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const drawer = useAppDrawer();
   const { logout } = useAuth();
   const [confirmingLogout, setConfirmingLogout] = useState(false);
   const [grievanceEmail, setGrievanceEmail] = useState<string | null>(null);
@@ -81,7 +83,7 @@ export function Profile() {
 
   return (
     <div className="space-y-6">
-      <TopHeader variant="back" title={t('profile.title')} onBack={() => navigate('/home')} />
+      <TopHeader variant="plain" title={t('profile.title')} onMenuClick={drawer.open} />
 
       <Card className="flex items-center gap-3">
         <Avatar url={profile?.profilePhotoUrl} name={profile?.name} size="lg" />
@@ -229,21 +231,6 @@ export function Profile() {
           icon={<IconCircle tone="soft" size="sm" icon={<Landmark />} />}
           label={t('profile.payouts')}
           onClick={() => navigate('/payouts')}
-        />
-        <ListRow
-          icon={<IconCircle tone="soft" size="sm" icon={<HelpCircle />} />}
-          label={t('help.title')}
-          onClick={() => navigate('/help')}
-        />
-        <ListRow
-          icon={<IconCircle tone="soft" size="sm" icon={<Lock />} />}
-          label={t('legal.privacy')}
-          onClick={() => navigate('/privacy')}
-        />
-        <ListRow
-          icon={<IconCircle tone="soft" size="sm" icon={<FileText />} />}
-          label={t('legal.terms')}
-          onClick={() => navigate('/terms')}
         />
       </Card>
 

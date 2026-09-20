@@ -1,4 +1,4 @@
-import { FileText, Info, Languages, LifeBuoy, Lock, LogOut, Wallet } from 'lucide-react';
+import { FileText, Info, Languages, LifeBuoy, Lock, LogOut } from 'lucide-react';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -99,7 +99,6 @@ export function AppDrawerProvider({ children }: { children: ReactNode }) {
                   setPickingLanguage(true);
                 },
               },
-              { key: 'payouts', label: t('drawer.payouts'), icon: <Wallet />, onClick: () => go('/payouts') },
             ],
           },
           {
