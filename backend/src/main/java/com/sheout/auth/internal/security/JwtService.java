@@ -44,11 +44,17 @@ public class JwtService {
         this.expiry = Duration.ofMinutes(expiryMinutes);
     }
 
-    public String issue(UUID accountId, AccountRole role) {
+    /**
+     * sid is the session this token belongs to - see SessionService. Without
+     * it a token cannot be checked against anything, so a token issued before
+     * sessions existed no longer authenticates anybody.
+     */
+    public String issue(UUID accountId, AccountRole role, UUID sessionId) {
         Instant now = Instant.now();
         return Jwts.builder()
                 .subject(accountId.toString())
                 .claim("role", role.name())
+                .claim("sid", sessionId.toString())
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plus(expiry)))
                 .signWith(key)
@@ -64,7 +70,13 @@ public class JwtService {
                     .getPayload();
             UUID accountId = UUID.fromString(claims.getSubject());
             AccountRole role = AccountRole.valueOf(claims.get("role", String.class));
-            return Optional.of(new CurrentAccount(accountId, role));
+            String sid = claims.get("sid", String.class);
+            if (sid == null) {
+                // Pre-sessions token: nothing to check it against, so it is
+                // not a credential any more.
+                return Optional.empty();
+            }
+            return Optional.of(new CurrentAccount(accountId, role, UUID.fromString(sid)));
         } catch (JwtException | IllegalArgumentException ex) {
             return Optional.empty();
         }

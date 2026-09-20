@@ -1,4 +1,4 @@
-import { BadgeCheck, FileText, HelpCircle, Info, Lock, LogOut, MapPin, Receipt, ShieldAlert, User } from 'lucide-react';
+import { BadgeCheck, FileText, HelpCircle, Info, Lock, LogOut, MapPin, Receipt, ShieldAlert, User, Smartphone } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Avatar, Card, ConfirmDialog, IconCircle, ListRow, PrivacyDataSection, TopHeader } from '@sheout/design-system';
@@ -81,6 +81,7 @@ export function Profile() {
         <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">{t('profile.sectionPayments')}</h2>
         <Card className="p-0">
           <ListRow icon={<IconCircle tone="soft" size="sm" icon={<Receipt />} />} label={t('payments.history')} onClick={() => navigate('/profile/payments')} />
+          <ListRow icon={<IconCircle tone="soft" size="sm" icon={<Smartphone />} />} label={t('devices.title')} sublabel={t('devices.sub')} onClick={() => navigate('/profile/devices')} />
         </Card>
       </section>
 

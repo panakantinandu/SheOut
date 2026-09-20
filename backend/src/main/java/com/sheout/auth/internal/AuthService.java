@@ -6,6 +6,7 @@ import com.sheout.auth.AccountRole;
 import com.sheout.auth.AccountSummary;
 import com.sheout.auth.AuthApi;
 import com.sheout.auth.AuthenticatedSession;
+import com.sheout.auth.SessionRevocation;
 import com.sheout.auth.internal.otp.OtpService;
 import com.sheout.auth.internal.security.JwtService;
 import com.sheout.privacy.AccountDeletionRequested;
@@ -29,15 +30,18 @@ public class AuthService implements AuthApi {
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
 
     private final AccountRepository accountRepository;
+    private final SessionService sessions;
     private final OtpService otpService;
     private final JwtService jwtService;
     private final DomainEventPublisher eventPublisher;
 
     public AuthService(AccountRepository accountRepository,
+                        SessionService sessions,
                         OtpService otpService,
                         JwtService jwtService,
                         DomainEventPublisher eventPublisher) {
         this.accountRepository = accountRepository;
+        this.sessions = sessions;
         this.otpService = otpService;
         this.jwtService = jwtService;
         this.eventPublisher = eventPublisher;
@@ -92,7 +96,7 @@ public class AuthService implements AuthApi {
      * roll back together.
      */
     @Transactional
-    public Result<AuthenticatedSession, AuthError> verifyOtp(String phoneNumber, String code, AccountRole role) {
+    public Result<AuthenticatedSession, AuthError> verifyOtp(String phoneNumber, String code, AccountRole role, String userAgent) {
         OtpService.VerificationOutcome outcome = otpService.verifyCode(phoneNumber, role, code);
         if (outcome == OtpService.VerificationOutcome.NOT_FOUND_OR_EXPIRED) {
             return Result.failure(AuthError.OTP_NOT_FOUND_OR_EXPIRED);
@@ -125,8 +129,17 @@ public class AuthService implements AuthApi {
             account = existing.get();
         }
 
-        String token = jwtService.issue(account.getId(), account.getRole());
+        String token = issueFor(account, userAgent);
         return Result.success(new AuthenticatedSession(token, account.getId(), account.getRole(), isNewAccount));
+    }
+
+    /**
+     * A token tied to a fresh session, which is what makes it possible to
+     * take it away again - see SessionService.
+     */
+    private String issueFor(AccountEntity account, String userAgent) {
+        UUID sessionId = sessions.open(account.getId(), account.getRole(), userAgent);
+        return jwtService.issue(account.getId(), account.getRole(), sessionId);
     }
 
     /**
@@ -151,7 +164,7 @@ public class AuthService implements AuthApi {
      * rather than needing to remember to add this check later.
      */
     @Transactional
-    public Result<AuthenticatedSession, AuthError> verifyGoogleSignIn(String email, String name, AccountRole role) {
+    public Result<AuthenticatedSession, AuthError> verifyGoogleSignIn(String email, String name, AccountRole role, String userAgent) {
         // Same per-app rule as verifyOtp: the email identifies an account
         // only together with the app signing in, and a block on any of this
         // person's accounts holds in every app.
@@ -178,7 +191,7 @@ public class AuthService implements AuthApi {
             account = existing.get();
         }
 
-        String token = jwtService.issue(account.getId(), account.getRole());
+        String token = issueFor(account, userAgent);
         return Result.success(new AuthenticatedSession(token, account.getId(), account.getRole(), isNewAccount));
     }
 
@@ -201,6 +214,10 @@ public class AuthService implements AuthApi {
         return accountRepository.findById(accountId).map(account -> {
             account.block(adminAccountId, reason);
             accountRepository.save(account);
+            // The point of blocking: access stops now. Without this the
+            // phone already holding a token carried on for up to thirty days.
+            int ended = sessions.revokeAll(accountId, SessionRevocation.ACCOUNT_BLOCKED);
+            log.warn("Blocking account {} ended {} live session(s)", accountId, ended);
             // Worth a log line in its own right: this is the record an
             // operator will look for when asked why someone lost access,
             // and the row alone does not say it happened at a point in a
@@ -234,20 +251,6 @@ public class AuthService implements AuthApi {
     }
 
     /**
-     * Whether a token's account may still act. False once deleted.
-     * <p>
-     * Asked on every authenticated request by JwtAuthenticationFilter,
-     * because a token outlives the account it was issued for: tokens are
-     * valid for thirty days and there is no revocation list. Without this, a
-     * deleted account's phone would keep working until the token expired.
-     * One primary-key lookup per request; cheap next to what each endpoint
-     * already reads.
-     */
-    public boolean isActiveAccount(UUID accountId) {
-        return accountRepository.existsByIdAndDeletedAtIsNull(accountId);
-    }
-
-    /**
      * The auth half of an account deletion. See AccountEntity.markDeleted
      * for what is removed and why nothing of the phone number is kept.
      */
@@ -257,6 +260,7 @@ public class AuthService implements AuthApi {
         accountRepository.findById(event.accountId()).ifPresent(account -> {
             account.markDeleted();
             accountRepository.save(account);
+            sessions.revokeAll(event.accountId(), SessionRevocation.ACCOUNT_DELETED);
         });
     }
 

@@ -14,6 +14,7 @@ import { Privacy } from './screens/Privacy'
 import { Terms } from './screens/Terms'
 import { Notifications } from './screens/Notifications'
 import { PaymentMethods } from './screens/PaymentMethods'
+import { Devices } from './screens/Devices'
 import { PersonalDetails } from './screens/PersonalDetails'
 import { SavedAddresses } from './screens/SavedAddresses'
 import { Verification } from './screens/Verification'
@@ -76,6 +77,7 @@ function App() {
       <Route path="/profile/details" element={protectedOnly(<PersonalDetails />)} />
       <Route path="/profile/addresses" element={protectedOnly(<SavedAddresses />)} />
       <Route path="/profile/payments" element={protectedOnly(<PaymentMethods />)} />
+      <Route path="/profile/devices" element={protectedOnly(<Devices />)} />
       <Route path="/profile/emergency-contacts" element={protectedOnly(<EmergencyContacts />)} />
       <Route path="/verification" element={protectedOnly(<Verification />)} />
       <Route path="/help" element={protectedOnly(<HelpSupport />)} />

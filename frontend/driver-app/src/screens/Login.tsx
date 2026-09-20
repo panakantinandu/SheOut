@@ -1,8 +1,8 @@
 import { useState, type FormEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { BrandHeader, Button, LANGUAGES, LanguagePicker, LegalConsentNotice, PhoneField, TextField, isCompletePhone, setAppLanguage, toE164, useAppLanguage, ResendCode, useOtpSender } from '@sheout/design-system';
+import { BrandHeader, Button, LANGUAGES, LanguagePicker, LegalConsentNotice, PhoneField, TextField, isCompletePhone, setAppLanguage, toE164, useAppLanguage, ResendCode, useOtpSender, i18next } from '@sheout/design-system';
 import { Languages } from 'lucide-react';
-import { ApiError, authApi, usersApi } from '../api/client';
+import { ApiError, authApi, takeSessionEndedReason, usersApi } from '../api/client';
 import type { AuthSession } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { useTranslation } from '@sheout/design-system';
@@ -50,7 +50,14 @@ export function Login() {
   /** Non-error feedback, e.g. 'that number is already registered'. */
   const location = useLocation();
   // Set by another screen that sent her here with something to say - account deletion does.
-  const [notice, setNotice] = useState<string | null>((location.state as { notice?: string } | null)?.notice ?? null);
+  const [notice, setNotice] = useState<string | null>(() => {
+    // Why she is here, when she did not choose to be: signed in elsewhere,
+    // blocked, or signed out from another device. Read once - see
+    // takeSessionEndedReason.
+    const ended = takeSessionEndedReason();
+    if (ended && ended !== 'SIGNED_OUT') return i18next.t(`login.ended.${ended}`);
+    return (location.state as { notice?: string } | null)?.notice ?? null;
+  });
   const [phoneDigits, setPhoneDigits] = useState('');
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
