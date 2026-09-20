@@ -225,7 +225,12 @@
     "existingHint": "Already have an account? Tap <link>Login</link> above - same number, same OTP.",
     "googleLoadError": "Could not load Google sign-in - check your connection",
     "googleUnavailable": "Google sign-in is unavailable",
-    "googleCancelled": "Google sign-in was cancelled"
+    "googleCancelled": "Google sign-in was cancelled",
+    "ended": {
+      "SIGNED_IN_ELSEWHERE": "You were signed in on another device.",
+      "ACCOUNT_BLOCKED": "This account has been blocked by SheOut. Please contact support if you think this is a mistake.",
+      "ACCOUNT_DELETED": "This account has been deleted."
+    }
   },
   "drawer": {
     "language": "Language",
@@ -596,5 +601,22 @@
   },
   "splash": {
     "footer": "Safe · Fast · Women Focused"
+  },
+  "devices": {
+    "title": "Devices",
+    "sub": "Where you are signed in",
+    "intro": "These are the devices signed in to your SheOut account. Sign out any you do not recognise.",
+    "loading": "Loading your devices",
+    "loadError": "Could not load your devices.",
+    "endError": "Could not sign that device out.",
+    "emptyTitle": "No other devices",
+    "emptyMessage": "You are only signed in here.",
+    "thisDevice": "This device",
+    "lastActive": "Last used {{when}}",
+    "signOut": "Sign out",
+    "confirmTitle": "Sign out this device?",
+    "confirmMessage": "The {{device}} will have to sign in again.",
+    "confirmThisTitle": "Sign out?",
+    "confirmThisMessage": "This is the device you are using. You will be signed out here."
   }
 }

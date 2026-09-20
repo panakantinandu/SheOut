@@ -417,3 +417,13 @@ export interface AssignedDriver {
   averageStars: number | null;
   totalRatings: number;
 }
+
+/** One device signed in to this account - see sessionsApi. */
+export interface AccountSession {
+  id: string;
+  device: string;
+  signedInAt: string;
+  lastActiveAt: string;
+  /** The device asking. Signing it out is signing out. */
+  current: boolean;
+}

@@ -71,6 +71,60 @@ function buildQuery(params: Record<string, unknown>): string {
 
 const TOKEN_STORAGE_KEY = 'sheout_driver_access_token';
 
+/** Where the reason is left for the sign-in screen to read once. */
+const SESSION_ENDED_KEY = 'sheout_session_ended';
+
+export type SessionEndedReason = 'SIGNED_IN_ELSEWHERE' | 'ACCOUNT_BLOCKED' | 'ACCOUNT_DELETED' | 'SIGNED_OUT';
+
+/** Read once from storage, then remembered for this page. */
+let sessionEndedReason: SessionEndedReason | null | undefined;
+
+/**
+ * Why the last session ended, for the sign-in screen to explain.
+ * <p>
+ * Taken out of storage on the first call and kept in memory after that: React
+ * renders a component's initial state twice in development, and a plain
+ * read-and-delete lost the reason to the second render - the screen then had
+ * nothing to say. Storage is still cleared, so a later reload does not repeat
+ * an old message.
+ */
+export function takeSessionEndedReason(): SessionEndedReason | null {
+  if (sessionEndedReason === undefined) {
+    try {
+      sessionEndedReason = sessionStorage.getItem(SESSION_ENDED_KEY) as SessionEndedReason | null;
+      sessionStorage.removeItem(SESSION_ENDED_KEY);
+    } catch {
+      sessionEndedReason = null;
+    }
+  }
+  return sessionEndedReason;
+}
+
+/**
+ * The server has ended this session - she signed in elsewhere, an admin
+ * blocked the account, she signed this device out from another one, or the
+ * token simply is not accepted any more.
+ * <p>
+ * Handled here rather than screen by screen: it can land on any request, and
+ * a screen that only knows "401" would leave her tapping a dead app. Any 401
+ * while a token is stored means that token is finished - with a reason when
+ * the server gave one, silently when it did not. The token goes, the reason is
+ * kept for the sign-in screen, and the app restarts there.
+ */
+function onSessionEnded(body: ApiErrorResponse | undefined) {
+  const detail = body?.details?.find((d) => d.startsWith('reason:'));
+  const reason = (detail ? detail.split(':')[1].trim() : 'SIGNED_OUT') as SessionEndedReason;
+  setStoredToken(null);
+  try {
+    sessionStorage.setItem(SESSION_ENDED_KEY, reason);
+  } catch {
+    // Private browsing: she still gets signed out, just without the reason.
+  }
+  if (!window.location.pathname.startsWith('/login')) {
+    window.location.replace('/login');
+  }
+}
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -140,6 +194,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 
   if (!response.ok) {
     const errorBody = data as ApiErrorResponse | undefined;
+    if (response.status === 401 && getStoredToken()) onSessionEnded(errorBody);
     throw new ApiError(errorBody?.message ?? `Request failed (${response.status})`, response.status, errorBody ?? null);
   }
 
@@ -165,7 +220,14 @@ export const authApi = {
     return session;
   },
 
+  /**
+   * Ends the session on the server as well as on this device, so the token
+   * cannot be used again by anything that kept a copy. Fire-and-forget: the
+   * request carries the token, which the next line takes away, and signing
+   * out never waits on the network.
+   */
   logout(): void {
+    void request('/api/v1/auth/logout', { method: 'POST' }).catch(() => undefined);
     setStoredToken(null);
   },
 };

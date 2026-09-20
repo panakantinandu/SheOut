@@ -153,7 +153,12 @@
     "codePlaceholder": "6-digit code",
     "verifying": "Verifying...",
     "changeNumber": "Change number",
-    "verify": "Verify"
+    "verify": "Verify",
+    "ended": {
+      "SIGNED_IN_ELSEWHERE": "You were signed in on another device.",
+      "ACCOUNT_BLOCKED": "This account has been blocked by SheOut. Please contact support if you think this is a mistake.",
+      "ACCOUNT_DELETED": "This account has been deleted."
+    }
   },
   "verification": {
     "title": "Verification",

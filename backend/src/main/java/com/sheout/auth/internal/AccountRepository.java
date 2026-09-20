@@ -26,6 +26,4 @@ interface AccountRepository extends JpaRepository<AccountEntity, UUID>, JpaSpeci
 
     List<AccountEntity> findByEmailOrderByCreatedAtAsc(String email);
 
-    /** True for an account that exists and has not been deleted. See AuthService.isActiveAccount. */
-    boolean existsByIdAndDeletedAtIsNull(UUID id);
 }

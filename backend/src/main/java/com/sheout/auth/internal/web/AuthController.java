@@ -85,8 +85,8 @@ public class AuthController {
     public ResponseEntity<VerifyOtpResponse> verifyOtp(@Valid @RequestBody VerifyOtpRequest request, HttpServletRequest http) {
         otpRateLimiter.checkVerify(request.phoneNumber(), request.role());
         checkClient("otp-verify", http);
-        Result<AuthenticatedSession, AuthError> result =
-                authService.verifyOtp(request.phoneNumber(), request.code(), request.role());
+        Result<AuthenticatedSession, AuthError> result = authService.verifyOtp(
+                request.phoneNumber(), request.code(), request.role(), http.getHeader("User-Agent"));
         if (result.isFailure()) {
             throw toApiException(result.error());
         }
@@ -113,8 +113,8 @@ public class AuthController {
         GoogleTokenVerifier.VerifiedGoogleUser verified = googleTokenVerifier.verify(request.accessToken())
                 .orElseThrow(() -> ApiException.unauthorized("Invalid or expired Google sign-in token"));
 
-        Result<AuthenticatedSession, AuthError> result =
-                authService.verifyGoogleSignIn(verified.email(), verified.name(), request.role());
+        Result<AuthenticatedSession, AuthError> result = authService.verifyGoogleSignIn(
+                verified.email(), verified.name(), request.role(), http.getHeader("User-Agent"));
         if (result.isFailure()) {
             throw toApiException(result.error());
         }
