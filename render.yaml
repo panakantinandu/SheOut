@@ -42,7 +42,9 @@ services:
       # live frontends gets rejected by the browser's CORS check (curl-based
       # health checks never catch this - CORS is browser-enforced only).
       - key: CORS_ALLOWED_ORIGINS
-        value: https://sheout-customer-app.vercel.app,https://sheout-driver-app.vercel.app
+        # sheoutride.com is where the apps live; the vercel.app addresses
+        # stay for phones that installed the app from them.
+        value: https://app.sheoutride.com,https://partner.sheoutride.com,https://sheout-customer-app.vercel.app,https://sheout-driver-app.vercel.app
 
       # The real client address for per-client rate limits. Requests reach
       # the app from Render's proxy, so the socket address is shared by every

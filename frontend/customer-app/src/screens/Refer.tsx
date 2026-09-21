@@ -2,7 +2,7 @@ import { Gift, Share2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Card, IconCircle, TopHeader, brandIllustration, showToast, useTranslation } from '@sheout/design-system';
 
-const APP_URL = 'https://sheout-customer-app.vercel.app';
+const APP_URL = 'https://app.sheoutride.com';
 
 /**
  * Refer a Friend - a placeholder, because there is no referral programme.
