@@ -66,8 +66,12 @@ public class AuthController {
     }
 
     private void checkClient(String bucket, HttpServletRequest http) {
-        rateLimiter.tryConsume(bucket + ":ip:" + clientAddress.resolve(http), perClientLimit, perClientWindow)
+        rateLimiter.tryConsume(clientKey(bucket, http), perClientLimit, perClientWindow)
                 .orThrow("Too many sign-in attempts from this network. Please wait and try again.");
+    }
+
+    private String clientKey(String bucket, HttpServletRequest http) {
+        return bucket + ":ip:" + clientAddress.resolve(http);
     }
 
     @PostMapping("/api/v1/auth/otp/request")
@@ -90,6 +94,11 @@ public class AuthController {
         if (result.isFailure()) {
             throw toApiException(result.error());
         }
+        // Signing in is not what these limits are against - see
+        // OtpRateLimiter.releaseVerify. The per-network one matters as much:
+        // a room of testers on one office or college connection shares it.
+        otpRateLimiter.releaseVerify(request.phoneNumber(), request.role());
+        rateLimiter.release(clientKey("otp-verify", http));
         return ResponseEntity.ok(VerifyOtpResponse.from(result.value()));
     }
 
