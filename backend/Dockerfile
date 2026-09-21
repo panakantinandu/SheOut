@@ -7,10 +7,14 @@
 # Build stage - uses Maven image so no wrapper binary needs to be committed
 FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /app
+# Where to download from, and how long to wait - see the comment in the
+# settings file. Retries and parallel downloads are set here with it.
+COPY docker-maven-settings.xml .
+ENV MAVEN_ARGS="-B -s docker-maven-settings.xml -Dmaven.artifact.threads=8 -Daether.connector.http.retryHandler.count=5"
 COPY pom.xml .
-RUN mvn -B dependency:go-offline
+RUN mvn dependency:go-offline
 COPY src src
-RUN mvn -B package -DskipTests
+RUN mvn package -DskipTests
 
 # Runtime stage - slim JRE only, keeps the image small for faster cold
 # starts on Render's free tier.

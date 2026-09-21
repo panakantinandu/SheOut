@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Maven settings for the Docker build only (see Dockerfile).
+
+  Render's free-tier builders keep no Docker layer cache between deploys,
+  so every build downloads every dependency, and one deploy sat for 27
+  minutes on "Downloading from central". Two things made that possible:
+
+  - Maven Central throttles busy shared addresses, which a cloud builder
+    is. Google's mirror of Central serves the same artifacts from Google
+    Cloud Storage without that. It can trail Central by a few hours for a
+    brand-new release, which only matters on the day a version is bumped.
+
+  - Maven's default read timeout is thirty minutes, so one stalled download
+    hangs the build silently for up to half an hour before it is retried.
+    The timeouts below fail a stalled download in a minute and retry it.
+-->
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 https://maven.apache.org/xsd/settings-1.0.0.xsd">
+  <mirrors>
+    <mirror>
+      <id>google-maven-central</id>
+      <name>Google's mirror of Maven Central</name>
+      <url>https://maven-central.storage-download.googleapis.com/maven2/</url>
+      <mirrorOf>central</mirrorOf>
+    </mirror>
+  </mirrors>
+  <servers>
+    <server>
+      <id>google-maven-central</id>
+      <configuration>
+        <connectTimeout>10000</connectTimeout>
+        <requestTimeout>60000</requestTimeout>
+      </configuration>
+    </server>
+  </servers>
+</settings>
