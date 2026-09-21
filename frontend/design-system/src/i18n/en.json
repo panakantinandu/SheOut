@@ -304,6 +304,9 @@
     "light": "Light",
     "dark": "Dark",
     "system": "System",
-    "description": "Choose how SheOut looks on this device."
+    "description": "Choose how SheOut looks on this device.",
+    "lightNote": "Always the light theme.",
+    "darkNote": "Easier on the eyes at night.",
+    "systemNote": "Follows your phone's setting."
   }
 }

@@ -187,6 +187,17 @@ sheout:
     # default: a code in a production log is a sign-in for whoever reads it.
     # application-local.yml turns it on for development.
     log-otp-codes: ${LOG_OTP_CODES:false}
+    # Numbers that always get the same code, for testing a live deploy
+    # without a real SMS provider - see TestPhoneNumbers. One variable,
+    # any number of entries:
+    #   DEV_OTP_NUMBERS=+919000000001:123456,+919000000002:654321
+    # Nothing is texted to them even once a provider is live, and they are
+    # not held to the per-number request limits, because neither the bill
+    # nor the stranger those limits protect exists for a number that is
+    # never messaged. Unset this once real SMS works.
+    dev-otp-numbers: ${DEV_OTP_NUMBERS:}
+    # The three original single-number slots, still honoured so an existing
+    # deployment keeps working - dev-otp-numbers is the way to add more.
     # Both blank by default - opt-in only, for demoing a live deploy without
     # a real SMS provider wired up (see ConsoleOtpSender/OtpService). When
     # set, requesting an OTP for exactly this phone number always issues

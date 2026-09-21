@@ -40,6 +40,7 @@ import java.time.Duration;
 public class OtpRateLimiter {
 
     private final RateLimiter rateLimiter;
+    private final TestPhoneNumbers testNumbers;
     private final Duration cooldown;
     private final int hourlyLimit;
     private final int requestLimit;
@@ -47,12 +48,14 @@ public class OtpRateLimiter {
     private final Duration window;
 
     OtpRateLimiter(RateLimiter rateLimiter,
+                   TestPhoneNumbers testNumbers,
                    @Value("${sheout.auth.otp-cooldown-seconds:45}") long cooldownSeconds,
                    @Value("${sheout.auth.otp-hourly-limit:6}") int hourlyLimit,
                    @Value("${sheout.rate-limit.otp-request-per-phone:5}") int requestLimit,
                    @Value("${sheout.rate-limit.otp-verify-per-phone:5}") int verifyLimit,
                    @Value("${sheout.rate-limit.otp-window-minutes:15}") long windowMinutes) {
         this.rateLimiter = rateLimiter;
+        this.testNumbers = testNumbers;
         this.cooldown = Duration.ofSeconds(cooldownSeconds);
         this.hourlyLimit = hourlyLimit;
         this.requestLimit = requestLimit;
@@ -68,6 +71,15 @@ public class OtpRateLimiter {
      * can be sent, and two apps must not double that.
      */
     public void checkRequest(String phoneNumber, AccountRole role) {
+        if (testNumbers.isTestNumber(phoneNumber)) {
+            // These limits exist because a request means a text to somebody:
+            // it bills us, and it lets a stranger be messaged repeatedly. A
+            // test number is texted nothing at all, so neither applies - and
+            // the limits were making the people testing the app wait an hour
+            // between attempts. Guessing is still limited, below: the code
+            // for these numbers is fixed, so that is the one that matters.
+            return;
+        }
         // Its own code: this refusal means a code went out moments ago, so
         // the app takes her to enter it rather than showing an error.
         rateLimiter.tryConsume("otp-request-cooldown:" + role + ":" + phoneNumber, 1, cooldown)

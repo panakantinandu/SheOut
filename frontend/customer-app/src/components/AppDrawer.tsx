@@ -6,6 +6,7 @@ import {
   LifeBuoy,
   Lock,
   LogOut,
+  Moon,
   Star,
   Store,
 } from 'lucide-react';
@@ -17,10 +18,12 @@ import {
   Drawer,
   LANGUAGES,
   LanguagePicker,
+  ThemePicker,
   chooseLanguage,
   showToast,
   syncLanguageWithAccount,
   useAppLanguage,
+  useTheme,
   useTranslation,
 } from '@sheout/design-system';
 import { preferencesApi, usersApi } from '../api/client';
@@ -54,11 +57,14 @@ export function useAppDrawer(): DrawerControls {
  */
 export function AppDrawerProvider({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
+  const { t: ds } = useTranslation('ds');
   const navigate = useNavigate();
   const { isAuthenticated, logout } = useAuth();
   const lng = useAppLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const [pickingLanguage, setPickingLanguage] = useState(false);
+  const [pickingTheme, setPickingTheme] = useState(false);
+  const [themeChoice] = useTheme();
   const [confirmingLogout, setConfirmingLogout] = useState(false);
   const [profile, setProfile] = useState<CustomerProfileSummary | null>(null);
 
@@ -111,6 +117,16 @@ export function AppDrawerProvider({ children }: { children: ReactNode }) {
                   setPickingLanguage(true);
                 },
               },
+              {
+                key: 'theme',
+                label: ds('theme.label'),
+                sublabel: ds(`theme.${themeChoice}`),
+                icon: <Moon />,
+                onClick: () => {
+                  setIsOpen(false);
+                  setPickingTheme(true);
+                },
+              },
               { key: 'refer', label: t('drawer.refer'), sublabel: t('drawer.comingSoon'), icon: <Gift />, onClick: () => go('/refer') },
               { key: 'seller', label: t('drawer.seller'), sublabel: t('drawer.comingSoon'), icon: <Store />, onClick: () => go('/seller') },
               {
@@ -153,6 +169,7 @@ export function AppDrawerProvider({ children }: { children: ReactNode }) {
         ]}
         footer={t('drawer.version', { version: APP_VERSION })}
       />
+      <ThemePicker open={pickingTheme} onClose={() => setPickingTheme(false)} />
       <LanguagePicker
         open={pickingLanguage}
         onClose={() => setPickingLanguage(false)}

@@ -53,8 +53,10 @@ export interface BrandSplashProps {
 export function BrandSplash({ tagline, badge, items, footerLine, fading, durationMs = 2200 }: BrandSplashProps) {
   return (
     <div
-      // Warm pink-to-lavender wash, sampled from the mockup's splash tile.
-      className={`relative min-h-screen overflow-hidden bg-gradient-to-br from-[#FEF8F8] via-[#FBF1F6] to-[#E9DEF5] transition-opacity duration-300 ${
+      // Warm pink-to-lavender wash, sampled from the mockup's splash tile -
+      // and its night version, which is the same gradient in aubergine. See
+      // --brand-wash in theme.css.
+      className={`relative min-h-screen overflow-hidden bg-brand-wash transition-opacity duration-300 ${
         fading ? 'opacity-0' : 'opacity-100'
       }`}
       data-testid="splash"
@@ -63,11 +65,11 @@ export function BrandSplash({ tagline, badge, items, footerLine, fading, duratio
           the top half of the screen being flat white space. */}
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute -left-16 -top-24 h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(74,26,158,0.16),transparent_70%)] motion-safe:animate-drift"
+        className="pointer-events-none absolute -left-16 -top-24 h-72 w-72 rounded-full bg-[radial-gradient(circle,var(--splash-glow-primary),transparent_70%)] motion-safe:animate-drift"
       />
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute -right-20 top-10 h-64 w-64 rounded-full bg-[radial-gradient(circle,rgba(249,103,23,0.16),transparent_70%)] motion-safe:animate-drift-slow"
+        className="pointer-events-none absolute -right-20 top-10 h-64 w-64 rounded-full bg-[radial-gradient(circle,var(--splash-glow-accent),transparent_70%)] motion-safe:animate-drift-slow"
       />
 
       <svg
@@ -99,13 +101,20 @@ export function BrandSplash({ tagline, badge, items, footerLine, fading, duratio
         className="absolute inset-x-0 bottom-0 h-[38%] w-full motion-safe:animate-rise-in"
         aria-hidden="true"
       >
+        {/* The wave keeps its brand colours in both themes - white on purple
+            is the mark, not a light-mode decision - but it deepens at night
+            rather than glowing as the brightest thing in a dark room. The
+            text on it stays white either way. */}
         <defs>
           <linearGradient id="splashWave" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#4A1A9E" />
-            <stop offset="100%" stopColor="#36116F" />
+            <stop offset="0%" stopColor="var(--splash-wave-from)" />
+            <stop offset="100%" stopColor="var(--splash-wave-to)" />
           </linearGradient>
         </defs>
-        <path d="M0,52 C70,-3 150,82 230,37 C300,0 350,57 400,27 L400,300 L0,300 Z" fill="#FBA226" />
+        <path
+          d="M0,52 C70,-3 150,82 230,37 C300,0 350,57 400,27 L400,300 L0,300 Z"
+          fill="var(--splash-wave-crest)"
+        />
         <path d="M0,70 C70,15 150,100 230,55 C300,18 350,75 400,45 L400,300 L0,300 Z" fill="url(#splashWave)" />
       </svg>
 
@@ -128,28 +137,28 @@ export function BrandSplash({ tagline, badge, items, footerLine, fading, duratio
               <div
                 key={item.key}
                 className={`flex flex-1 flex-col items-center gap-2 px-2 motion-safe:animate-fade-slide-in ${
-                  i > 0 ? 'border-l border-text-inverse/25' : ''
+                  i > 0 ? 'border-l border-white/25' : ''
                 }`}
                 // One after another, left to right: the eye follows the row
                 // instead of being handed all three at once.
                 style={{ animationDelay: `${420 + i * 90}ms` }}
               >
-                <span className="text-text-inverse [&>svg]:h-7 [&>svg]:w-7">{item.icon}</span>
-                <span className="text-center text-xs font-semibold text-text-inverse">{item.label}</span>
+                <span className="text-white [&>svg]:h-7 [&>svg]:w-7">{item.icon}</span>
+                <span className="text-center text-xs font-semibold text-white">{item.label}</span>
               </div>
             ))}
           </div>
 
           {/* How long this screen has left. Held open exactly as long as the
               bar takes to fill, so it never sits full or vanishes half-drawn. */}
-          <span className="h-1 w-24 overflow-hidden rounded-full bg-text-inverse/25" aria-hidden="true">
+          <span className="h-1 w-24 overflow-hidden rounded-full bg-white/25" aria-hidden="true">
             <span
-              className="block h-full w-full origin-left scale-x-0 rounded-full bg-text-inverse/80 motion-safe:animate-[fill-bar_linear_forwards]"
+              className="block h-full w-full origin-left scale-x-0 rounded-full bg-white/80 motion-safe:animate-[fill-bar_linear_forwards]"
               style={{ animationDuration: `${durationMs}ms` }}
             />
           </span>
 
-          <p className="text-xs font-medium uppercase tracking-wide text-text-inverse/70">{footerLine}</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-white/70">{footerLine}</p>
         </div>
       </div>
     </div>

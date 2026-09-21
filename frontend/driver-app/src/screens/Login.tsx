@@ -146,11 +146,16 @@ export function Login() {
     }
   }
 
-  async function submitOtp() {
+  /**
+   * Verifies the code she entered. The argument matters: when the field
+   * completes itself, the state here is still one digit behind - see
+   * OtpCodeField.onComplete.
+   */
+  async function submitOtp(entered: string = code) {
     setError(null);
     setSubmitting(true);
     try {
-      const session = await authApi.verifyOtp(phoneNumber, code);
+      const session = await authApi.verifyOtp(phoneNumber, entered);
       await afterSignIn(session);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t('login.verifyError'));
@@ -261,7 +266,7 @@ export function Login() {
                 }}
                 error={error ?? undefined}
                 disabled={submitting}
-                onComplete={() => void submitOtp()}
+                onComplete={(entered) => void submitOtp(entered)}
               />
               <Button type="submit" fullWidth disabled={submitting || code.length < OTP_CODE_LENGTH}>
                 {submitting ? t('login.verifying') : t('login.verify')}
