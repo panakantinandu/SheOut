@@ -66,15 +66,27 @@ public class AccountEntity extends BaseEntity {
     }
 
     /**
-     * Google sign-in has no phone number at creation time - phoneNumber
-     * stays null unless a future "link your phone" flow sets it (not built;
-     * see AuthService's Javadoc on account linking).
+     * Google sign-in has no phone number at creation time. The rider app
+     * then requires one before anything else - see
+     * AuthService.verifyAddedPhone, which sets it through attachPhoneNumber.
      */
     public static AccountEntity forGoogleSignIn(String email, AccountRole role) {
         AccountEntity entity = new AccountEntity();
         entity.email = email;
         entity.role = role;
         return entity;
+    }
+
+    /**
+     * Gives a Google-created account its first number, once the code sent to
+     * that number has been verified. Never replaces a number: changing one
+     * is a different decision with its own risks, and is not what this is.
+     */
+    void attachPhoneNumber(String verifiedPhoneNumber) {
+        if (this.phoneNumber != null) {
+            throw new IllegalStateException("Account already has a phone number");
+        }
+        this.phoneNumber = verifiedPhoneNumber;
     }
 
     public String getPhoneNumber() {

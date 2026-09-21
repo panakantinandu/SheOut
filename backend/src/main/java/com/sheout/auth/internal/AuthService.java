@@ -13,6 +13,7 @@ import com.sheout.privacy.AccountDeletionRequested;
 import com.sheout.sharedkernel.Result;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.EventListener;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
 import com.sheout.sharedkernel.event.DomainEventPublisher;
 import org.slf4j.Logger;
@@ -173,6 +174,12 @@ public class AuthService implements AuthApi {
      */
     @Transactional
     public Result<AuthenticatedSession, AuthError> verifyGoogleSignIn(String email, String name, AccountRole role, String userAgent) {
+        // The rider app only. Partners and operators are phone and code, full
+        // stop - see AuthError.GOOGLE_NOT_FOR_ROLE. Checked first, so no
+        // account is looked up or created for any other role.
+        if (role != AccountRole.CUSTOMER) {
+            return Result.failure(AuthError.GOOGLE_NOT_FOR_ROLE);
+        }
         // Same per-app rule as verifyOtp: the email identifies an account
         // only together with the app signing in, and a block on any of this
         // person's accounts holds in every app.
@@ -201,6 +208,77 @@ public class AuthService implements AuthApi {
 
         String token = issueFor(account, userAgent);
         return Result.success(new AuthenticatedSession(token, account.getId(), account.getRole(), isNewAccount));
+    }
+
+    /**
+     * Sends a code to the number a Google-signup rider is adding - the same
+     * code, store and sender as signing in with a number.
+     * <p>
+     * Nothing about the number is looked up here, for the reason requestOtp
+     * gives: before the code proves she owns it, answering "that number is
+     * already registered" would tell anyone which numbers have accounts.
+     * Only the account asking is checked - that it is a rider account, and
+     * that it has no number yet.
+     */
+    public Result<Void, AuthError> requestAddedPhone(UUID accountId, String phoneNumber) {
+        Optional<AccountEntity> account = accountRepository.findById(accountId);
+        if (account.isEmpty() || account.get().getRole() != AccountRole.CUSTOMER) {
+            return Result.failure(AuthError.GOOGLE_NOT_FOR_ROLE);
+        }
+        if (account.get().getPhoneNumber() != null) {
+            return Result.failure(AuthError.PHONE_ALREADY_SET);
+        }
+        return requestOtp(phoneNumber, AccountRole.CUSTOMER);
+    }
+
+    /**
+     * Verifies the code and gives this account the number.
+     * <p>
+     * After the code is verified, and only then, the same checks signing in
+     * makes: a number carrying a block on any account cannot be attached -
+     * a block is on the person - and a number that already signs in to
+     * another rider account is refused rather than moved or merged. Merging
+     * two accounts would carry trips, payments and verification across
+     * without anybody deciding it should.
+     * <p>
+     * Not @Transactional: the save runs in the repository's own transaction,
+     * so losing a race for the number on the unique index can be caught and
+     * answered. Inside a surrounding transaction the failed flush would mark
+     * it rollback-only, and the answer would become a 500 at commit.
+     */
+    public Result<String, AuthError> verifyAddedPhone(UUID accountId, String phoneNumber, String code) {
+        Optional<AccountEntity> found = accountRepository.findById(accountId);
+        if (found.isEmpty() || found.get().getRole() != AccountRole.CUSTOMER) {
+            return Result.failure(AuthError.GOOGLE_NOT_FOR_ROLE);
+        }
+        AccountEntity account = found.get();
+        if (account.getPhoneNumber() != null) {
+            return Result.failure(AuthError.PHONE_ALREADY_SET);
+        }
+        OtpService.VerificationOutcome outcome = otpService.verifyCode(phoneNumber, AccountRole.CUSTOMER, code);
+        if (outcome == OtpService.VerificationOutcome.NOT_FOUND_OR_EXPIRED) {
+            return Result.failure(AuthError.OTP_NOT_FOUND_OR_EXPIRED);
+        }
+        if (outcome == OtpService.VerificationOutcome.MISMATCH) {
+            return Result.failure(AuthError.OTP_CODE_MISMATCH);
+        }
+        List<AccountEntity> onThisNumber = accountRepository.findByPhoneNumberOrderByCreatedAtAsc(phoneNumber);
+        if (onThisNumber.stream().anyMatch(AccountEntity::isBlocked)) {
+            return Result.failure(AuthError.ACCOUNT_BLOCKED);
+        }
+        if (onThisNumber.stream().anyMatch(a -> a.getRole() == AccountRole.CUSTOMER)) {
+            return Result.failure(AuthError.PHONE_ALREADY_REGISTERED);
+        }
+        account.attachPhoneNumber(phoneNumber);
+        try {
+            // A rider account taking the same number between the check above
+            // and this write fails on the unique index here.
+            accountRepository.save(account);
+        } catch (DataIntegrityViolationException raced) {
+            return Result.failure(AuthError.PHONE_ALREADY_REGISTERED);
+        }
+        log.info("Phone number added to Google-signup account {}", accountId);
+        return Result.success(phoneNumber);
     }
 
     @Override

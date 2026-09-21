@@ -41,7 +41,7 @@ export interface VerificationTurnaround {
 export interface CustomerProfileSummary {
   accountId: string;
   name: string | null;
-  /** Null for a Google-signed-in account - phone signup is the only path that collects one. */
+  /** Null only for a Google-signup account that has not reached the Add your phone number step yet - see AddPhone. */
   phoneNumber: string | null;
   /**
     * Home and Work as places: a label and, once she has put it on the map,

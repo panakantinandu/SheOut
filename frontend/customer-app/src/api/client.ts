@@ -239,6 +239,19 @@ export const authApi = {
   },
 
   /**
+   * Sends a code to the number a Google-signup account is adding. Same
+   * code, sender and limits as signing in with a number - see AddPhone.
+   */
+  requestAddedPhone(phoneNumber: string): Promise<void> {
+    return request('/api/v1/auth/phone/request', { method: 'POST', body: { phoneNumber } });
+  },
+
+  /** Verifies that code and gives this account the number. */
+  verifyAddedPhone(phoneNumber: string, code: string): Promise<{ phoneNumber: string }> {
+    return request('/api/v1/auth/phone/verify', { method: 'POST', body: { phoneNumber, code } });
+  },
+
+  /**
    * Ends the session on the server as well as on this device, so the token
    * cannot be used again by anything that kept a copy. Fire-and-forget: the
    * request carries the token, which the next line takes away, and signing
