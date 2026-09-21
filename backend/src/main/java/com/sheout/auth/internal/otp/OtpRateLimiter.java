@@ -92,7 +92,23 @@ public class OtpRateLimiter {
 
     /** Throws TooManyRequestsException when this number has had too many verification attempts. */
     public void checkVerify(String phoneNumber, AccountRole role) {
-        rateLimiter.tryConsume("otp-verify:" + role + ":" + phoneNumber, verifyLimit, window)
+        rateLimiter.tryConsume(verifyKey(phoneNumber, role), verifyLimit, window)
                 .orThrow("Too many attempts for this number. Please wait and try again.");
+    }
+
+    /**
+     * A right code gives its attempt back. This limit is against guessing,
+     * and a correct code is not a guess - but it was counting every sign-in,
+     * so a test number shared by a group of testers locked for everyone on
+     * the sixth successful sign-in in fifteen minutes, with nobody having
+     * typed a wrong digit. Only wrong codes use up the allowance now; a
+     * number already over it is still refused before its code is checked.
+     */
+    public void releaseVerify(String phoneNumber, AccountRole role) {
+        rateLimiter.release(verifyKey(phoneNumber, role));
+    }
+
+    private static String verifyKey(String phoneNumber, AccountRole role) {
+        return "otp-verify:" + role + ":" + phoneNumber;
     }
 }

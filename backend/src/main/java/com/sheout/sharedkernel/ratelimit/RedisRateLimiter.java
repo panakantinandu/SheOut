@@ -51,6 +51,14 @@ class RedisRateLimiter implements RateLimiter {
             return {count, ttl}
             """, List.class);
 
+    private static final RedisScript<Long> RELEASE = new DefaultRedisScript<>("""
+            local count = tonumber(redis.call('GET', KEYS[1]) or '0')
+            if count > 0 then
+              return redis.call('DECR', KEYS[1])
+            end
+            return 0
+            """, Long.class);
+
     private final StringRedisTemplate redis;
 
     RedisRateLimiter(StringRedisTemplate redis) {
@@ -73,6 +81,16 @@ class RedisRateLimiter implements RateLimiter {
             // The key is not logged: several of them name a phone number.
             log.error("Rate limiter unavailable, allowing the request: {}", ex.getClass().getSimpleName());
             return RateLimitDecision.allow();
+        }
+    }
+
+    @Override
+    public void release(String key) {
+        try {
+            redis.execute(RELEASE, List.of(PREFIX + key));
+        } catch (RuntimeException ex) {
+            // Failing to give an attempt back only makes the limit stricter.
+            log.warn("Rate limiter unavailable, attempt not released: {}", ex.getClass().getSimpleName());
         }
     }
 }

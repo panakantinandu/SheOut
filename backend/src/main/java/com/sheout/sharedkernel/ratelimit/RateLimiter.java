@@ -24,4 +24,13 @@ public interface RateLimiter {
      * @param key    a namespaced subject, e.g. {@code "otp-request:phone:+91..."}
      */
     RateLimitDecision tryConsume(String key, int limit, Duration window);
+
+    /**
+     * Gives back one attempt recorded against {@code key}, for a limit that
+     * is meant to count only failures. The attempt is still consumed before
+     * the outcome is known - so a subject already over its limit is refused
+     * even when it is right - and returned once it turns out to have
+     * succeeded. Never takes a count below zero.
+     */
+    void release(String key);
 }
