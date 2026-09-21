@@ -76,7 +76,7 @@ public class OsrmRouteProvider implements RouteProvider {
                 // courtesy the Nominatim client already observes. An
                 // anonymous client hammering a volunteer-run endpoint is how
                 // a whole project gets blocked.
-                .defaultHeader("User-Agent", "SheOut/1.0 (+https://sheout-customer-app.vercel.app)")
+                .defaultHeader("User-Agent", "SheOut/1.0 (+https://app.sheoutride.com)")
                 .build();
         log.info("Routing via {} (timeout {}ms)", baseUrl, timeoutMs);
     }
