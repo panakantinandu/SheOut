@@ -2,6 +2,7 @@ export * from './BrandHeader';
 export * from './ConfirmDialog';
 export * from './CancelReasonDialog';
 export * from './Overlay';
+export * from './ThemePicker';
 export * from './ThemeToggle';
 export * from './RatingDialog';
 export * from './StarRating';

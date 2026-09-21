@@ -1,4 +1,4 @@
-import { FileText, Info, Languages, LifeBuoy, Lock, LogOut } from 'lucide-react';
+import { FileText, Info, Languages, LifeBuoy, Lock, LogOut, Moon } from 'lucide-react';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -7,10 +7,12 @@ import {
   Drawer,
   LANGUAGES,
   LanguagePicker,
+  ThemePicker,
   chooseLanguage,
   showToast,
   syncLanguageWithAccount,
   useAppLanguage,
+  useTheme,
   useTranslation,
   vehicleLabel,
 } from '@sheout/design-system';
@@ -41,11 +43,14 @@ export function useAppDrawer(): DrawerControls {
  */
 export function AppDrawerProvider({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
+  const { t: ds } = useTranslation('ds');
   const navigate = useNavigate();
   const { isAuthenticated, logout } = useAuth();
   const lng = useAppLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const [pickingLanguage, setPickingLanguage] = useState(false);
+  const [pickingTheme, setPickingTheme] = useState(false);
+  const [themeChoice] = useTheme();
   const [confirmingLogout, setConfirmingLogout] = useState(false);
   const [profile, setProfile] = useState<DriverProfileSummary | null>(null);
 
@@ -99,6 +104,16 @@ export function AppDrawerProvider({ children }: { children: ReactNode }) {
                   setPickingLanguage(true);
                 },
               },
+              {
+                key: 'theme',
+                label: ds('theme.label'),
+                sublabel: ds(`theme.${themeChoice}`),
+                icon: <Moon />,
+                onClick: () => {
+                  setIsOpen(false);
+                  setPickingTheme(true);
+                },
+              },
             ],
           },
           {
@@ -129,6 +144,7 @@ export function AppDrawerProvider({ children }: { children: ReactNode }) {
         ]}
         footer={t('drawer.version', { version: APP_VERSION })}
       />
+      <ThemePicker open={pickingTheme} onClose={() => setPickingTheme(false)} />
       <LanguagePicker
         open={pickingLanguage}
         onClose={() => setPickingLanguage(false)}

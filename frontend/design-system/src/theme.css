@@ -29,6 +29,12 @@
   --c-text-inverse: 255 255 255;
   --shadow-card: 0 4px 16px rgba(36, 26, 51, 0.08);
   --shadow-raised: 0 10px 24px rgba(123, 63, 228, 0.30);
+  /* The splash wave, and the drifting glows behind the wordmark. */
+  --splash-wave-from: #4A1A9E;
+  --splash-wave-to: #36116F;
+  --splash-wave-crest: #FBA226;
+  --splash-glow-primary: rgba(74, 26, 158, 0.16);
+  --splash-glow-accent: rgba(249, 103, 23, 0.16);
   /* The soft sunrise behind sign-in and the introduction. */
   --brand-wash: linear-gradient(135deg, #FEF8F8 0%, #FBF1F6 50%, #E9DEF5 100%);
   color-scheme: light;
@@ -51,6 +57,11 @@
     --c-text-inverse: 24 18 43;
     --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.45);
     --shadow-raised: 0 10px 24px rgba(0, 0, 0, 0.55);
+    --splash-wave-from: #3A1080;
+    --splash-wave-to: #280B5C;
+    --splash-wave-crest: #D98317;
+    --splash-glow-primary: rgba(182, 155, 255, 0.20);
+    --splash-glow-accent: rgba(255, 138, 76, 0.16);
     --brand-wash: linear-gradient(135deg, #1A1330 0%, #1E1438 50%, #241A44 100%);
     color-scheme: dark;
   }
@@ -72,6 +83,11 @@
   --c-text-inverse: 24 18 43;
   --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.45);
   --shadow-raised: 0 10px 24px rgba(0, 0, 0, 0.55);
+  --splash-wave-from: #3A1080;
+  --splash-wave-to: #280B5C;
+  --splash-wave-crest: #D98317;
+  --splash-glow-primary: rgba(182, 155, 255, 0.20);
+  --splash-glow-accent: rgba(255, 138, 76, 0.16);
   --brand-wash: linear-gradient(135deg, #1A1330 0%, #1E1438 50%, #241A44 100%);
   color-scheme: dark;
 }

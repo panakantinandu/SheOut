@@ -9,8 +9,18 @@ export interface OtpCodeFieldProps {
   onChange: (value: string) => void;
   error?: string;
   disabled?: boolean;
-  /** Fires when the last digit is typed, and on Enter with a full code. */
-  onComplete?: () => void;
+  /**
+   * Fires when the last digit is typed, and on Enter with a full code.
+   * <p>
+   * It is handed the finished code, and callers must submit THAT rather
+   * than their own state. The state they hold is one render behind at this
+   * moment - onChange has been called but React has not re-rendered - so a
+   * caller reading its own variable submits five digits of a six-digit
+   * code. Every sign-in that autofilled or typed straight through failed
+   * with "Validation failed", and pressing Verify by hand then worked,
+   * which made it look like the code was wrong rather than truncated.
+   */
+  onComplete?: (code: string) => void;
 }
 
 /**
@@ -57,12 +67,12 @@ export function OtpCodeField({ value, onChange, error, disabled, onComplete }: O
           onChange={(e) => {
             const next = e.target.value.replace(/\D/g, '').slice(0, OTP_CODE_LENGTH);
             onChange(next);
-            if (next.length === OTP_CODE_LENGTH) onComplete?.();
+            if (next.length === OTP_CODE_LENGTH) onComplete?.(next);
           }}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && value.length === OTP_CODE_LENGTH) {
               e.preventDefault();
-              onComplete?.();
+              onComplete?.(value);
             }
           }}
           // Over the boxes and invisible: every tap, the caret and the
