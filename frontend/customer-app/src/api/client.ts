@@ -2,6 +2,7 @@ import type { PushApi } from '@sheout/design-system';
 import type {
   ApiErrorResponse,
   AccountSession,
+  VerificationTurnaround,
   AuthSession,
   SavedPlace,
   BookingCategory,
@@ -478,6 +479,26 @@ export const dispatchApi = {
 export const verificationApi = {
   getMyStatus(): Promise<VerificationSummary> {
     return request('/api/v1/driver-verification/me');
+  },
+
+  /** How long reviews are actually taking, for the screen that says so. */
+  turnaround(): Promise<VerificationTurnaround> {
+    return request('/api/v1/driver-verification/turnaround');
+  },
+
+  /**
+   * Notes that she reached the upload screen, or chose a document.
+   * <p>
+   * Deliberately swallows everything. This exists to measure whether
+   * verification is where people give up; an instrument that shows her an
+   * error, or blocks an upload, has broken the thing it was measuring.
+   */
+  async recordProgress(step: 'UPLOAD_VIEWED' | 'DOCUMENT_CHOSEN'): Promise<void> {
+    try {
+      await request(`/api/v1/driver-verification/progress/${step}`, { method: 'POST' });
+    } catch {
+      // Nothing to do and nothing to say.
+    }
   },
 
   /**

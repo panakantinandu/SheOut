@@ -143,21 +143,31 @@
     "title": "Identity Verification",
     "loadError": "Could not load your verification status",
     "tooLarge": "That file is larger than 10MB. Please upload a smaller photo.",
-    "submitted": "Document submitted. Our team will review it shortly.",
+    "submitted": "Sent. A person will review it and we will let you know.",
     "uploadError": "Could not upload your document. Please try again.",
     "loading": "Loading your verification",
     "idVerification": "ID verification",
     "verifiedBody": "You're verified and can book rides and deliveries.",
-    "reviewBody": "Your document is with our team. This usually takes a few hours.",
-    "rejectedBody": "Your last document could not be accepted. Please upload a clearer photo.",
-    "pendingBody": "SheOut is women-only. Upload a government ID so we can confirm your identity before your first booking.",
+    "reviewBody": "Your ID is with a person on our team now.",
+    "rejectedBody": "A person looked at your ID and could not accept it.",
     "replace": "Replace your document",
     "upload": "Upload your ID",
     "acceptedIds": "Aadhaar, passport, driving licence or voter ID. Make sure your name and photo are readable.",
     "uploadDifferent": "Upload a different document",
     "choose": "Choose document",
-    "privacyNote": "Your document is only used to confirm your identity and is reviewed by a person, never automatically.",
-    "fileHint": "A clear photo (JPG, PNG or HEIC) or a PDF. Make sure the whole document is in the frame and readable."
+    "privacyNote": "Only a person on our team sees this, only to confirm you are who you say you are. Never checked by a machine, never shown to partners.",
+    "fileHint": "A clear photo (JPG, PNG or HEIC) or a PDF. Make sure the whole document is in the frame and readable.",
+    "whyBody": "SheOut is a women-only platform. A quick ID check is how every rider and partner can trust who they are sharing the road with. A real person reviews it, and you can look around the app while you wait.",
+    "whatWeNeed": "We only look at three things",
+    "maskInvite": "Your name, your photo and your gender. Not your Aadhaar number — you can cover it in the next step, and what you cover never leaves your phone.",
+    "waitUsually": "Usually reviewed in {{time}}",
+    "waitTarget": "We aim to review this within {{time}}",
+    "waitUnknown": "A person is reviewing your ID",
+    "waitHours": "about {{count}} hour",
+    "waitHours_other": "about {{count}} hours",
+    "waitMinutes": "about {{count}} minutes",
+    "waitBody": "We will send you a notification and an email the moment it is done — you do not need to keep checking.",
+    "exploreMeanwhile": "Look around while you wait"
   },
   "payments": {
     "history": "Payment History",
@@ -330,7 +340,8 @@
     "bookNow": "Book Now",
     "nearbyPartner": "Partner nearby",
     "nearbyCount_one": "{{count}} partner near your pickup",
-    "nearbyCount_other": "{{count}} partners near your pickup"
+    "nearbyCount_other": "{{count}} partners near your pickup",
+    "verifyNow": "Verify my ID"
   },
   "apiError": {
     "UNPAID_TRIP": "Your last trip is still unpaid. Pay for it from your wallet or online, then book again.",
@@ -343,7 +354,8 @@
     "TRIP_NOT_ENDED": "This trip has not ended yet, so there is nothing to pay.",
     "INVALID_PICKUP_CODE": "That code doesn't match. Ask your rider to read it out again.",
     "PICKUP_CODE_REQUIRED": "Enter the four-digit pickup code.",
-    "PICKUP_VERIFICATION_LOCKED": "Too many wrong codes for this trip. Contact support."
+    "PICKUP_VERIFICATION_LOCKED": "Too many wrong codes for this trip. Contact support.",
+    "CUSTOMER_NOT_VERIFIED": "Your ID is still to be verified, so this trip cannot be booked yet."
   },
   "picker": {
     "noAddress": "No address found at that point. Move the pin somewhere closer to a road or landmark.",

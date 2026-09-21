@@ -87,6 +87,7 @@ export function DeliveryBooking() {
   const [submitting, setSubmitting] = useState(false);
   const fare = useFareQuote({ type: 'DELIVERY', category: config.category, pickup, drop });
   const [error, setError] = useState<string | null>(null);
+  const [needsVerification, setNeedsVerification] = useState(false);
   /** Bumped when the server refuses a booking for an unpaid trip, so the banner re-checks. */
   const [unpaidCheck, setUnpaidCheck] = useState(0);
   const isLunchbox = kind === 'lunchbox';
@@ -124,6 +125,9 @@ export function DeliveryBooking() {
       navigate(`/tracking/${booking.id}`);
     } catch (err) {
       setError(apiErrorText(err, 'booking.createError'));
+      // Not verified yet is not an error she can fix by reading it: the
+      // screen offers the door rather than only naming the wall.
+      setNeedsVerification(err instanceof ApiError && err.body?.error === 'CUSTOMER_NOT_VERIFIED');
       // The banner above names the unpaid trip and links to it.
       if (err instanceof ApiError && err.body?.error === 'UNPAID_TRIP') setUnpaidCheck((n) => n + 1);
     } finally {
@@ -244,6 +248,11 @@ export function DeliveryBooking() {
 
       {pickupError && !pickup && <p className="text-xs text-text-secondary">{pickupError}</p>}
       {error && <p className="text-sm text-danger">{error}</p>}
+      {needsVerification && (
+        <Button variant="secondary" fullWidth onClick={() => navigate('/verification')} data-testid="verify-now">
+          {t('booking.verifyNow')}
+        </Button>
+      )}
 
       <ServiceAreaNotice pickup={pickup} drop={drop} />
 

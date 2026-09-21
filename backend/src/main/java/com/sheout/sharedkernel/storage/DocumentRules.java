@@ -1,5 +1,11 @@
 package com.sheout.sharedkernel.storage;
 
+import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
+import javax.imageio.stream.ImageInputStream;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.util.Iterator;
 import java.util.Locale;
 
 /**
@@ -17,13 +23,19 @@ import java.util.Locale;
  * first bytes of the file, so a renamed one is refused rather than stored
  * as an image nobody can open.
  * <p>
- * A MINIMUM SIZE. Not arbitrary: a photograph of a card, at a resolution
- * where the name and the face are legible, does not come out under about
- * twenty kilobytes even after a phone compresses it. Below that it is a
- * thumbnail, a cropped corner or a blank frame - something an operator
- * cannot decide from and will reject anyway, after the applicant has spent
- * a day waiting. Refusing it at the moment she taps upload, with a sentence
- * saying why, is the kinder end of the same decision.
+ * A MINIMUM SIZE, MEASURED IN PIXELS WHERE IT CAN BE. What makes a document
+ * readable is its resolution; bytes are only a proxy, and a poor one. A
+ * photograph of a card at a legible resolution rarely comes under twenty
+ * kilobytes, so that is the fallback - but a plain document, or one a phone
+ * compressed well, can be small and perfectly readable, and refusing it
+ * would be refusing a real person for the wrong reason. This caught the
+ * app's own masking tool: an ID with its number covered re-encodes smaller,
+ * and the byte rule alone turned her careful redaction into "that file is
+ * too small to read". So when the dimensions can be read, they decide.
+ * <p>
+ * Either way the point is the same: something an operator cannot decide
+ * from will be rejected anyway, a day later. Saying so at the moment she
+ * taps upload is the kinder end of the same decision.
  * <p>
  * A MAXIMUM SIZE, so one upload cannot fill the request buffer. Spring
  * refuses larger multipart requests before this is reached; this exists so
@@ -31,8 +43,12 @@ import java.util.Locale;
  */
 public final class DocumentRules {
 
-    /** Twenty kilobytes - see the class note. */
+    /** Twenty kilobytes, for files whose dimensions cannot be read. */
     public static final int MIN_BYTES = 20 * 1024;
+
+    /** A card photographed at less than this cannot be read by anybody. */
+    public static final int MIN_WIDTH = 480;
+    public static final int MIN_HEIGHT = 320;
 
     /** Ten megabytes, matching spring.servlet.multipart.max-file-size. */
     public static final int MAX_BYTES = 10 * 1024 * 1024;
@@ -61,10 +77,44 @@ public final class DocumentRules {
         if (!looksLikeSupportedDocument(bytes)) {
             return Problem.UNSUPPORTED_TYPE;
         }
+        Dimensions pixels = dimensionsOf(bytes);
+        if (pixels != null) {
+            return pixels.width() >= MIN_WIDTH && pixels.height() >= MIN_HEIGHT ? null : Problem.TOO_SMALL;
+        }
+        // A PDF, a HEIC, or an image Java has no reader for: fall back to
+        // the size on disk, which is all that is left to judge by.
         if (bytes.length < MIN_BYTES) {
             return Problem.TOO_SMALL;
         }
         return null;
+    }
+
+    private record Dimensions(int width, int height) {
+    }
+
+    /** The image's own size, or null when it cannot be read here. */
+    private static Dimensions dimensionsOf(byte[] bytes) {
+        try (ImageInputStream stream = ImageIO.createImageInputStream(new ByteArrayInputStream(bytes))) {
+            if (stream == null) {
+                return null;
+            }
+            Iterator<ImageReader> readers = ImageIO.getImageReaders(stream);
+            if (!readers.hasNext()) {
+                return null;
+            }
+            ImageReader reader = readers.next();
+            try {
+                // Header only - the pixels themselves are never decoded, so
+                // this costs nothing and cannot be used to make the server
+                // do work by uploading something enormous.
+                reader.setInput(stream, true, true);
+                return new Dimensions(reader.getWidth(0), reader.getHeight(0));
+            } finally {
+                reader.dispose();
+            }
+        } catch (IOException | RuntimeException ex) {
+            return null;
+        }
     }
 
     /**

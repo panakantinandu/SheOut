@@ -54,6 +54,13 @@ public class VerificationRecordEntity extends BaseEntity {
     @Column(length = 500)
     private String rcDocumentKey;
 
+    /**
+     * When the document was sent in, as opposed to when it was looked at.
+     * Null until something is submitted. Re-submitting after a rejection
+     * moves it: the queue started waiting again at that moment.
+     */
+    private Instant documentSubmittedAt;
+
     @Column(length = 100)
     private String reviewedBy;
     private Instant reviewedAt;
@@ -126,6 +133,14 @@ public class VerificationRecordEntity extends BaseEntity {
     /** For account deletion only - the note is free text about the person. See AccountDeletionDocumentListener. */
     public void clearRejectionReason() {
         this.rejectionReason = null;
+    }
+
+    public void markDocumentSubmitted() {
+        this.documentSubmittedAt = Instant.now();
+    }
+
+    public Instant getDocumentSubmittedAt() {
+        return documentSubmittedAt;
     }
 
     public void recordReview(String reviewedByAccountId, String rejectionReason) {

@@ -1,5 +1,7 @@
 package com.sheout.driververification;
 
+import com.sheout.auth.AccountRole;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -21,6 +23,23 @@ import java.util.UUID;
 public interface VerificationApi {
 
     Optional<VerificationSummary> findByAccountId(UUID accountId);
+
+    /**
+     * How long reviews of this kind have actually been taking lately, for
+     * the screen that tells somebody how long she is waiting.
+     * <p>
+     * Measured from real reviews once there are enough of them, and a
+     * configured target before that - the answer says which it is, because
+     * "usually" and "we aim to" are different promises.
+     */
+    VerificationTurnaround turnaroundFor(AccountRole role);
+
+    /**
+     * How many people reached the identity screen recently and never sent
+     * anything - the measurement that says whether this step is a problem,
+     * rather than an argument about whether it might be.
+     */
+    VerificationDropOff dropOff(AccountRole role, int windowDays);
 
     /**
      * Every account with outstanding review work, newest-updated first. One

@@ -403,8 +403,14 @@ public class BookingController {
 
     private ApiException toApiException(BookingError error) {
         return switch (error) {
+            // A code, not the reason phrase: the app has to tell this
+            // refusal apart from every other 409 to offer the way out of it.
+            // Printing "Customer must be gender-verified before booking" in
+            // red under the button was a dead end at the one moment she was
+            // ready to travel.
             case CUSTOMER_NOT_VERIFIED -> new ApiException(
-                    HttpStatus.CONFLICT, "Conflict", "Customer must be gender-verified before booking");
+                    HttpStatus.CONFLICT, "CUSTOMER_NOT_VERIFIED",
+                    "Your ID has not been verified yet, so this trip cannot be booked.");
             // The one case where `error` carries a machine-readable code
             // rather than the HTTP reason phrase. The apps need to tell this
             // refusal apart from every other 409 so they can name the real

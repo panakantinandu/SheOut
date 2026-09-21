@@ -1,7 +1,9 @@
 package com.sheout.driververification.internal;
 
+import com.sheout.auth.AccountRole;
 import com.sheout.driververification.VerificationStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -39,4 +41,23 @@ interface VerificationRecordRepository extends JpaRepository<VerificationRecordE
             """)
     List<VerificationRecordEntity> findAwaitingReview(@Param("underReview") VerificationStatus underReview,
                                                       @Param("pending") VerificationStatus pending);
+
+    /**
+     * How long recent reviews actually took, newest first, in seconds.
+     * <p>
+     * The honest basis for what the app tells somebody who is waiting. Only
+     * rows where both moments are known, and only for the role being asked
+     * about - a rider's review is a different job from a partner's, and
+     * averaging them would tell each of them about the other.
+     */
+    @Query("""
+            select new com.sheout.driververification.internal.ReviewWindow(r.documentSubmittedAt, r.reviewedAt)
+            from VerificationRecordEntity r
+            where r.role = :role
+              and r.reviewedAt is not null
+              and r.documentSubmittedAt is not null
+              and r.reviewedAt > r.documentSubmittedAt
+            order by r.reviewedAt desc
+            """)
+    List<ReviewWindow> recentReviews(@Param("role") AccountRole role, Pageable pageable);
 }

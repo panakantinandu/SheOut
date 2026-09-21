@@ -133,6 +133,14 @@ sheout:
     # available rather than showing nothing. Must be set before launch.
     grievance-officer-email: ${GRIEVANCE_OFFICER_EMAIL:}
 
+  verification:
+    # What the app tells somebody who is waiting, BEFORE there are enough
+    # real reviews to measure. Said as a target ("we aim to") rather than
+    # as a fact, and replaced by the measured median once five reviews
+    # exist - see VerificationService.turnaroundFor. Four hours is what
+    # operations can stand behind today; lower it when that changes.
+    target-turnaround-minutes: ${VERIFICATION_TARGET_TURNAROUND_MINUTES:240}
+
   users:
     # Where the cancellation review line sits.
     #

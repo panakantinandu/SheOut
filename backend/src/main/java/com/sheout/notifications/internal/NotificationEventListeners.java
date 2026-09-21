@@ -12,6 +12,8 @@ import com.sheout.dispatch.DispatchExhausted;
 import com.sheout.dispatch.DriverArriving;
 import com.sheout.dispatch.DriverOffered;
 import com.sheout.driververification.AccountVerified;
+import com.sheout.driververification.VerificationRejected;
+import com.sheout.driververification.VerificationSubmitted;
 import com.sheout.notifications.SosAlertRaised;
 import com.sheout.notifications.internal.channel.OutboundMessage;
 import com.sheout.payments.PaymentCaptured;
@@ -156,6 +158,41 @@ class NotificationEventListeners {
                 "No partners available right now",
                 "Nobody nearby could take this trip. Nothing was charged - try again in a few minutes.",
                 "/tracking/" + event.bookingId()));
+    }
+
+    /**
+     * Operations hears that somebody is waiting.
+     * <p>
+     * How long she waits is mostly how long it takes anybody to notice, and
+     * until this nobody was told at all: the queue grew and was found on the
+     * next visit to the console. No names and no document - an alert on a
+     * lock screen says that there is work, and the work itself is behind a
+     * login.
+     */
+    @Async(NotificationDeliveryConfig.EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void onVerificationSubmitted(VerificationSubmitted event) {
+        boolean driver = event.role() == AccountRole.DRIVER;
+        dispatcher.deliverToRole(AccountRole.ADMIN, NotificationType.VERIFICATION_SUBMITTED, new OutboundMessage(
+                driver ? "A partner is waiting for verification" : "A rider is waiting for verification",
+                "Somebody has submitted an ID and cannot use SheOut until it is reviewed. Open the console.",
+                "/admin/index.html",
+                "verification-" + event.accountId(),
+                OutboundMessage.Urgency.NORMAL));
+    }
+
+    /**
+     * The answer, when it is no. She used to be told nothing: the app went on
+     * saying "being reviewed" and the reason an operator typed stayed in the
+     * database.
+     */
+    @Async(NotificationDeliveryConfig.EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void onVerificationRejected(VerificationRejected event) {
+        dispatcher.deliver(event.accountId(), NotificationType.ACCOUNT_VERIFICATION_REJECTED, OutboundMessage.of(
+                "We could not verify your ID",
+                event.reason() + " You can send another photo from Identity Verification in the app.",
+                "/verification"));
     }
 
     @Async(NotificationDeliveryConfig.EXECUTOR)
