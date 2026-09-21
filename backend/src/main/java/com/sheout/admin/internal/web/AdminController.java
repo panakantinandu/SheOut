@@ -7,6 +7,7 @@ import com.sheout.admin.internal.TrustReviewRow;
 import com.sheout.admin.internal.ReviewQueueRow;
 import com.sheout.admin.internal.SosAlertRow;
 import com.sheout.auth.AccountRole;
+import com.sheout.driververification.VerificationDropOff;
 import com.sheout.auth.CurrentAccount;
 import com.sheout.auth.CurrentAccountContext;
 import com.sheout.booking.BookingCategory;
@@ -71,6 +72,25 @@ public class AdminController {
     public AdminController(AdminService adminService, AnnouncementApi announcements) {
         this.announcements = announcements;
         this.adminService = adminService;
+    }
+
+    /**
+     * How many people reached the identity screen lately and never sent
+     * anything in.
+     * <p>
+     * Here so "is verification where we lose people" can be answered with a
+     * number once there are real users, rather than argued about. It reads
+     * as zeroes until then, which is the honest state rather than a missing
+     * feature.
+     */
+    @GetMapping("/verification/drop-off")
+    public ResponseEntity<VerificationDropOff> verificationDropOff(
+            @RequestParam(required = false) AccountRole role,
+            @RequestParam(required = false) Integer days) {
+        requireAdmin();
+        return ResponseEntity.ok(adminService.verificationDropOff(
+                role == null ? AccountRole.CUSTOMER : role,
+                days == null ? 30 : Math.min(Math.max(days, 1), 365)));
     }
 
     @GetMapping("/verification/review-queue")

@@ -19,7 +19,23 @@ export interface VerificationSummary {
   genderVerificationStatus: VerificationStatus;
   policeVerificationStatus: VerificationStatus | null;
   documentSubmitted: boolean;
+  /** What the operator wrote, when the last decision was a rejection. */
+  rejectionReason: string | null;
   updatedAt: string;
+}
+
+/**
+ * How long a review is taking, and whether that is measured or aimed at.
+ * <p>
+ * The difference matters on screen: "usually about two hours" is a fact
+ * about reviews that happened, "we aim to review within four hours" is a
+ * promise. Saying the first while meaning the second is a lie to somebody
+ * who is waiting to get somewhere.
+ */
+export interface VerificationTurnaround {
+  typicalMinutes: number;
+  measured: boolean;
+  sampleSize: number;
 }
 
 export type VehicleType = 'BIKE' | 'AUTO' | 'CAB';

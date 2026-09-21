@@ -12,6 +12,7 @@ import com.sheout.users.DriverProfileApi;
 import com.sheout.users.DriverProfileSummary;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +29,10 @@ import java.util.stream.Collectors;
  */
 @Component
 public class NotificationDispatcher {
+
+    /** An operator alert goes to an on-duty team, not to a mailing list. */
+    private static final int ROLE_EMAIL_PAGE_SIZE = 25;
+    private static final int ROLE_EMAIL_PAGES = 2;
 
     private final Map<NotificationChannelType, NotificationChannel> channels = new EnumMap<>(NotificationChannelType.class);
     private final NotificationLogService log;
@@ -89,12 +94,50 @@ public class NotificationDispatcher {
      * accounts with no device get no inbox entry either: they have no inbox.
      */
     public void deliverToRole(AccountRole role, NotificationType type, OutboundMessage message) {
+        DeliveryPolicy policy = DeliveryPolicy.forType(type);
         Map<UUID, List<PushDeviceEntity>> byAccount = pushDevices.devicesForRole(role).stream()
                 .collect(Collectors.groupingBy(PushDeviceEntity::getAccountId));
         byAccount.forEach((accountId, devices) -> {
             UUID notificationId = log.recordNotification(accountId, type, message);
             pushToDevices(notificationId, devices, message);
         });
+
+        // Push alone reaches only whoever installed the console on a phone
+        // and allowed notifications. For an alert whose whole purpose is
+        // that somebody looks soon - a rider waiting on a verification -
+        // that is a thin thread: an operations team with no PWA installed
+        // gets nothing, silently, and the queue sits. Email goes to the
+        // role as well when its policy says so.
+        if (policy.emailAlways()) {
+            for (String address : roleAddresses(role)) {
+                send(NotificationChannelType.EMAIL, address, message);
+            }
+        }
+    }
+
+    /**
+     * Every email address held for a role, deduplicated.
+     * <p>
+     * Read a page at a time through the auth module's own API rather than
+     * this module reaching into accounts - and capped, because this is an
+     * operator alert: a role with hundreds of addresses is a mailing list,
+     * not an on-duty team, and mailing all of it on every submission would
+     * be the wrong shape of mistake to make quietly.
+     */
+    private List<String> roleAddresses(AccountRole role) {
+        List<String> addresses = new ArrayList<>();
+        for (int page = 0; page < ROLE_EMAIL_PAGES; page++) {
+            List<String> batch = authApi.findEmailAddresses(role, page, ROLE_EMAIL_PAGE_SIZE);
+            if (batch.isEmpty()) {
+                break;
+            }
+            for (String address : batch) {
+                if (address != null && !address.isBlank() && !addresses.contains(address.trim())) {
+                    addresses.add(address.trim());
+                }
+            }
+        }
+        return addresses;
     }
 
     private boolean pushToDevices(UUID notificationId, List<PushDeviceEntity> devices, OutboundMessage message) {

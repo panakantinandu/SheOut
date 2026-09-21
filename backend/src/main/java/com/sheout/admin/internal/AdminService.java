@@ -7,6 +7,7 @@ import com.sheout.auth.AuthApi;
 import com.sheout.booking.BookingApi;
 import com.sheout.booking.BookingSummary;
 import com.sheout.driververification.VerificationApi;
+import com.sheout.driververification.VerificationDropOff;
 import com.sheout.driververification.VerificationSummary;
 import com.sheout.notifications.SosAlertSummary;
 import com.sheout.notifications.SosApi;
@@ -57,6 +58,15 @@ public class AdminService {
         this.authApi = authApi;
         this.customerProfileApi = customerProfileApi;
         this.driverProfileApi = driverProfileApi;
+    }
+
+    /**
+     * How many people reached the identity screen lately and never sent
+     * anything - see VerificationApi.dropOff. Passed straight through: the
+     * counting belongs to the module that owns the records.
+     */
+    public VerificationDropOff verificationDropOff(AccountRole role, int windowDays) {
+        return verificationApi.dropOff(role, windowDays);
     }
 
     public List<ReviewQueueRow> reviewQueue() {

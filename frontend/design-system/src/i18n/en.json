@@ -308,5 +308,17 @@
     "lightNote": "Always the light theme.",
     "darkNote": "Easier on the eyes at night.",
     "systemNote": "Follows your phone's setting."
+  },
+  "masker": {
+    "title": "Cover your ID number",
+    "instruction": "Drag over your Aadhaar number to cover it. We only need your name, photo and gender — not the number. What you cover here is painted out before the photo leaves your phone.",
+    "none": "Nothing covered yet",
+    "count": "{{count}} area covered",
+    "count_other": "{{count}} areas covered",
+    "undo": "Undo",
+    "clear": "Clear",
+    "useThis": "Use this photo",
+    "cannotOpen": "That photo could not be opened. Try choosing it again.",
+    "cannotSave": "Could not prepare the photo. Try again."
   }
 }

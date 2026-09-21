@@ -3,6 +3,8 @@ package com.sheout.driververification.internal.web;
 import com.sheout.auth.CurrentAccount;
 import com.sheout.auth.CurrentAccountContext;
 import com.sheout.driververification.VerificationSummary;
+import com.sheout.driververification.VerificationTurnaround;
+import com.sheout.driververification.internal.VerificationFunnelStep;
 import com.sheout.driververification.internal.VerificationError;
 import com.sheout.driververification.internal.VerificationService;
 import com.sheout.sharedkernel.storage.DocumentUpload;
@@ -12,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
@@ -51,6 +54,37 @@ public class VerificationController {
             throw toApiException(result.error());
         }
         return ResponseEntity.ok(result.value());
+    }
+
+    /**
+     * How long she is likely to wait, as the pending screen tells her.
+     * <p>
+     * Her own role's number: a rider's review and a partner's are different
+     * jobs, and telling her about the other one would be telling her about
+     * somebody else's queue.
+     */
+    @GetMapping("/api/v1/driver-verification/turnaround")
+    public ResponseEntity<VerificationTurnaround> turnaround() {
+        CurrentAccount caller = requireAuthenticated();
+        return ResponseEntity.ok(verificationService.turnaroundFor(caller.role()));
+    }
+
+    /**
+     * Notes that she reached the upload screen, or picked a document.
+     * <p>
+     * Fire-and-forget by design - 204 whatever happens, because a
+     * measurement must never be the reason an upload screen shows an error.
+     * Only ever about the caller's own account: there is no account id on
+     * the wire to get wrong.
+     */
+    @PostMapping("/api/v1/driver-verification/progress/{step}")
+    public ResponseEntity<Void> recordProgress(@PathVariable String step) {
+        CurrentAccount caller = requireAuthenticated();
+        VerificationFunnelStep parsed = VerificationFunnelStep.parse(step);
+        if (parsed != null) {
+            verificationService.recordFunnelStep(caller.accountId(), caller.role(), parsed);
+        }
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/api/v1/driver-verification/me")

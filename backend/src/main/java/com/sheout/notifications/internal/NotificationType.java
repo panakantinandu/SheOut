@@ -17,6 +17,12 @@ public enum NotificationType {
     /** Dispatch searched and nobody took the trip. */
     NO_DRIVERS_AVAILABLE,
     ACCOUNT_VERIFIED,
+
+    /** Her document was looked at and turned down, with the reason. */
+    ACCOUNT_VERIFICATION_REJECTED,
+
+    /** To operations: somebody is waiting on a review. */
+    VERIFICATION_SUBMITTED,
     /** The rider's own record of an SOS she raised and who it reached. */
     SOS_ALERT,
     /** An SOS raised by a rider, sent to operators. */
