@@ -2,6 +2,8 @@ package com.sheout.auth.internal.web;
 
 import com.sheout.auth.AccountRole;
 import com.sheout.auth.AuthenticatedSession;
+import com.sheout.auth.CurrentAccount;
+import com.sheout.auth.CurrentAccountContext;
 import com.sheout.auth.internal.AuthError;
 import com.sheout.auth.internal.AuthService;
 import com.sheout.auth.internal.otp.OtpRateLimiter;
@@ -130,6 +132,44 @@ public class AuthController {
         return ResponseEntity.ok(VerifyOtpResponse.from(result.value()));
     }
 
+    /**
+     * A Google-signup rider adding her phone number: the same code, sender
+     * and limits as signing in with one (OtpRateLimiter per number, and the
+     * per-network limit), so it is no easier to use this to text a stranger
+     * or to guess a code than it is through the sign-in screen.
+     */
+    @PostMapping("/api/v1/auth/phone/request")
+    public ResponseEntity<Void> requestAddedPhone(@Valid @RequestBody AddPhoneRequest request, HttpServletRequest http) {
+        CurrentAccount caller = requireCaller();
+        otpRateLimiter.checkRequest(request.phoneNumber(), AccountRole.CUSTOMER);
+        checkClient("otp-request", http);
+        Result<Void, AuthError> result = authService.requestAddedPhone(caller.accountId(), request.phoneNumber());
+        if (result.isFailure()) {
+            throw toApiException(result.error());
+        }
+        return ResponseEntity.accepted().build();
+    }
+
+    @PostMapping("/api/v1/auth/phone/verify")
+    public ResponseEntity<AddedPhoneResponse> verifyAddedPhone(@Valid @RequestBody VerifyAddedPhoneRequest request, HttpServletRequest http) {
+        CurrentAccount caller = requireCaller();
+        otpRateLimiter.checkVerify(request.phoneNumber(), AccountRole.CUSTOMER);
+        checkClient("otp-verify", http);
+        Result<String, AuthError> result = authService.verifyAddedPhone(caller.accountId(), request.phoneNumber(), request.code());
+        if (result.isFailure()) {
+            throw toApiException(result.error());
+        }
+        // A right code gives its attempt back, as it does when signing in.
+        otpRateLimiter.releaseVerify(request.phoneNumber(), AccountRole.CUSTOMER);
+        rateLimiter.release(clientKey("otp-verify", http));
+        return ResponseEntity.ok(new AddedPhoneResponse(result.value()));
+    }
+
+    private CurrentAccount requireCaller() {
+        return CurrentAccountContext.get()
+                .orElseThrow(() -> ApiException.unauthorized("Authentication required"));
+    }
+
     private ApiException toApiException(AuthError error) {
         return switch (error) {
             case OTP_DELIVERY_FAILED ->
@@ -153,6 +193,13 @@ public class AuthController {
                     ApiException.forbidden("ADMIN accounts cannot be created via self-service signup");
             case EMAIL_LINKED_TO_PHONE_ACCOUNT ->
                     new ApiException(HttpStatus.CONFLICT, "Conflict", "An account already exists with this email - sign in with your phone number instead");
+            case GOOGLE_NOT_FOR_ROLE ->
+                    ApiException.forbidden("Google sign-in is only for the rider app. Partners sign in with their phone number.");
+            case PHONE_ALREADY_SET ->
+                    new ApiException(HttpStatus.CONFLICT, "PHONE_ALREADY_SET", "This account already has a phone number");
+            case PHONE_ALREADY_REGISTERED ->
+                    new ApiException(HttpStatus.CONFLICT, "PHONE_ALREADY_REGISTERED",
+                            "This number already has a SheOut rider account. Sign out and sign in with this number instead.");
         };
     }
 
@@ -167,6 +214,20 @@ public class AuthController {
             @NotBlank @Pattern(regexp = "^\\d{6}$", message = "must be a 6-digit code") String code,
             @NotNull AccountRole role
     ) {
+    }
+
+    public record AddPhoneRequest(
+            @NotBlank @Pattern(regexp = "^\\+[1-9]\\d{7,14}$", message = "must be a valid E.164 phone number") String phoneNumber
+    ) {
+    }
+
+    public record VerifyAddedPhoneRequest(
+            @NotBlank @Pattern(regexp = "^\\+[1-9]\\d{7,14}$", message = "must be a valid E.164 phone number") String phoneNumber,
+            @NotBlank @Pattern(regexp = "^\\d{6}$", message = "must be a 6-digit code") String code
+    ) {
+    }
+
+    public record AddedPhoneResponse(String phoneNumber) {
     }
 
     public record GoogleVerifyRequest(

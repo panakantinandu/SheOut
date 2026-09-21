@@ -144,13 +144,23 @@ export function Login() {
     }
 
     let needsProfile = session.newAccount;
+    let needsPhone = false;
     try {
       const profile = await usersApi.getMyProfile();
       needsProfile = !profile.profileComplete;
+      // Only a Google sign-in can arrive without a number. Asked before the
+      // profile, and before anything else - see ProtectedRoute.
+      needsPhone = !profile.phoneNumber;
     } catch {
       // Profile fetch failed - fall back to the session's own signal rather than stranding the user here.
+      // The route guard asks again on the next screen, so a missing number is still caught.
     }
-    if (needsProfile) {
+    if (needsPhone) {
+      navigate('/add-phone', {
+        replace: true,
+        state: session.newAccount ? { notice: t('login.createdForYou') } : undefined,
+      });
+    } else if (needsProfile) {
       // Said on the screen she lands on - set here and navigated away from,
       // the notice was never seen. A number from the other app becomes a new
       // account in this one, and this is where she learns that.

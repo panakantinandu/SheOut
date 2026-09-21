@@ -9,6 +9,12 @@ package com.sheout.booking;
  */
 public enum BookingError {
     CUSTOMER_NOT_VERIFIED,
+    /**
+     * A rider account with no verified phone number - one created through
+     * Google that has not added one yet. Dispatch, SOS and support all reach
+     * a rider on her number, so a trip is never booked without one.
+     */
+    CUSTOMER_PHONE_REQUIRED,
     /** Pickup or drop is outside the radius SheOut operates in - see ServiceArea. */
     OUTSIDE_SERVICE_AREA,
     CATEGORY_TYPE_MISMATCH,

@@ -61,6 +61,13 @@
     "cancel": "Cancel",
     "next": "Next"
   },
+  "addPhone": {
+    "title": "Add your phone number",
+    "subtitle": "One more step before you can ride.",
+    "why": "Your partner calls you on this number at pickup, your emergency contacts are texted from it if you press SOS, and support calls you back on it. We send a code to check it is yours.",
+    "verify": "Verify number",
+    "signOut": "Use a different account"
+  },
   "completeProfile": {
     "title": "Complete your profile",
     "subtitle": "A few details before your first ride."

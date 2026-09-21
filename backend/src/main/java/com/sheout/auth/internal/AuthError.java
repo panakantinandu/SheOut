@@ -42,5 +42,26 @@ public enum AuthError {
      * actually produce this today (phone signup never collects an email),
      * this exists so it's handled correctly the moment one does.
      */
-    EMAIL_LINKED_TO_PHONE_ACCOUNT
+    EMAIL_LINKED_TO_PHONE_ACCOUNT,
+    /**
+     * Google sign-in for any app but the rider app. Partners and operators
+     * sign in with a phone and a code only: dispatch, SOS and the operations
+     * team all depend on every one of them having a verified number, which a
+     * Google account does not give. The partner app never offered Google,
+     * but the server accepted whatever role a request named, so a direct call
+     * could have created a partner account with no number at all.
+     */
+    GOOGLE_NOT_FOR_ROLE,
+    /**
+     * Adding a number to an account that already has one. This step exists
+     * to give a Google account its first number, not to change a number.
+     */
+    PHONE_ALREADY_SET,
+    /**
+     * The number, verified by its code, already belongs to another rider
+     * account - most likely her own, from signing up with the number before.
+     * Said only after the code proves the number is hers, so it cannot be
+     * used to learn whether a number is registered.
+     */
+    PHONE_ALREADY_REGISTERED
 }

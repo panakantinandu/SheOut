@@ -408,6 +408,9 @@ public class BookingController {
             // Printing "Customer must be gender-verified before booking" in
             // red under the button was a dead end at the one moment she was
             // ready to travel.
+            case CUSTOMER_PHONE_REQUIRED -> new ApiException(
+                    HttpStatus.CONFLICT, "CUSTOMER_PHONE_REQUIRED",
+                    "Add and verify your phone number before booking a trip.");
             case CUSTOMER_NOT_VERIFIED -> new ApiException(
                     HttpStatus.CONFLICT, "CUSTOMER_NOT_VERIFIED",
                     "Your ID has not been verified yet, so this trip cannot be booked.");

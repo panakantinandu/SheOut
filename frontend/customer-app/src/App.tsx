@@ -27,6 +27,7 @@ import { Splash } from './screens/Splash'
 import { Tracking } from './screens/Tracking'
 import { Chat } from './screens/Chat'
 import { CompleteProfile } from './screens/CompleteProfile'
+import { AddPhone } from './screens/AddPhone'
 import { Wallet } from './screens/Wallet'
 import { Seller } from './screens/Seller'
 import { Refer } from './screens/Refer'
@@ -74,6 +75,7 @@ function App() {
       {/* Pushed on top of Profile with a back arrow, like the booking flow -
           they are drill-downs, not tab destinations, so no AppShell. */}
       <Route path="/notifications" element={protectedOnly(<Notifications />)} />
+      <Route path="/add-phone" element={protectedOnly(<AddPhone />)} />
       <Route path="/complete-profile" element={protectedOnly(<CompleteProfile />)} />
       <Route path="/welcome" element={protectedOnly(<Onboarding />)} />
       <Route path="/profile/details" element={protectedOnly(<PersonalDetails />)} />

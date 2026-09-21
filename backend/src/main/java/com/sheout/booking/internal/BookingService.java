@@ -117,6 +117,12 @@ public class BookingService implements BookingApi {
         if (!withinServiceArea(command.pickup(), command.drop())) {
             return Result.failure(BookingError.OUTSIDE_SERVICE_AREA);
         }
+        // Before the ID check: the app asks for the number first, so this is
+        // the step she is actually on. The app enforces it too, but only the
+        // server can promise a phone-less account never books.
+        if (!hasPhoneNumber(command.customerId())) {
+            return Result.failure(BookingError.CUSTOMER_PHONE_REQUIRED);
+        }
         if (!isCustomerVerified(command.customerId())) {
             return Result.failure(BookingError.CUSTOMER_NOT_VERIFIED);
         }
@@ -506,6 +512,12 @@ public class BookingService implements BookingApi {
      * still goes through the unmodified VerificationApi check with no
      * change in behavior.
      */
+    private boolean hasPhoneNumber(UUID customerId) {
+        return authApi.findAccount(customerId)
+                .map(account -> account.phoneNumber() != null && !account.phoneNumber().isBlank())
+                .orElse(false);
+    }
+
     private boolean isCustomerVerified(UUID customerId) {
         if (isVerifiedBypassAccount(customerId)) {
             return true;
