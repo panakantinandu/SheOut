@@ -44,6 +44,12 @@ public enum BookingError {
     /** Too many wrong guesses on this booking. See PickupCode.MAX_ATTEMPTS. */
     PICKUP_VERIFICATION_LOCKED,
 
+    /** The driver has not reached the authoritative drop-off location yet. */
+    DRIVER_NOT_AT_DROP_OFF,
+
+    /** The driver's last location is missing, invalid, or too old to trust. */
+    DRIVER_LOCATION_UNAVAILABLE,
+
     /**
      * The rider has a trip that ended and is still unpaid, so she cannot
      * book another. Paying it - from the wallet or online - clears this.

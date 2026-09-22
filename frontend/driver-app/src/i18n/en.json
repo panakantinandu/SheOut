@@ -326,6 +326,8 @@
     "backHome": "Back to home",
     "ending": "Ending trip...",
     "endTrip": "End trip and request payment",
+    "locationNeededToEnd": "Refresh your location before ending the trip.",
+    "mustReachDrop": "Reach the drop-off location before ending the trip.",
     "cancelTrip": "Cancel Trip",
     "detailsTitle": "Trip details",
     "requestedOn": "Requested {{when}}",

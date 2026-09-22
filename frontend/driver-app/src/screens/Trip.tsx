@@ -50,6 +50,8 @@ function formatWhen(iso: string): string {
 const ROUTE_REFRESH_METRES = 300;
 
 const EARTH_RADIUS_M = 6371000;
+// UX hint only. The backend configuration remains the final authority.
+const DROP_OFF_GEOFENCE_METRES = 100;
 
 function metresBetween(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
   const toRad = (deg: number) => (deg * Math.PI) / 180;
@@ -126,6 +128,12 @@ export function Trip() {
     : false;
   const location = useShareLocation(tripIsLive);
   const myPosition = location.position;
+  const atDropOff = Boolean(
+    booking?.status === 'IN_PROGRESS'
+      && myPosition
+      && booking.drop
+      && metresBetween(myPosition, booking.drop) <= DROP_OFF_GEOFENCE_METRES
+  );
 
   const phase = booking?.status === 'IN_PROGRESS' ? 'DROP' : 'PICKUP';
   const settled = paid || Boolean(booking?.paymentSettledAt);
@@ -569,9 +577,17 @@ export function Trip() {
               </>
             )}
             {booking.status === 'IN_PROGRESS' && (
-              <Button fullWidth variant="success" disabled={busy} onClick={handleComplete}>
+              <>
+                {!myPosition && (
+                  <p className="text-center text-sm text-text-secondary">{t('trip.locationNeededToEnd')}</p>
+                )}
+                {myPosition && !atDropOff && (
+                  <p className="text-center text-sm text-text-secondary">{t('trip.mustReachDrop')}</p>
+                )}
+                <Button fullWidth variant="success" disabled={busy || !atDropOff} onClick={handleComplete}>
                 {busy ? t('trip.ending') : t('trip.endTrip')}
-              </Button>
+                </Button>
+              </>
             )}
             {(booking.status === 'MATCHED' || booking.status === 'ACCEPTED') && (
               <Button

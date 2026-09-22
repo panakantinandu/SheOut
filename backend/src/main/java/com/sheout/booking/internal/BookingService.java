@@ -22,6 +22,8 @@ import com.sheout.booking.internal.fare.FareQuote;
 import com.sheout.driververification.VerificationApi;
 import com.sheout.driververification.VerificationStatus;
 import com.sheout.driververification.VerificationSummary;
+import com.sheout.dispatch.internal.DriverLocation;
+import com.sheout.dispatch.internal.redis.DriverLocationStore;
 import com.sheout.sharedkernel.Result;
 import com.sheout.sharedkernel.geo.ServiceArea;
 import com.sheout.sharedkernel.event.DomainEventPublisher;
@@ -60,6 +62,8 @@ public class BookingService implements BookingApi {
     private final ServiceArea serviceArea;
     private final String verifiedBypassPhone;
     private final Duration partnerPaymentHold;
+    private final DriverLocationStore locationStore;
+    private final DropoffGeofence dropoffGeofence;
 
     public BookingService(BookingRepository bookingRepository,
                            VerificationApi verificationApi,
@@ -68,7 +72,10 @@ public class BookingService implements BookingApi {
                            AuthApi authApi,
                            ServiceArea serviceArea,
                            @Value("${sheout.testing.verified-bypass-phone:}") String verifiedBypassPhone,
-                           @Value("${sheout.booking.partner-payment-hold-minutes:10}") long partnerPaymentHoldMinutes) {
+                           @Value("${sheout.booking.partner-payment-hold-minutes:10}") long partnerPaymentHoldMinutes,
+                           DriverLocationStore locationStore,
+                           @Value("${sheout.booking.completion.drop-off-radius-metres:100}") double dropoffRadiusMetres,
+                           @Value("${sheout.booking.completion.driver-location-max-age-seconds:30}") long driverLocationMaxAgeSeconds) {
         this.partnerPaymentHold = Duration.ofMinutes(partnerPaymentHoldMinutes);
         this.bookingRepository = bookingRepository;
         this.verificationApi = verificationApi;
@@ -77,6 +84,9 @@ public class BookingService implements BookingApi {
         this.authApi = authApi;
         this.serviceArea = serviceArea;
         this.verifiedBypassPhone = verifiedBypassPhone;
+        this.locationStore = locationStore;
+        this.dropoffGeofence = new DropoffGeofence(
+                dropoffRadiusMetres, Duration.ofSeconds(driverLocationMaxAgeSeconds));
     }
 
     /**
@@ -313,13 +323,16 @@ public class BookingService implements BookingApi {
     }
 
     /**
-     * Self-service - driver marks drop-off complete. finalFare = fareEstimate
-     * (no real trip-distance tracking exists yet to base a genuinely
-     * different figure on - see FareCalculator's Javadoc).
+     * Self-service - the assigned driver marks drop-off complete. The row
+     * lock keeps duplicate requests serialized; the authoritative drop-off
+     * and the latest trusted driver location are checked before any state or
+     * payment-related event can be written.
      */
     @Transactional
-    public Result<BookingSummary, BookingError> completeTrip(UUID bookingId) {
-        Optional<BookingEntity> found = bookingRepository.findById(bookingId);
+    public Result<BookingSummary, BookingError> completeTrip(UUID bookingId, UUID driverId) {
+        // Lock before every read involved in completion. This makes the state
+        // check, location check, and final transition one atomic decision.
+        Optional<BookingEntity> found = bookingRepository.findLockedById(bookingId);
         if (found.isEmpty()) {
             return Result.failure(BookingError.BOOKING_NOT_FOUND);
         }
@@ -330,9 +343,26 @@ public class BookingService implements BookingApi {
         if (transition.isFailure()) {
             return Result.failure(transition.error());
         }
+        if (booking.getDriverId() == null || !booking.getDriverId().equals(driverId)) {
+            return Result.failure(BookingError.BOOKING_NOT_FOUND);
+        }
+
+        Instant now = Instant.now();
+        Optional<DriverLocation> location = locationStore.findLocation(driverId);
+        if (location.isEmpty()) {
+            return Result.failure(BookingError.DRIVER_LOCATION_UNAVAILABLE);
+        }
+        DropoffGeofence.Decision geofence = dropoffGeofence.check(
+                location.get(), booking.getDrop().getLat(), booking.getDrop().getLng(), now);
+        if (geofence == DropoffGeofence.Decision.LOCATION_UNAVAILABLE) {
+            return Result.failure(BookingError.DRIVER_LOCATION_UNAVAILABLE);
+        }
+        if (geofence == DropoffGeofence.Decision.OUTSIDE_DROP_OFF) {
+            return Result.failure(BookingError.DRIVER_NOT_AT_DROP_OFF);
+        }
 
         booking.setStatus(BookingStatus.COMPLETED);
-        booking.setCompletedAt(Instant.now());
+        booking.setCompletedAt(now);
         booking.setFinalFare(booking.getFareEstimate());
         bookingRepository.save(booking);
 
@@ -340,6 +370,7 @@ public class BookingService implements BookingApi {
                 booking.getId(), booking.getCustomerId(), booking.getDriverId(), booking.getFinalFare()));
         return Result.success(toSummary(booking));
     }
+
 
     /**
      * Self-service - either participant (customer or the assigned driver)
