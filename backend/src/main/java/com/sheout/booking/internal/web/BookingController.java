@@ -60,6 +60,7 @@ import java.util.UUID;
 public class BookingController {
 
     private static final Duration PICKUP_WINDOW = Duration.ofMinutes(15);
+    private static final int BOOKINGS_PER_HOUR = 12;
 
     private final BookingService bookingService;
     private final ServiceArea serviceArea;
@@ -85,6 +86,11 @@ public class BookingController {
     @PostMapping("/api/v1/bookings")
     public ResponseEntity<BookingSummary> createBooking(@Valid @RequestBody CreateBookingRequest request) {
         CurrentAccount caller = requireRole(AccountRole.CUSTOMER);
+        // Booking and cancelling in a loop gets past one-live-trip-at-a-time
+        // and still sends a partner out each time. Twelve an hour is more
+        // than anyone travels; a loop meets it in a minute.
+        rateLimiter.tryConsume("booking-create:" + caller.accountId(), BOOKINGS_PER_HOUR, Duration.ofHours(1))
+                .orThrow("You have booked a lot of trips in the last hour. Please wait a while before booking again.");
         RequestBookingCommand command = new RequestBookingCommand(
                 caller.accountId(),
                 request.type(),
@@ -455,6 +461,9 @@ public class BookingController {
             case UNPAID_TRIP -> new ApiException(
                     HttpStatus.CONFLICT, "UNPAID_TRIP",
                     "Your last trip is still unpaid. Pay for it from your wallet or online, then book again.");
+            case ACTIVE_BOOKING_EXISTS -> new ApiException(
+                    HttpStatus.CONFLICT, "ACTIVE_BOOKING_EXISTS",
+                    "You already have a trip in progress. Finish or cancel it before booking another.");
         };
     }
 

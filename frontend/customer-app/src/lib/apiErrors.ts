@@ -4,6 +4,8 @@ import { ApiError } from '../api/client';
 /** Server error codes the app has its own translated wording for. */
 const KNOWN_CODES = new Set([
   'UNPAID_TRIP',
+  'ACTIVE_BOOKING_EXISTS',
+  'CUSTOMER_PHONE_REQUIRED',
   'CUSTOMER_NOT_VERIFIED',
   'OUTSIDE_SERVICE_AREA',
   'INSUFFICIENT_BALANCE',

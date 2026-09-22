@@ -348,7 +348,8 @@
     "nearbyPartner": "Partner nearby",
     "nearbyCount_one": "{{count}} partner near your pickup",
     "nearbyCount_other": "{{count}} partners near your pickup",
-    "verifyNow": "Verify my ID"
+    "verifyNow": "Verify my ID",
+    "viewLiveTrip": "View your trip"
   },
   "apiError": {
     "UNPAID_TRIP": "Your last trip is still unpaid. Pay for it from your wallet or online, then book again.",
@@ -362,7 +363,9 @@
     "INVALID_PICKUP_CODE": "That code doesn't match. Ask your rider to read it out again.",
     "PICKUP_CODE_REQUIRED": "Enter the four-digit pickup code.",
     "PICKUP_VERIFICATION_LOCKED": "Too many wrong codes for this trip. Contact support.",
-    "CUSTOMER_NOT_VERIFIED": "Your ID is still to be verified, so this trip cannot be booked yet."
+    "CUSTOMER_NOT_VERIFIED": "Your ID is still to be verified, so this trip cannot be booked yet.",
+    "ACTIVE_BOOKING_EXISTS": "You already have a trip in progress. Finish or cancel it before booking another.",
+    "CUSTOMER_PHONE_REQUIRED": "Add and verify your phone number before booking a trip."
   },
   "picker": {
     "noAddress": "No address found at that point. Move the pin somewhere closer to a road or landmark.",

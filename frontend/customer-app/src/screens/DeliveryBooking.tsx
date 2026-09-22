@@ -12,6 +12,7 @@ import { LocationRow } from '../components/LocationRow';
 import { ServiceAreaNotice } from '../components/ServiceAreaNotice';
 import { currentPosition, describePoint, isInServiceArea } from '../lib/geocode';
 import { apiErrorText } from '../lib/apiErrors';
+import { findLiveTrip } from '../lib/liveTrip';
 import { useFareQuote } from '../lib/useFareQuote';
 import { useNearbyDrivers } from '../lib/useNearbyDrivers';
 import { useSavedPlaces } from '../lib/useSavedPlaces';
@@ -88,6 +89,7 @@ export function DeliveryBooking() {
   const fare = useFareQuote({ type: 'DELIVERY', category: config.category, pickup, drop });
   const [error, setError] = useState<string | null>(null);
   const [needsVerification, setNeedsVerification] = useState(false);
+  const [liveTripId, setLiveTripId] = useState<string | null>(null);
   /** Bumped when the server refuses a booking for an unpaid trip, so the banner re-checks. */
   const [unpaidCheck, setUnpaidCheck] = useState(0);
   const isLunchbox = kind === 'lunchbox';
@@ -130,6 +132,8 @@ export function DeliveryBooking() {
       setNeedsVerification(err instanceof ApiError && err.body?.error === 'CUSTOMER_NOT_VERIFIED');
       // The banner above names the unpaid trip and links to it.
       if (err instanceof ApiError && err.body?.error === 'UNPAID_TRIP') setUnpaidCheck((n) => n + 1);
+      // A trip already live: the way out is that trip, one tap away.
+      setLiveTripId(err instanceof ApiError && err.body?.error === 'ACTIVE_BOOKING_EXISTS' ? await findLiveTrip('DELIVERY') : null);
     } finally {
       setSubmitting(false);
     }
@@ -248,6 +252,12 @@ export function DeliveryBooking() {
 
       {pickupError && !pickup && <p className="text-xs text-text-secondary">{pickupError}</p>}
       {error && <p className="text-sm text-danger">{error}</p>}
+      {liveTripId && (
+        <Button variant="secondary" fullWidth onClick={() => navigate(`/tracking/${liveTripId}`)} data-testid="view-live-trip">
+          {t('booking.viewLiveTrip')}
+        </Button>
+      )}
+
       {needsVerification && (
         <Button variant="secondary" fullWidth onClick={() => navigate('/verification')} data-testid="verify-now">
           {t('booking.verifyNow')}

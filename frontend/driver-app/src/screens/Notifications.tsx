@@ -5,8 +5,7 @@ import {
   PushStatusNote,
   TopHeader,
   usePushMessages,
-  usePushNotifications,
-} from '@sheout/design-system';
+  usePushNotifications, safeInternalPath } from '@sheout/design-system';
 import { PUSH_TOKEN_KEY, notificationsApi, pushApi } from '../api/client';
 import { useTranslation } from '@sheout/design-system';
 
@@ -31,7 +30,10 @@ export function Notifications() {
         fetchPage={notificationsApi.inbox}
         markRead={notificationsApi.markRead}
         markAllRead={notificationsApi.markAllRead}
-        onOpen={(link) => navigate(link)}
+        onOpen={(link) => {
+          const path = safeInternalPath(link);
+          if (path) navigate(path);
+        }}
         refreshKey={refreshKey}
       />
     </div>

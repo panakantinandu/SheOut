@@ -48,6 +48,10 @@ public class BookingService implements BookingApi {
     private static final java.util.Set<BookingStatus> ACTIVE_TRIP_STATUSES = java.util.EnumSet.of(
             BookingStatus.MATCHED, BookingStatus.ACCEPTED, BookingStatus.IN_PROGRESS);
 
+    /** A rider's trip is live from the moment it starts searching. */
+    private static final java.util.Set<BookingStatus> LIVE_STATUSES = java.util.EnumSet.of(
+            BookingStatus.REQUESTED, BookingStatus.MATCHED, BookingStatus.ACCEPTED, BookingStatus.IN_PROGRESS);
+
     private final BookingRepository bookingRepository;
     private final VerificationApi verificationApi;
     private final FareCalculator fareCalculator;
@@ -131,6 +135,11 @@ public class BookingService implements BookingApi {
         // owes it cannot ride again until it is settled.
         if (findPaymentHoldForCustomer(command.customerId()).isPresent()) {
             return Result.failure(BookingError.UNPAID_TRIP);
+        }
+        // One live trip of each kind: a ride and a parcel together is
+        // ordinary, two rides at once is not a thing a person does.
+        if (bookingRepository.existsByCustomerIdAndTypeAndStatusIn(command.customerId(), command.type(), LIVE_STATUSES)) {
+            return Result.failure(BookingError.ACTIVE_BOOKING_EXISTS);
         }
 
         BigDecimal fareEstimate = fareCalculator.estimate(command.category(), command.pickup(), command.drop());

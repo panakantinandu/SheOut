@@ -1,6 +1,7 @@
 package com.sheout.booking.internal;
 
 import com.sheout.booking.BookingStatus;
+import com.sheout.booking.BookingType;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -41,6 +42,9 @@ interface BookingRepository extends JpaRepository<BookingEntity, UUID>, JpaSpeci
 
     /** Backed by idx_bookings_driver - see BookingService.hasActiveTripAsDriver. */
     boolean existsByDriverIdAndStatusIn(UUID driverId, java.util.Collection<BookingStatus> statuses);
+
+    /** A live booking of this type for this rider - see BookingService.requestBooking. */
+    boolean existsByCustomerIdAndTypeAndStatusIn(UUID customerId, BookingType type, java.util.Collection<BookingStatus> statuses);
 
     /** Searches that outlived the search budget - see StaleSearchReaper. */
     List<BookingEntity> findTop100ByStatusAndCreatedAtBeforeOrderByCreatedAtAsc(BookingStatus status, Instant cutoff);

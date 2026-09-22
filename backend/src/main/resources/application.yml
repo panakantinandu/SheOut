@@ -190,6 +190,8 @@ sheout:
     # guessable. Local dev gets a dev-only default - see application-local.yml.
     jwt-secret: ${JWT_SECRET}
     jwt-expiry-minutes: ${JWT_EXPIRY_MINUTES:43200}
+    # Operator sessions: a working day - see JwtService.
+    admin-jwt-expiry-minutes: ${ADMIN_JWT_EXPIRY_MINUTES:720}
     otp-ttl-seconds: ${OTP_TTL_SECONDS:300}
     # Whether ConsoleOtpSender writes the code itself into the log. Off by
     # default: a code in a production log is a sign-in for whoever reads it.

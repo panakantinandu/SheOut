@@ -37,9 +37,25 @@ public class OfferStore {
     }
 
     /** Opens a pending offer for one driver on one booking, expiring after the accept window. */
-    public void createOffer(UUID bookingId, UUID driverId, Duration window) {
+    /**
+     * Offers this booking to this driver, unless she is already holding an
+     * offer - in which case nothing is written and this answers false.
+     * <p>
+     * A driver has one "current offer" slot, which is what her app shows.
+     * It used to be overwritten: a second booking near her while the first
+     * offer was still on screen replaced it, the first offer expired unseen,
+     * she was marked as tried for it, and that rider could be told nobody
+     * was available with a partner fifty metres away. The slot is claimed
+     * with SET NX, so two searches running at the same moment cannot both
+     * put a trip in it either.
+     */
+    public boolean createOffer(UUID bookingId, UUID driverId, Duration window) {
+        Boolean claimed = redisTemplate.opsForValue().setIfAbsent(driverActiveOfferKey(driverId), bookingId.toString(), window);
+        if (!Boolean.TRUE.equals(claimed)) {
+            return false;
+        }
         redisTemplate.opsForValue().set(offerKey(bookingId, driverId), "1", window);
-        redisTemplate.opsForValue().set(driverActiveOfferKey(driverId), bookingId.toString(), window);
+        return true;
     }
 
     /** What a driver polls to discover a pending offer. */
@@ -54,7 +70,25 @@ public class OfferStore {
 
     public void removeOffer(UUID bookingId, UUID driverId) {
         redisTemplate.delete(offerKey(bookingId, driverId));
-        redisTemplate.delete(driverActiveOfferKey(driverId));
+        // Only if her slot still holds this booking - never clear an offer
+        // for a different trip that is on her screen now.
+        if (bookingId.toString().equals(redisTemplate.opsForValue().get(driverActiveOfferKey(driverId)))) {
+            redisTemplate.delete(driverActiveOfferKey(driverId));
+        }
+    }
+
+    /**
+     * Withdraws every offer still out for a booking that has ended - the
+     * rider cancelled while partners were deciding. Each partner is freed
+     * for the next trip at once, instead of looking at a dead offer until it
+     * times out.
+     */
+    public void withdrawOffers(UUID bookingId) {
+        Set<String> tried = redisTemplate.opsForSet().members(triedKey(bookingId));
+        if (tried == null) {
+            return;
+        }
+        tried.forEach(driverId -> removeOffer(bookingId, UUID.fromString(driverId)));
     }
 
     /**

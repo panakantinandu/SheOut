@@ -836,9 +836,12 @@ async function api(path, options = {}) {
     }
   });
   if (res.status === 401 || res.status === 403) {
-    // 403 here means "not an ADMIN" - a role gate, genuinely distinct from
-    // the 404 the per-resource checks return.
-    signOut('Your session is not authorised as an operations account. Sign in with an admin account.');
+    // 401: the session is over - operator sign-ins last a working day, and
+    // can be ended from elsewhere. 403: signed in, but not as an operator -
+    // a role gate, genuinely distinct from the 404 per-resource checks return.
+    signOut(res.status === 401
+      ? 'Your session has ended. Operator sign-ins last 12 hours - sign in again to continue.'
+      : 'Your session is not authorised as an operations account. Sign in with an admin account.');
     throw new Error('unauthorized');
   }
   const body = res.status === 204 ? null : await res.json().catch(() => null);

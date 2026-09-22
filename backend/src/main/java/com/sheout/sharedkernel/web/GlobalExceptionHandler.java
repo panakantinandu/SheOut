@@ -12,8 +12,12 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestHeaderException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -32,19 +36,72 @@ public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+    /**
+     * A JSON body that parsed but broke a rule - a latitude of 999, a name
+     * too long.
+     * <p>
+     * The details were FieldError.toString(), which is Spring's debugging
+     * text: it named the request class, every message code it tried and
+     * java.lang.Double, and handed that to whoever sent the request. Now each
+     * detail is the field and the rule, and the message names the first one,
+     * so an app that shows the message says something a person can act on
+     * instead of "Validation failed".
+     */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiErrorResponse> handleValidation(MethodArgumentNotValidException ex,
                                                                HttpServletRequest request) {
         List<String> details = ex.getBindingResult().getFieldErrors().stream()
-                .map(FieldError::toString)
+                .map(error -> error.getField() + ": " + error.getDefaultMessage())
                 .toList();
+        return badRequest(details.isEmpty() ? "Some of the details sent are not valid" : "Please check " + details.get(0),
+                request, details);
+    }
+
+    /**
+     * A required query parameter or header left off, or one that is not the
+     * type it should be - "page=abc", a booking id that is not an id, a
+     * status nobody has heard of.
+     * <p>
+     * All of these fell through to the catch-all as 500s: logged as server
+     * faults with a stack trace, sent to error reporting, for a caller's
+     * typo. Anyone could fill the error log - and bury a real incident in
+     * it - by leaving a parameter off. The message names the parameter and
+     * never the handler or its Java types.
+     */
+    @ExceptionHandler({
+            MissingServletRequestParameterException.class,
+            MissingRequestHeaderException.class,
+            MissingServletRequestPartException.class,
+            MethodArgumentTypeMismatchException.class,
+    })
+    public ResponseEntity<ApiErrorResponse> handleBadParameter(Exception ex, HttpServletRequest request) {
+        String message;
+        if (ex instanceof MissingServletRequestParameterException missing) {
+            message = "Missing required parameter '" + missing.getParameterName() + "'";
+        } else if (ex instanceof MissingRequestHeaderException missing) {
+            message = "Missing required header '" + missing.getHeaderName() + "'";
+        } else if (ex instanceof MissingServletRequestPartException missing) {
+            message = "Missing required part '" + missing.getRequestPartName() + "'";
+        } else if (ex instanceof MethodArgumentTypeMismatchException mismatch) {
+            message = "'" + mismatch.getName() + "' has a value that is not valid here";
+        } else {
+            message = "This request is missing something or has a value that is not valid";
+        }
+        log.debug("Bad parameter on {}: {}", request.getRequestURI(), message);
+        return badRequest(message, request, List.of());
+    }
+
+    /** A document or photo over the size limit. A 413 the apps can explain, not a 500. */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiErrorResponse> handleTooLarge(MaxUploadSizeExceededException ex, HttpServletRequest request) {
         ApiErrorResponse body = ApiErrorResponse.of(
-                HttpStatus.BAD_REQUEST.value(),
-                "Bad Request",
-                "Validation failed",
-                request.getRequestURI(),
-                details
-        );
+                HttpStatus.PAYLOAD_TOO_LARGE.value(), "Payload Too Large",
+                "That file is too large. Please choose one under 10 MB.", request.getRequestURI());
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(body);
+    }
+
+    private static ResponseEntity<ApiErrorResponse> badRequest(String message, HttpServletRequest request, List<String> details) {
+        ApiErrorResponse body = ApiErrorResponse.of(HttpStatus.BAD_REQUEST.value(), "Bad Request", message, request.getRequestURI(), details);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 
@@ -116,14 +173,8 @@ public class GlobalExceptionHandler {
                 .flatMap(result -> result.getResolvableErrors().stream()
                         .map(error -> result.getMethodParameter().getParameterName() + ": " + error.getDefaultMessage()))
                 .toList();
-        ApiErrorResponse body = ApiErrorResponse.of(
-                HttpStatus.BAD_REQUEST.value(),
-                "Bad Request",
-                "Validation failed",
-                request.getRequestURI(),
-                details
-        );
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+        return badRequest(details.isEmpty() ? "Some of the details sent are not valid" : "Please check " + details.get(0),
+                request, details);
     }
 
     /**
