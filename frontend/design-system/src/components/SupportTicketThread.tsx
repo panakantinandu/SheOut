@@ -75,7 +75,7 @@ export function SupportTicketThread({
         ))}
         {!messages.some((m) => m.fromSupport) && (
           <p className="py-2 text-center text-xs text-text-secondary">
-            No reply yet. Support will answer here - check back on this screen.
+            {t('thread.noReplyYet')}
           </p>
         )}
         <div ref={endRef} />
