@@ -711,7 +711,9 @@ export function Tracking() {
             <p className="mt-1 text-sm text-text-secondary">
               {booking?.status === 'IN_PROGRESS'
                 ? t('tracking.onYourWayBody')
-                : <SafetyText k="pickupCode.haveReady" />}
+                : pickupCode
+                  ? <SafetyText k="pickupCode.haveReady" />
+                  : t('tracking.comingToCollectBody')}
             </p>
           </div>
         </Card>
