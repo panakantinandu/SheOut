@@ -47,6 +47,9 @@ public enum BookingError {
     /** The driver has not reached the authoritative drop-off location yet. */
     DRIVER_NOT_AT_DROP_OFF,
 
+    /** The driver has not reached the authoritative pickup location yet. */
+    DRIVER_NOT_AT_PICKUP,
+
     /** The driver's last location is missing, invalid, or too old to trust. */
     DRIVER_LOCATION_UNAVAILABLE,
 

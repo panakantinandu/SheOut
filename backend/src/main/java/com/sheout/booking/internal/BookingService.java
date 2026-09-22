@@ -28,6 +28,7 @@ import com.sheout.sharedkernel.Result;
 import com.sheout.sharedkernel.geo.ServiceArea;
 import com.sheout.sharedkernel.event.DomainEventPublisher;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import com.sheout.booking.BookingQuery;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -64,7 +65,9 @@ public class BookingService implements BookingApi {
     private final Duration partnerPaymentHold;
     private final DriverLocationStore locationStore;
     private final DropoffGeofence dropoffGeofence;
+    private final DropoffGeofence pickupGeofence;
 
+    @Autowired
     public BookingService(BookingRepository bookingRepository,
                            VerificationApi verificationApi,
                            FareCalculator fareCalculator,
@@ -75,7 +78,8 @@ public class BookingService implements BookingApi {
                            @Value("${sheout.booking.partner-payment-hold-minutes:10}") long partnerPaymentHoldMinutes,
                            DriverLocationStore locationStore,
                            @Value("${sheout.booking.completion.drop-off-radius-metres:100}") double dropoffRadiusMetres,
-                           @Value("${sheout.booking.completion.driver-location-max-age-seconds:30}") long driverLocationMaxAgeSeconds) {
+                           @Value("${sheout.booking.completion.driver-location-max-age-seconds:30}") long driverLocationMaxAgeSeconds,
+                           @Value("${sheout.dispatch.arriving-radius-metres:300}") double pickupRadiusMetres) {
         this.partnerPaymentHold = Duration.ofMinutes(partnerPaymentHoldMinutes);
         this.bookingRepository = bookingRepository;
         this.verificationApi = verificationApi;
@@ -87,6 +91,28 @@ public class BookingService implements BookingApi {
         this.locationStore = locationStore;
         this.dropoffGeofence = new DropoffGeofence(
                 dropoffRadiusMetres, Duration.ofSeconds(driverLocationMaxAgeSeconds));
+        this.pickupGeofence = new DropoffGeofence(
+                pickupRadiusMetres, Duration.ofSeconds(driverLocationMaxAgeSeconds));
+    }
+
+    /**
+     * Keeps direct unit-test construction source/binary compatible while the
+     * Spring constructor also receives the pickup radius configuration.
+     */
+    public BookingService(BookingRepository bookingRepository,
+                           VerificationApi verificationApi,
+                           FareCalculator fareCalculator,
+                           DomainEventPublisher eventPublisher,
+                           AuthApi authApi,
+                           ServiceArea serviceArea,
+                           String verifiedBypassPhone,
+                           long partnerPaymentHoldMinutes,
+                           DriverLocationStore locationStore,
+                           double dropoffRadiusMetres,
+                           long driverLocationMaxAgeSeconds) {
+        this(bookingRepository, verificationApi, fareCalculator, eventPublisher, authApi, serviceArea,
+                verifiedBypassPhone, partnerPaymentHoldMinutes, locationStore, dropoffRadiusMetres,
+                driverLocationMaxAgeSeconds, 300);
     }
 
     /**
@@ -245,15 +271,12 @@ public class BookingService implements BookingApi {
      *   <li>the code last.</li>
      * </ol>
      * <p>
-     * A booking with no code stored is one accepted before this existed.
-     * Those start unverified, because refusing them would strand every
-     * partner who was mid-job at the moment of the deploy. The set is closed
-     * - every acceptance from now on writes a code - and
-     * {@code pickupVerifiedAt} stays null on them, which is how a row can
-     * later be told apart from one that was actually verified.
+     * The authenticated driver and a recent pickup-geofence location are
+     * checked inside this locked transaction, before the OTP is consumed or
+     * the status is changed.
      */
     @Transactional
-    public Result<BookingSummary, BookingError> startTrip(UUID bookingId, String submittedCode) {
+    public Result<BookingSummary, BookingError> startTrip(UUID bookingId, UUID driverId, String submittedCode) {
         // Locked: the attempt count below is read, compared and written back,
         // and concurrent guesses must see each other's count. See
         // BookingRepository.findLockedById.
@@ -263,44 +286,55 @@ public class BookingService implements BookingApi {
         }
         BookingEntity booking = found.get();
 
+        if (!driverId.equals(booking.getDriverId())) {
+            return Result.failure(BookingError.INVALID_STATE_TRANSITION);
+        }
+
         Result<BookingStatus, BookingError> transition =
                 BookingStateMachine.transition(booking.getStatus(), BookingStatus.IN_PROGRESS);
         if (transition.isFailure()) {
             return Result.failure(transition.error());
         }
 
-        boolean verified = false;
-        if (booking.getPickupOtp() != null) {
-            if (booking.pickupAttemptsExhausted()) {
-                return Result.failure(BookingError.PICKUP_VERIFICATION_LOCKED);
-            }
-            if (!PickupCode.isWellFormed(submittedCode)) {
-                return Result.failure(BookingError.PICKUP_CODE_REQUIRED);
-            }
-            if (!PickupCode.matches(booking.getPickupOtp(), submittedCode)) {
-                // Saved on its own, because the surrounding transaction is
-                // about to return a failure Result - which does not roll
-                // back, but leaving the count to an implicit flush would
-                // make that a thing to reason about rather than read.
-                booking.recordFailedPickupAttempt();
-                bookingRepository.save(booking);
-                return Result.failure(booking.pickupAttemptsExhausted()
-                        ? BookingError.PICKUP_VERIFICATION_LOCKED
-                        : BookingError.INVALID_PICKUP_CODE);
-            }
-            verified = true;
+        DropoffGeofence.Decision pickupDecision = pickupGeofence.check(
+                locationStore.findLocation(driverId).orElse(null),
+                booking.getPickup().getLat(), booking.getPickup().getLng(), Instant.now());
+        if (pickupDecision == DropoffGeofence.Decision.LOCATION_UNAVAILABLE) {
+            return Result.failure(BookingError.DRIVER_LOCATION_UNAVAILABLE);
+        }
+        if (pickupDecision != DropoffGeofence.Decision.AT_DROP_OFF) {
+            return Result.failure(BookingError.DRIVER_NOT_AT_PICKUP);
+        }
+
+        if (booking.getPickupOtp() == null) {
+            return Result.failure(BookingError.PICKUP_CODE_REQUIRED);
+        }
+        if (booking.pickupAttemptsExhausted()) {
+            return Result.failure(BookingError.PICKUP_VERIFICATION_LOCKED);
+        }
+        if (!PickupCode.isWellFormed(submittedCode)) {
+            return Result.failure(BookingError.PICKUP_CODE_REQUIRED);
+        }
+        if (!PickupCode.matches(booking.getPickupOtp(), submittedCode)) {
+            // Saved on its own, because the surrounding transaction is
+            // about to return a failure Result - which does not roll
+            // back, but leaving the count to an implicit flush would
+            // make the count difficult to reason about.
+            booking.recordFailedPickupAttempt();
+            bookingRepository.save(booking);
+            return Result.failure(booking.pickupAttemptsExhausted()
+                    ? BookingError.PICKUP_VERIFICATION_LOCKED
+                    : BookingError.INVALID_PICKUP_CODE);
         }
 
         Instant now = Instant.now();
         booking.setStatus(BookingStatus.IN_PROGRESS);
         booking.setStartedAt(now);
-        if (verified) {
-            booking.setPickupVerifiedAt(now);
-        }
+        booking.setPickupVerifiedAt(now);
         bookingRepository.save(booking);
 
         eventPublisher.publish(new BookingStarted(
-                booking.getId(), booking.getCustomerId(), booking.getDriverId(), verified));
+                booking.getId(), booking.getCustomerId(), booking.getDriverId(), true));
         return Result.success(toSummary(booking));
     }
 
@@ -319,7 +353,23 @@ public class BookingService implements BookingApi {
         return bookingRepository.findById(bookingId)
                 .filter(booking -> booking.getCustomerId().equals(customerId))
                 .filter(booking -> booking.getStatus() == BookingStatus.ACCEPTED)
+                .filter(booking -> booking.getDriverId() != null)
+                .filter(booking -> pickupGeofence.check(
+                        locationStore.findLocation(booking.getDriverId()).orElse(null),
+                        booking.getPickup().getLat(), booking.getPickup().getLng(), Instant.now())
+                        == DropoffGeofence.Decision.AT_DROP_OFF)
                 .map(BookingEntity::getPickupOtp);
+    }
+
+    public boolean isDriverAtPickup(UUID bookingId, UUID driverId) {
+        return bookingRepository.findById(bookingId)
+                .filter(booking -> booking.getDriverId() != null && booking.getDriverId().equals(driverId))
+                .filter(booking -> booking.getStatus() == BookingStatus.ACCEPTED)
+                .map(booking -> pickupGeofence.check(
+                        locationStore.findLocation(driverId).orElse(null),
+                        booking.getPickup().getLat(), booking.getPickup().getLng(), Instant.now())
+                        == DropoffGeofence.Decision.AT_DROP_OFF)
+                .orElse(false);
     }
 
     /**

@@ -113,6 +113,7 @@ export function Trip() {
   const [codeError, setCodeError] = useState<string | null>(null);
   /** Set once the server says the attempt limit is spent. The keypad closes. */
   const [codeLocked, setCodeLocked] = useState(false);
+  const [pickupArrived, setPickupArrived] = useState(false);
 
   const [route, setRoute] = useState<TripRoute | null>(null);
   const [routeError, setRouteError] = useState(false);
@@ -145,6 +146,29 @@ export function Trip() {
     dispatchApi.getAssignedRider(bookingId).then(setRider).catch(() => undefined);
   }, [riderVisible, bookingId, rider]);
   const awaitingPayment = booking?.status === 'COMPLETED' && !settled;
+
+  useEffect(() => {
+    if (!bookingId || booking?.status !== 'ACCEPTED') {
+      setPickupArrived(false);
+      return;
+    }
+    let cancelled = false;
+    const check = () => {
+      bookingApi.pickupStatus(bookingId)
+        .then((result) => {
+          if (!cancelled) setPickupArrived(result.arrived);
+        })
+        .catch(() => {
+          if (!cancelled) setPickupArrived(false);
+        });
+    };
+    check();
+    const timer = window.setInterval(check, POLL_INTERVAL_MS);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [bookingId, booking?.status]);
 
   // Over, either way. From here the screen is the trip's record - opened from
   // My Bookings or a notification - not a job to do.
@@ -425,7 +449,7 @@ export function Trip() {
           )}
 
           {/* The gate between the two phases. */}
-          {booking.status === 'ACCEPTED' && (
+          {booking.status === 'ACCEPTED' && pickupArrived && (
             <Card className="space-y-3">
               <div className="flex items-start gap-3">
                 <IconCircle tone="soft" icon={<CheckCircle2 />} />

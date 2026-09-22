@@ -269,6 +269,7 @@ sheout:
     offer-window-seconds: ${DISPATCH_OFFER_WINDOW_SECONDS:15}
     max-retries: ${DISPATCH_MAX_RETRIES:3}
     sweep-interval-ms: ${DISPATCH_SWEEP_INTERVAL_MS:2000}
+    arriving-radius-metres: ${DISPATCH_ARRIVING_RADIUS_METRES:300}
 
     # The TOTAL time dispatch may spend hunting for a driver for one
     # booking, across every retry round and every radius expansion.
