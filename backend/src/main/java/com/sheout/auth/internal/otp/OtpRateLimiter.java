@@ -50,9 +50,9 @@ public class OtpRateLimiter {
     OtpRateLimiter(RateLimiter rateLimiter,
                    TestPhoneNumbers testNumbers,
                    @Value("${sheout.auth.otp-cooldown-seconds:45}") long cooldownSeconds,
-                   @Value("${sheout.auth.otp-hourly-limit:6}") int hourlyLimit,
-                   @Value("${sheout.rate-limit.otp-request-per-phone:5}") int requestLimit,
-                   @Value("${sheout.rate-limit.otp-verify-per-phone:5}") int verifyLimit,
+                   @Value("${sheout.auth.otp-hourly-limit:8}") int hourlyLimit,
+                   @Value("${sheout.rate-limit.otp-request-per-phone:8}") int requestLimit,
+                   @Value("${sheout.rate-limit.otp-verify-per-phone:8}") int verifyLimit,
                    @Value("${sheout.rate-limit.otp-window-minutes:15}") long windowMinutes) {
         this.rateLimiter = rateLimiter;
         this.testNumbers = testNumbers;
