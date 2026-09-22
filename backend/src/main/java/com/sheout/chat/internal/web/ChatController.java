@@ -1,6 +1,7 @@
 package com.sheout.chat.internal.web;
 
-import com.sheout.auth.CurrentAccount;
+
+import com.sheout.sharedkernel.ratelimit.RateLimiter;import com.sheout.auth.CurrentAccount;
 import com.sheout.auth.CurrentAccountContext;
 import com.sheout.chat.ChatError;
 import com.sheout.chat.ChatMessage;
@@ -43,8 +44,10 @@ public class ChatController {
      */
     private final SupportApi supportApi;
     private final ChatService chatService;
+    private final RateLimiter rateLimiter;
 
-    ChatController(ChatService chatService, SupportApi supportApi) {
+    ChatController(ChatService chatService, SupportApi supportApi, RateLimiter rateLimiter) {
+        this.rateLimiter = rateLimiter;
         this.chatService = chatService;
         this.supportApi = supportApi;
     }
@@ -71,6 +74,11 @@ public class ChatController {
             @PathVariable UUID bookingId,
             @Valid @RequestBody SendMessageRequest request) {
         CurrentAccount caller = requireAuthenticated();
+        // Chat is between two strangers, one of whom can see where the other
+        // is. Twenty messages a minute is more than anyone types about a
+        // pickup; a flood of them is harassment, and it stops here.
+        rateLimiter.tryConsume("chat-send:" + caller.accountId() + ":" + bookingId, 20, java.time.Duration.ofMinutes(1))
+                .orThrow("You are sending messages very quickly. Please wait a moment.");
         Result<ChatMessage, ChatError> result =
                 chatService.send(bookingId, caller.accountId(), caller.role(), request.body());
         if (result.isFailure()) {

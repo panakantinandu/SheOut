@@ -48,5 +48,13 @@ public enum BookingError {
      * The rider has a trip that ended and is still unpaid, so she cannot
      * book another. Paying it - from the wallet or online - clears this.
      */
-    UNPAID_TRIP
+    UNPAID_TRIP,
+
+    /**
+     * She already has a live trip of this type - searching, matched, on the
+     * way or under way. One at a time: every booking goes out to real
+     * partners, and six at once from one account was six partners each
+     * driving to a pickup for a trip that could only ever be one.
+     */
+    ACTIVE_BOOKING_EXISTS
 }

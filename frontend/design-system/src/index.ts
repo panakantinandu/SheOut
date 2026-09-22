@@ -1,4 +1,5 @@
 export * from './lib/toast';
+export * from './lib/safeLink';
 export * from './lib/labels';
 export * from './lib/cancellation';
 export * from './lib/support';

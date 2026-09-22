@@ -150,6 +150,9 @@ public class DispatchService {
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onBookingCancelled(BookingCancelled event) {
+        // Before the round is cleared: withdrawing reads who was offered it.
+        offerStore.withdrawOffers(event.bookingId());
+        offerStore.clearRound(event.bookingId());
         if (event.driverId() != null) {
             approachStore.find(event.driverId())
                     .filter(approach -> approach.bookingId().equals(event.bookingId()))
@@ -362,6 +365,9 @@ public class DispatchService {
                 // One person can hold a rider account and a partner account
                 // on the same number. Her own ride is never offered to her.
                 .filter(candidate -> !authApi.samePerson(candidate.driverId(), state.customerId()))
+                // Already deciding on another trip: her screen shows one offer
+                // at a time - see OfferStore.createOffer.
+                .filter(candidate -> offerStore.findActiveOfferForDriver(candidate.driverId()).isEmpty())
                 .toList();
 
         List<CandidateDriver> offered = matchingStrategy.rank(eligible).stream()
@@ -371,14 +377,21 @@ public class DispatchService {
         Duration window = Duration.ofSeconds(offerWindowSeconds);
         Instant expiresAt = Instant.now().plus(window);
 
-        if (!offered.isEmpty()) {
-            for (CandidateDriver candidate : offered) {
-                offerStore.createOffer(bookingId, candidate.driverId(), window);
-                // After the offer exists, so a partner alerted by this can accept it.
-                eventPublisher.publish(new DriverOffered(
-                        bookingId, candidate.driverId(), state.category(), candidate.distanceKm(), expiresAt));
+        java.util.Set<UUID> actuallyOffered = new java.util.HashSet<>();
+        for (CandidateDriver candidate : offered) {
+            // False when another search claimed her between the filter above
+            // and now. She is not marked as tried for this booking, so a later
+            // round can still offer it to her once she is free.
+            if (!offerStore.createOffer(bookingId, candidate.driverId(), window)) {
+                continue;
             }
-            offerStore.markTried(bookingId, offered.stream().map(CandidateDriver::driverId).collect(Collectors.toSet()));
+            actuallyOffered.add(candidate.driverId());
+            // After the offer exists, so a partner alerted by this can accept it.
+            eventPublisher.publish(new DriverOffered(
+                    bookingId, candidate.driverId(), state.category(), candidate.distanceKm(), expiresAt));
+        }
+        if (!actuallyOffered.isEmpty()) {
+            offerStore.markTried(bookingId, actuallyOffered);
         }
         // Recorded even with zero candidates this round, so the sweeper still picks this booking
         // back up and expands the radius further next time, rather than it going silently stuck.

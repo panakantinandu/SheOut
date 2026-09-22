@@ -1,6 +1,7 @@
 package com.sheout.support.internal.web;
 
-import com.sheout.auth.AccountRole;
+
+import com.sheout.sharedkernel.ratelimit.RateLimiter;import com.sheout.auth.AccountRole;
 import com.sheout.auth.CurrentAccount;
 import com.sheout.auth.CurrentAccountContext;
 import com.sheout.sharedkernel.Result;
@@ -48,14 +49,22 @@ import java.util.UUID;
 public class SupportTicketController {
 
     private final SupportApi supportApi;
+    private final RateLimiter rateLimiter;
 
-    SupportTicketController(SupportApi supportApi) {
+    SupportTicketController(SupportApi supportApi, RateLimiter rateLimiter) {
         this.supportApi = supportApi;
+        this.rateLimiter = rateLimiter;
     }
 
     @PostMapping
     public ResponseEntity<TicketView> raise(@Valid @RequestBody RaiseTicketRequest request) {
         CurrentAccount caller = requireRiderOrPartner();
+        // Every ticket lands in the operations queue and alerts whoever is on
+        // duty. Twenty-five in a row from one account were all accepted, which
+        // is a queue buried and a pager that stops meaning anything. Ten a day
+        // is far past a person with real problems; a script meets it at once.
+        rateLimiter.tryConsume("ticket-create:" + caller.accountId(), 10, java.time.Duration.ofHours(24))
+                .orThrow("You have raised a lot of tickets today. Add to one of your open tickets, or call support.");
         Result<SupportTicketSummary, SupportError> result = supportApi.createTicket(new CreateTicketCommand(
                 caller.accountId(), caller.role(), request.category(), request.subject(), request.description(),
                 request.linkedBookingId()));

@@ -133,6 +133,28 @@ public final class DocumentRules {
         return isJpeg(b) || isPng(b) || isWebp(b) || isHeif(b) || isPdf(b);
     }
 
+    /**
+     * The type a photo actually is, read from its first bytes - image/jpeg,
+     * image/png or image/webp - or null when it is none of them, whatever
+     * name or type the phone gave it. For profile photos, which are shown
+     * to other people and must be what they claim to be.
+     */
+    public static String photoTypeOf(byte[] b) {
+        if (b == null) return null;
+        // JPEG and PNG must also have an image header Java can read: the
+        // first three bytes of a JPEG followed by a script is a signature,
+        // not a photo. WebP has no reader here, so its signature is the check.
+        if (isJpeg(b)) return hasReadableSize(b) ? "image/jpeg" : null;
+        if (isPng(b)) return hasReadableSize(b) ? "image/png" : null;
+        if (isWebp(b)) return "image/webp";
+        return null;
+    }
+
+    private static boolean hasReadableSize(byte[] b) {
+        Dimensions size = dimensionsOf(b);
+        return size != null && size.width() > 0 && size.height() > 0;
+    }
+
     private static boolean isJpeg(byte[] b) {
         return b.length > 3 && (b[0] & 0xFF) == 0xFF && (b[1] & 0xFF) == 0xD8 && (b[2] & 0xFF) == 0xFF;
     }

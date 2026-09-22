@@ -680,7 +680,7 @@ export function Tracking() {
           {/* The one way to reach her. Not a call, and not a number. */}
           <button
             aria-label={t('tracking.messagePartner')}
-            className="rounded-full p-2 text-primary hover:bg-background"
+            className="rounded-full p-3 text-primary hover:bg-background"
             onClick={() => navigate(`/chat/${bookingId}`)}
           >
             <MessageCircle className="h-5 w-5" />

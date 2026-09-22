@@ -34,14 +34,25 @@ public class JwtService {
 
     private final SecretKey key;
     private final Duration expiry;
+    private final Duration adminExpiry;
 
+    /**
+     * Operators get a working day, not a month. An ops sign-in holds every
+     * rider's documents, phone number and SOS location, and it is used on
+     * office machines that other people sit at; thirty days - the rider and
+     * partner lifetime, right for a phone in her pocket - left a forgotten
+     * console tab signed in for a month. Sessions can still be ended early
+     * from Devices, and are ended on block or deletion.
+     */
     public JwtService(@Value("${sheout.auth.jwt-secret}") String secret,
-                       @Value("${sheout.auth.jwt-expiry-minutes:43200}") long expiryMinutes) {
+                       @Value("${sheout.auth.jwt-expiry-minutes:43200}") long expiryMinutes,
+                       @Value("${sheout.auth.admin-jwt-expiry-minutes:720}") long adminExpiryMinutes) {
         // HS256 needs a key of at least 256 bits (32 bytes) - a short/weak
         // JWT_SECRET will fail fast here rather than silently producing an
         // insecure token.
         this.key = Keys.hmacShaKeyFor(secret.getBytes());
         this.expiry = Duration.ofMinutes(expiryMinutes);
+        this.adminExpiry = Duration.ofMinutes(adminExpiryMinutes);
     }
 
     /**
@@ -56,7 +67,7 @@ public class JwtService {
                 .claim("role", role.name())
                 .claim("sid", sessionId.toString())
                 .issuedAt(Date.from(now))
-                .expiration(Date.from(now.plus(expiry)))
+                .expiration(Date.from(now.plus(role == AccountRole.ADMIN ? adminExpiry : expiry)))
                 .signWith(key)
                 .compact();
     }

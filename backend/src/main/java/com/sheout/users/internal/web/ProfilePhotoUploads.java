@@ -1,5 +1,6 @@
 package com.sheout.users.internal.web;
 
+import com.sheout.sharedkernel.storage.DocumentRules;
 import com.sheout.sharedkernel.storage.DocumentUpload;
 import com.sheout.sharedkernel.web.ApiException;
 import org.springframework.http.HttpStatus;
@@ -25,10 +26,21 @@ final class ProfilePhotoUploads {
             throw new ApiException(HttpStatus.BAD_REQUEST, "UNSUPPORTED_PHOTO_TYPE",
                     "Choose a JPEG, PNG or WebP photo.");
         }
+        byte[] bytes;
         try {
-            return new DocumentUpload(file.getOriginalFilename(), file.getContentType(), file.getBytes());
+            bytes = file.getBytes();
         } catch (IOException e) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Bad Request", "Could not read the uploaded photo");
         }
+        // The bytes decide, not the name or the type the phone declared. Both
+        // are whatever the sender says: an HTML page or a program called
+        // photo.jpg with type image/jpeg was stored and served as a profile
+        // photo, to riders and partners and operators alike.
+        String actualType = DocumentRules.photoTypeOf(bytes);
+        if (actualType == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "UNSUPPORTED_PHOTO_TYPE",
+                    "That file is not a photo. Choose a JPEG, PNG or WebP photo.");
+        }
+        return new DocumentUpload(file.getOriginalFilename(), actualType, bytes);
     }
 }

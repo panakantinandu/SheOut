@@ -34,7 +34,7 @@ export function LocationRow({ icon, label, sublabel, onSearch, onMap }: Location
         type="button"
         aria-label={t('location.pickOnMap', { what: label })}
         onClick={onMap}
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border text-text-secondary hover:bg-background"
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border text-text-secondary hover:bg-background"
       >
         <MapPinned className="h-4 w-4" />
       </button>
