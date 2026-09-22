@@ -13,7 +13,7 @@ package com.sheout.notifications.internal.channel;
  * @param urgency {@link Urgency#ALERT} for something that needs acting on in
  *                seconds - see FcmPushChannel for what that changes
  */
-public record OutboundMessage(String title, String body, String link, String tag, Urgency urgency) {
+public record OutboundMessage(String title, String body, String link, String tag, Urgency urgency, String englishSms) {
 
     public enum Urgency {
         NORMAL,
@@ -27,11 +27,25 @@ public record OutboundMessage(String title, String body, String link, String tag
         }
     }
 
+    /** A message with no separate SMS wording - the SMS is built from the title and body. */
+    public OutboundMessage(String title, String body, String link, String tag, Urgency urgency) {
+        this(title, body, link, tag, urgency, null);
+    }
+
     public static OutboundMessage of(String title, String body, String link) {
         return new OutboundMessage(title, body, link, null, Urgency.NORMAL);
     }
 
+    /**
+     * englishSms, when set, is what goes by SMS - the English of a message
+     * whose push and inbox copy is in her language. An SMS in India has to
+     * match a DLT-registered template, and the registered one is English
+     * until Hindi and Telugu templates are added. See NotificationCopy.
+     */
     public String smsText() {
+        if (englishSms != null) {
+            return englishSms;
+        }
         return "SheOut: " + title + (body == null || body.isBlank() ? "" : ". " + body);
     }
 }

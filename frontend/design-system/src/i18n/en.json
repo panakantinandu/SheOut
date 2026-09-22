@@ -66,7 +66,8 @@
     "emptyOpen": "No messages yet. Say hello, or send {{who}} a landmark to look for.",
     "emptyClosed": "No messages were sent on this trip.",
     "placeholder": "Type a message",
-    "send": "Send message"
+    "send": "Send message",
+    "closedNote": "This trip has ended, so the chat is closed. It stays here if you ever need to look back at it."
   },
   "push": {
     "rider": {
@@ -156,7 +157,8 @@
   "thread": {
     "you": "You",
     "support": "SheOut Support",
-    "placeholder": "Add more detail or reply to support"
+    "placeholder": "Add more detail or reply to support",
+    "noReplyYet": "No reply yet. Support will answer here - check back on this screen."
   },
   "raiseIssue": {
     "missingCategory": "Choose what this is about.",

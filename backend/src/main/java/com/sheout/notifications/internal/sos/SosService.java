@@ -1,6 +1,9 @@
 package com.sheout.notifications.internal.sos;
 
-import com.sheout.notifications.SosAlertRaised;
+
+
+
+import java.util.Map;import com.sheout.users.AppLanguage;import com.sheout.notifications.internal.NotificationCopy;import com.sheout.notifications.SosAlertRaised;
 import com.sheout.notifications.internal.NotificationChannelType;
 import com.sheout.notifications.internal.NotificationLogService;
 import com.sheout.notifications.internal.NotificationType;
@@ -70,11 +73,13 @@ public class SosService implements SosApi {
     private final CustomerProfileApi customerProfileApi;
     private final EmergencyContactsApi emergencyContactsApi;
     private final SosFanOutThrottle fanOutThrottle;
+    private final NotificationCopy copy;
 
     public SosService(SosAlertRepository sosAlertRepository, NotificationLogService notificationLogService,
                        List<NotificationChannel> channels, CustomerProfileApi customerProfileApi,
                        EmergencyContactsApi emergencyContactsApi, SosFanOutThrottle fanOutThrottle,
-                       DomainEventPublisher eventPublisher) {
+                       DomainEventPublisher eventPublisher, NotificationCopy copy) {
+        this.copy = copy;
         this.fanOutThrottle = fanOutThrottle;
         this.sosAlertRepository = sosAlertRepository;
         this.notificationLogService = notificationLogService;
@@ -151,7 +156,7 @@ public class SosService implements SosApi {
         // Her own record of the alert, in her inbox, with one delivery per
         // contact - written after the sends so it can say how many got it.
         UUID notificationId = notificationLogService.recordNotification(customerAccountId, NotificationType.SOS_ALERT,
-                OutboundMessage.of("SOS alert sent", sosSummary(contacts.size(), notified), "/sos"));
+                sosRecord(customerAccountId, contacts.size(), notified));
         attempts.forEach(attempt -> notificationLogService.recordDelivery(
                 notificationId, NotificationChannelType.SMS, attempt.phoneNumber(), attempt.result()));
 
@@ -222,15 +227,15 @@ public class SosService implements SosApi {
      * safety-critical response. See SosController's Javadoc for the same
      * reasoning applied to the endpoint's HTTP status.
      */
-    private static String sosSummary(int contacts, int notified) {
-        if (contacts == 0) {
-            return "You have no emergency contacts saved, so nobody was texted. Add one from your profile.";
-        }
-        if (notified == 0) {
-            return "We could not text any of your emergency contacts. Call 112 if you are in danger.";
-        }
-        return "Your location was texted to " + notified + " of " + contacts + " emergency contact"
-                + (contacts == 1 ? "" : "s") + ".";
+    /** Her own record of the alert, in her language with the English beneath - see NotificationCopy.safety. */
+    private OutboundMessage sosRecord(UUID customerAccountId, int contacts, int notified) {
+        AppLanguage language = copy.languageOf(customerAccountId);
+        String key = contacts == 0 ? "sosNoContacts"
+                : notified == 0 ? "sosNoneReached"
+                : contacts == 1 ? "sosOneReached"
+                : "sosSomeReached";
+        Map<String, String> params = Map.of("notified", String.valueOf(notified), "total", String.valueOf(contacts));
+        return OutboundMessage.of(copy.safety(language, "sosSent.title", Map.of()), copy.safety(language, key, params), "/sos");
     }
 
     private record ContactDelivery(String phoneNumber, Result<Void, SendFailure> result) {

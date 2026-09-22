@@ -160,7 +160,7 @@ export function ChatThread({
         </div>
       ) : (
         <p className="rounded-input border border-border bg-background px-4 py-3 text-center text-sm text-text-secondary">
-          This trip has ended, so the chat is closed. It stays here if you ever need to look back at it.
+          {t('chat.closedNote')}
         </p>
       )}
     </div>

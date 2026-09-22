@@ -1,5 +1,6 @@
 package com.sheout.users.internal;
 
+import com.sheout.users.AccountLanguageApi;
 import com.sheout.users.AppLanguage;
 import com.sheout.users.FeatureWaitlistApi;
 import com.sheout.users.WaitlistFeature;
@@ -17,7 +18,7 @@ import java.util.UUID;
  * there is no way to ask about anybody else.
  */
 @Service
-public class AccountPreferenceService implements FeatureWaitlistApi {
+public class AccountPreferenceService implements FeatureWaitlistApi, AccountLanguageApi {
 
     private final AccountPreferenceRepository preferences;
     private final FeatureWaitlistRepository waitlist;
@@ -30,6 +31,11 @@ public class AccountPreferenceService implements FeatureWaitlistApi {
     /** Empty until she has chosen one; the app then goes by the phone's own language. */
     public Optional<AppLanguage> findLanguage(UUID accountId) {
         return preferences.findByAccountId(accountId).flatMap(p -> AppLanguage.fromCode(p.getLanguage()));
+    }
+
+    @Override
+    public Optional<AppLanguage> languageOf(UUID accountId) {
+        return findLanguage(accountId);
     }
 
     @Transactional

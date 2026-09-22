@@ -4,7 +4,6 @@ import com.sheout.auth.AccountRole;
 import com.sheout.booking.BookingAccepted;
 import com.sheout.booking.BookingApi;
 import com.sheout.booking.BookingCancelled;
-import com.sheout.booking.BookingCategory;
 import com.sheout.booking.BookingCompleted;
 import com.sheout.booking.BookingRequested;
 import com.sheout.booking.BookingSummary;
@@ -20,6 +19,7 @@ import com.sheout.payments.PaymentCaptured;
 import com.sheout.payments.PaymentMethod;
 import com.sheout.payouts.PayoutMarkedPaid;
 import com.sheout.support.SupportReplyPosted;
+import com.sheout.users.AppLanguage;
 import com.sheout.users.DriverProfileApi;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
@@ -32,7 +32,9 @@ import java.time.Duration;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
 
 /**
  * Reacts to other modules' domain events with notifications - no module calls
@@ -58,19 +60,41 @@ class NotificationEventListeners {
     private final NotificationDispatcher dispatcher;
     private final DriverProfileApi driverProfileApi;
     private final BookingApi bookingApi;
+    private final NotificationCopy copy;
 
-    NotificationEventListeners(NotificationDispatcher dispatcher, DriverProfileApi driverProfileApi, BookingApi bookingApi) {
+    NotificationEventListeners(NotificationDispatcher dispatcher, DriverProfileApi driverProfileApi, BookingApi bookingApi,
+                               NotificationCopy copy) {
         this.dispatcher = dispatcher;
         this.driverProfileApi = driverProfileApi;
         this.bookingApi = bookingApi;
+        this.copy = copy;
+    }
+
+    /**
+     * A message to a rider or partner, in her language - see NotificationCopy.
+     * The SMS, if one goes out, is the English, which is what the DLT
+     * template is registered in.
+     */
+    private OutboundMessage localized(UUID to, String key, Function<AppLanguage, Map<String, String>> params,
+                                      String link, String tag, OutboundMessage.Urgency urgency) {
+        NotificationCopy.Localized m = copy.render(to, key, params);
+        return new OutboundMessage(m.title(), m.body(), link, tag, urgency,
+                "SheOut: " + m.englishTitle() + ". " + m.englishBody());
+    }
+
+    private OutboundMessage localized(UUID to, String key, Function<AppLanguage, Map<String, String>> params, String link) {
+        return localized(to, key, params, link, null, OutboundMessage.Urgency.NORMAL);
+    }
+
+    private static Function<AppLanguage, Map<String, String>> none() {
+        return language -> Map.of();
     }
 
     @Async(NotificationDeliveryConfig.EXECUTOR)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onBookingRequested(BookingRequested event) {
-        dispatcher.deliver(event.customerId(), NotificationType.BOOKING_REQUESTED, OutboundMessage.of(
-                "Booking requested",
-                "We're finding a " + categoryName(event.category()) + " partner near you.",
+        dispatcher.deliver(event.customerId(), NotificationType.BOOKING_REQUESTED, localized(event.customerId(), "bookingRequested",
+                language -> Map.of("category", copy.categoryName(event.category(), language)),
                 "/tracking/" + event.bookingId()));
     }
 
@@ -87,39 +111,34 @@ class NotificationEventListeners {
         // Rounded up: the offer is created a few milliseconds before this event,
         // and a 15-second window must not read as 14.
         long windowSeconds = Math.max(1, (Duration.between(event.occurredAt(), event.expiresAt()).toMillis() + 999) / 1000);
-        dispatcher.deliver(event.driverId(), NotificationType.DRIVER_OFFER, new OutboundMessage(
-                "New " + categoryName(event.category()) + " trip request",
-                String.format(Locale.ENGLISH, "%.1f km from you. Offers last %d seconds - open SheOut to accept.",
-                        event.distanceKm(), windowSeconds),
-                "/offer/" + event.bookingId(),
-                "offer-" + event.bookingId(),
-                OutboundMessage.Urgency.ALERT));
+        String km = String.format(Locale.ENGLISH, "%.1f", event.distanceKm());
+        dispatcher.deliver(event.driverId(), NotificationType.DRIVER_OFFER, localized(event.driverId(), "driverOffer",
+                language -> Map.of("category", copy.categoryName(event.category(), language), "km", km,
+                        "seconds", String.valueOf(windowSeconds)),
+                "/offer/" + event.bookingId(), "offer-" + event.bookingId(), OutboundMessage.Urgency.ALERT));
     }
 
     @Async(NotificationDeliveryConfig.EXECUTOR)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onBookingAccepted(BookingAccepted event) {
-        dispatcher.deliver(event.customerId(), NotificationType.BOOKING_ACCEPTED, new OutboundMessage(
-                driverName(event.driverId()) + " is on the way",
-                "Check her photo and vehicle number in the app before you get in.",
+        dispatcher.deliver(event.customerId(), NotificationType.BOOKING_ACCEPTED, localized(event.customerId(), "bookingAccepted",
+                language -> Map.of("driver", driverName(event.driverId(), language)),
                 "/tracking/" + event.bookingId(), "booking-" + event.bookingId(), OutboundMessage.Urgency.NORMAL));
     }
 
     @Async(NotificationDeliveryConfig.EXECUTOR)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onDriverArriving(DriverArriving event) {
-        dispatcher.deliver(event.customerId(), NotificationType.DRIVER_ARRIVING, new OutboundMessage(
-                driverName(event.driverId()) + " is arriving",
-                "She is almost at your pickup. Have your pickup code ready.",
+        dispatcher.deliver(event.customerId(), NotificationType.DRIVER_ARRIVING, localized(event.customerId(), "driverArriving",
+                language -> Map.of("driver", driverName(event.driverId(), language)),
                 "/tracking/" + event.bookingId(), "booking-" + event.bookingId(), OutboundMessage.Urgency.NORMAL));
     }
 
     @Async(NotificationDeliveryConfig.EXECUTOR)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onBookingCompleted(BookingCompleted event) {
-        dispatcher.deliver(event.customerId(), NotificationType.BOOKING_COMPLETED, new OutboundMessage(
-                "You have arrived - payment due",
-                "Fare " + rupees(event.finalFare()) + ". Pay in the app, from your SheOut wallet or online, to finish the trip.",
+        dispatcher.deliver(event.customerId(), NotificationType.BOOKING_COMPLETED, localized(event.customerId(), "bookingCompleted",
+                language -> Map.of("fare", rupees(event.finalFare())),
                 "/tracking/" + event.bookingId(), "booking-" + event.bookingId(), OutboundMessage.Urgency.NORMAL));
     }
 
@@ -133,17 +152,14 @@ class NotificationEventListeners {
     public void onBookingCancelled(BookingCancelled event) {
         UUID by = event.cancelledBy();
         if (!event.customerId().equals(by)) {
-            dispatcher.deliver(event.customerId(), NotificationType.BOOKING_CANCELLED, OutboundMessage.of(
-                    "Your booking was cancelled",
-                    event.driverId() != null && event.driverId().equals(by)
-                            ? "Your partner had to cancel. You have not been charged - book again whenever you are ready."
-                            : "You have not been charged - book again whenever you are ready.",
+            boolean partnerCancelled = event.driverId() != null && event.driverId().equals(by);
+            dispatcher.deliver(event.customerId(), NotificationType.BOOKING_CANCELLED, localized(event.customerId(),
+                    partnerCancelled ? "cancelledByPartner" : "cancelledForRider", none(),
                     "/tracking/" + event.bookingId()));
         }
         if (event.driverId() != null && !event.driverId().equals(by)) {
-            dispatcher.deliver(event.driverId(), NotificationType.BOOKING_CANCELLED, OutboundMessage.of(
-                    "Trip cancelled",
-                    "The rider cancelled this trip. You do not need to go to the pickup.",
+            dispatcher.deliver(event.driverId(), NotificationType.BOOKING_CANCELLED, localized(event.driverId(),
+                    "cancelledForPartner", none(),
                     // The trip itself, which now shows as a record once it
                     // has ended. Home said nothing about which trip, so the
                     // tap looked like it had done nothing.
@@ -154,10 +170,8 @@ class NotificationEventListeners {
     @Async(NotificationDeliveryConfig.EXECUTOR)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onDispatchExhausted(DispatchExhausted event) {
-        dispatcher.deliver(event.customerId(), NotificationType.NO_DRIVERS_AVAILABLE, OutboundMessage.of(
-                "No partners available right now",
-                "Nobody nearby could take this trip. Nothing was charged - try again in a few minutes.",
-                "/tracking/" + event.bookingId()));
+        dispatcher.deliver(event.customerId(), NotificationType.NO_DRIVERS_AVAILABLE, localized(event.customerId(), "noDrivers",
+                none(), "/tracking/" + event.bookingId()));
     }
 
     /**
@@ -189,9 +203,9 @@ class NotificationEventListeners {
     @Async(NotificationDeliveryConfig.EXECUTOR)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onVerificationRejected(VerificationRejected event) {
-        dispatcher.deliver(event.accountId(), NotificationType.ACCOUNT_VERIFICATION_REJECTED, OutboundMessage.of(
-                "We could not verify your ID",
-                event.reason() + " You can send another photo from Identity Verification in the app.",
+        // The reason is what the operator typed, in the operator's words.
+        dispatcher.deliver(event.accountId(), NotificationType.ACCOUNT_VERIFICATION_REJECTED, localized(event.accountId(),
+                "verificationRejected", language -> Map.of("reason", event.reason() == null ? "" : event.reason()),
                 "/verification"));
     }
 
@@ -199,10 +213,8 @@ class NotificationEventListeners {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onAccountVerified(AccountVerified event) {
         boolean driver = event.role() == AccountRole.DRIVER;
-        dispatcher.deliver(event.accountId(), NotificationType.ACCOUNT_VERIFIED, OutboundMessage.of(
-                "Your account is verified",
-                driver ? "You can go online and accept trips." : "You can now book rides and deliveries.",
-                "/home"));
+        dispatcher.deliver(event.accountId(), NotificationType.ACCOUNT_VERIFIED, localized(event.accountId(),
+                driver ? "verifiedPartner" : "verifiedRider", none(), "/home"));
     }
 
     /**
@@ -213,18 +225,16 @@ class NotificationEventListeners {
     @Async(NotificationDeliveryConfig.EXECUTOR)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onSupportReplyPosted(SupportReplyPosted event) {
-        dispatcher.deliver(event.recipientAccountId(), NotificationType.SUPPORT_REPLY, new OutboundMessage(
-                "Support replied to your ticket",
-                "Open Help & Support in the app to read the reply.",
+        dispatcher.deliver(event.recipientAccountId(), NotificationType.SUPPORT_REPLY, localized(event.recipientAccountId(),
+                "supportReply", none(),
                 "/help/tickets/" + event.ticketId(), "ticket-" + event.ticketId(), OutboundMessage.Urgency.NORMAL));
     }
 
     @Async(NotificationDeliveryConfig.EXECUTOR)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onPayoutMarkedPaid(PayoutMarkedPaid event) {
-        dispatcher.deliver(event.driverAccountId(), NotificationType.PAYOUT_PAID, OutboundMessage.of(
-                "Payout sent: " + rupees(event.amount()),
-                "SheOut has sent your payout. Bank or UPI reference: " + event.paymentReference() + ".",
+        dispatcher.deliver(event.driverAccountId(), NotificationType.PAYOUT_PAID, localized(event.driverAccountId(), "payoutPaid",
+                language -> Map.of("amount", rupees(event.amount()), "reference", String.valueOf(event.paymentReference())),
                 "/payouts"));
     }
 
@@ -233,10 +243,8 @@ class NotificationEventListeners {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onPaymentCaptured(PaymentCaptured event) {
         bookingApi.findById(event.bookingId()).ifPresent(booking -> dispatcher.deliver(
-                booking.customerId(), NotificationType.PAYMENT_RECEIPT, OutboundMessage.of(
-                        "Receipt: " + rupees(event.amount()) + " paid",
-                        receiptBody(event, booking),
-                        "/profile/payments")));
+                booking.customerId(), NotificationType.PAYMENT_RECEIPT, localized(booking.customerId(), "receipt",
+                        language -> receiptParams(event, booking, language), "/profile/payments")));
     }
 
     /**
@@ -256,37 +264,34 @@ class NotificationEventListeners {
                 OutboundMessage.Urgency.ALERT));
     }
 
-    private String receiptBody(PaymentCaptured event, BookingSummary booking) {
-        String how = event.method() == PaymentMethod.CASH ? "in cash to your partner" : "online by " + methodName(event.method());
-        return "Paid " + how + " on " + RECEIPT_TIME.format(event.capturedAt().atZone(INDIA))
-                + " for your " + categoryName(booking.category()) + " trip from " + booking.pickup().label()
-                + " to " + booking.drop().label() + ".";
+    private Map<String, String> receiptParams(PaymentCaptured event, BookingSummary booking, AppLanguage language) {
+        // Each way of paying in its own words. A SheOut wallet payment fell to
+        // the catch-all and read "Paid online by online payment".
+        String how = switch (event.method()) {
+            case CASH -> copy.one(language, "receipt.cash");
+            case SHEOUT_WALLET -> copy.one(language, "receipt.sheoutWallet");
+            default -> copy.one(language, "receipt.online").replace("{method}", methodName(event.method(), language));
+        };
+        return Map.of(
+                "amount", rupees(event.amount()),
+                "how", how,
+                "when", RECEIPT_TIME.format(event.capturedAt().atZone(INDIA)),
+                "category", copy.categoryName(booking.category(), language),
+                "from", booking.pickup().label(),
+                "to", booking.drop().label());
     }
 
-    private String driverName(UUID driverId) {
+    private String driverName(UUID driverId, AppLanguage language) {
         return driverProfileApi.findByAccountId(driverId)
                 .map(driver -> driver.name())
                 .filter(name -> name != null && !name.isBlank())
-                .orElse("Your partner");
+                .orElse(copy.one(language, "yourPartner"));
     }
 
-    private static String categoryName(BookingCategory category) {
-        return switch (category) {
-            case BIKE -> "bike taxi";
-            case AUTO -> "auto";
-            case CAB -> "cab";
-            case PARCEL -> "parcel delivery";
-            case LUNCHBOX -> "lunch box delivery";
-        };
-    }
-
-    private static String methodName(PaymentMethod method) {
+    private String methodName(PaymentMethod method, AppLanguage language) {
         return switch (method) {
-            case UPI -> "UPI";
-            case CARD -> "card";
-            case NETBANKING -> "netbanking";
-            case WALLET -> "wallet";
-            default -> "online payment";
+            case UPI, CARD, NETBANKING, WALLET -> copy.one(language, "method." + method.name());
+            default -> copy.one(language, "method.OTHER");
         };
     }
 
