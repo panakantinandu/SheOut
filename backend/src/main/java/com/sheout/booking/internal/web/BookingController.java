@@ -257,7 +257,7 @@ public class BookingController {
         // never comes near it.
         rateLimiter.tryConsume("pickup-code:driver:" + caller.accountId(), pickupAttemptLimit, PICKUP_WINDOW)
                 .orThrow("Too many pickup code attempts. Please wait a few minutes, or call support.");
-        return respond(bookingService.startTrip(bookingId, request.pickupCode()));
+        return respond(bookingService.startTrip(bookingId, caller.accountId(), request.pickupCode()));
     }
 
     /**
@@ -332,6 +332,13 @@ public class BookingController {
         return bookingService.findPickupCodeForCustomer(bookingId, caller.accountId())
                 .map(code -> ResponseEntity.ok(new PickupCodeResponse(code)))
                 .orElseThrow(() -> ApiException.notFound("No pickup code for this booking"));
+    }
+
+    @GetMapping("/api/v1/bookings/{bookingId}/pickup-status")
+    public PickupStatusResponse pickupStatus(@PathVariable UUID bookingId) {
+        CurrentAccount caller = requireRole(AccountRole.DRIVER);
+        requireAssignedDriver(caller, bookingId);
+        return new PickupStatusResponse(bookingService.isDriverAtPickup(bookingId, caller.accountId()));
     }
 
     @PostMapping("/api/v1/bookings/{bookingId}/complete")
@@ -459,6 +466,9 @@ public class BookingController {
             case DRIVER_NOT_AT_DROP_OFF -> new ApiException(
                     HttpStatus.CONFLICT, "DRIVER_NOT_AT_DROP_OFF",
                     "Driver must be at the drop-off location before ending the trip.");
+            case DRIVER_NOT_AT_PICKUP -> new ApiException(
+                    HttpStatus.CONFLICT, "DRIVER_NOT_AT_PICKUP",
+                    "Driver must be at the pickup location before starting the trip.");
             case DRIVER_LOCATION_UNAVAILABLE -> new ApiException(
                     HttpStatus.CONFLICT, "DRIVER_LOCATION_UNAVAILABLE",
                     "Your current location is unavailable or too old. Refresh your location and try again.");
@@ -496,6 +506,9 @@ public class BookingController {
 
     /** Shown to the rider, read aloud to her partner. Never served to the driver - see the endpoint above. */
     public record PickupCodeResponse(String pickupCode) {
+    }
+
+    public record PickupStatusResponse(boolean arrived) {
     }
 
     /**

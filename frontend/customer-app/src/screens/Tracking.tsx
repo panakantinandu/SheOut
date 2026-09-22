@@ -328,7 +328,7 @@ export function Tracking() {
    * on screen into a trip that has already begun.
    */
   useEffect(() => {
-    if (!bookingId || booking?.status !== 'ACCEPTED') {
+    if (!bookingId || booking?.status !== 'ACCEPTED' || !driverLocation) {
       setPickupCode(null);
       return;
     }
@@ -339,14 +339,14 @@ export function Tracking() {
         if (!cancelled) setPickupCode(result.pickupCode);
       })
       .catch(() => {
-        // A 404 is the normal answer for a booking that predates pickup
-        // verification. The card simply does not appear, and her partner's
-        // app lets that trip start without a code - see the backend.
+        // Before the driver reaches pickup the endpoint intentionally returns
+        // no code; polling the booking and location effects will retry this
+        // after the next real location update.
       });
     return () => {
       cancelled = true;
     };
-  }, [bookingId, booking?.status]);
+  }, [bookingId, booking?.status, driverLocation?.recordedAt]);
 
   useEffect(() => {
     if (!bookingId || !DRIVER_DETAILS_STATUSES.includes(booking?.status as BookingStatus)) {

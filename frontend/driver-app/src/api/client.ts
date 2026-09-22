@@ -463,6 +463,10 @@ export const bookingApi = {
     });
   },
 
+  pickupStatus(bookingId: string): Promise<{ arrived: boolean }> {
+    return request(`/api/v1/bookings/${bookingId}/pickup-status`);
+  },
+
   /**
    * The road from where she is now to wherever this booking says she is
    * going next - the pickup during ACCEPTED, the drop during IN_PROGRESS.
