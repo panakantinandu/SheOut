@@ -92,6 +92,12 @@ sheout:
     sos-burst-window-minutes: ${SOS_BURST_WINDOW_MINUTES:10}
 
   booking:
+    completion:
+      # Straight-line GPS geofence used by the server before a driver can
+      # mark an IN_PROGRESS trip complete.
+      drop-off-radius-metres: ${TRIP_COMPLETION_RADIUS_METRES:100}
+      # Location reports older than this are not trusted for completion.
+      driver-location-max-age-seconds: ${TRIP_COMPLETION_LOCATION_MAX_AGE_SECONDS:30}
     service-area:
       # Where SheOut operates. Both pickup and drop must fall within
       # radius-km of this centre, checked server-side on booking AND on

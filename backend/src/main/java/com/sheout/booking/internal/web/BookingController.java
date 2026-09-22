@@ -338,7 +338,7 @@ public class BookingController {
     public ResponseEntity<BookingSummary> complete(@PathVariable UUID bookingId) {
         CurrentAccount caller = requireRole(AccountRole.DRIVER);
         requireAssignedDriver(caller, bookingId);
-        return respond(bookingService.completeTrip(bookingId));
+        return respond(bookingService.completeTrip(bookingId, caller.accountId()));
     }
 
     /**
@@ -456,6 +456,12 @@ public class BookingController {
             case PICKUP_VERIFICATION_LOCKED -> new ApiException(
                     HttpStatus.CONFLICT, "PICKUP_VERIFICATION_LOCKED",
                     "Too many wrong codes for this trip. Call support and they will sort it out with you.");
+            case DRIVER_NOT_AT_DROP_OFF -> new ApiException(
+                    HttpStatus.CONFLICT, "DRIVER_NOT_AT_DROP_OFF",
+                    "Driver must be at the drop-off location before ending the trip.");
+            case DRIVER_LOCATION_UNAVAILABLE -> new ApiException(
+                    HttpStatus.CONFLICT, "DRIVER_LOCATION_UNAVAILABLE",
+                    "Your current location is unavailable or too old. Refresh your location and try again.");
             // Its own code so the app can take her straight to the trip that
             // needs paying rather than showing a dead-end error.
             case UNPAID_TRIP -> new ApiException(
