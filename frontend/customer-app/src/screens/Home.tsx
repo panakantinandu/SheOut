@@ -1,4 +1,4 @@
-import { ArrowRight, Bike, Clock, MapPinned, Package, ShieldAlert, Wallet as WalletIcon } from 'lucide-react';
+import { ArrowRight, Clock, MapPinned, ShieldAlert, Wallet as WalletIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -19,8 +19,10 @@ import { UnpaidTripBanner } from '../components/UnpaidTripBanner';
 import { useAppDrawer } from '../components/AppDrawer';
 import { PUSH_TOKEN_KEY, contentApi, notificationsApi, pushApi, usersApi } from '../api/client';
 import type { CustomerProfileSummary } from '../api/types';
-import { ThreeWomen } from '../components/ThreeWomen';
 import { useTranslation } from '@sheout/design-system';
+import bikeTaxiImage from '../../../../public/BikeTaxiImage.png';
+import parcelImage from '../../../../public/ParcelImage.png';
+import womenImage from '../../../../public/Women.png';
 
 /**
  * Two of the mockup's three service tiles - Lunch Box is deferred for
@@ -28,8 +30,8 @@ import { useTranslation } from '@sheout/design-system';
  * is one entry, not another copy of the tile.
  */
 const SERVICES = [
-  { key: 'ride', labelKey: 'home.serviceRide', to: '/book/ride', bg: 'bg-primary', icon: <Bike className="h-8 w-8" strokeWidth={1.5} /> },
-  { key: 'parcel', labelKey: 'home.serviceParcel', to: '/book/parcel', bg: 'bg-accent-orange', icon: <Package className="h-8 w-8" strokeWidth={1.5} /> },
+  { key: 'ride', labelKey: 'home.serviceRide', to: '/book/ride', bg: 'bg-primary', image: bikeTaxiImage, alt: 'Bike Taxi' },
+  { key: 'parcel', labelKey: 'home.serviceParcel', to: '/book/parcel', bg: 'bg-accent-orange', image: parcelImage, alt: 'Parcel Delivery' },
 ];
 
 /**
@@ -138,7 +140,7 @@ export function Home() {
               <span
                 className={`flex aspect-square w-full items-center justify-center rounded-card text-text-inverse ${service.bg}`}
               >
-                {service.icon}
+                <img src={service.image} alt={service.alt} className="h-full w-full object-contain" />
               </span>
               <span className="text-xs font-semibold leading-tight text-text-primary">{t(service.labelKey)}</span>
               <ArrowRight className="h-3.5 w-3.5 text-text-primary" aria-hidden="true" />
@@ -152,7 +154,7 @@ export function Home() {
           <p className="text-sm font-semibold text-primary">{fromContent('home.community.title', 'home.communityTitle')}</p>
           <p className="mt-1 text-xs text-text-secondary">{fromContent('home.community.subtitle', 'home.communitySubtitle')}</p>
         </div>
-        <ThreeWomen className="h-16 w-24 shrink-0" />
+        <img src={womenImage} alt={t('home.threeWomen')} className="h-16 w-24 shrink-0 object-contain" />
       </Card>
 
       <div>
