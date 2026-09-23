@@ -119,31 +119,26 @@ export function Home() {
 
       <div>
         <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">{t('home.services')}</h2>
-        {/* Filled rounded-square tiles with a white line-art glyph and an
-            arrow under the label, per the mockup - not the small tinted
-            circles this used to render. Lunch Box is deferred for launch:
-            the backend still accepts LUNCHBOX and its tile can come
-            straight back here. See DeliveryBooking for the route guard. */}
-        {/* Tiles keep the mockup's one-third width so the row still looks
-            right when Lunch Box returns. Centred rather than left-aligned
-            because at launch there are only two: a trailing empty third
-            column reads as a missing tile, a centred pair reads as
-            intentional. Remove justify-center when the third comes back. */}
+        {/* Two equal service tiles keep the artwork, label, and action aligned
+          as one compact option. Lunch Box is deferred for launch; the
+          backend still accepts LUNCHBOX and its tile can return here. */}
         <div className="grid grid-cols-2 gap-4">
           {SERVICES.map((service) => (
             <button
               key={service.key}
               type="button"
               onClick={() => navigate(service.to)}
-              className="flex min-w-0 flex-col items-center gap-2 text-center"
+              className="flex min-w-0 flex-col items-center gap-1.5 text-center"
             >
               <span
-                className={`flex aspect-square w-full items-center justify-center overflow-hidden rounded-card p-1 text-text-inverse ${service.bg}`}
+                className={`flex aspect-square w-[92%] items-center justify-center overflow-hidden rounded-card p-1 text-text-inverse ${service.bg}`}
               >
                 <img src={service.image} alt={service.alt} className="h-full w-full rounded-[inherit] object-contain" />
               </span>
-              <span className="text-xs font-semibold leading-tight text-text-primary">{t(service.labelKey)}</span>
-              <ArrowRight className="h-3.5 w-3.5 text-text-primary" aria-hidden="true" />
+              <span className="flex w-[92%] items-center justify-between gap-1 text-left">
+                <span className="text-xs font-semibold leading-tight text-text-primary">{t(service.labelKey)}</span>
+                <ArrowRight className="h-3.5 w-3.5 shrink-0 text-text-primary" aria-hidden="true" />
+              </span>
             </button>
           ))}
         </div>
