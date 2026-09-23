@@ -144,12 +144,18 @@ export function Home() {
         </div>
       </div>
 
-      <Card tone="brand" className="relative flex items-center gap-3 overflow-hidden">
-        <div className="flex-1">
+      <Card tone="brand" className="flex items-center justify-between gap-3 overflow-hidden rounded-[1.75rem] p-4">
+        <div className="min-w-0 max-w-[58%] flex-1">
           <p className="text-sm font-semibold text-primary">{fromContent('home.community.title', 'home.communityTitle')}</p>
           <p className="mt-1 text-xs text-text-secondary">{fromContent('home.community.subtitle', 'home.communitySubtitle')}</p>
         </div>
-        <img src={womenImage} alt={t('home.threeWomen')} className="h-20 w-32 shrink-0 object-contain object-right" />
+        <div className="relative flex h-20 w-[42%] max-w-[180px] shrink-0 items-end justify-end overflow-visible">
+          <img
+            src={womenImage}
+            alt={t('home.threeWomen')}
+            className="h-full w-full object-contain object-right-bottom"
+          />
+        </div>
       </Card>
 
       <div>

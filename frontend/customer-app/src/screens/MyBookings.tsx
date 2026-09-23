@@ -1,6 +1,8 @@
-import { Bike, CalendarX, MapPinned, Package, SearchX, Star, UtensilsCrossed } from 'lucide-react';
+import { CalendarX, MapPinned, SearchX, Star, UtensilsCrossed } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import bikeTaxiImage from '../../../../public/BikeTaxiImage.png';
+import parcelImage from '../../../../public/ParcelImage.png';
 import {
   AmountText,
   Button,
@@ -141,9 +143,19 @@ function statusTone(booking: BookingSummary): StatusTone {
 }
 
 function categoryIcon(category: BookingCategory) {
-  if (category === 'PARCEL') return <IconCircle color="orange" tone="soft" size="sm" icon={<Package />} />;
+  if (category === 'PARCEL') {
+    return (
+      <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-[#F3C385]/25 ring-1 ring-[#D98338]/20">
+        <img src={parcelImage} alt="Parcel Delivery" className="h-7 w-7 object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.18)]" />
+      </div>
+    );
+  }
   if (category === 'LUNCHBOX') return <IconCircle color="green" tone="soft" size="sm" icon={<UtensilsCrossed />} />;
-  return <IconCircle tone="soft" size="sm" icon={<Bike />} />;
+  return (
+    <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-[#DCC7FF]/25 ring-1 ring-[#8A6AE6]/20">
+      <img src={bikeTaxiImage} alt="Bike Taxi" className="h-7 w-7 object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.18)]" />
+    </div>
+  );
 }
 
 /**
@@ -299,14 +311,31 @@ export function MyBookings() {
 
       <div className="space-y-3">
         {list.items.map((booking) => (
-          <Card key={booking.id} className="flex items-center gap-3" onClick={() => navigate(`/tracking/${booking.id}`)}>
-            {categoryIcon(booking.category)}
+          <Card key={booking.id} className="flex items-start gap-3 overflow-hidden p-3.5" onClick={() => navigate(`/tracking/${booking.id}`)}>
+            <div className="mt-0.5 shrink-0">{categoryIcon(booking.category)}</div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-text-primary">{bookingCategoryLabel(booking.category)}</p>
-              <p className="truncate text-xs text-text-secondary">
-                {t('bookings.to', { place: booking.drop.label })} &middot; {new Date(booking.requestedAt).toLocaleString()}
+              <div className="flex items-start justify-between gap-2">
+                <p className="truncate text-sm font-semibold text-text-primary">{bookingCategoryLabel(booking.category)}</p>
+                {copy.trackable ? (
+                  // Named, not just a chevron. In the live view the useful thing
+                  // is the map, and the whole row already opens it - this says so.
+                  <span className="flex shrink-0 items-center gap-1 text-[11px] font-semibold text-primary">
+                    <MapPinned className="h-3.5 w-3.5" />
+                    {t('bookings.track')}
+                  </span>
+                ) : (
+                  <div className="shrink-0">
+                    <AmountText amount={booking.finalFare ?? booking.fareEstimate} />
+                  </div>
+                )}
+              </div>
+
+              <p className="mt-1 truncate text-xs text-text-secondary">
+                {t('bookings.to', { place: booking.drop.label })}
               </p>
-              <StatusBadge tone={statusTone(booking)} className="mt-1">
+              <p className="mt-1 text-[11px] text-text-secondary">{new Date(booking.requestedAt).toLocaleString()}</p>
+
+              <StatusBadge tone={statusTone(booking)} className="mt-1.5">
                 {tripStatusLabel(booking)}
               </StatusBadge>
               {/* Says which of the three a completed trip is in: already
@@ -316,14 +345,14 @@ export function MyBookings() {
                   dismiss without reading. */}
               {booking.status === 'COMPLETED' && ratingMarks.has(booking.id) && (
                 ratingMarks.get(booking.id)!.stars !== null ? (
-                  <p className="mt-1 flex items-center gap-1 text-xs text-text-secondary">
+                  <p className="mt-1 flex items-center gap-1 text-[11px] text-text-secondary">
                     <Star className="h-3.5 w-3.5 fill-accent-orange text-accent-orange" />
                     {t('bookings.youRated', { stars: ratingMarks.get(booking.id)!.stars })}
                   </p>
                 ) : new Date(ratingMarks.get(booking.id)!.rateableUntil) > new Date() ? (
                   <button
                     type="button"
-                    className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-primary"
+                    className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-primary"
                     onClick={(e) => {
                       e.stopPropagation();
                       setRatingBookingId(booking.id);
@@ -335,16 +364,6 @@ export function MyBookings() {
                 ) : null
               )}
             </div>
-            {copy.trackable ? (
-              // Named, not just a chevron. In the live view the useful thing
-              // is the map, and the whole row already opens it - this says so.
-              <span className="flex shrink-0 items-center gap-1 text-xs font-semibold text-primary">
-                <MapPinned className="h-4 w-4" />
-                {t('bookings.track')}
-              </span>
-            ) : (
-              <AmountText amount={booking.finalFare ?? booking.fareEstimate} />
-            )}
           </Card>
         ))}
       </div>
