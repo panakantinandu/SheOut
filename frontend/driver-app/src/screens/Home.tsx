@@ -550,10 +550,10 @@ export function Home() {
       )}
 
       {activeTrip && (
-        <Card className="flex items-center gap-3" onClick={() => navigate(`/trip/${activeTrip.id}`)}>
-          <IconCircle tone="soft" icon={activeTrip.type === 'RIDE' ? <Bike className="h-5 w-5" /> : <Navigation2 className="h-5 w-5" />} />
-          <div className="flex-1">
-            <p className="font-heading font-semibold text-text-primary">{t('home.activeTrip', { status: bookingStatusLabel(activeTrip.status) })}</p>
+        <Card className="flex items-center gap-3 p-3" onClick={() => navigate(`/trip/${activeTrip.id}`)}>
+          <IconCircle tone="soft" size="sm" icon={activeTrip.type === 'RIDE' ? <Bike className="h-4 w-4" /> : <Navigation2 className="h-4 w-4" />} />
+          <div className="min-w-0 flex-1">
+            <p className="font-heading text-sm font-semibold text-text-primary">{t('home.activeTrip', { status: bookingStatusLabel(activeTrip.status) })}</p>
             <p className="truncate text-xs text-text-secondary">{activeTrip.drop.label}</p>
           </div>
         </Card>

@@ -53,6 +53,10 @@ public class DriverLocationStore {
     }
 
     public void recordLocation(UUID driverId, double lat, double lng) {
+        if (!Double.isFinite(lat) || !Double.isFinite(lng)
+                || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
+            return;
+        }
         GeoOperations<String, String> geoOps = redisTemplate.opsForGeo();
         // Point(x, y) = Point(longitude, latitude).
         geoOps.add(GEO_KEY, new Point(lng, lat), driverId.toString());
@@ -78,12 +82,18 @@ public class DriverLocationStore {
             return Optional.empty();
         }
         Point point = points.get(0);
+        double lat = point.getY();
+        double lng = point.getX();
+        if (!Double.isFinite(lat) || !Double.isFinite(lng)
+                || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
+            return Optional.empty();
+        }
         String timestamp = redisTemplate.opsForValue().get(TS_KEY_PREFIX + driverId);
         // EPOCH marks "position exists but predates timestamp tracking" - callers
         // render that as unknown freshness rather than as 1970.
         Instant recordedAt = timestamp == null ? Instant.EPOCH : Instant.ofEpochMilli(Long.parseLong(timestamp));
         // Point(x, y) = Point(longitude, latitude) - unwound back to (lat, lng) here.
-        return Optional.of(new DriverLocation(point.getY(), point.getX(), recordedAt));
+        return Optional.of(new DriverLocation(lat, lng, recordedAt));
     }
 
     /**
