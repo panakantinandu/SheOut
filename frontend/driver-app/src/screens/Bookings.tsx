@@ -1,6 +1,8 @@
-import { Bike, CalendarX, Package, SearchX, Star, UtensilsCrossed } from 'lucide-react';
+import { CalendarX, SearchX, Star, UtensilsCrossed } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import bikeTaxiImage from '../../../../public/BikeTaxiImage.png';
+import parcelImage from '../../../../public/ParcelImage.png';
 import {
   AmountText,
   Card,
@@ -70,9 +72,19 @@ function statusTone(booking: BookingSummary): StatusTone {
 }
 
 function categoryIcon(category: BookingCategory) {
-  if (category === 'PARCEL') return <IconCircle color="orange" tone="soft" size="sm" icon={<Package />} />;
+  if (category === 'PARCEL') {
+    return (
+      <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-[#F3C385]/25 ring-1 ring-[#D98338]/20">
+        <img src={parcelImage} alt="Parcel Delivery" className="h-7 w-7 object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.18)]" />
+      </div>
+    );
+  }
   if (category === 'LUNCHBOX') return <IconCircle color="green" tone="soft" size="sm" icon={<UtensilsCrossed />} />;
-  return <IconCircle tone="soft" size="sm" icon={<Bike />} />;
+  return (
+    <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-[#DCC7FF]/25 ring-1 ring-[#8A6AE6]/20">
+      <img src={bikeTaxiImage} alt="Bike Taxi" className="h-7 w-7 object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.18)]" />
+    </div>
+  );
 }
 
 /**
