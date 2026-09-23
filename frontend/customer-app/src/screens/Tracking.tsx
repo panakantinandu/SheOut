@@ -497,8 +497,15 @@ export function Tracking() {
     markers.push({ key: 'pickup', lat: booking.pickup.lat, lng: booking.pickup.lng, label: t('booking.pickup'), kind: 'pickup' });
     markers.push({ key: 'drop', lat: booking.drop.lat, lng: booking.drop.lng, label: t('booking.drop'), kind: 'drop' });
   }
-  if (driverLocation) {
-    markers.push({ key: 'driver', lat: driverLocation.lat, lng: driverLocation.lng, label: t('tracking.driver'), kind: 'driver' });
+  const validDriverLocation = driverLocation
+    && Number.isFinite(driverLocation.lat)
+    && Number.isFinite(driverLocation.lng)
+    && Math.abs(driverLocation.lat) <= 90
+    && Math.abs(driverLocation.lng) <= 180
+    ? driverLocation
+    : null;
+  if (validDriverLocation) {
+    markers.push({ key: 'driver', lat: validDriverLocation.lat, lng: validDriverLocation.lng, label: t('tracking.driver'), kind: 'driver' });
   }
   // Unchanged for every normal case: cancelling during a live search still
   // works exactly as it did, reason dialog and all. Only suppressed once the
