@@ -129,18 +129,18 @@ export function Home() {
             because at launch there are only two: a trailing empty third
             column reads as a missing tile, a centred pair reads as
             intentional. Remove justify-center when the third comes back. */}
-        <div className="flex justify-center gap-3">
+        <div className="grid grid-cols-2 gap-4">
           {SERVICES.map((service) => (
             <button
               key={service.key}
               type="button"
               onClick={() => navigate(service.to)}
-              className="flex w-[30%] flex-col items-center gap-2 text-center"
+              className="flex min-w-0 flex-col items-center gap-2 text-center"
             >
               <span
-                className={`flex aspect-square w-full items-center justify-center rounded-card text-text-inverse ${service.bg}`}
+                className={`flex aspect-square w-full items-center justify-center overflow-hidden rounded-card p-1 text-text-inverse ${service.bg}`}
               >
-                <img src={service.image} alt={service.alt} className="h-full w-full object-contain" />
+                <img src={service.image} alt={service.alt} className="h-full w-full rounded-[inherit] object-contain" />
               </span>
               <span className="text-xs font-semibold leading-tight text-text-primary">{t(service.labelKey)}</span>
               <ArrowRight className="h-3.5 w-3.5 text-text-primary" aria-hidden="true" />
@@ -154,7 +154,7 @@ export function Home() {
           <p className="text-sm font-semibold text-primary">{fromContent('home.community.title', 'home.communityTitle')}</p>
           <p className="mt-1 text-xs text-text-secondary">{fromContent('home.community.subtitle', 'home.communitySubtitle')}</p>
         </div>
-        <img src={womenImage} alt={t('home.threeWomen')} className="h-16 w-24 shrink-0 object-contain" />
+        <img src={womenImage} alt={t('home.threeWomen')} className="h-20 w-32 shrink-0 object-contain object-right" />
       </Card>
 
       <div>
