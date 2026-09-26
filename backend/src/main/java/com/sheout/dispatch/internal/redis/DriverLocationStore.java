@@ -1,7 +1,8 @@
 package com.sheout.dispatch.internal.redis;
 
+import com.sheout.dispatch.DriverLocation;
+import com.sheout.dispatch.DriverLocationApi;
 import com.sheout.dispatch.internal.CandidateDriver;
-import com.sheout.dispatch.internal.DriverLocation;
 import org.springframework.data.geo.Distance;
 import org.springframework.data.geo.Metrics;
 import org.springframework.data.geo.Point;
@@ -35,7 +36,7 @@ import java.util.UUID;
  * explicitly at every call site below.
  */
 @Component
-public class DriverLocationStore {
+public class DriverLocationStore implements DriverLocationApi {
 
     private static final String GEO_KEY = "dispatch:driver-geo";
     private static final String TS_KEY_PREFIX = "dispatch:driver-loc-ts:";
@@ -76,6 +77,7 @@ public class DriverLocationStore {
      * stored point for one member, rather than searching an area the way
      * findNearby does.
      */
+    @Override
     public Optional<DriverLocation> findLocation(UUID driverId) {
         List<Point> points = redisTemplate.opsForGeo().position(GEO_KEY, driverId.toString());
         if (points == null || points.isEmpty() || points.get(0) == null) {

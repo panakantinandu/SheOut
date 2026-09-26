@@ -6,6 +6,8 @@ import com.sheout.driververification.VerificationApi;
 import com.sheout.driververification.VerificationStatus;
 import com.sheout.driververification.VerificationSummary;
 import com.sheout.sharedkernel.Result;
+import com.sheout.sharedkernel.event.DomainEventPublisher;
+import com.sheout.users.DriverWentOffline;
 import com.sheout.sharedkernel.geo.ServiceArea;
 import com.sheout.sharedkernel.storage.DocumentStorage;
 import com.sheout.sharedkernel.storage.DocumentUpload;
@@ -32,13 +34,16 @@ public class DriverProfileService implements DriverProfileApi {
     private final DocumentStorage documentStorage;
     private final ServiceArea serviceArea;
     private final String verifiedDriverBypassPhone;
+    private final DomainEventPublisher eventPublisher;
 
     public DriverProfileService(DriverProfileRepository driverProfileRepository,
                                  AuthApi authApi,
                                  VerificationApi verificationApi,
                                  DocumentStorage documentStorage,
                                  ServiceArea serviceArea,
+                                 DomainEventPublisher eventPublisher,
                                  @Value("${sheout.testing.verified-driver-bypass-phone:}") String verifiedDriverBypassPhone) {
+        this.eventPublisher = eventPublisher;
         this.driverProfileRepository = driverProfileRepository;
         this.authApi = authApi;
         this.verificationApi = verificationApi;
@@ -258,6 +263,9 @@ public class DriverProfileService implements DriverProfileApi {
 
         profile.setOnlineStatus(requested);
         driverProfileRepository.save(profile);
+        if (requested == OnlineStatus.OFFLINE) {
+            eventPublisher.publish(new DriverWentOffline(accountId));
+        }
         return Result.success(toSummary(profile));
     }
 

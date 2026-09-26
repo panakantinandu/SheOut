@@ -31,10 +31,11 @@ public class PrivacyFacade {
         AccountDeletionService.Result result = deletions.delete(accountId, role);
         return new DeletionOutcome(result.outcome() == AccountDeletionService.Outcome.DELETED,
                 result.outcome() == AccountDeletionService.Outcome.PENDING_PAYOUT,
+                result.outcome() == AccountDeletionService.Outcome.UNPAID_TRIP,
                 result.requestedAt(), result.completedAt());
     }
 
     /** When not deleted, pendingPayout says whether a payout was the reason; otherwise it was an active trip. */
-    public record DeletionOutcome(boolean deleted, boolean pendingPayout, Instant requestedAt, Instant completedAt) {
+    public record DeletionOutcome(boolean deleted, boolean pendingPayout, boolean unpaidTrip, Instant requestedAt, Instant completedAt) {
     }
 }

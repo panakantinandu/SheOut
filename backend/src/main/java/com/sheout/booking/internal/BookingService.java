@@ -22,8 +22,8 @@ import com.sheout.booking.internal.fare.FareQuote;
 import com.sheout.driververification.VerificationApi;
 import com.sheout.driververification.VerificationStatus;
 import com.sheout.driververification.VerificationSummary;
-import com.sheout.dispatch.internal.DriverLocation;
-import com.sheout.dispatch.internal.redis.DriverLocationStore;
+import com.sheout.dispatch.DriverLocation;
+import com.sheout.dispatch.DriverLocationApi;
 import com.sheout.sharedkernel.Result;
 import com.sheout.sharedkernel.geo.ServiceArea;
 import com.sheout.sharedkernel.event.DomainEventPublisher;
@@ -63,7 +63,7 @@ public class BookingService implements BookingApi {
     private final ServiceArea serviceArea;
     private final String verifiedBypassPhone;
     private final Duration partnerPaymentHold;
-    private final DriverLocationStore locationStore;
+    private final DriverLocationApi locationStore;
     private final DropoffGeofence dropoffGeofence;
     private final DropoffGeofence pickupGeofence;
 
@@ -76,7 +76,7 @@ public class BookingService implements BookingApi {
                            ServiceArea serviceArea,
                            @Value("${sheout.testing.verified-bypass-phone:}") String verifiedBypassPhone,
                            @Value("${sheout.booking.partner-payment-hold-minutes:10}") long partnerPaymentHoldMinutes,
-                           DriverLocationStore locationStore,
+                           DriverLocationApi locationStore,
                            @Value("${sheout.booking.completion.drop-off-radius-metres:100}") double dropoffRadiusMetres,
                            @Value("${sheout.booking.completion.driver-location-max-age-seconds:30}") long driverLocationMaxAgeSeconds,
                            @Value("${sheout.dispatch.arriving-radius-metres:300}") double pickupRadiusMetres) {
@@ -107,7 +107,7 @@ public class BookingService implements BookingApi {
                            ServiceArea serviceArea,
                            String verifiedBypassPhone,
                            long partnerPaymentHoldMinutes,
-                           DriverLocationStore locationStore,
+                           DriverLocationApi locationStore,
                            double dropoffRadiusMetres,
                            long driverLocationMaxAgeSeconds) {
         this(bookingRepository, verificationApi, fareCalculator, eventPublisher, authApi, serviceArea,
@@ -199,7 +199,7 @@ public class BookingService implements BookingApi {
     @Override
     @Transactional
     public Result<BookingSummary, BookingError> assignDriver(UUID bookingId, UUID driverId) {
-        Optional<BookingEntity> found = bookingRepository.findById(bookingId);
+        Optional<BookingEntity> found = bookingRepository.findLockedById(bookingId);
         if (found.isEmpty()) {
             return Result.failure(BookingError.BOOKING_NOT_FOUND);
         }
@@ -223,7 +223,7 @@ public class BookingService implements BookingApi {
     /** Self-service - the driver assigned to a MATCHED booking confirms it. Caller-vs-driverId match is checked by the controller. */
     @Transactional
     public Result<BookingSummary, BookingError> acceptBooking(UUID bookingId) {
-        Optional<BookingEntity> found = bookingRepository.findById(bookingId);
+        Optional<BookingEntity> found = bookingRepository.findLockedById(bookingId);
         if (found.isEmpty()) {
             return Result.failure(BookingError.BOOKING_NOT_FOUND);
         }
@@ -421,6 +421,40 @@ public class BookingService implements BookingApi {
         return Result.success(toSummary(booking));
     }
 
+    /**
+     * The rider ends her own trip where she is, short of the drop pin.
+     * <p>
+     * The partner's End Trip is held to the drop-off geofence, which is right
+     * for her and left no way out for the ordinary "drop me here, by the
+     * gate": the partner could not end it, the rider had no button, and the
+     * trip sat IN_PROGRESS until support stepped in. The rider is the one
+     * person who can say she has arrived without GPS having to agree, so the
+     * rider may end it. The fare is the one she was quoted - stopping early
+     * is her choice and never costs her partner.
+     */
+    @Transactional
+    public Result<BookingSummary, BookingError> endTripAtRidersRequest(UUID bookingId, UUID customerId) {
+        Optional<BookingEntity> found = bookingRepository.findLockedById(bookingId);
+        if (found.isEmpty() || !found.get().getCustomerId().equals(customerId)) {
+            return Result.failure(BookingError.BOOKING_NOT_FOUND);
+        }
+        BookingEntity booking = found.get();
+        Result<BookingStatus, BookingError> transition =
+                BookingStateMachine.transition(booking.getStatus(), BookingStatus.COMPLETED);
+        if (transition.isFailure()) {
+            return Result.failure(transition.error());
+        }
+
+        booking.setStatus(BookingStatus.COMPLETED);
+        booking.setCompletedAt(Instant.now());
+        booking.setFinalFare(booking.getFareEstimate());
+        bookingRepository.save(booking);
+
+        eventPublisher.publish(new BookingCompleted(
+                booking.getId(), booking.getCustomerId(), booking.getDriverId(), booking.getFinalFare()));
+        return Result.success(toSummary(booking));
+    }
+
 
     /**
      * Self-service - either participant (customer or the assigned driver)
@@ -455,7 +489,7 @@ public class BookingService implements BookingApi {
      */
     @Transactional
     public Result<BookingSummary, BookingError> markNoDriversAvailable(UUID bookingId) {
-        Optional<BookingEntity> found = bookingRepository.findById(bookingId);
+        Optional<BookingEntity> found = bookingRepository.findLockedById(bookingId);
         if (found.isEmpty()) {
             return Result.failure(BookingError.BOOKING_NOT_FOUND);
         }
@@ -483,7 +517,7 @@ public class BookingService implements BookingApi {
             return Result.failure(BookingError.CANCELLATION_NOTE_REQUIRED);
         }
 
-        Optional<BookingEntity> found = bookingRepository.findById(bookingId);
+        Optional<BookingEntity> found = bookingRepository.findLockedById(bookingId);
         if (found.isEmpty()) {
             return Result.failure(BookingError.BOOKING_NOT_FOUND);
         }

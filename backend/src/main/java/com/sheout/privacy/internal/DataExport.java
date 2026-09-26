@@ -61,7 +61,8 @@ public record DataExport(
     public record EmergencyContact(String name, String phoneNumber, String relationship) {
     }
 
-    public record Verification(String identityCheck, String policeCheck, boolean identityDocumentOnFile) {
+    public record Verification(String identityCheck, String policeCheck, boolean identityDocumentOnFile,
+                               boolean liveSelfieOnFile) {
     }
 
     /**

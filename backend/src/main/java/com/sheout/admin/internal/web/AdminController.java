@@ -122,7 +122,8 @@ public class AdminController {
         requireAdmin();
         return adminService.documentUrl(accountId)
                 .map(url -> ResponseEntity.ok(
-                        new DocumentResponse(accountId, url, adminService.rcDocumentUrl(accountId).orElse(null))))
+                        new DocumentResponse(accountId, url, adminService.rcDocumentUrl(accountId).orElse(null),
+                                adminService.liveSelfie(accountId).orElse(null))))
                 .orElseThrow(() -> ApiException.notFound("No document submitted for this account"));
     }
 
@@ -322,6 +323,8 @@ public class AdminController {
     }
 
     /** rcUrl is null for riders and for partners who submitted before the RC was required. */
-    public record DocumentResponse(UUID accountId, String url, String rcUrl) {
+    /** liveSelfie is null for a submission made before the live selfie was required. */
+    public record DocumentResponse(UUID accountId, String url, String rcUrl,
+                                   com.sheout.driververification.LiveSelfie liveSelfie) {
     }
 }

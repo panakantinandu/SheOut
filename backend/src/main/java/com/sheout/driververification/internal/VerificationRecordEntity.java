@@ -61,6 +61,22 @@ public class VerificationRecordEntity extends BaseEntity {
      */
     private Instant documentSubmittedAt;
 
+    /** The live selfie and its liveness frames - see V34__live_selfie.sql. */
+    @Column(length = 500)
+    private String selfieDocumentKey;
+    @Column(length = 500)
+    private String livenessFramesKey;
+    @Column(length = 200)
+    private String selfiePrompts;
+    private Instant selfieCapturedAt;
+
+    /** The challenge issued and not yet used. */
+    @Column(length = 64)
+    private String selfieChallengeNonce;
+    @Column(length = 200)
+    private String selfieChallengePrompts;
+    private Instant selfieChallengeExpiresAt;
+
     @Column(length = 100)
     private String reviewedBy;
     private Instant reviewedAt;
@@ -137,6 +153,53 @@ public class VerificationRecordEntity extends BaseEntity {
 
     public void markDocumentSubmitted() {
         this.documentSubmittedAt = Instant.now();
+    }
+
+    /** A fresh challenge replaces any earlier one: only the latest can be answered. */
+    public void issueSelfieChallenge(String nonce, String prompts, Instant expiresAt) {
+        this.selfieChallengeNonce = nonce;
+        this.selfieChallengePrompts = prompts;
+        this.selfieChallengeExpiresAt = expiresAt;
+    }
+
+    /** The prompts of the challenge this nonce answers, if it is live; used up either way it matches. */
+    public java.util.Optional<String> consumeSelfieChallenge(String nonce, Instant now) {
+        if (nonce == null || selfieChallengeNonce == null || !selfieChallengeNonce.equals(nonce)
+                || selfieChallengeExpiresAt == null || now.isAfter(selfieChallengeExpiresAt)) {
+            return java.util.Optional.empty();
+        }
+        String prompts = selfieChallengePrompts;
+        this.selfieChallengeNonce = null;
+        this.selfieChallengePrompts = null;
+        this.selfieChallengeExpiresAt = null;
+        return java.util.Optional.of(prompts);
+    }
+
+    public void recordLiveSelfie(String selfieKey, String framesKey, String prompts, Instant at) {
+        this.selfieDocumentKey = selfieKey;
+        this.livenessFramesKey = framesKey;
+        this.selfiePrompts = prompts;
+        this.selfieCapturedAt = at;
+    }
+
+    public void clearLiveSelfie() {
+        recordLiveSelfie(null, null, null, null);
+    }
+
+    public String getSelfieDocumentKey() {
+        return selfieDocumentKey;
+    }
+
+    public String getLivenessFramesKey() {
+        return livenessFramesKey;
+    }
+
+    public String getSelfiePrompts() {
+        return selfiePrompts;
+    }
+
+    public Instant getSelfieCapturedAt() {
+        return selfieCapturedAt;
     }
 
     public Instant getDocumentSubmittedAt() {

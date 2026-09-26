@@ -68,6 +68,10 @@ public class DispatchController {
     private static final Set<BookingStatus> DRIVER_DETAILS_VISIBLE_FROM = Set.of(
             BookingStatus.ACCEPTED, BookingStatus.IN_PROGRESS, BookingStatus.COMPLETED);
 
+    /** The partner's live position is shared with her rider only while the trip is live - see driverLocation. */
+    private static final Set<BookingStatus> LOCATION_VISIBLE_DURING = Set.of(
+            BookingStatus.ACCEPTED, BookingStatus.IN_PROGRESS);
+
     private final DispatchService dispatchService;
     private final BookingApi bookingApi;
     private final DriverProfileApi driverProfileApi;
@@ -265,6 +269,14 @@ public class DispatchController {
         UUID driverId = participants.value().driverId();
         if (driverId == null) {
             throw ApiException.notFound("No driver assigned to this booking yet");
+        }
+        // Only while she is coming or driving. This had no status check, so a
+        // rider could keep reading where her partner was - live, from the
+        // partner's next trips and her way home - for as long as she kept the
+        // id of one finished or cancelled booking. A woman's position after
+        // the job is over is nobody's business, and least of all a stranger's.
+        if (!LOCATION_VISIBLE_DURING.contains(participants.value().status())) {
+            throw ApiException.notFound("No such booking");
         }
         return dispatchService.findDriverLocation(driverId)
                 .map(location -> ResponseEntity.ok(new DriverLocationResponse(

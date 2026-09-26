@@ -201,7 +201,10 @@
     "removePan": "Remove PAN",
     "updatePan": "Update PAN",
     "savePan": "Save PAN",
-    "fileHint": "A clear photo (JPG, PNG or HEIC) or a PDF. Make sure the whole document is in the frame and readable."
+    "fileHint": "A clear photo (JPG, PNG or HEIC) or a PDF. Make sure the whole document is in the frame and readable.",
+    "maskInvite": "You can blur your ID number if you'd like, we only need your name, photo, and gender to verify you.",
+    "selfieTitle": "Take a live selfie",
+    "needSelfie": "Take your selfie to continue"
   },
   "faq": {
     "q1": "Why can I not go online?",
@@ -337,7 +340,9 @@
       "completed": "Completed",
       "cancelled": "Cancelled"
     },
-    "fareNotCharged": "Quoted fare (not charged)"
+    "fareNotCharged": "Quoted fare (not charged)",
+    "notAtPickupYet": "The pickup code opens when you reach the pickup point.",
+    "riderCanEndEarly": "Rider getting off before the drop? She can end the trip from her app with \"End trip here\"."
   },
   "earnings": {
     "group": {
@@ -455,5 +460,11 @@
     "waiting": "Waiting for payment",
     "howPaid": "Your rider pays in her SheOut app, from her wallet or online. This updates on its own the moment she does.",
     "noCash": "Please don't take cash or a transfer to your own account. Fares paid outside SheOut can't be recorded, and your trip won't count as paid."
+  },
+  "sos": {
+    "button": "SOS",
+    "sending": "Sending your location...",
+    "alertTeam": "Alert SheOut safety team",
+    "close": "Close"
   }
 }

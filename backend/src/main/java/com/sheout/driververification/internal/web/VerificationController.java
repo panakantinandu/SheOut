@@ -7,8 +7,10 @@ import com.sheout.driververification.VerificationTurnaround;
 import com.sheout.driververification.internal.VerificationFunnelStep;
 import com.sheout.driververification.internal.VerificationError;
 import com.sheout.driververification.internal.VerificationService;
+import com.sheout.driververification.internal.LiveSelfieUpload;
 import com.sheout.sharedkernel.storage.DocumentUpload;
 import com.sheout.sharedkernel.Result;
+import com.sheout.sharedkernel.ratelimit.RateLimiter;
 import com.sheout.sharedkernel.web.ApiException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +23,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.time.Duration;
 
 /**
  * Self-service endpoints - a caller only ever acts on their own record.
@@ -31,10 +34,19 @@ import java.io.UncheckedIOException;
 @RestController
 public class VerificationController {
 
-    private final VerificationService verificationService;
+    /**
+     * Uploads a day, per account. An honest retake after a blurry photo is
+     * two or three; each upload is up to two 10 MB files, and without a cap
+     * one account could fill the document store in minutes.
+     */
+    private static final int UPLOADS_PER_DAY = 10;
 
-    public VerificationController(VerificationService verificationService) {
+    private final VerificationService verificationService;
+    private final RateLimiter rateLimiter;
+
+    public VerificationController(VerificationService verificationService, RateLimiter rateLimiter) {
         this.verificationService = verificationService;
+        this.rateLimiter = rateLimiter;
     }
 
     @PostMapping(value = "/api/v1/driver-verification/documents", consumes = "multipart/form-data")
@@ -44,12 +56,23 @@ public class VerificationController {
             // rider has no vehicle and cannot produce one; making it
             // mandatory here would break her submission to enforce a rule
             // that was never about her.
-            @RequestParam(value = "rcFile", required = false) MultipartFile rcFile) {
+            @RequestParam(value = "rcFile", required = false) MultipartFile rcFile,
+            // Optional on the wire so an app cached from before the selfie
+            // gets SELFIE_REQUIRED, saying what is missing, not a bare 400.
+            @RequestParam(value = "selfie", required = false) MultipartFile selfie,
+            @RequestParam(value = "livenessFrames", required = false) MultipartFile livenessFrames,
+            @RequestParam(value = "selfieChallengeId", required = false) String selfieChallengeId) {
         CurrentAccount caller = requireAuthenticated();
+        rateLimiter.tryConsume("verification-upload:" + caller.accountId(), UPLOADS_PER_DAY, Duration.ofDays(1))
+                .orThrow("You have uploaded documents several times today. Please try again tomorrow, or contact support.");
         DocumentUpload upload = toUpload(file);
         DocumentUpload rcUpload = rcFile == null || rcFile.isEmpty() ? null : toUpload(rcFile);
+        LiveSelfieUpload live = new LiveSelfieUpload(
+                selfie == null || selfie.isEmpty() ? null : toUpload(selfie),
+                livenessFrames == null || livenessFrames.isEmpty() ? null : toUpload(livenessFrames),
+                selfieChallengeId);
         Result<VerificationSummary, VerificationError> result =
-                verificationService.submitDocument(caller.accountId(), upload, rcUpload);
+                verificationService.submitDocument(caller.accountId(), upload, rcUpload, live);
         if (result.isFailure()) {
             throw toApiException(result.error());
         }
@@ -63,6 +86,25 @@ public class VerificationController {
      * jobs, and telling her about the other one would be telling her about
      * somebody else's queue.
      */
+    /**
+     * The prompts for her live selfie, and the id the submission must quote.
+     * Asked for when she opens the camera; a new one replaces the last.
+     * Counted against the same daily allowance as uploads, so it cannot be
+     * called in a loop to fish for easy prompts.
+     */
+    @PostMapping("/api/v1/driver-verification/selfie-challenge")
+    public ResponseEntity<VerificationService.SelfieChallenge> selfieChallenge() {
+        CurrentAccount caller = requireAuthenticated();
+        rateLimiter.tryConsume("selfie-challenge:" + caller.accountId(), UPLOADS_PER_DAY * 3, Duration.ofDays(1))
+                .orThrow("You have started the selfie several times today. Please try again tomorrow, or contact support.");
+        Result<VerificationService.SelfieChallenge, VerificationError> result =
+                verificationService.issueSelfieChallenge(caller.accountId());
+        if (result.isFailure()) {
+            throw toApiException(result.error());
+        }
+        return ResponseEntity.ok(result.value());
+    }
+
     @GetMapping("/api/v1/driver-verification/turnaround")
     public ResponseEntity<VerificationTurnaround> turnaround() {
         CurrentAccount caller = requireAuthenticated();
@@ -117,6 +159,12 @@ public class VerificationController {
                     "Send a photo (JPG, PNG, HEIC or WebP) or a PDF. Other kinds of file cannot be opened for review.");
             case DOCUMENT_TOO_SMALL -> new ApiException(HttpStatus.BAD_REQUEST, "DOCUMENT_TOO_SMALL",
                     "That file is too small to read. Photograph the whole document in good light, or send the original PDF.");
+            case SELFIE_REQUIRED -> new ApiException(HttpStatus.BAD_REQUEST, "SELFIE_REQUIRED",
+                    "Take a live selfie with the in-app camera before submitting.");
+            case SELFIE_CHALLENGE_EXPIRED -> new ApiException(HttpStatus.CONFLICT, "SELFIE_CHALLENGE_EXPIRED",
+                    "Your selfie has expired. Please take it again, then submit.");
+            case ALREADY_VERIFIED -> new ApiException(HttpStatus.CONFLICT, "ALREADY_VERIFIED",
+                    "Your ID is already verified. To change a document, contact support.");
             case DOCUMENT_TOO_LARGE -> new ApiException(HttpStatus.BAD_REQUEST, "DOCUMENT_TOO_LARGE",
                     "That file is larger than 10 MB. A photo taken with your phone's camera will be well under it.");
         };

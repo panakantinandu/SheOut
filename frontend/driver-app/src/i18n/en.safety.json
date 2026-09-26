@@ -9,5 +9,12 @@
     "askForCode": "Ask your rider for her four-digit code and enter it here. The trip starts once it matches.",
     "fieldLabel": "Pickup code",
     "fieldPlaceholder": "4-digit code"
+  },
+  "sos": {
+    "title": "Need help right now?",
+    "body": "Call 112 for police, fire or ambulance. You can also send your location to the SheOut safety team, who will call you.",
+    "call112": "Call 112",
+    "sent": "The SheOut safety team has your location and will call you. If you are in danger, call 112 now.",
+    "failed": "Could not reach SheOut. Call 112 now."
   }
 }

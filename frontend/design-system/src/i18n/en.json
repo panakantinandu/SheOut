@@ -313,7 +313,7 @@
   },
   "masker": {
     "title": "Cover your ID number",
-    "instruction": "Drag over your Aadhaar number to cover it. We only need your name, photo and gender — not the number. What you cover here is painted out before the photo leaves your phone.",
+    "instruction": "Optional. Drag over your Aadhaar or PAN number to cover it. We only need your name, photo and gender to verify you. What you cover is painted out before the photo leaves your phone.",
     "none": "Nothing covered yet",
     "count": "{{count}} area covered",
     "count_other": "{{count}} areas covered",
@@ -322,5 +322,30 @@
     "useThis": "Use this photo",
     "cannotOpen": "That photo could not be opened. Try choosing it again.",
     "cannotSave": "Could not prepare the photo. Try again."
+  },
+  "selfie": {
+    "why": "A quick selfie with your camera shows a real person is signing up. A reviewer compares it with your ID photo - nothing is matched automatically.",
+    "start": "Open camera",
+    "opening": "Opening your camera...",
+    "tryAgain": "Try again",
+    "retake": "Retake",
+    "useThis": "Use this selfie",
+    "done": "Selfie taken.",
+    "previewAlt": "Your selfie",
+    "noMotion": "We could not see you move. Hold your phone at face height, follow each instruction on the screen, and try again.",
+    "denied": "Camera access is blocked. Allow the camera for SheOut in your browser or phone settings, then try again. This step needs your camera - a photo from your gallery cannot be used.",
+    "noCamera": "No front camera was found on this device. This step needs a phone with a camera.",
+    "cameraBusy": "The camera could not be started. Close other apps that may be using it, then try again.",
+    "unsupported": "Your browser cannot open the camera here. Update your browser, or open SheOut in Chrome or Safari.",
+    "challengeError": "Could not start the selfie. Check your connection and try again.",
+    "prompt": {
+      "straight": "Look straight at the camera",
+      "straightAgain": "Look straight at the camera again",
+      "turnLeft": "Turn your head slightly to the left",
+      "turnRight": "Turn your head slightly to the right",
+      "lookUp": "Tilt your head up a little",
+      "smile": "Smile",
+      "closeEyes": "Close your eyes"
+    }
   }
 }

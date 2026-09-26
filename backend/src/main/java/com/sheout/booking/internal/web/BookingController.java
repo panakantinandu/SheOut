@@ -255,9 +255,32 @@ public class BookingController {
         // bounds the rate at which anyone can guess at all, including in a
         // parallel burst. See PickupCode.MAX_ATTEMPTS for why honest typing
         // never comes near it.
-        rateLimiter.tryConsume("pickup-code:driver:" + caller.accountId(), pickupAttemptLimit, PICKUP_WINDOW)
+        String attemptKey = "pickup-code:driver:" + caller.accountId();
+        rateLimiter.tryConsume(attemptKey, pickupAttemptLimit, PICKUP_WINDOW)
                 .orThrow("Too many pickup code attempts. Please wait a few minutes, or call support.");
-        return respond(bookingService.startTrip(bookingId, caller.accountId(), request.pickupCode()));
+        Result<BookingSummary, BookingError> result =
+                bookingService.startTrip(bookingId, caller.accountId(), request.pickupCode());
+        // Only a code that was actually checked is a guess. A refusal before
+        // the code is looked at - not at the pickup yet, a stale GPS fix -
+        // gives its attempt back, or a partner whose phone was slow to find
+        // her locked herself out by tapping Start a few times at the kerb.
+        if (result.isFailure()
+                && result.error() != BookingError.INVALID_PICKUP_CODE
+                && result.error() != BookingError.PICKUP_VERIFICATION_LOCKED) {
+            rateLimiter.release(attemptKey);
+        }
+        return respond(result);
+    }
+
+    /**
+     * The rider ends the trip where she is - "drop me here" - which the
+     * partner cannot do away from the drop pin. See
+     * BookingService.endTripAtRidersRequest.
+     */
+    @PostMapping("/api/v1/bookings/{bookingId}/end-here")
+    public ResponseEntity<BookingSummary> endHere(@PathVariable UUID bookingId) {
+        CurrentAccount caller = requireRole(AccountRole.CUSTOMER);
+        return respond(bookingService.endTripAtRidersRequest(bookingId, caller.accountId()));
     }
 
     /**

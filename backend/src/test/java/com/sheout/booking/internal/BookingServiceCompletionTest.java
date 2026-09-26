@@ -7,8 +7,8 @@ import com.sheout.booking.BookingStatus;
 import com.sheout.booking.BookingType;
 import com.sheout.booking.GeoAddress;
 import com.sheout.booking.internal.fare.FareCalculator;
-import com.sheout.dispatch.internal.DriverLocation;
-import com.sheout.dispatch.internal.redis.DriverLocationStore;
+import com.sheout.dispatch.DriverLocation;
+import com.sheout.dispatch.DriverLocationApi;
 import com.sheout.driververification.VerificationApi;
 import com.sheout.sharedkernel.event.DomainEventPublisher;
 import com.sheout.sharedkernel.geo.ServiceArea;
@@ -27,7 +27,7 @@ import static org.mockito.Mockito.*;
 class BookingServiceCompletionTest {
 
     private final BookingRepository repository = mock(BookingRepository.class);
-    private final DriverLocationStore locations = mock(DriverLocationStore.class);
+    private final DriverLocationApi locations = mock(DriverLocationApi.class);
     private final DomainEventPublisher events = mock(DomainEventPublisher.class);
     private final UUID bookingId = UUID.randomUUID();
     private final UUID driverId = UUID.randomUUID();
@@ -104,6 +104,37 @@ class BookingServiceCompletionTest {
 
         assertEquals(BookingError.INVALID_STATE_TRANSITION, result.error());
         verifyNoInteractions(locations, events);
+    }
+
+    @Test
+    void riderCanEndHerTripShortOfTheDropAtTheQuotedFare() {
+        var result = service.endTripAtRidersRequest(bookingId, booking.getCustomerId());
+
+        assertTrue(result.isSuccess());
+        assertEquals(BookingStatus.COMPLETED, booking.getStatus());
+        assertEquals(BigDecimal.TEN, booking.getFinalFare());
+        // Her word is enough - no GPS is consulted.
+        verifyNoInteractions(locations);
+        verify(events).publish(any());
+    }
+
+    @Test
+    void nobodyButTheRiderCanEndHerTrip() {
+        var result = service.endTripAtRidersRequest(bookingId, driverId);
+
+        assertEquals(BookingError.BOOKING_NOT_FOUND, result.error());
+        assertEquals(BookingStatus.IN_PROGRESS, booking.getStatus());
+        verifyNoInteractions(events);
+    }
+
+    @Test
+    void aTripThatHasNotStartedCannotBeEndedByTheRider() {
+        booking.setStatus(BookingStatus.ACCEPTED);
+
+        var result = service.endTripAtRidersRequest(bookingId, booking.getCustomerId());
+
+        assertEquals(BookingError.INVALID_STATE_TRANSITION, result.error());
+        verifyNoInteractions(events);
     }
 
     @Test

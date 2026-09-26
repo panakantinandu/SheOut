@@ -1,4 +1,4 @@
-package com.sheout.dispatch.internal;
+package com.sheout.dispatch;
 
 import java.time.Instant;
 

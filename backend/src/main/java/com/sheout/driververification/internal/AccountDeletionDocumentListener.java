@@ -45,6 +45,14 @@ class AccountDeletionDocumentListener {
                 documentStorage.delete(record.getRcDocumentKey());
                 record.setRcDocumentKey(null);
             }
+            // Her face, twice over: the selfie and the prompt frames go too.
+            if (record.getSelfieDocumentKey() != null) {
+                documentStorage.delete(record.getSelfieDocumentKey());
+            }
+            if (record.getLivenessFramesKey() != null) {
+                documentStorage.delete(record.getLivenessFramesKey());
+            }
+            record.clearLiveSelfie();
             record.clearRejectionReason();
             // A submission waiting for review has nothing left to review. Back
             // to "not submitted" takes it off the operators' queue, which

@@ -376,6 +376,13 @@
   .docs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 4px; }
   @media (max-width: 900px) { .docs { grid-template-columns: 1fr; } }
   .doc-label { font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
+  /* The liveness frames: one image, captioned underneath column by column. */
+  .liveness-label { margin-top: 12px; }
+  .liveness-captions { display: grid; gap: 8px; margin-top: 6px; font-size: 12px; color: var(--muted); text-align: center; }
+  .liveness-cols-1 { grid-template-columns: 1fr; }
+  .liveness-cols-2 { grid-template-columns: 1fr 1fr; }
+  .liveness-cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .liveness-cols-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
   .doc-hint { font-weight: 400; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 
   /* ---------- support tickets ---------- */
@@ -1181,12 +1188,12 @@ const VIEWS = {
 
   sos: {
     title: 'SOS Alerts',
-    desc: 'Live safety alerts raised by customers. "Reached" counts the emergency contacts an SMS actually got through to — if it reads 0, nobody was told.',
+    desc: 'Live safety alerts raised by riders and partners. "Reached" counts the emergency contacts an SMS actually got through to — if it reads 0, nobody was told. A partner has no emergency contacts on file: her alert is yours to answer.',
     cardTitle: 'Active alerts',
     hint: 'Open the location link to see exactly where the alert came from',
-    empty: { icon: ICON_EMPTY_SOS, title: 'No active SOS alerts', text: 'Alerts raised from the customer app appear here until they are resolved.' },
+    empty: { icon: ICON_EMPTY_SOS, title: 'No active SOS alerts', text: 'Alerts raised from the rider and partner apps appear here until they are resolved.' },
     columns: [
-      { key: 'customer', label: 'Customer', sort: r => (r.customerName || '').toLowerCase() },
+      { key: 'customer', label: 'Raised by', sort: r => (r.customerName || '').toLowerCase() },
       { key: 'phone', label: 'Phone', sort: r => r.customerPhone || '' },
       { key: 'location', label: 'Location', sort: r => r.lat },
       { key: 'contacts', label: 'Contacts reached', sort: r => r.contactsNotified },
@@ -1196,7 +1203,7 @@ const VIEWS = {
     ],
     load: () => api('/admin/sos/active'),
     cell: (r, key) => {
-      if (key === 'customer') return `<span class="strong">${esc(r.customerName || 'Unknown')}</span>${r.customerBlocked ? ' <span class="badge b-blocked">Blocked</span>' : ''}`;
+      if (key === 'customer') return `<span class="strong">${esc(r.customerName || 'Unknown')}</span> ${r.raisedBy === 'PARTNER' ? '<span class="badge b-role-driver">Partner</span>' : '<span class="badge b-role-customer">Rider</span>'}${r.customerBlocked ? ' <span class="badge b-blocked">Blocked</span>' : ''}`;
       if (key === 'phone') return `<span class="num">${esc(r.customerPhone)}</span>`;
       if (key === 'location') return `<a href="https://maps.google.com/?q=${r.lat},${r.lng}" target="_blank" rel="noreferrer">Open map</a>
         <div class="subtle num">${r.lat.toFixed(4)}, ${r.lng.toFixed(4)}</div>`;
@@ -1806,6 +1813,45 @@ async function renderDocument(box, url, alt) {
   box.append(foot);
 }
 
+/** What each liveness frame was taken during - the server's record of what it asked, not the phone's. */
+const SELFIE_PROMPT_LABEL = {
+  TURN_LEFT: 'Asked to turn her head to her left',
+  TURN_RIGHT: 'Asked to turn her head to her right',
+  LOOK_UP: 'Asked to tilt her head up',
+  SMILE: 'Asked to smile',
+  CLOSE_EYES: 'Asked to close her eyes',
+};
+
+/**
+ * The live selfie beside the ID, and under both the frames taken while she
+ * followed the prompts. A frame that does not show what was asked - eyes
+ * open when they should be closed, the same face at the same angle every
+ * time - is worth a second look. Nothing here decides; the operator does.
+ */
+function renderLiveSelfie(root, live) {
+  const selfieBox = root.querySelector('#selfieBox');
+  const framesBox = root.querySelector('#livenessBox');
+  if (!selfieBox) return;
+  if (!live) {
+    // Submitted before the selfie was required. Said, so it is not read as
+    // a selfie that failed to load.
+    selfieBox.innerHTML = '<div class="fallback">No live selfie on file. This account submitted before the selfie was required — reject with a note asking her to re-submit if you cannot confirm who she is from the ID alone.</div>';
+    return;
+  }
+  const when = root.querySelector('#selfieWhen');
+  if (when && live.capturedAt) when.textContent = `taken ${time(live.capturedAt)}`;
+  renderDocument(selfieBox, live.selfieUrl, 'Live selfie taken in the app');
+  if (!framesBox || !live.livenessFramesUrl) return;
+  const prompts = live.prompts || [];
+  framesBox.innerHTML = `
+    <div class="doc-label liveness-label">Taken while she followed the prompts, left to right</div>
+    <div class="doc" id="framesDoc"></div>
+    <div class="liveness-captions liveness-cols-${Math.min(prompts.length, 4)}">
+      ${prompts.map((p, i) => `<span>${i + 1}. ${esc(SELFIE_PROMPT_LABEL[p] || p)}</span>`).join('')}
+    </div>`;
+  renderDocument(framesBox.querySelector('#framesDoc'), live.livenessFramesUrl, 'Frames taken during the liveness prompts');
+}
+
 function openDriver(r) {
   const w = waited(r.updatedAt);
   openModal(`
@@ -1826,8 +1872,19 @@ function openDriver(r) {
            number on her profile matches the vehicle she actually owns.
            Making an operator open them one at a time invites approving on
            the first without ever reading the second. -->
-      <label>Submitted documents</label>
+      <!-- The live selfie beside the ID photo, for the reviewer's own eyes.
+           Nothing in SheOut matches faces or scores them: this is evidence,
+           and the decision below is still a person's. -->
+      <label>Face check — compare the live selfie with the ID photo</label>
       <div class="docs">
+        <div>
+          <div class="doc-label">Live selfie <span class="doc-hint" id="selfieWhen"></span></div>
+          <div class="doc" id="selfieBox">
+            ${r.documentSubmitted
+              ? '<div class="skel doc-skel" aria-label="Loading selfie"></div>'
+              : '<div class="fallback">Nothing submitted yet.</div>'}
+          </div>
+        </div>
         <div>
           <div class="doc-label">Identity document</div>
           <div class="doc" id="docBox">
@@ -1836,7 +1893,12 @@ function openDriver(r) {
               : '<div class="fallback">Nothing uploaded yet.</div>'}
           </div>
         </div>
-        ${isCustomer(r) ? '' : `
+      </div>
+      <div id="livenessBox"></div>
+
+      ${isCustomer(r) ? '' : `
+      <label>Vehicle</label>
+      <div class="docs">
         <div>
           <div class="doc-label">Vehicle RC
             <span class="doc-hint">must match ${esc(r.vehicleRegistrationNumber || 'the number on file')}</span>
@@ -1846,12 +1908,12 @@ function openDriver(r) {
               ? '<div class="skel doc-skel" aria-label="Loading document"></div>'
               : '<div class="fallback">Nothing uploaded yet.</div>'}
           </div>
-        </div>`}
-      </div>
+        </div>
+      </div>`}
 
       <div class="check">
         <div class="top"><h4>ID &amp; gender check</h4>${badge(r.genderVerificationStatus)}</div>
-        <p>Confirm the document is readable and matches the ${isCustomer(r) ? "customer's" : "driver's"} name.</p>
+        <p>Confirm the document is readable and matches the ${isCustomer(r) ? "customer's" : "driver's"} name, and that the live selfie shows the same woman as the ID photo. That comparison is yours - nothing checks it automatically.</p>
         <div class="row">
           <button class="btn btn-approve" data-decide="gender" data-decision="VERIFIED" type="button">Approve</button>
           <button class="btn btn-reject" data-decide="gender" data-decision="REJECTED" type="button">Reject</button>
@@ -1882,6 +1944,7 @@ function openDriver(r) {
     api(`/admin/verification/${r.accountId}/document`)
       .then(out => {
         renderDocument(root.querySelector('#docBox'), out.url, 'Submitted identity document');
+        renderLiveSelfie(root, out.liveSelfie);
         const rcBox = root.querySelector('#rcBox');
         if (!rcBox) return;
         if (out.rcUrl) {
@@ -1895,7 +1958,7 @@ function openDriver(r) {
       })
       .catch(err => {
         if (err.message === 'unauthorized') return;
-        ['#docBox', '#rcBox'].forEach(sel => {
+        ['#docBox', '#rcBox', '#selfieBox'].forEach(sel => {
           const box = root.querySelector(sel);
           if (box) box.innerHTML = `<div class="fallback">Could not load the document: ${esc(err.message)}</div>`;
         });

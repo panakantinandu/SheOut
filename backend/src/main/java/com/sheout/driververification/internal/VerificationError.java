@@ -27,6 +27,15 @@ public enum VerificationError {
     /** Larger than the server accepts. */
     DOCUMENT_TOO_LARGE,
 
+    /** Submitted without the live selfie, or with one that is not a readable photo. */
+    SELFIE_REQUIRED,
+
+    /** The selfie does not answer the latest challenge issued to this account, or answers it too late. */
+    SELFIE_CHALLENGE_EXPIRED,
+
+    /** Identity already VERIFIED - the approved document is not replaced by a new upload. */
+    ALREADY_VERIFIED,
+
     /** Gender review attempted while status isn't UNDER_REVIEW (must be submitted first). */
     NOT_UNDER_REVIEW,
 

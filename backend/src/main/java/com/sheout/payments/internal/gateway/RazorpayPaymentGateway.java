@@ -145,6 +145,13 @@ public class RazorpayPaymentGateway implements PaymentGateway {
 
     @Override
     public boolean verifyWebhookSignature(String payload, String signature) {
+        // No secret, no webhook. An HMAC over a blank key is one anybody can
+        // compute, and a forged "payment.captured" marks a trip or a wallet
+        // top-up paid. Refused today only because the JDK happens to reject
+        // an empty key - this says it on purpose.
+        if (webhookSecret == null || webhookSecret.isBlank() || signature == null || signature.isBlank()) {
+            return false;
+        }
         try {
             return Utils.verifyWebhookSignature(payload, signature, webhookSecret);
         } catch (RazorpayException e) {

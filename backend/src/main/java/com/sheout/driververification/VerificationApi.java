@@ -88,4 +88,7 @@ public interface VerificationApi {
      * An operator reads them together; nothing else should read either.
      */
     Optional<String> findRcDocumentUrl(UUID accountId);
+
+    /** Empty when no live selfie is on file - every submission before it was required. */
+    Optional<LiveSelfie> findLiveSelfie(UUID accountId);
 }

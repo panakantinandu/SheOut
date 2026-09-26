@@ -51,7 +51,11 @@ public class SosController {
 
     @PostMapping
     public ResponseEntity<SosResponse> trigger(@Valid @RequestBody SosRequest request) {
-        CurrentAccount caller = requireCustomer();
+        // Riders and partners both. A partner is as alone on a night road as
+        // her rider, and she had no SOS at all. Operators are alerted either
+        // way; a partner has no emergency contacts on file yet, so hers is
+        // answered by the operator on duty.
+        CurrentAccount caller = requireRiderOrPartner();
         SosService.SosOutcome outcome = sosService.trigger(caller.accountId(), request.lat(), request.lng(), request.bookingId());
         return ResponseEntity.ok(SosResponse.from(outcome));
     }
@@ -62,11 +66,11 @@ public class SosController {
         return ResponseEntity.ok(sosService.findActiveAlerts());
     }
 
-    private CurrentAccount requireCustomer() {
+    private CurrentAccount requireRiderOrPartner() {
         CurrentAccount caller = CurrentAccountContext.get()
                 .orElseThrow(() -> ApiException.unauthorized("Authentication required"));
-        if (caller.role() != AccountRole.CUSTOMER) {
-            throw ApiException.forbidden("Customer role required");
+        if (caller.role() != AccountRole.CUSTOMER && caller.role() != AccountRole.DRIVER) {
+            throw ApiException.forbidden("Rider or partner role required");
         }
         return caller;
     }
