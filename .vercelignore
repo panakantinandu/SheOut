@@ -1,0 +1,9 @@
+# The Vercel CLI uploads the repository root (each project's Root Directory is
+# set inside it), and it does not read .gitignore here - so a local backend
+# build (a 138 MB jar) went up with the apps and broke the 100 MB file limit.
+# Neither app needs anything outside frontend/ and the root package files.
+backend/
+scratchpad/
+docs/
+dump.rdb
+**/dist/
