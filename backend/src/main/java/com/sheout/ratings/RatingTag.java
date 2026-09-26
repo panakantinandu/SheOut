@@ -36,6 +36,11 @@ public enum RatingTag {
     VEHICLE_MISMATCH("Vehicle didn't match details", Sentiment.NEGATIVE, AccountRole.CUSTOMER),
     UNUSUAL_ROUTE("Route seemed unusual", Sentiment.NEGATIVE, AccountRole.CUSTOMER),
     UNSAFE_DRIVING("Unsafe driving", Sentiment.NEGATIVE, AccountRole.CUSTOMER),
+    // Where she was set down, not how she got there. Only ever showed up in
+    // free-text complaints, where it could not be counted; as tags it can be
+    // counted per partner and per drop point.
+    DROPPED_WRONG_SIDE_OF_ROAD("Dropped on wrong side of road", Sentiment.NEGATIVE, AccountRole.CUSTOMER),
+    HAD_TO_CROSS_TRAFFIC("Had to cross traffic to reach destination", Sentiment.NEGATIVE, AccountRole.CUSTOMER),
     CUSTOMER_OTHER("Other", Sentiment.NEGATIVE, AccountRole.CUSTOMER),
     DRIVER_ON_TIME("On time", Sentiment.POSITIVE, AccountRole.CUSTOMER),
     DRIVER_FRIENDLY("Friendly", Sentiment.POSITIVE, AccountRole.CUSTOMER),

@@ -19,6 +19,7 @@ import com.sheout.dispatch.internal.redis.ApproachStore;
 import com.sheout.dispatch.internal.matching.MatchingStrategy;
 import com.sheout.dispatch.internal.redis.DriverLocationStore;
 import com.sheout.dispatch.internal.redis.OfferStore;
+import com.sheout.dispatch.internal.redis.TripTrailStore;
 import com.sheout.dispatch.internal.redis.RoundState;
 import com.sheout.sharedkernel.Result;
 import com.sheout.sharedkernel.event.DomainEventPublisher;
@@ -62,6 +63,7 @@ public class DispatchService {
     private final BookingApi bookingApi;
     private final DomainEventPublisher eventPublisher;
     private final ApproachStore approachStore;
+    private final TripTrailStore trailStore;
 
     private final double initialRadiusKm;
     private final double radiusExpansionFactor;
@@ -82,6 +84,7 @@ public class DispatchService {
             AuthApi authApi,
             DomainEventPublisher eventPublisher,
             ApproachStore approachStore,
+            TripTrailStore trailStore,
             @Value("${sheout.dispatch.initial-radius-km:3.0}") double initialRadiusKm,
             @Value("${sheout.dispatch.radius-expansion-factor:2.0}") double radiusExpansionFactor,
             @Value("${sheout.dispatch.candidate-count:5}") int candidateCount,
@@ -105,6 +108,7 @@ public class DispatchService {
         this.bookingApi = bookingApi;
         this.eventPublisher = eventPublisher;
         this.approachStore = approachStore;
+        this.trailStore = trailStore;
         this.arrivingRadiusMetres = arrivingRadiusMetres;
         this.initialRadiusKm = initialRadiusKm;
         this.radiusExpansionFactor = radiusExpansionFactor;
@@ -118,6 +122,9 @@ public class DispatchService {
 
     public void recordLocation(UUID driverId, double lat, double lng) {
         locationStore.recordLocation(driverId, lat, lng);
+        // While a trip is under way this report is also its trail - the path
+        // compared with the quoted route when the trip ends.
+        trailStore.append(driverId, lat, lng, Instant.now());
         // Arriving is read off the reports she already sends, not polled for.
         approachStore.find(driverId).ifPresent(approach -> {
             double metres = GeoDistance.haversineKm(lat, lng, approach.pickupLat(), approach.pickupLng()) * 1000;
@@ -142,11 +149,15 @@ public class DispatchService {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onBookingStarted(BookingStarted event) {
         approachStore.finish(event.driverId());
+        // The trail begins where she started - at the pickup, the position
+        // the pickup check has just accepted.
+        trailStore.start(event.driverId(), event.bookingId(), locationStore.findLocation(event.driverId()).orElse(null));
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onBookingCompleted(BookingCompleted event) {
         approachStore.finish(event.driverId());
+        trailStore.stop(event.driverId());
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)

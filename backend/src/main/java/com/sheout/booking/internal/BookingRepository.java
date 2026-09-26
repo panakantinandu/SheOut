@@ -40,6 +40,9 @@ interface BookingRepository extends JpaRepository<BookingEntity, UUID>, JpaSpeci
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<BookingEntity> findLockedById(UUID id);
 
+    /** The route-review queue: flagged by the route check, not yet looked at. */
+    List<BookingEntity> findByRouteFlaggedAtIsNotNullAndRouteReviewedAtIsNullOrderByRouteFlaggedAtAsc();
+
     /** Backed by idx_bookings_driver - see BookingService.hasActiveTripAsDriver. */
     boolean existsByDriverIdAndStatusIn(UUID driverId, java.util.Collection<BookingStatus> statuses);
 

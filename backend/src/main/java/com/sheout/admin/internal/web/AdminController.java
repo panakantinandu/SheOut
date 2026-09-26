@@ -4,6 +4,7 @@ import com.sheout.admin.internal.AccountOpsRow;
 import com.sheout.admin.internal.AdminService;
 import com.sheout.admin.internal.BookingOpsRow;
 import com.sheout.admin.internal.TrustReviewRow;
+import com.sheout.admin.internal.RouteReviewRow;
 import com.sheout.admin.internal.ReviewQueueRow;
 import com.sheout.admin.internal.SosAlertRow;
 import com.sheout.auth.AccountRole;
@@ -300,6 +301,33 @@ public class AdminController {
      * keeps cancelling, or keeps being rated badly, crosses the line again
      * and comes back, which is what a review queue should do.
      */
+    /** Trips driven measurably shorter than quoted, awaiting a person. See AdminService.routeReviewQueue. */
+    @GetMapping("/route-review/queue")
+    public ResponseEntity<List<RouteReviewRow>> routeReviewQueue() {
+        requireAdmin();
+        return ResponseEntity.ok(adminService.routeReviewQueue());
+    }
+
+    /**
+     * Marks a flagged trip as looked at. The note is the record of what was
+     * decided and is required; the fare and both accounts are untouched -
+     * anything further (a refund, a word with the partner) is its own step.
+     */
+    @PostMapping("/route-review/{bookingId}/reviewed")
+    public ResponseEntity<RouteReviewRow> markRouteReviewed(@PathVariable UUID bookingId,
+                                                           @Valid @RequestBody RouteReviewRequest request) {
+        CurrentAccount admin = requireAdmin();
+        Result<RouteReviewRow, com.sheout.booking.BookingError> result =
+                adminService.recordRouteReview(bookingId, admin.accountId(), request.note());
+        if (result.isFailure()) {
+            throw ApiException.notFound("No flagged trip with that id");
+        }
+        return ResponseEntity.ok(result.value());
+    }
+
+    public record RouteReviewRequest(@NotBlank @Size(max = 1000) String note) {
+    }
+
     @PostMapping("/accounts/{accountId}/clear-review-flag")
     public ResponseEntity<AccountOpsRow> clearReviewFlag(@PathVariable UUID accountId) {
         requireAdmin();

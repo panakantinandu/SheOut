@@ -47,6 +47,12 @@ public enum BookingError {
     /** The driver has not reached the authoritative drop-off location yet. */
     DRIVER_NOT_AT_DROP_OFF,
 
+    /** Ending away from the drop (or with no trustworthy position) needs a DropOffDeviationReason. */
+    DROP_OFF_REASON_REQUIRED,
+
+    /** DropOffDeviationReason.OTHER needs a few words. */
+    DROP_OFF_NOTE_REQUIRED,
+
     /** The driver has not reached the authoritative pickup location yet. */
     DRIVER_NOT_AT_PICKUP,
 

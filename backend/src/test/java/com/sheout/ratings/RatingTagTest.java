@@ -33,7 +33,11 @@ class RatingTagTest {
     void everyOfferedListIsShortEnoughToRead() {
         for (AccountRole role : List.of(AccountRole.CUSTOMER, AccountRole.DRIVER)) {
             for (int stars : new int[]{1, 5}) {
-                assertThat(RatingTag.offeredTo(role, stars)).hasSizeBetween(4, 5);
+                // Seven at most: the rider's issue list carries the two
+                // drop-point tags (wrong side of road, crossing traffic) so
+                // those complaints can be counted. Past seven, chips wrap to a
+                // third row on a phone and stop being a glance.
+                assertThat(RatingTag.offeredTo(role, stars)).hasSizeBetween(4, 7);
             }
         }
     }

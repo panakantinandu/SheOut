@@ -13,6 +13,14 @@ import {
   reverseGeocode,
   searchPlaces,
 } from '../lib/geocode';
+import { SERVICE_RADIUS_KM } from '../lib/geocode';
+import {
+  newSessionToken,
+  placesAvailable,
+  resolvePlace,
+  suggestPlaces,
+  type PlaceSuggestion,
+} from '../lib/places';
 import { useTranslation } from '@sheout/design-system';
 
 /** Nominatim asks for roughly one request a second; this stays well inside that. */
@@ -74,6 +82,13 @@ export function LocationPicker({
   const [mode, setMode] = useState<PickerMode>(initialMode);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<GeoAddress[]>([]);
+  /** Google Places suggestions - the main search. `results` is Nominatim, kept as the fallback. */
+  const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
+  const [usingGoogle, setUsingGoogle] = useState(false);
+  const [resolvingPlace, setResolvingPlace] = useState(false);
+  /** Set when the place she chose is an area, not a spot: she is asked to put the pin on the gate. */
+  const [areaHint, setAreaHint] = useState(false);
+  const sessionToken = useRef<string>(newSessionToken());
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
@@ -90,6 +105,8 @@ export function LocationPicker({
     if (!open) {
       setQuery('');
       setResults([]);
+      setSuggestions([]);
+      setAreaHint(false);
       setError(null);
       setPin(null);
       setPinAddress(null);
@@ -101,6 +118,8 @@ export function LocationPicker({
     // pin already set for this field if there is one, so re-opening shows
     // where the current choice actually is.
     setMode(initialMode);
+    // One Places billing session per opening of the picker.
+    sessionToken.current = newSessionToken();
     setPin(startAt ? { lat: startAt.lat, lng: startAt.lng } : null);
     setPinAddress(startAt);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -138,6 +157,7 @@ export function LocationPicker({
     const trimmed = query.trim();
     if (trimmed.length < 3) {
       setResults([]);
+      setSuggestions([]);
       setSearching(false);
       return;
     }
@@ -149,6 +169,24 @@ export function LocationPicker({
       const controller = new AbortController();
       inFlight.current = controller;
       try {
+        // Google first: it knows buildings and businesses by name, and
+        // returns the place's own coordinates. Nominatim only if Google is
+        // not configured here or does not answer - a search that works
+        // roughly beats one that does not work at all.
+        if (placesAvailable()) {
+          try {
+            const found = await suggestPlaces(trimmed, sessionToken.current, controller.signal);
+            setSuggestions(found);
+            setResults([]);
+            setUsingGoogle(true);
+            setError(found.length === 0 ? t('picker.noResults') : null);
+            return;
+          } catch (err) {
+            if ((err as Error).name === 'AbortError') throw err;
+          }
+        }
+        setUsingGoogle(false);
+        setSuggestions([]);
         const found = await searchPlaces(trimmed, controller.signal);
         setResults(found);
         // Both messages name the way out rather than just the problem. A
@@ -169,6 +207,40 @@ export function LocationPicker({
     }, SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [query, open]);
+
+  /**
+   * She tapped a Google suggestion: fetch where it actually is. A building or
+   * business is used as it is. An area - a locality, a neighbourhood - is
+   * not a place anybody can be collected from, so the map opens with the pin
+   * on it and she is asked to move it to the exact spot.
+   */
+  async function handleSuggestion(suggestion: PlaceSuggestion) {
+    setResolvingPlace(true);
+    setError(null);
+    try {
+      const place = await resolvePlace(suggestion, sessionToken.current);
+      // The session ends with a Details call; the next search is a new one.
+      sessionToken.current = newSessionToken();
+      if (!isInServiceArea(place.address)) {
+        setError(outOfAreaMessage());
+        return;
+      }
+      if (place.precise) {
+        onSelect(place.address);
+        onClose();
+        return;
+      }
+      setPin({ lat: place.address.lat, lng: place.address.lng });
+      setPinAddress(place.address);
+      setPinError(null);
+      setAreaHint(true);
+      setMode('map');
+    } catch {
+      setError(t('picker.searchError'));
+    } finally {
+      setResolvingPlace(false);
+    }
+  }
 
   async function handleUseCurrent() {
     setLocating(true);
@@ -235,18 +307,28 @@ export function LocationPicker({
         </div>
 
         {mode === 'map' ? (
+          <>
+          {areaHint && (
+            <p className="rounded-input bg-primary-light px-3 py-2 text-sm text-primary" data-testid="picker-area-hint">
+              {t('picker.areaHint')}
+            </p>
+          )}
           <MapPane
             pin={pin}
             address={pinAddress}
             resolving={resolving}
             error={pinError}
             markerKind={markerKind}
-            onPick={resolvePin}
+            onPick={(lat, lng) => {
+              setAreaHint(false);
+              void resolvePin(lat, lng);
+            }}
             onConfirm={(address) => {
               onSelect(address);
               onClose();
             }}
           />
+          </>
         ) : (
         <>
         <TextField
@@ -265,6 +347,33 @@ export function LocationPicker({
 
         {error && <p className="text-sm text-danger">{error}</p>}
         {searching && <p className="text-sm text-text-secondary">{t('picker.searching')}</p>}
+
+        {resolvingPlace && <p className="text-sm text-text-secondary">{t('picker.searching')}</p>}
+
+        {suggestions.length > 0 && (
+          <Card className="divide-y divide-border p-0" data-testid="picker-suggestions">
+            {suggestions.map((s) => {
+              const servable = s.kmFromCentre == null || s.kmFromCentre <= SERVICE_RADIUS_KM;
+              return (
+                <button
+                  key={s.placeId}
+                  type="button"
+                  disabled={!servable || resolvingPlace}
+                  aria-disabled={!servable}
+                  onClick={() => servable && handleSuggestion(s)}
+                  className={servable ? 'flex w-full items-center gap-3 p-4 text-left' : 'flex w-full cursor-not-allowed items-center gap-3 p-4 text-left opacity-50'}
+                >
+                  <IconCircle tone="soft" size="sm" color={servable ? undefined : 'red'} icon={<MapPin />} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium text-text-primary">{s.mainText}</span>
+                    {s.secondaryText && <span className="block truncate text-xs text-text-secondary">{s.secondaryText}</span>}
+                    {!servable && <span className="block text-xs font-medium text-danger">{t('picker.outsideArea')}</span>}
+                  </span>
+                </button>
+              );
+            })}
+          </Card>
+        )}
 
         {results.length > 0 && (
           // Out-of-area matches are shown, not hidden. Hiding a real address
@@ -354,7 +463,8 @@ export function LocationPicker({
         </>
         )}
 
-        <p className="text-center text-xs text-text-secondary">{t('picker.osm')}</p>
+        {/* Google requires this beside Places results shown without a Google map. */}
+        <p className="text-center text-xs text-text-secondary">{usingGoogle && (mode === 'search' || areaHint) ? 'Powered by Google' : t('picker.osm')}</p>
       </div>
     </div>,
     document.body

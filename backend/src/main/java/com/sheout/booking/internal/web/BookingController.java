@@ -8,6 +8,7 @@ import com.sheout.booking.BookingError;
 import com.sheout.booking.BookingQuery;
 import com.sheout.booking.BookingStatus;
 import com.sheout.booking.CancellationReason;
+import com.sheout.booking.DropOffDeviationReason;
 import com.sheout.sharedkernel.geo.ServiceArea;
 import com.sheout.booking.internal.fare.FareQuote;
 import com.sheout.booking.internal.fare.RoutePath;
@@ -364,11 +365,23 @@ public class BookingController {
         return new PickupStatusResponse(bookingService.isDriverAtPickup(bookingId, caller.accountId()));
     }
 
+    /**
+     * Ends the trip. The body is optional: at the drop she sends nothing;
+     * away from it (or with no trustworthy position) the server answers 409
+     * DROP_OFF_REASON_REQUIRED and she sends it again with a reason - see
+     * BookingService.completeTrip.
+     */
     @PostMapping("/api/v1/bookings/{bookingId}/complete")
-    public ResponseEntity<BookingSummary> complete(@PathVariable UUID bookingId) {
+    public ResponseEntity<BookingSummary> complete(@PathVariable UUID bookingId,
+                                                   @Valid @RequestBody(required = false) CompleteTripRequest request) {
         CurrentAccount caller = requireRole(AccountRole.DRIVER);
         requireAssignedDriver(caller, bookingId);
-        return respond(bookingService.completeTrip(bookingId, caller.accountId()));
+        return respond(bookingService.completeTrip(bookingId, caller.accountId(),
+                request == null ? null : request.reason(), request == null ? null : request.note()));
+    }
+
+    /** Why she is ending the trip away from the drop, when she is. */
+    public record CompleteTripRequest(DropOffDeviationReason reason, @Size(max = 500) String note) {
     }
 
     /**
@@ -492,6 +505,13 @@ public class BookingController {
             case DRIVER_NOT_AT_PICKUP -> new ApiException(
                     HttpStatus.CONFLICT, "DRIVER_NOT_AT_PICKUP",
                     "Driver must be at the pickup location before starting the trip.");
+            // Codes the partner app acts on: it opens the reason picker.
+            case DROP_OFF_REASON_REQUIRED -> new ApiException(
+                    HttpStatus.CONFLICT, "DROP_OFF_REASON_REQUIRED",
+                    "You're not at the drop-off point. Tell us why you're ending the trip here.");
+            case DROP_OFF_NOTE_REQUIRED -> new ApiException(
+                    HttpStatus.BAD_REQUEST, "DROP_OFF_NOTE_REQUIRED",
+                    "Please say a little more about why you're ending the trip here.");
             case DRIVER_LOCATION_UNAVAILABLE -> new ApiException(
                     HttpStatus.CONFLICT, "DRIVER_LOCATION_UNAVAILABLE",
                     "Your current location is unavailable or too old. Refresh your location and try again.");

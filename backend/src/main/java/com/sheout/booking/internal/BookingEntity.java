@@ -3,6 +3,8 @@ package com.sheout.booking.internal;
 import com.sheout.booking.BookingCategory;
 import com.sheout.booking.BookingStatus;
 import com.sheout.booking.CancellationReason;
+import com.sheout.booking.DropOffDeviationReason;
+import com.sheout.booking.TripEndedBy;
 import com.sheout.booking.BookingType;
 import com.sheout.sharedkernel.BaseEntity;
 import jakarta.persistence.AttributeOverride;
@@ -110,9 +112,87 @@ public class BookingEntity extends BaseEntity {
     @Column(nullable = false)
     private int pickupAttempts;
 
+    // What was quoted, how it ended, and the route check - see
+    // V35__drop_off_and_route_check.sql for what each column records.
+    @Column(precision = 8, scale = 2)
+    private BigDecimal quotedDistanceKm;
+    private Boolean quotedDistanceRouted;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 10)
+    private TripEndedBy completedBy;
+    private Double completionLat;
+    private Double completionLng;
+    @Column(name = "completion_distance_from_drop_m")
+    private Integer completionDistanceFromDropM;
+    @Enumerated(EnumType.STRING)
+    @Column(length = 40)
+    private DropOffDeviationReason dropDeviationReason;
+    @Column(length = 500)
+    private String dropDeviationNote;
+
+    @Column(precision = 8, scale = 2)
+    private BigDecimal actualDistanceKm;
+    private Integer routePoints;
+    private Instant routeFlaggedAt;
+    private Instant routeReviewedAt;
+    private UUID routeReviewedBy;
+    @Column(length = 1000)
+    private String routeReviewNote;
+
     protected BookingEntity() {
         // JPA
     }
+
+    /** The road distance the fare was priced on, and whether it came from a real route or the fallback estimate. */
+    public void recordQuotedDistance(BigDecimal distanceKm, boolean routed) {
+        this.quotedDistanceKm = distanceKm;
+        this.quotedDistanceRouted = routed;
+    }
+
+    /**
+     * How the trip ended. The position is the partner's last trusted fix -
+     * null when there was none - and the reason is whatever she gave, kept
+     * whether or not it was needed.
+     */
+    public void recordCompletion(TripEndedBy by, Double lat, Double lng, Integer distanceFromDropM,
+                                 DropOffDeviationReason reason, String note) {
+        this.completedBy = by;
+        this.completionLat = lat;
+        this.completionLng = lng;
+        this.completionDistanceFromDropM = distanceFromDropM;
+        this.dropDeviationReason = reason;
+        this.dropDeviationNote = note;
+    }
+
+    /** The measured route. actualKm is null when the reports were too sparse to measure from; flagged means a person should look. */
+    public void recordRouteCheck(BigDecimal actualKm, int points, boolean flagged, Instant at) {
+        this.actualDistanceKm = actualKm;
+        this.routePoints = points;
+        this.routeFlaggedAt = flagged ? at : null;
+    }
+
+    /** An operator has looked, and says why it is fine (or what was done). Nothing else changes. */
+    public void recordRouteReview(UUID adminAccountId, String note, Instant at) {
+        this.routeReviewedAt = at;
+        this.routeReviewedBy = adminAccountId;
+        this.routeReviewNote = note;
+    }
+
+    public BigDecimal getQuotedDistanceKm() { return quotedDistanceKm; }
+    public Boolean getQuotedDistanceRouted() { return quotedDistanceRouted; }
+    public TripEndedBy getCompletedBy() { return completedBy; }
+    public Double getCompletionLat() { return completionLat; }
+    public Double getCompletionLng() { return completionLng; }
+    public Integer getCompletionDistanceFromDropM() { return completionDistanceFromDropM; }
+    public DropOffDeviationReason getDropDeviationReason() { return dropDeviationReason; }
+    public String getDropDeviationNote() { return dropDeviationNote; }
+    public BigDecimal getActualDistanceKm() { return actualDistanceKm; }
+    public Integer getRoutePoints() { return routePoints; }
+    public Instant getRouteFlaggedAt() { return routeFlaggedAt; }
+    public Instant getRouteReviewedAt() { return routeReviewedAt; }
+    public UUID getRouteReviewedBy() { return routeReviewedBy; }
+    public String getRouteReviewNote() { return routeReviewNote; }
 
     public BookingEntity(BookingType type, BookingCategory category, UUID customerId,
                           GeoAddressEmbeddable pickup, GeoAddressEmbeddable drop, BigDecimal fareEstimate) {
