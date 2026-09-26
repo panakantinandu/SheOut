@@ -40,6 +40,17 @@ and the same database/Redis the backend uses, reachable with `psql` and
 
     node sheout-load.mjs --api http://STAGING:8080 --minutes 15 --riders 100 --partners 40 --out results/
 
+Against the Render staging service (, which has
+ and  set in render.yaml), with
+staging's external database URL from the Render dashboard:
+
+    node sheout-load.mjs --api https://sheout-backend-staging.onrender.com       --code 123456 --rider-prefix +9199999970 --partner-prefix +9199999960       --db-url "$LOAD_DB_URL" --no-redis --minutes 15 --riders 100 --partners 40 --out results/
+
+Staging's Redis is internal-only, so  skips its sampling, and
+server memory and CPU come from the service's Metrics tab rather than this
+script. The report measures the network round trip before the run; every
+latency includes it.
+
 It writes `report.txt` (per-endpoint p50/p95/p99, errors, Redis command
 rate, trip outcomes, per-minute latency) and `results.json`.
 

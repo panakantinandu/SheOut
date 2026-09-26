@@ -31,10 +31,22 @@ const RIDERS = Number(arg('riders', '100'));
 const PARTNERS = Number(arg('partners', '40'));
 const OUT = arg('out', './load-results');
 const PSQL = arg('psql', 'C:/Program Files/PostgreSQL/18/bin/psql.exe');
+// A remote staging database: its external connection URL. Without it, psql
+// connects to a local database as sheout/sheout.
+const DB_URL = arg('db-url', process.env.LOAD_DB_URL ?? '');
+// Redis is sampled for its command rate when reachable; a remote staging
+// Redis is usually internal-only, so --no-redis skips it.
+const USE_REDIS = !process.argv.includes('--no-redis');
 const REDIS_CLI = arg('redis-cli', 'C:/Program Files/Memurai/memurai-cli.exe');
 const REDIS_PORT = arg('redis-port', '6380');
-const CODE = '246810';
-if (/onrender\.com|sheoutride\.com/.test(API)) throw new Error('Refusing to load-test production.');
+// Sign-in: each account's number is a prefix plus a counter, and all of them
+// sign in with CODE (DEV_OTP_NUMBERS or DEV_OTP_TEST_PREFIX on the backend).
+const CODE = arg('code', '246810');
+const RIDER_PREFIX = arg('rider-prefix', '+9197000');
+const PARTNER_PREFIX = arg('partner-prefix', '+9196000');
+// Production, by name. Staging also lives on onrender.com, so the whole
+// domain cannot be refused.
+if (/^https?:\/\/sheout-backend\.onrender\.com|sheoutride\.com/.test(API)) throw new Error('Refusing to load-test production.');
 fs.mkdirSync(OUT, { recursive: true });
 
 // The apps' real intervals.
@@ -98,11 +110,13 @@ async function call(route, method, path, token, body) {
 const outcome = { booked: 0, matched: 0, noDrivers: 0, started: 0, completedByPartner: 0, paid: 0, bookRefused: {}, matchSeconds: [] };
 
 // ---------------------------------------------------------------- setup
-const sql = (q) => execFileSync(PSQL, ['-h', 'localhost', '-U', 'sheout', '-d', 'sheout', '-tAc', q],
+const sql = (q) => execFileSync(PSQL, DB_URL ? [DB_URL, '-tAc', q] : ['-h', 'localhost', '-U', 'sheout', '-d', 'sheout', '-tAc', q],
   { env: { ...process.env, PGPASSWORD: 'sheout' } }).toString().trim();
 const redis = (...a) => execFileSync(REDIS_CLI, ['-p', REDIS_PORT, ...a]).toString().trim();
-const riderPhone = (i) => `+9197000${String(i).padStart(5, '0')}`;
-const partnerPhone = (i) => `+9196000${String(i).padStart(5, '0')}`;
+// +91 and ten digits: the prefix, then the counter zero-padded to fill it.
+const phoneFor = (prefix, i) => prefix + String(i).padStart(13 - prefix.length, '0');
+const riderPhone = (i) => phoneFor(RIDER_PREFIX, i);
+const partnerPhone = (i) => phoneFor(PARTNER_PREFIX, i);
 
 async function signIn(phone, role) {
   await call('setup', 'POST', '/api/v1/auth/otp/request', null, { phoneNumber: phone, role });
@@ -127,7 +141,7 @@ async function setup() {
   sql(`insert into rider_wallets (id, customer_account_id, balance, version, created_at, updated_at) select gen_random_uuid(), id, 100000, 0, now(), now() from accounts where id in (${rIds}) on conflict (customer_account_id) do update set balance = 100000`);
   // The per-rider hourly booking cap is a real rule, but a previous run's
   // bookings in the last hour would otherwise count against this one.
-  for (const k of redis('--scan', '--pattern', 'rl:booking-create:*').split(/\r?\n/).filter(Boolean)) redis('DEL', k);
+  if (USE_REDIS) for (const k of redis('--scan', '--pattern', 'rl:booking-create:*').split(/\r?\n/).filter(Boolean)) redis('DEL', k);
   return { riders, partners };
 }
 
@@ -257,6 +271,7 @@ async function riderLoop(r, startDelayMs) {
 // ---------------------------------------------------------------- server-side sampling
 const samples = [];
 function redisInfo() {
+  if (!USE_REDIS) return null;
   const info = Object.fromEntries(redis('INFO').split(/\r?\n/).filter((l) => l.includes(':')).map((l) => l.split(/:(.*)/s).slice(0, 2)));
   return {
     commands: Number(info.total_commands_processed), opsPerSec: Number(info.instantaneous_ops_per_sec),
@@ -264,6 +279,7 @@ function redisInfo() {
   };
 }
 function processStats() {
+  if (!/localhost|127\.0\.0\.1/.test(API)) return []; // only this machine's processes are visible
   try {
     const out = execFileSync('powershell', ['-NoProfile', '-Command',
       "Get-Process java,osrm-routed -ErrorAction SilentlyContinue | ForEach-Object { '{0}|{1}|{2}|{3}' -f $_.ProcessName,$_.Id,[int]($_.WorkingSet64/1MB),[math]::Round($_.TotalProcessorTime.TotalSeconds,1) }"]).toString();
@@ -273,6 +289,21 @@ function processStats() {
 
 // ---------------------------------------------------------------- report
 function pct(sorted, p) { return sorted.length ? sorted[Math.min(sorted.length - 1, Math.floor((p / 100) * sorted.length))] : 0; }
+// Round trip to the API with the server doing almost nothing: what every
+// figure in the report includes before the server does any work.
+let network = null;
+async function measureNetwork() {
+  const lat = [];
+  for (let i = 0; i < 20; i++) {
+    const t0 = performance.now();
+    await fetch(API + '/actuator/health').then((r) => r.text()).catch(() => undefined);
+    lat.push(performance.now() - t0);
+    await sleep(250);
+  }
+  lat.sort((a, b) => a - b);
+  network = { n: lat.length, p50: pct(lat, 50), min: lat[0] };
+}
+
 function report(durationS, redisStart, redisEnd) {
   const EXPECTED = { 'rider partner-location poll': [404], 'partner claim offer': [404, 409], 'rider pickup code': [404] };
   const rows = [];
@@ -292,9 +323,17 @@ function report(durationS, redisStart, redisEnd) {
   for (const r of rows) text += `${r.route.padEnd(30)}${String(r.n).padStart(6)} ${r.rps.toFixed(2).padStart(6)}${f(r.p50)}${f(r.p95)}${f(r.p99)}${f(r.max)}  ${String(r.errors).padStart(6)}  ${JSON.stringify(r.codes)}\n`;
   const allLat = [...stats.entries()].filter(([k]) => k !== 'setup').flatMap(([, s]) => s.lat).sort((a, b) => a - b);
   text += `\nALL: ${all} requests, ${(all / durationS).toFixed(1)} req/s, p50 ${pct(allLat, 50).toFixed(0)} ms, p95 ${pct(allLat, 95).toFixed(0)} ms, p99 ${pct(allLat, 99).toFixed(0)} ms, errors ${bad} (${((100 * bad) / Math.max(1, all)).toFixed(2)}%)\n`;
-  const redisCmds = redisEnd.commands - redisStart.commands;
-  text += `\nRedis: ${redisCmds} commands in ${(durationS / 60).toFixed(1)} min = ${(redisCmds / durationS).toFixed(1)}/s; `
-    + `${Math.round((redisCmds / durationS) * 86400).toLocaleString('en-US')}/day at this rate; peak memory ${Math.max(...samples.map((s) => s.redis.usedMemoryMb)).toFixed(1)} MB; peak clients ${Math.max(...samples.map((s) => s.redis.clients))}\n`;
+  if (redisStart && redisEnd) {
+    const redisCmds = redisEnd.commands - redisStart.commands;
+    text += `\nRedis: ${redisCmds} commands in ${(durationS / 60).toFixed(1)} min = ${(redisCmds / durationS).toFixed(1)}/s; `
+      + `${Math.round((redisCmds / durationS) * 86400).toLocaleString('en-US')}/day at this rate; peak memory ${Math.max(...samples.map((s) => s.redis.usedMemoryMb)).toFixed(1)} MB; peak clients ${Math.max(...samples.map((s) => s.redis.clients))}\n`;
+  } else {
+    text += '\nRedis: not sampled (--no-redis)\n';
+  }
+  if (network) {
+    text += `\nNetwork floor from this machine, measured before the run: health check p50 ${network.p50.toFixed(0)} ms, `
+      + `min ${network.min.toFixed(0)} ms over ${network.n} calls. Every latency above includes it.\n`;
+  }
   const mt = [...outcome.matchSeconds].sort((a, b) => a - b);
   text += `\nTrips: ${outcome.booked} booked, ${outcome.matched} matched (median ${pct(mt, 50).toFixed(0)} s to match), ${outcome.noDrivers} no partner available, `
     + `${outcome.started} started with a pickup code, ${outcome.completedByPartner} completed at the drop, ${outcome.paid} paid; booking refused: ${JSON.stringify(outcome.bookRefused)}\n`;
@@ -316,6 +355,7 @@ function report(durationS, redisStart, redisEnd) {
 
 // ---------------------------------------------------------------- run
 const { riders, partners } = await setup();
+await measureNetwork();
 console.log(`running ${MINUTES} min: ${riders.length} riders booking within the first minute, ${partners.length} partners online`);
 const redisStart = redisInfo();
 started.at = Date.now();

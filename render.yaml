@@ -266,7 +266,9 @@ services:
     runtime: docker
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
-    plan: free
+    # The same instance as production, so a load test here says what
+    # production can take.
+    plan: starter
     region: singapore
     healthCheckPath: /actuator/health
     envVars:
@@ -299,6 +301,10 @@ services:
         value: "+91999999"
       - key: DEV_OTP_TEST_CODE
         value: "123456"
+      # The load test (loadtest/) signs in 140 accounts from one machine, which
+      # the per-network sign-in limit (30) would stop. Staging only.
+      - key: LOGIN_PER_CLIENT
+        value: "100000"
       - key: ADMIN_BOOTSTRAP_PHONE
         sync: false
       - key: VERIFIED_BYPASS_PHONE
