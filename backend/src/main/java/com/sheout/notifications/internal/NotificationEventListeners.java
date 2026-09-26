@@ -18,6 +18,7 @@ import com.sheout.notifications.internal.channel.OutboundMessage;
 import com.sheout.payments.PaymentCaptured;
 import com.sheout.payments.PaymentMethod;
 import com.sheout.payouts.PayoutMarkedPaid;
+import com.sheout.campaigns.DriverIncentiveAwarded;
 import com.sheout.support.SupportReplyPosted;
 import com.sheout.users.AppLanguage;
 import com.sheout.users.DriverProfileApi;
@@ -238,6 +239,14 @@ class NotificationEventListeners {
                 "/payouts"));
     }
 
+    @Async(NotificationDeliveryConfig.EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void onIncentiveAwarded(DriverIncentiveAwarded event) {
+        dispatcher.deliver(event.driverId(), NotificationType.INCENTIVE_EARNED, localized(event.driverId(), "incentive",
+                language -> Map.of("amount", rupees(event.amount()), "name", event.incentiveName()),
+                "/earnings"));
+    }
+
     /** The receipt: emailed if she has an address, and kept in her inbox either way. */
     @Async(NotificationDeliveryConfig.EXECUTOR)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
@@ -270,6 +279,7 @@ class NotificationEventListeners {
         String how = switch (event.method()) {
             case CASH -> copy.one(language, "receipt.cash");
             case SHEOUT_WALLET -> copy.one(language, "receipt.sheoutWallet");
+            case PROMO_CREDIT -> copy.one(language, "receipt.promoCredit");
             default -> copy.one(language, "receipt.online").replace("{method}", methodName(event.method(), language));
         };
         return Map.of(

@@ -23,6 +23,9 @@ import com.sheout.driververification.VerificationApi;
 import com.sheout.driververification.VerificationStatus;
 import com.sheout.driververification.VerificationSummary;
 import com.sheout.booking.DropOffDeviationReason;
+import com.sheout.booking.BookingNoDriversAvailable;
+import com.sheout.campaigns.CampaignsApi;
+import com.sheout.campaigns.PromoApplication;
 import com.sheout.booking.RouteReviewItem;
 import com.sheout.booking.TripEndedBy;
 import com.sheout.dispatch.DriverLocation;
@@ -71,6 +74,7 @@ public class BookingService implements BookingApi {
     private final DropoffGeofence dropoffGeofence;
     private final DropoffGeofence pickupGeofence;
     private final TripRouteChecker routeChecker;
+    private final CampaignsApi campaigns;
 
     @Autowired
     public BookingService(BookingRepository bookingRepository,
@@ -87,10 +91,11 @@ public class BookingService implements BookingApi {
                            @Value("${sheout.booking.completion.drop-off-radius-metres:150}") double dropoffRadiusMetres,
                            @Value("${sheout.booking.completion.driver-location-max-age-seconds:30}") long driverLocationMaxAgeSeconds,
                            @Value("${sheout.dispatch.arriving-radius-metres:300}") double pickupRadiusMetres,
-                           TripRouteChecker routeChecker) {
+                           TripRouteChecker routeChecker,
+                           CampaignsApi campaigns) {
         this(bookingRepository, verificationApi, fareCalculator, eventPublisher, authApi, serviceArea,
                 devMode.verifiedRiderBypassPhone().orElse(""), partnerPaymentHoldMinutes, locationStore,
-                dropoffRadiusMetres, driverLocationMaxAgeSeconds, pickupRadiusMetres, routeChecker);
+                dropoffRadiusMetres, driverLocationMaxAgeSeconds, pickupRadiusMetres, routeChecker, campaigns);
     }
 
     private BookingService(BookingRepository bookingRepository,
@@ -105,8 +110,10 @@ public class BookingService implements BookingApi {
                            double dropoffRadiusMetres,
                            long driverLocationMaxAgeSeconds,
                            double pickupRadiusMetres,
-                           TripRouteChecker routeChecker) {
+                           TripRouteChecker routeChecker,
+                           CampaignsApi campaigns) {
         this.routeChecker = routeChecker;
+        this.campaigns = campaigns;
         this.partnerPaymentHold = Duration.ofMinutes(partnerPaymentHoldMinutes);
         this.bookingRepository = bookingRepository;
         this.verificationApi = verificationApi;
@@ -139,7 +146,7 @@ public class BookingService implements BookingApi {
                            long driverLocationMaxAgeSeconds) {
         this(bookingRepository, verificationApi, fareCalculator, eventPublisher, authApi, serviceArea,
                 verifiedBypassPhone, partnerPaymentHoldMinutes, locationStore, dropoffRadiusMetres,
-                driverLocationMaxAgeSeconds, 300, TripRouteChecker.withoutTrails());
+                driverLocationMaxAgeSeconds, 300, TripRouteChecker.withoutTrails(), NO_CAMPAIGNS);
     }
 
     /**
@@ -220,6 +227,14 @@ public class BookingService implements BookingApi {
         booking.recordQuotedDistance(
                 BigDecimal.valueOf(quote.distanceKm()).setScale(2, java.math.RoundingMode.HALF_UP), quote.routed());
         bookingRepository.save(booking);
+        // A promotion pays some or all of the fare on her behalf - the fare
+        // itself is unchanged. Held now, against the promotion's budget, in
+        // this transaction: if the booking does not commit, neither does the hold.
+        PromoApplication promo = campaigns.reserveDiscount(command.customerId(), booking.getId(), fareEstimate);
+        if (promo.applies()) {
+            booking.applyPromotion(promo.discount(), promo.promotionName());
+            bookingRepository.save(booking);
+        }
 
         eventPublisher.publish(new BookingRequested(
                 booking.getId(), booking.getCustomerId(), booking.getType(), booking.getCategory(),
@@ -466,7 +481,7 @@ public class BookingService implements BookingApi {
         bookingRepository.save(booking);
 
         eventPublisher.publish(new BookingCompleted(
-                booking.getId(), booking.getCustomerId(), booking.getDriverId(), booking.getFinalFare()));
+                booking.getId(), booking.getCustomerId(), booking.getDriverId(), booking.getFinalFare(), booking.amountDue()));
         return Result.success(toSummary(booking));
     }
 
@@ -507,7 +522,7 @@ public class BookingService implements BookingApi {
         bookingRepository.save(booking);
 
         eventPublisher.publish(new BookingCompleted(
-                booking.getId(), booking.getCustomerId(), booking.getDriverId(), booking.getFinalFare()));
+                booking.getId(), booking.getCustomerId(), booking.getDriverId(), booking.getFinalFare(), booking.amountDue()));
         return Result.success(toSummary(booking));
     }
 
@@ -619,6 +634,7 @@ public class BookingService implements BookingApi {
 
         booking.setStatus(BookingStatus.NO_DRIVERS_AVAILABLE);
         bookingRepository.save(booking);
+        eventPublisher.publish(new BookingNoDriversAvailable(booking.getId(), booking.getCustomerId()));
         return Result.success(toSummary(booking));
     }
 
@@ -793,9 +809,45 @@ public class BookingService implements BookingApi {
                 booking.getStartedAt(),
                 booking.getCompletedAt(),
                 booking.getCancelledAt(),
-                booking.getPaymentSettledAt()
+                booking.getPaymentSettledAt(),
+                booking.getPromoDiscount(),
+                booking.amountDue(),
+                booking.getPromotionName()
         );
     }
+
+    @Override
+    public long completedTripOrdinalForDriver(UUID driverId, UUID bookingId) {
+        return bookingRepository.findById(bookingId)
+                .filter(b -> driverId.equals(b.getDriverId()) && b.getStatus() == BookingStatus.COMPLETED && b.getCompletedAt() != null)
+                .map(b -> bookingRepository.countByDriverIdAndStatusAndCompletedAtLessThanEqual(
+                        driverId, BookingStatus.COMPLETED, b.getCompletedAt()))
+                .orElse(0L);
+    }
+
+    @Override
+    public long countFullPriceTripsForCustomer(UUID customerId, Instant from, Instant to) {
+        return bookingRepository.countByCustomerIdAndStatusAndPromoDiscountAndCompletedAtGreaterThanEqualAndCompletedAtLessThan(
+                customerId, BookingStatus.COMPLETED, BigDecimal.ZERO.setScale(2), from, to);
+    }
+
+    /** What a quote would come to for this rider after her best promotion - previewed, nothing held. */
+    public PromoApplication previewPromotion(UUID customerId, BigDecimal fare) {
+        return campaigns.previewDiscount(customerId, fare);
+    }
+
+    /** For direct construction in tests: no promotions apply. */
+    private static final CampaignsApi NO_CAMPAIGNS = new CampaignsApi() {
+        @Override
+        public PromoApplication previewDiscount(UUID customerId, BigDecimal fare) {
+            return PromoApplication.none();
+        }
+
+        @Override
+        public PromoApplication reserveDiscount(UUID customerId, UUID bookingId, BigDecimal fare) {
+            return PromoApplication.none();
+        }
+    };
 
     @Override
     @Transactional
@@ -823,7 +875,7 @@ public class BookingService implements BookingApi {
         return bookingRepository
                 .findFirstByCustomerIdAndStatusAndPaymentSettledAtIsNullOrderByCompletedAtAsc(
                         customerId, BookingStatus.COMPLETED)
-                .map(booking -> new PaymentHold(booking.getId(), booking.getFinalFare(), booking.getCompletedAt(), null));
+                .map(booking -> new PaymentHold(booking.getId(), booking.amountDue(), booking.getCompletedAt(), null));
     }
 
     @Override

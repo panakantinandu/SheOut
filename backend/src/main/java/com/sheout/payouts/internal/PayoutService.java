@@ -99,6 +99,23 @@ public class PayoutService implements PayoutApi {
         wallets.save(wallet);
     }
 
+    /**
+     * A campaign incentive: added to what she has earned and can withdraw,
+     * as its own entry so her statement shows it apart from trip earnings.
+     * In the award's own transaction - the award and the credit commit together.
+     */
+    @EventListener
+    @Transactional
+    public void onIncentiveAwarded(com.sheout.campaigns.DriverIncentiveAwarded event) {
+        if (entries.existsByIncentiveAwardId(event.awardId())) {
+            return;
+        }
+        DriverWalletEntity wallet = lockedWallet(event.driverId());
+        wallet.creditEarning(event.amount());
+        entries.save(WalletEntryEntity.forIncentive(event.driverId(), event.amount(), event.bookingId(), event.awardId()));
+        wallets.save(wallet);
+    }
+
     @Override
     public WalletSummary getWallet(UUID driverAccountId) {
         return wallets.findByDriverAccountId(driverAccountId)

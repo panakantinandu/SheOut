@@ -51,12 +51,19 @@ class BookingCompletedListener {
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onBookingCompleted(BookingCompleted event) {
-        PaymentEntity payment = paymentService.createPendingPayment(event.bookingId(), event.finalFare());
+        // Charged what she owes after any promotion; the partner's share is
+        // still worked out from the whole fare (see createPendingPayment).
+        PaymentEntity payment = paymentService.createPendingPayment(event.bookingId(), event.amountDue(), event.finalFare());
         if (payment == null) {
             return; // duplicate/retried event for a booking we've already recorded a payment for
         }
+        if (event.amountDue().signum() == 0) {
+            // A promotion paid the whole fare: nothing to charge, no gateway order.
+            paymentService.settleCoveredByPromotion(event.bookingId());
+            return;
+        }
         Result<GatewayOrder, PaymentError> orderResult =
-                paymentGateway.createOrder(event.bookingId(), event.finalFare());
+                paymentGateway.createOrder(event.bookingId(), event.amountDue());
         paymentService.applyGatewayResult(payment.getId(), orderResult);
     }
 }

@@ -126,4 +126,10 @@ public interface BookingApi {
 
     /** An operator has looked at a flagged trip; the note records what was decided. Nothing else changes. */
     Result<RouteReviewItem, BookingError> recordRouteReview(UUID bookingId, UUID adminAccountId, String note);
+
+    /** Which of this partner's completed trips this was - 1 for her first. 0 if it is not one of hers. */
+    long completedTripOrdinalForDriver(UUID driverId, UUID bookingId);
+
+    /** Completed trips this rider paid for in full - no promotion - in [from, to). */
+    long countFullPriceTripsForCustomer(UUID customerId, java.time.Instant from, java.time.Instant to);
 }

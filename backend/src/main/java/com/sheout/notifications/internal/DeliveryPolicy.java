@@ -31,6 +31,8 @@ record DeliveryPolicy(boolean push, boolean emailFallback, boolean smsFallback, 
             // a push saying so would arrive on top of it.
             case BOOKING_REQUESTED -> INBOX_ONLY;
             case DRIVER_OFFER, SOS_OPERATOR_ALERT -> PUSH_ONLY;
+            // Good news, already in her balance and her inbox: not worth a paid text.
+            case INCENTIVE_EARNED -> PUSH_ONLY;
             case BOOKING_ACCEPTED, DRIVER_ARRIVING, BOOKING_COMPLETED, BOOKING_CANCELLED,
                  NO_DRIVERS_AVAILABLE, PAYOUT_PAID -> PUSH_THEN_SMS;
             // The answer to "am I allowed to use this app yet", after a wait

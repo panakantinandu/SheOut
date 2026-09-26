@@ -325,7 +325,7 @@ export function MyBookings() {
                   </span>
                 ) : (
                   <div className="shrink-0">
-                    <AmountText amount={booking.finalFare ?? booking.fareEstimate} />
+                    <AmountText amount={booking.promoDiscount > 0 && booking.status !== 'CANCELLED' ? booking.amountDue : booking.finalFare ?? booking.fareEstimate} />
                   </div>
                 )}
               </div>

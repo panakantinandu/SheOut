@@ -372,7 +372,9 @@
     "PICKUP_VERIFICATION_LOCKED": "Too many wrong codes for this trip. Contact support.",
     "CUSTOMER_NOT_VERIFIED": "Your ID is still to be verified, so this trip cannot be booked yet.",
     "ACTIVE_BOOKING_EXISTS": "You already have a trip in progress. Finish or cancel it before booking another.",
-    "CUSTOMER_PHONE_REQUIRED": "Add and verify your phone number before booking a trip."
+    "CUSTOMER_PHONE_REQUIRED": "Add and verify your phone number before booking a trip.",
+    "PROMO_NOT_FOUND": "That code is not valid, or the offer has ended.",
+    "PROMO_ALREADY_REDEEMED": "You have already added this code."
   },
   "picker": {
     "noAddress": "No address found at that point. Move the pin somewhere closer to a road or landmark.",
@@ -510,7 +512,8 @@
     "payFromWalletBalance": "Pay from wallet (balance ₹{{amount}})",
     "addToWallet": "Add ₹{{amount}} or more to your wallet",
     "payOnline": "Pay online - UPI, card or netbanking",
-    "appOnlyNote": "Pay only in the app - never in cash or to your partner's own account. Your fare goes to her SheOut wallet, and you can book your next trip once it is paid."
+    "appOnlyNote": "Pay only in the app - never in cash or to your partner's own account. Your fare goes to her SheOut wallet, and you can book your next trip once it is paid.",
+    "coveredByPromo": "Covered by {{name}}"
   },
   "unpaid": {
     "title": "Pay ₹{{amount}} for your last trip",
@@ -693,5 +696,21 @@
       "title": "You are all set",
       "body": "Add money to your SheOut wallet whenever you like - every fare is paid in the app, never in cash."
     }
+  },
+  "promo": {
+    "fare": "Fare",
+    "offer": "Offer",
+    "youPayApplied": "You pay (promo applied)",
+    "youPayCovered": "You pay - covered by your offer",
+    "title": "Offers",
+    "none": "No offers right now.",
+    "creditLeft": "{{name}}: ₹{{amount}} left",
+    "creditHow": "Taken off your trip fares automatically",
+    "discountHow": "Applied to your next trip automatically",
+    "until": "until {{date}}",
+    "codeLabel": "Have a code?",
+    "apply": "Apply",
+    "codeAdded": "Code added. It will be applied to your next trip.",
+    "codeError": "Could not add that code"
   }
 }

@@ -32,5 +32,7 @@ public enum NotificationType {
     /** A trip was offered to this partner - see dispatch's DriverOffered. */
     DRIVER_OFFER,
     PAYOUT_PAID,
+    /** A campaign bonus reached her wallet - see campaigns' DriverIncentiveAwarded. */
+    INCENTIVE_EARNED,
     PAYMENT_RECEIPT
 }

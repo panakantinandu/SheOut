@@ -546,6 +546,39 @@
     .kv { grid-template-columns: 1fr; gap: 2px 0; }
     .kv dt { margin-top: 8px; }
   }
+  /* ---------- campaigns ---------- */
+  .camp-toolbar { display: flex; gap: 8px; flex-wrap: wrap; justify-content: space-between; align-items: center; margin: 14px 0 6px; }
+  .camp-toolbar h3 { margin: 0; font-size: 14px; font-weight: 700; }
+  .camp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+  .camp { border: 1px solid var(--line); border-radius: 10px; padding: 14px; background: var(--panel); display: flex; flex-direction: column; gap: 10px; }
+  .camp.off { background: var(--panel-soft); }
+  .camp .top { display: flex; gap: 8px; align-items: flex-start; justify-content: space-between; }
+  .camp .name { font-weight: 700; font-size: 14px; }
+  .camp .terms { font-size: 12.5px; color: var(--muted); }
+  /* Budget is the headline of every campaign: the one number that says
+     whether it can keep running. */
+  .budget .figures { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .budget .used { font-size: 20px; font-weight: 750; font-variant-numeric: tabular-nums; }
+  .budget .of { font-size: 12.5px; color: var(--muted); }
+  .budget .left { font-size: 13px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .bar { height: 10px; border-radius: 999px; background: var(--line-soft); overflow: hidden; margin-top: 6px; }
+  .bar > span { display: block; height: 100%; background: var(--green); border-radius: 999px; transition: width .4s; }
+  .bar.warn > span { background: var(--amber); }
+  .bar.full > span { background: var(--red); }
+  .camp .stats { display: flex; gap: 14px; font-size: 12.5px; color: var(--muted); flex-wrap: wrap; }
+  .camp .stats strong { color: var(--text); font-variant-numeric: tabular-nums; }
+  .camp .acts { display: flex; gap: 8px; }
+  .retention { border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-top: 18px; }
+  .retention h3 { margin: 0 0 4px; font-size: 14px; font-weight: 700; }
+  .retention .kpis { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin: 12px 0; }
+  .retention .kpi { background: var(--panel-soft); border: 1px solid var(--line-soft); border-radius: 8px; padding: 10px 12px; }
+  .retention .kpi b { display: block; font-size: 18px; font-variant-numeric: tabular-nums; }
+  .retention .kpi span { font-size: 12px; color: var(--muted); }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+  .form-grid .span2 { grid-column: 1 / -1; }
+  .modal select { width: 100%; padding: 9px 11px; border: 1px solid var(--line); border-radius: 8px; font: inherit; background: var(--panel); color: var(--text); }
+  .modal .help { font-size: 11.5px; color: var(--muted); margin-top: 4px; }
+  @media (max-width: 560px) { .form-grid { grid-template-columns: 1fr; } .camp-grid { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
@@ -638,6 +671,11 @@
       <button data-tab="feedback" aria-current="false">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.3a2 2 0 002-1.7l1.4-9A2 2 0 0019.7 9z"/><path d="M7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3"/></svg>
         Feedback <span class="count" id="cFeedback">–</span>
+      </button>
+      <div class="label">Growth</div>
+      <button data-tab="campaigns" aria-current="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 12v9H4v-9"/><path d="M2 7h20v5H2z"/><path d="M12 21V7"/><path d="M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z"/></svg>
+        Campaigns <span class="count" id="cCampaigns">–</span>
       </button>
       <div class="label">App</div>
       <button data-tab="announcements" aria-current="false">
@@ -1431,6 +1469,23 @@ const VIEWS = {
       if (key === 'sentAt') return `<span class="subtle nowrap">${time(r.sentAt)}</span>${r.note ? `<div class="subtle clamp" title="${esc(r.note)}">${esc(r.note)}</div>` : ''}`;
       return '—';
     },
+  },
+
+  campaigns: {
+    title: 'Campaigns',
+    desc: 'Temporary offers on top of the real fare: rider promotions, and partner incentives paid from SheOut\'s margin. The fare formula itself never changes. Every campaign has a budget cap and stops by itself when the cap is reached.',
+    cardTitle: 'Campaigns',
+    hint: 'Spend refreshes every 15 seconds while this page is open',
+    custom: true,
+    columns: [],
+    load: async () => {
+      const [overview, retention] = await Promise.all([
+        api('/admin/campaigns'),
+        api('/admin/campaigns/signup-retention'),
+      ]);
+      return { overview, retention };
+    },
+    paint: data => paintCampaigns(data),
   },
 
   content: {
@@ -2443,6 +2498,284 @@ function clientPage(items, page = 0) {
   };
 }
 
+// ---- campaigns ------------------------------------------------------------
+const CAMPAIGN_STATUS = {
+  ACTIVE: ['Running', 'b-green'],
+  SCHEDULED: ['Scheduled', 'b-grey'],
+  PAUSED: ['Paused', 'b-amber'],
+  BUDGET_REACHED: ['Budget reached', 'b-red'],
+  ENDED: ['Ended', 'b-grey'],
+};
+const PROMOTION_TYPES = {
+  SIGNUP_CREDIT: 'Signup credit',
+  PERCENTAGE_DISCOUNT: 'Percentage off',
+  FLAT_DISCOUNT: 'Flat amount off',
+};
+const INCENTIVE_TYPES = {
+  PER_TRIP_BONUS: 'Bonus per trip',
+  MINIMUM_EARNINGS_GUARANTEE: 'Minimum earnings per trip',
+};
+let campaignsData = null;
+let campaignsTimer = null;
+
+function campaignBadge(status) {
+  const [text, cls] = CAMPAIGN_STATUS[status] || [status, 'b-grey'];
+  return `<span class="badge ${cls}">${esc(text)}</span>`;
+}
+
+/** What the rider gets, in one line. Returns HTML: every value in it is escaped. */
+function promotionTerms(p) {
+  const parts = [];
+  if (p.type === 'SIGNUP_CREDIT') parts.push(esc(`${rupees(p.value)} credit for every new rider${p.creditValidDays ? `, usable for ${p.creditValidDays} days` : ''}`));
+  if (p.type === 'PERCENTAGE_DISCOUNT') parts.push(esc(`${Number(p.value)}% off${p.maxDiscountPerBooking ? ` (up to ${rupees(p.maxDiscountPerBooking)})` : ''}`));
+  if (p.type === 'FLAT_DISCOUNT') parts.push(esc(`${rupees(p.value)} off`));
+  if (p.type !== 'SIGNUP_CREDIT') parts.push(`${p.maxUsesPerAccount} trip${p.maxUsesPerAccount === 1 ? '' : 's'} per rider`);
+  parts.push(p.code ? `code <span class="num strong">${esc(p.code)}</span>` : (p.type === 'SIGNUP_CREDIT' ? 'given automatically at signup' : 'no code - every rider gets it'));
+  return parts.join(' · ');
+}
+
+function incentiveTerms(i) {
+  const scope = i.firstNTrips ? `on each of a partner's first ${i.firstNTrips} completed trips` : 'on every completed trip';
+  return i.type === 'PER_TRIP_BONUS'
+    ? `${rupees(i.value)} bonus ${scope}`
+    : `Tops her share up to ${rupees(i.value)} ${scope}`;
+}
+
+function datesText(c) {
+  const from = new Date(c.validFrom) > new Date() ? `Starts ${time(c.validFrom)}` : `Since ${time(c.validFrom)}`;
+  return c.validUntil ? `${from}, until ${time(c.validUntil)}` : `${from}, no end date`;
+}
+
+/** The headline of every campaign: what it has used, and what it has left. */
+function budgetBlock(c) {
+  const cap = Number(c.budgetCap), spent = Number(c.spent);
+  const pct = cap > 0 ? Math.min(100, (spent / cap) * 100) : 0;
+  const cls = pct >= 100 ? 'full' : pct >= 80 ? 'warn' : '';
+  return `<div class="budget">
+    <div class="figures">
+      <div><span class="used" data-spent>${rupees(spent)}</span> <span class="of">used of ${rupees(cap)}</span></div>
+      <div class="left" data-remaining>${rupees(c.remaining)} left</div>
+    </div>
+    <div class="bar ${cls}" role="progressbar" aria-label="Budget used" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct.toFixed(0)}"><span style="width:${pct.toFixed(1)}%"></span></div>
+  </div>`;
+}
+
+function campaignCard(kind, c) {
+  const stats = kind === 'promotion'
+    ? `<span><strong>${c.ridersGranted}</strong> rider${c.ridersGranted === 1 ? '' : 's'} given it</span><span><strong>${c.tripsDiscounted}</strong> finished trip${c.tripsDiscounted === 1 ? '' : 's'} discounted</span>`
+    : `<span><strong>${c.partnersAwarded}</strong> partner${c.partnersAwarded === 1 ? '' : 's'} paid</span><span><strong>${c.awards}</strong> trip bonus${c.awards === 1 ? '' : 'es'}</span>`;
+  return `<div class="camp ${c.status !== 'ACTIVE' ? 'off' : ''}" data-camp="${kind}:${esc(c.id)}">
+    <div class="top">
+      <div><div class="name">${esc(c.name)}</div>
+        <div class="terms">${esc(kind === 'promotion' ? PROMOTION_TYPES[c.type] : INCENTIVE_TYPES[c.type])}</div></div>
+      <span data-status>${campaignBadge(c.status)}</span>
+    </div>
+    ${budgetBlock(c)}
+    <div class="terms">${kind === 'promotion' ? promotionTerms(c) : esc(incentiveTerms(c))}</div>
+    <div class="terms">${esc(datesText(c))}</div>
+    <div class="stats">${stats}</div>
+    <div class="acts">
+      <button class="btn" type="button" data-camp-edit>Edit</button>
+      ${c.status === 'ENDED' ? '' : c.status === 'PAUSED'
+        ? '<button class="btn btn-approve" type="button" data-camp-resume>Resume</button>'
+        : '<button class="btn btn-reject" type="button" data-camp-pause>Pause</button>'}
+    </div>
+  </div>`;
+}
+
+function retentionBlock(r) {
+  const rate = r.cameBackRatePercent == null ? '—' : `${Number(r.cameBackRatePercent).toFixed(1)}%`;
+  const avg = r.averageFullPriceTrips == null ? '—' : Number(r.averageFullPriceTrips).toFixed(2);
+  return `<div class="retention" data-retention>
+    <h3>Does the signup credit bring riders back?</h3>
+    <p class="subtle">For each rider whose signup credit has ended - spent or lapsed - the trips she paid for in full in the 30 days after.
+      The rate counts only riders whose 30 days are over: a rider whose credit ended yesterday has not had the chance to come back yet.</p>
+    <div class="kpis">
+      <div class="kpi"><b>${r.creditsGranted}</b><span>riders given the credit</span></div>
+      <div class="kpi"><b>${r.stillActive}</b><span>credit not ended yet</span></div>
+      <div class="kpi"><b>${r.ended}</b><span>credit ended (${r.endedByUse} spent, ${r.endedByExpiry} lapsed)</span></div>
+      <div class="kpi"><b>${rate}</b><span>came back at full price (${r.cameBackAtFullPrice} of ${r.windowComplete} whose 30 days are over)</span></div>
+      <div class="kpi"><b>${avg}</b><span>full-price trips each in those 30 days</span></div>
+      <div class="kpi"><b>${r.cameBackSoFar} of ${r.windowOpen}</b><span>still inside their 30 days: back so far</span></div>
+    </div>
+    ${r.riders.length ? `<div class="scroll"><table>
+      <thead><tr><th>Rider</th><th>Credit used</th><th>Credit ended</th><th>Full-price trips after</th></tr></thead>
+      <tbody>${r.riders.map(x => `<tr>
+        <td class="num">${esc(x.phoneNumber || x.accountId)}</td>
+        <td>${rupees(x.creditUsed)}</td>
+        <td>${x.endedBy === 'EXHAUSTED' ? 'Spent' : 'Lapsed'} <span class="subtle nowrap">${time(x.endedAt)}</span></td>
+        <td><strong>${x.fullPriceTrips}</strong> ${x.windowComplete ? '' : '<span class="badge b-grey">30 days not over</span>'}</td>
+      </tr>`).join('')}</tbody></table></div>` : '<p class="subtle">No rider\'s credit has ended yet, so there is nothing to measure.</p>'}
+  </div>`;
+}
+
+function paintCampaigns(data) {
+  campaignsData = data;
+  const { overview, retention } = data;
+  $('cCampaigns').textContent = [...overview.promotions, ...overview.incentives].filter(c => c.status === 'ACTIVE').length;
+  $('panel').innerHTML = `
+    <div class="camp-toolbar"><h3>Rider promotions</h3><button class="btn btn-primary" type="button" data-camp-new="promotion">New promotion</button></div>
+    ${overview.promotions.length ? `<div class="camp-grid">${overview.promotions.map(p => campaignCard('promotion', p)).join('')}</div>`
+      : '<p class="subtle">No rider promotions yet.</p>'}
+    <p class="subtle">Used includes discounts on trips booked but not yet finished. A cancelled trip, or one no partner took, gives its discount back.</p>
+    <div class="camp-toolbar"><h3>Partner incentives</h3><button class="btn btn-primary" type="button" data-camp-new="incentive">New incentive</button></div>
+    ${overview.incentives.length ? `<div class="camp-grid">${overview.incentives.map(i => campaignCard('incentive', i)).join('')}</div>`
+      : '<p class="subtle">No partner incentives yet.</p>'}
+    ${retentionBlock(retention)}`;
+  scheduleCampaignRefresh();
+}
+
+/**
+ * Spend moves with every booking, so the page keeps itself current rather
+ * than showing a figure from whenever it was opened. Held while a form or
+ * confirmation is open, so an edit in progress is never repainted away.
+ */
+function scheduleCampaignRefresh() {
+  clearTimeout(campaignsTimer);
+  campaignsTimer = setTimeout(async () => {
+    if (tab !== 'campaigns') return;
+    if ($('modalRoot').innerHTML || document.visibilityState !== 'visible') { scheduleCampaignRefresh(); return; }
+    try {
+      const data = await VIEWS.campaigns.load();
+      if (tab !== 'campaigns') return;
+      if ($('modalRoot').innerHTML) scheduleCampaignRefresh();
+      else paintCampaigns(data);
+    } catch (err) {
+      if (err.message !== 'unauthorized') scheduleCampaignRefresh();
+    }
+  }, 15000);
+}
+
+/** An Instant as the value of a datetime-local input, in this browser's time zone. */
+function toLocalInput(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+const fromLocalInput = v => (v ? new Date(v).toISOString() : null);
+const numOrNull = v => (String(v).trim() === '' ? null : Number(v));
+
+const CAMPAIGN_VALUE_LABEL = {
+  SIGNUP_CREDIT: 'Credit per rider (₹)',
+  PERCENTAGE_DISCOUNT: 'Percent off',
+  FLAT_DISCOUNT: 'Amount off (₹)',
+  PER_TRIP_BONUS: 'Bonus per trip (₹)',
+  MINIMUM_EARNINGS_GUARANTEE: 'Minimum share per trip (₹)',
+};
+
+function openCampaignForm(kind, c) {
+  const editing = !!c;
+  const promo = kind === 'promotion';
+  const types = promo ? PROMOTION_TYPES : INCENTIVE_TYPES;
+  const type = c ? c.type : Object.keys(types)[0];
+  openModal(`
+    <div class="modal-head"><h3>${editing ? 'Edit' : 'New'} ${promo ? 'rider promotion' : 'partner incentive'}</h3>
+      <p>${promo
+        ? 'Taken off what the rider pays. The fare, and the partner\'s share of it, do not change - SheOut pays the difference.'
+        : 'Paid into the partner\'s wallet on top of her share, from SheOut\'s margin.'}${editing ? ' Changes apply from now on; money already given stays given.' : ''}</p></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="span2"><label for="cfName">Name</label><input id="cfName" maxlength="120" value="${esc(c ? c.name : '')}"></div>
+        <div><label for="cfType">Type</label><select id="cfType" ${editing ? 'disabled' : ''}>
+          ${Object.entries(types).map(([v, l]) => `<option value="${v}" ${v === type ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></div>
+        <div><label for="cfValue" id="cfValueLabel">Value</label><input id="cfValue" type="number" min="0" step="0.01" value="${c ? Number(c.value) : ''}"></div>
+        ${promo ? `
+        <div data-show="PERCENTAGE_DISCOUNT"><label for="cfMaxPer">Most off one trip (₹, optional)</label><input id="cfMaxPer" type="number" min="0" step="0.01" value="${c && c.maxDiscountPerBooking != null ? Number(c.maxDiscountPerBooking) : ''}"></div>
+        <div data-hide="SIGNUP_CREDIT"><label for="cfUses">Trips per rider</label><input id="cfUses" type="number" min="1" step="1" value="${c ? c.maxUsesPerAccount : 1}"></div>
+        <div data-show="SIGNUP_CREDIT"><label for="cfDays">Credit usable for (days, optional)</label><input id="cfDays" type="number" min="1" step="1" value="${c && c.creditValidDays != null ? c.creditValidDays : ''}"></div>
+        <div data-hide="SIGNUP_CREDIT" class="span2"><label for="cfCode">Code (optional)</label><input id="cfCode" maxlength="20" value="${esc(c && c.code ? c.code : '')}" style="text-transform:uppercase">
+          <div class="help">4-20 letters and digits. Without a code, every rider gets it automatically.</div></div>`
+        : `<div class="span2"><label for="cfFirstN">Only a partner's first N completed trips (optional)</label><input id="cfFirstN" type="number" min="1" step="1" value="${c && c.firstNTrips != null ? c.firstNTrips : ''}">
+          <div class="help">Empty means every completed trip.</div></div>`}
+        <div><label for="cfFrom">Starts</label><input id="cfFrom" type="datetime-local" value="${toLocalInput(c ? c.validFrom : new Date().toISOString())}"></div>
+        <div><label for="cfUntil">Ends (optional)</label><input id="cfUntil" type="datetime-local" value="${toLocalInput(c && c.validUntil)}"></div>
+        <div class="span2"><label for="cfCap">Budget cap (₹)</label><input id="cfCap" type="number" min="0" step="1" value="${c ? Number(c.budgetCap) : ''}">
+          <div class="help">The most this campaign may ever spend. When it is reached the campaign stops by itself.${c ? ` Used so far: ${rupees(c.spent)}.` : ''}</div></div>
+      </div>
+      <p class="field-err" id="cfErr" hidden></p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" data-cancel type="button">Cancel</button>
+      <button class="btn btn-primary" data-go type="button">${editing ? 'Save changes' : 'Create'}</button>
+    </div>`, { wide: true });
+  const root = $('modalRoot');
+  const val = id => { const el = root.querySelector('#' + id); return el ? el.value : ''; };
+  const syncType = () => {
+    const t = val('cfType');
+    root.querySelectorAll('[data-show]').forEach(el => { el.hidden = el.dataset.show !== t; });
+    root.querySelectorAll('[data-hide]').forEach(el => { el.hidden = el.dataset.hide === t; });
+    root.querySelector('#cfValueLabel').textContent = CAMPAIGN_VALUE_LABEL[t];
+  };
+  root.querySelector('#cfType').addEventListener('change', syncType);
+  syncType();
+  root.querySelector('[data-cancel]').addEventListener('click', closeModal);
+  root.querySelector('[data-go]').addEventListener('click', async () => {
+    const t = val('cfType');
+    const common = {
+      name: val('cfName'), type: t, value: numOrNull(val('cfValue')),
+      validFrom: fromLocalInput(val('cfFrom')), validUntil: fromLocalInput(val('cfUntil')),
+      budgetCap: numOrNull(val('cfCap')),
+    };
+    const body = promo ? {
+      ...common,
+      code: t === 'SIGNUP_CREDIT' ? null : (val('cfCode').trim() || null),
+      maxDiscountPerBooking: t === 'PERCENTAGE_DISCOUNT' ? numOrNull(val('cfMaxPer')) : null,
+      maxUsesPerAccount: t === 'SIGNUP_CREDIT' ? 1 : numOrNull(val('cfUses')),
+      creditValidDays: t === 'SIGNUP_CREDIT' ? numOrNull(val('cfDays')) : null,
+    } : { ...common, firstNTrips: numOrNull(val('cfFirstN')) };
+    const btn = root.querySelector('[data-go]');
+    btn.disabled = true;
+    try {
+      const path = `/admin/campaigns/${promo ? 'promotions' : 'incentives'}${editing ? '/' + c.id : ''}`;
+      await api(path, { method: editing ? 'PUT' : 'POST', body: JSON.stringify(body) });
+      closeModal();
+      toast('ok', editing ? 'Campaign saved' : 'Campaign created', body.name);
+      render();
+    } catch (err) {
+      if (err.message === 'unauthorized') return;
+      const box = root.querySelector('#cfErr');
+      box.textContent = err.message;
+      box.hidden = false;
+      btn.disabled = false;
+    }
+  });
+}
+
+$('panel').addEventListener('click', async e => {
+  if (tab !== 'campaigns' || !campaignsData) return;
+  const create = e.target.closest('[data-camp-new]');
+  if (create) { openCampaignForm(create.dataset.campNew, null); return; }
+  const card = e.target.closest('[data-camp]');
+  if (!card) return;
+  const [kind, id] = card.dataset.camp.split(':');
+  const c = (kind === 'promotion' ? campaignsData.overview.promotions : campaignsData.overview.incentives).find(x => x.id === id);
+  if (!c) return;
+  if (e.target.closest('[data-camp-edit]')) { openCampaignForm(kind, c); return; }
+  const pause = e.target.closest('[data-camp-pause]');
+  const resume = e.target.closest('[data-camp-resume]');
+  if (!pause && !resume) return;
+  const ok = await confirmAction(pause ? {
+    title: `Pause "${c.name}"?`,
+    message: kind === 'promotion'
+      ? 'No new trips will get this discount. Trips already booked with it keep it, and riders keep any credit they hold for when it resumes.'
+      : 'No new trips will earn this bonus. Bonuses already paid stay paid.',
+    confirmLabel: 'Pause', tone: 'reject',
+  } : {
+    title: `Resume "${c.name}"?`,
+    message: 'It applies to new trips again, until its end date or budget stops it.',
+    confirmLabel: 'Resume', tone: 'approve',
+  });
+  if (!ok) return;
+  try {
+    await api(`/admin/campaigns/${kind === 'promotion' ? 'promotions' : 'incentives'}/${id}/${pause ? 'pause' : 'resume'}`, { method: 'POST' });
+    toast('ok', pause ? 'Campaign paused' : 'Campaign resumed', c.name);
+    render();
+  } catch (err) {
+    if (err.message !== 'unauthorized') toast('bad', 'Could not change the campaign', err.message);
+  }
+});
+
 function paintContent(blocks) {
   const view = VIEWS.content;
   const state = stateFor('content');
@@ -2627,10 +2960,14 @@ async function render(opts = {}) {
     paintPager(null);
     $('panel').innerHTML = contentSkeleton();
     try {
-      const blocks = await view.load(stateFor(tab));
+      const data = await view.load(stateFor(tab));
       if (isStale()) return;
-      paintContent(blocks);
-      $('cContent').textContent = blocks.length;
+      if (view.paint) {
+        view.paint(data);
+      } else {
+        paintContent(data);
+        $('cContent').textContent = data.length;
+      }
     } catch (err) {
       if (err.message === 'unauthorized' || isStale()) return;
       $('panel').innerHTML = errorState(err.message);

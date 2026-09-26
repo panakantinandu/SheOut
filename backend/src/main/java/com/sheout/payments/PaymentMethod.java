@@ -23,5 +23,8 @@ public enum PaymentMethod {
     ONLINE,
 
     /** Paid from her own SheOut wallet balance. */
-    SHEOUT_WALLET
+    SHEOUT_WALLET,
+
+    /** A promotion paid the whole fare - see PaymentService.settleCoveredByPromotion. */
+    PROMO_CREDIT
 }

@@ -33,7 +33,13 @@ public record BookingSummary(
          * this null has ended but is not paid, and is shown that way in both
          * apps - see paymentPending().
          */
-        Instant paymentSettledAt
+        Instant paymentSettledAt,
+        /** What a promotion paid towards the fare; zero when none. */
+        BigDecimal promoDiscount,
+        /** What the rider is charged: the fare less the promotion. */
+        BigDecimal amountDue,
+        /** Which promotion, by its name - null when none. */
+        String promotionName
 ) {
 
     /** Ended by the partner, not yet paid for. */
