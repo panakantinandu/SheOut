@@ -21,7 +21,9 @@ public class WalletEntryEntity extends BaseEntity {
         /** A rider paid her cash directly - the whole fare. Negative. */
         CASH_COLLECTED,
         /** She asked to be paid; the amount is held. Negative. */
-        PAYOUT_REQUESTED
+        PAYOUT_REQUESTED,
+        /** A campaign incentive on a trip, paid by SheOut on top of her share. Positive. */
+        INCENTIVE
     }
 
     @Column(nullable = false)
@@ -40,6 +42,9 @@ public class WalletEntryEntity extends BaseEntity {
 
     private UUID payoutRequestId;
 
+    /** The campaign award this entry pays - unique, so one award is credited once. */
+    private UUID incentiveAwardId;
+
     protected WalletEntryEntity() {
         // JPA
     }
@@ -51,6 +56,16 @@ public class WalletEntryEntity extends BaseEntity {
         e.amount = signedAmount;
         e.bookingId = bookingId;
         e.paymentId = paymentId;
+        return e;
+    }
+
+    static WalletEntryEntity forIncentive(UUID driverAccountId, BigDecimal amount, UUID bookingId, UUID incentiveAwardId) {
+        WalletEntryEntity e = new WalletEntryEntity();
+        e.driverAccountId = driverAccountId;
+        e.type = Type.INCENTIVE;
+        e.amount = amount;
+        e.bookingId = bookingId;
+        e.incentiveAwardId = incentiveAwardId;
         return e;
     }
 

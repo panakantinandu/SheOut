@@ -46,6 +46,14 @@ interface BookingRepository extends JpaRepository<BookingEntity, UUID>, JpaSpeci
     /** Backed by idx_bookings_driver - see BookingService.hasActiveTripAsDriver. */
     boolean existsByDriverIdAndStatusIn(UUID driverId, java.util.Collection<BookingStatus> statuses);
 
+    /** How many trips she had completed by the time this one completed - this one included. */
+    long countByDriverIdAndStatusAndCompletedAtLessThanEqual(UUID driverId, BookingStatus status, java.time.Instant completedAt);
+
+    /** Completed trips a rider paid in full for (no promotion) between two moments. */
+    long countByCustomerIdAndStatusAndPromoDiscountAndCompletedAtGreaterThanEqualAndCompletedAtLessThan(
+            UUID customerId, BookingStatus status, java.math.BigDecimal promoDiscount,
+            java.time.Instant from, java.time.Instant to);
+
     /** A live booking of this type for this rider - see BookingService.requestBooking. */
     boolean existsByCustomerIdAndTypeAndStatusIn(UUID customerId, BookingType type, java.util.Collection<BookingStatus> statuses);
 

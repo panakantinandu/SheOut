@@ -267,7 +267,8 @@
     "CARD": "కార్డ్",
     "NETBANKING": "నెట్‌బ్యాంకింగ్",
     "WALLET": "వాలెట్",
-    "ONLINE": "ఆన్‌లైన్"
+    "ONLINE": "ఆన్‌లైన్",
+    "PROMO_CREDIT": "ఆఫర్ క్రెడిట్"
   },
   "paymentStatus": {
     "PENDING": "చెల్లింపు కోసం వేచి ఉంది",

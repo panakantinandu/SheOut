@@ -7,6 +7,7 @@ import type { BookingSummary, PaymentSummary, RiderWallet } from '../api/types';
 import { openRazorpayCheckout } from '../lib/razorpayCheckout';
 import { apiErrorText } from '../lib/apiErrors';
 import { useTranslation } from '@sheout/design-system';
+import { PromoFareLines } from './PromoFareLines';
 
 const POLL_INTERVAL_MS = 4000;
 
@@ -130,21 +131,35 @@ export function TripPaymentCard({ booking, onPaid }: { booking: BookingSummary; 
     );
   }
 
+  const promo = booking.promoDiscount > 0 ? (
+    <PromoFareLines
+      fare={booking.finalFare ?? booking.fareEstimate}
+      discount={booking.promoDiscount}
+      youPay={booking.amountDue}
+      promotionName={booking.promotionName}
+    />
+  ) : null;
+
   if (paid) {
     return (
-      <Card tone="success" className="flex items-center gap-3" data-testid="trip-payment-paid">
-        <IconCircle size="md" tone="soft" color="green" icon={<CheckCircle2 />} />
-        <div className="flex-1">
-          <p className="font-heading font-semibold text-text-primary">{t('tripPay.paid')}</p>
-          <p className="text-sm text-text-secondary">
-            {payment.status === 'WAIVED'
-              ? t('tripPay.settledEarlier')
-              : payment.method === 'CASH'
-                ? t('tripPay.cashToPartner')
-                : paymentMethodLabel(payment.method)}
-          </p>
+      <Card tone="success" className="space-y-3" data-testid="trip-payment-paid">
+        <div className="flex items-center gap-3">
+          <IconCircle size="md" tone="soft" color="green" icon={<CheckCircle2 />} />
+          <div className="flex-1">
+            <p className="font-heading font-semibold text-text-primary">{t('tripPay.paid')}</p>
+            <p className="text-sm text-text-secondary">
+              {payment.status === 'WAIVED'
+                ? t('tripPay.settledEarlier')
+                : payment.method === 'CASH'
+                  ? t('tripPay.cashToPartner')
+                  : payment.method === 'PROMO_CREDIT'
+                    ? t('tripPay.coveredByPromo', { name: booking.promotionName ?? t('promo.offer') })
+                    : paymentMethodLabel(payment.method)}
+            </p>
+          </div>
+          <AmountText amount={payment.amount} size="lg" exact />
         </div>
-        <AmountText amount={payment.amount} size="lg" exact />
+        {promo}
       </Card>
     );
   }
@@ -158,6 +173,7 @@ export function TripPaymentCard({ booking, onPaid }: { booking: BookingSummary; 
         <p className="font-heading font-semibold text-text-primary">{t('tripPay.payForTrip')}</p>
         <AmountText amount={payment.amount} size="lg" exact />
       </div>
+      {promo}
 
       <Button
         fullWidth

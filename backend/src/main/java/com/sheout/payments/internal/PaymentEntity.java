@@ -84,6 +84,23 @@ public class PaymentEntity extends BaseEntity {
         return amount;
     }
 
+    /**
+     * The whole fare, when a promotion paid part of it - amount is then what
+     * the rider was charged. Null on payments from before promotions, where
+     * amount was the whole fare.
+     */
+    @Column(precision = 10, scale = 2)
+    private BigDecimal fareAmount;
+
+    public void setFareAmount(BigDecimal fareAmount) {
+        this.fareAmount = fareAmount;
+    }
+
+    /** What the partner's share is worked out from: always the whole fare. */
+    public BigDecimal getFareAmount() {
+        return fareAmount != null ? fareAmount : amount;
+    }
+
     public PaymentMethod getMethod() {
         return method;
     }

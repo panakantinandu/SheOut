@@ -140,8 +140,36 @@ public class BookingEntity extends BaseEntity {
     @Column(length = 1000)
     private String routeReviewNote;
 
+    /**
+     * What a promotion paid towards this trip, held when it was booked. The
+     * fare itself is never changed by a promotion: see amountDue.
+     */
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal promoDiscount = BigDecimal.ZERO;
+    @Column(length = 120)
+    private String promotionName;
+
     protected BookingEntity() {
         // JPA
+    }
+
+    public void applyPromotion(BigDecimal discount, String promotionName) {
+        this.promoDiscount = discount;
+        this.promotionName = promotionName;
+    }
+
+    public BigDecimal getPromoDiscount() {
+        return promoDiscount == null ? BigDecimal.ZERO : promoDiscount;
+    }
+
+    public String getPromotionName() {
+        return promotionName;
+    }
+
+    /** What the rider is charged: the fare (final once the trip ends, quoted before) less the promotion, never below zero. */
+    public BigDecimal amountDue() {
+        BigDecimal fare = finalFare != null ? finalFare : fareEstimate;
+        return fare.subtract(getPromoDiscount()).max(BigDecimal.ZERO);
     }
 
     /** The road distance the fare was priced on, and whether it came from a real route or the fallback estimate. */

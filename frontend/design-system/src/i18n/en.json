@@ -267,7 +267,8 @@
     "CARD": "Card",
     "NETBANKING": "Netbanking",
     "WALLET": "Wallet",
-    "ONLINE": "Online"
+    "ONLINE": "Online",
+    "PROMO_CREDIT": "Offer credit"
   },
   "paymentStatus": {
     "PENDING": "Awaiting payment",

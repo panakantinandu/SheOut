@@ -63,6 +63,23 @@ public class PaymentService implements PaymentApi {
     }
 
     /**
+     * A trip a promotion paid for in full: there is nothing to charge, so it
+     * is captured at once, as paid by promotional credit. The partner is
+     * credited her whole share, exactly as for a trip the rider paid, and the
+     * trip is settled so nobody is held for a zero fare.
+     * <p>
+     * REQUIRES_NEW for the same reason as createPendingPayment: it is called
+     * from BookingCompletedListener after booking's commit, where a joined
+     * transaction reports success and commits nothing.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void settleCoveredByPromotion(UUID bookingId) {
+        paymentRepository.findLockedByBookingId(bookingId)
+                .filter(payment -> !settled(payment))
+                .ifPresent(payment -> markCaptured(payment, PaymentMethod.PROMO_CREDIT, null));
+    }
+
+    /**
      * The one way a payment becomes CAPTURED, whichever path got it here -
      * Checkout, webhook, or cash. The caller holds the row lock and has
      * checked the payment is not already captured.
@@ -84,7 +101,9 @@ public class PaymentService implements PaymentApi {
         // partner's, and at what rate. Both numbers stay on the row rather
         // than the margin being folded into the price - see
         // PlatformCommission.
-        payment.recordSettlement(platformCommission.payoutFrom(payment.getAmount()), platformCommission.percent());
+        // From the whole fare, not what the rider paid: a promotion is
+        // SheOut's cost, never taken out of the partner's share.
+        payment.recordSettlement(platformCommission.payoutFrom(payment.getFareAmount()), platformCommission.percent());
         paymentRepository.save(payment);
         eventPublisher.publish(new PaymentCaptured(
                 payment.getId(), payment.getBookingId(), method, payment.getAmount(),
@@ -123,7 +142,7 @@ public class PaymentService implements PaymentApi {
             return Optional.empty();
         }
         log.warn("Booking {} ended with no payment row - creating it now", bookingId);
-        createPendingPayment(bookingId, booking.get().finalFare());
+        createPendingPayment(bookingId, booking.get().amountDue(), booking.get().finalFare());
         Optional<PaymentEntity> created = paymentRepository.findByBookingId(bookingId);
         // A trip already settled without a row is one V23 grandfathered.
         // Recording it as payable would offer the rider a "Pay" button for a
@@ -277,10 +296,21 @@ public class PaymentService implements PaymentApi {
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public PaymentEntity createPendingPayment(UUID bookingId, BigDecimal finalFare) {
+        return createPendingPayment(bookingId, finalFare, finalFare);
+    }
+
+    /**
+     * amountDue is what the rider is charged; finalFare the whole fare, which
+     * the partner's share is worked out from. They differ only when a
+     * promotion paid part of the trip.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public PaymentEntity createPendingPayment(UUID bookingId, BigDecimal amountDue, BigDecimal finalFare) {
         if (paymentRepository.findByBookingId(bookingId).isPresent()) {
             return null;
         }
-        PaymentEntity payment = new PaymentEntity(bookingId, finalFare, PaymentMethod.UPI, PaymentStatus.PENDING);
+        PaymentEntity payment = new PaymentEntity(bookingId, amountDue, PaymentMethod.UPI, PaymentStatus.PENDING);
+        payment.setFareAmount(finalFare);
         try {
             return paymentRepository.save(payment);
         } catch (DataIntegrityViolationException e) {

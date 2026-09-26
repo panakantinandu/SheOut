@@ -30,6 +30,7 @@ import type {
   EmergencyContact,
   FareQuote,
   GeoAddress,
+  HeldPromotion,
   NotificationView,
   PagedResult,
   CheckoutDetails,
@@ -579,6 +580,17 @@ export const walletApi = {
   /** The server checks the signature and confirms the capture with Razorpay before crediting. */
   verifyTopup(topupId: string, result: CheckoutResult): Promise<RiderWallet> {
     return request(`/api/v1/wallet/topups/${topupId}/verify`, { method: 'POST', body: result });
+  },
+};
+
+/** Promotions she holds, and entering a code. */
+export const promotionsApi = {
+  mine(): Promise<HeldPromotion[]> {
+    return request('/api/v1/promotions/me');
+  },
+
+  redeem(code: string): Promise<void> {
+    return request('/api/v1/promotions/redeem', { method: 'POST', body: { code } });
   },
 };
 

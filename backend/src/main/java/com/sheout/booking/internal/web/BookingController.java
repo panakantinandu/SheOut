@@ -127,7 +127,7 @@ public class BookingController {
      */
     @PostMapping("/api/v1/bookings/quote")
     public ResponseEntity<FareQuoteResponse> quote(@Valid @RequestBody QuoteRequest request) {
-        requireAuthenticated();
+        CurrentAccount caller = requireAuthenticated();
         if (request.category().expectedType() != request.type()) {
             throw toApiException(BookingError.CATEGORY_TYPE_MISMATCH);
         }
@@ -141,6 +141,12 @@ public class BookingController {
             throw toApiException(result.error());
         }
         FareQuote quote = result.value();
+        // The real fare and, beside it, what she would pay after her best
+        // promotion - both, so a discount is never a bare number with no
+        // context. Previewed only; nothing is held until she books.
+        com.sheout.campaigns.PromoApplication promo = caller.role() == AccountRole.CUSTOMER
+                ? bookingService.previewPromotion(caller.accountId(), quote.amount())
+                : com.sheout.campaigns.PromoApplication.none();
         return ResponseEntity.ok(new FareQuoteResponse(
                 quote.amount(),
                 BigDecimal.valueOf(quote.distanceKm()).setScale(1, RoundingMode.HALF_UP),
@@ -152,7 +158,10 @@ public class BookingController {
                 quote.surgeMultiplier(),
                 quote.nightMultiplier(),
                 quote.minimumFareApplied(),
-                request.category()));
+                request.category(),
+                promo.discount(),
+                quote.amount().subtract(promo.discount()).max(BigDecimal.ZERO),
+                promo.promotionName()));
     }
 
     /**
@@ -640,7 +649,12 @@ public class BookingController {
             BigDecimal surgeMultiplier,
             BigDecimal nightMultiplier,
             boolean minimumFareApplied,
-            BookingCategory category
+            BookingCategory category,
+            /** What her best promotion would pay towards fareEstimate; zero when none. */
+            BigDecimal promoDiscount,
+            /** What she would pay: fareEstimate less promoDiscount. */
+            BigDecimal youPay,
+            String promotionName
     ) {
     }
 }

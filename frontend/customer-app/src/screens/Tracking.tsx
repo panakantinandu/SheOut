@@ -27,6 +27,7 @@ import { ApiError, bookingApi, chatApi, dispatchApi } from '../api/client';
 import type { AssignedDriver, BookingStatus, BookingSummary, DriverLocation } from '../api/types';
 import { RatingPrompt } from '../components/RatingPrompt';
 import { TripPaymentCard } from '../components/TripPaymentCard';
+import { PromoFareLines } from '../components/PromoFareLines';
 import { apiErrorText } from '../lib/apiErrors';
 import { mapsLink, shareViaDevice } from '../lib/emergency';
 import { useTranslation } from '@sheout/design-system';
@@ -500,6 +501,8 @@ export function Tracking() {
   /** Ended by the partner, not yet paid - not complete. */
   const paymentDue = booking?.status === 'COMPLETED' && !tripPaid && !booking.paymentSettledAt;
   const searchFailed = noDrivers || clientGaveUp;
+  /** A promotion is taking something off a trip that is still going to be charged. */
+  const promoShown = !!booking && booking.status !== 'COMPLETED' && booking.status !== 'CANCELLED' && !searchFailed && booking.promoDiscount > 0;
   /**
    * A partner has confirmed she is coming.
    * <p>
@@ -788,7 +791,22 @@ export function Tracking() {
           card carries the final fare, so the plain fare row would repeat it. */}
       {booking?.status === 'COMPLETED' && <TripPaymentCard booking={booking} onPaid={() => setTripPaid(true)} />}
 
-      {booking && booking.status !== 'COMPLETED' && (
+      {booking && promoShown && (
+        <Card className="space-y-2" data-testid="tracking-promo-fare">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-text-secondary">{t('fare.estimated')}</span>
+            <AmountText amount={booking.amountDue} size="lg" />
+          </div>
+          <PromoFareLines
+            fare={booking.finalFare ?? booking.fareEstimate}
+            discount={booking.promoDiscount}
+            youPay={booking.amountDue}
+            promotionName={booking.promotionName}
+          />
+        </Card>
+      )}
+
+      {booking && booking.status !== 'COMPLETED' && !promoShown && (
         <Card className="flex items-center justify-between">
           {/* A cancelled trip was never charged. Showing a rupee figure
               with no qualifier reads as a bill. */}

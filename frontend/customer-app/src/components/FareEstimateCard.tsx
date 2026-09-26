@@ -1,6 +1,7 @@
 import { Bike } from 'lucide-react';
 import { AmountText, Card, IconCircle } from '@sheout/design-system';
 import type { FareQuoteState } from '../lib/useFareQuote';
+import { PromoFareLines } from './PromoFareLines';
 import { useTranslation } from '@sheout/design-system';
 
 /**
@@ -33,18 +34,25 @@ export function FareEstimateCard({ state }: { state: FareQuoteState }) {
 
   if (!quote && !loading) return null;
 
+  const promo = quote && quote.promoDiscount > 0 ? quote : null;
+
   return (
-    <Card className="flex items-center gap-3">
-      <IconCircle tone="soft" icon={<Bike />} />
-      <div className="flex-1">
-        <p className="text-sm text-text-secondary">{t('fare.estimated')}</p>
-        {loading && !quote ? (
-          <p className="font-heading font-semibold text-text-secondary">{t('fare.calculating')}</p>
-        ) : (
-          <p className="text-xs text-text-secondary">{t('fare.approxKm', { km: quote!.distanceKm })}</p>
-        )}
+    <Card className="space-y-3" data-testid="fare-estimate">
+      <div className="flex items-center gap-3">
+        <IconCircle tone="soft" icon={<Bike />} />
+        <div className="flex-1">
+          <p className="text-sm text-text-secondary">{t('fare.estimated')}</p>
+          {loading && !quote ? (
+            <p className="font-heading font-semibold text-text-secondary">{t('fare.calculating')}</p>
+          ) : (
+            <p className="text-xs text-text-secondary">{t('fare.approxKm', { km: quote!.distanceKm })}</p>
+          )}
+        </div>
+        {quote && <AmountText amount={promo ? promo.youPay : quote.fareEstimate} size="lg" />}
       </div>
-      {quote && <AmountText amount={quote.fareEstimate} size="lg" />}
+      {promo && (
+        <PromoFareLines fare={promo.fareEstimate} discount={promo.promoDiscount} youPay={promo.youPay} promotionName={promo.promotionName} />
+      )}
     </Card>
   );
 }

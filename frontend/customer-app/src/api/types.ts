@@ -112,6 +112,21 @@ export interface BookingSummary {
    * still unpaid - see isAwaitingPayment in the design system.
    */
   paymentSettledAt: string | null;
+  /** Taken off by a promotion. The fare itself is never changed - see amountDue. */
+  promoDiscount: number;
+  /** What she pays: the fare less promoDiscount. */
+  amountDue: number;
+  promotionName: string | null;
+}
+
+/** A promotion she holds - the signup credit, or a code she entered. */
+export interface HeldPromotion {
+  name: string;
+  type: 'SIGNUP_CREDIT' | 'PERCENTAGE_DISCOUNT' | 'FLAT_DISCOUNT';
+  creditLeft: number | null;
+  creditTotal: number | null;
+  usesLeft: number | null;
+  expiresAt: string | null;
 }
 
 /**
@@ -197,7 +212,7 @@ export type { InboxItem as NotificationView, InboxPage, PushConfig } from '@sheo
 export type PaymentStatus = 'PENDING' | 'CAPTURED' | 'FAILED' | 'REFUNDED' | 'WAIVED';
 
 /** CASH is historical only - it is no longer accepted. SHEOUT_WALLET is her own SheOut balance. */
-export type PaymentMethod = 'UPI' | 'CASH' | 'CARD' | 'NETBANKING' | 'WALLET' | 'ONLINE' | 'SHEOUT_WALLET';
+export type PaymentMethod = 'UPI' | 'CASH' | 'CARD' | 'NETBANKING' | 'WALLET' | 'ONLINE' | 'SHEOUT_WALLET' | 'PROMO_CREDIT';
 
 /** What Razorpay Checkout is opened with. amountPaise is the fare in paise, as Razorpay counts it. */
 export interface CheckoutDetails {
@@ -289,6 +304,11 @@ export interface FareQuote {
   nightMultiplier: number;
   minimumFareApplied: boolean;
   category: BookingCategory;
+  /** What a promotion she holds would take off. 0 when none applies. */
+  promoDiscount: number;
+  /** fareEstimate less promoDiscount. */
+  youPay: number;
+  promotionName: string | null;
 }
 
 /**

@@ -20,6 +20,7 @@ import type { PaymentHold, RiderWallet, RiderWalletEntry } from '../api/types';
 import { openRazorpayCheckout } from '../lib/razorpayCheckout';
 import { apiErrorText } from '../lib/apiErrors';
 import { useTranslation } from '@sheout/design-system';
+import { PromotionsCard } from '../components/PromotionsCard';
 
 const QUICK_AMOUNTS = [100, 200, 500, 1000];
 
@@ -199,6 +200,8 @@ export function Wallet() {
           </div>
         </Card>
       )}
+
+      <PromotionsCard />
 
       {routeState.need && wallet && (
         <Card tone="warning">

@@ -267,7 +267,8 @@
     "CARD": "कार्ड",
     "NETBANKING": "नेटबैंकिंग",
     "WALLET": "वॉलेट",
-    "ONLINE": "ऑनलाइन"
+    "ONLINE": "ऑनलाइन",
+    "PROMO_CREDIT": "ऑफ़र क्रेडिट"
   },
   "paymentStatus": {
     "PENDING": "भुगतान बाकी है",
