@@ -190,6 +190,16 @@ sheout:
     # reopen a slot somebody was already told had closed.
     window-hours: ${RATING_WINDOW_HOURS:72}
 
+  # THE MASTER SWITCH for every dev/test bypass: the fixed-code sign-in
+  # numbers and prefix above and below, writing codes into the log, and the
+  # rider and partner verification bypasses under sheout.testing. With this
+  # false - the default - every one of them is off, whatever else is set.
+  # Only DevMode reads the bypass settings; DevModeIsTheOnlyReaderTest keeps
+  # it that way. Set false before real users, and nothing else needs
+  # remembering.
+  dev-mode:
+    enabled: ${DEV_MODE_ENABLED:false}
+
   auth:
     # No default - see JwtService Javadoc for why a missing/weak secret
     # should fail startup rather than silently signing with something
@@ -234,6 +244,12 @@ sheout:
     # future new-account test needs a different number here.
     dev-otp-phone-3: ${DEV_OTP_PHONE_3:}
     dev-otp-code-3: ${DEV_OTP_CODE_3:}
+    # A whole range of test numbers at once: every number starting with this
+    # prefix signs in with dev-otp-test-code, e.g. DEV_OTP_TEST_PREFIX=+91999999
+    # covers +919999990001, +919999990002, ... for QA and load tests. Must be
+    # + and at least 8 digits, so it cannot swallow real people's numbers.
+    dev-otp-test-prefix: ${DEV_OTP_TEST_PREFIX:}
+    dev-otp-test-code: ${DEV_OTP_TEST_CODE:123456}
     # Blank by default - opt-in, not fail-fast (see GoogleTokenVerifier's
     # Javadoc for why this doesn't block startup the way JWT_SECRET does).
     # No real Google Cloud OAuth Client ID exists yet for this build; set

@@ -73,6 +73,22 @@ services:
       - key: JWT_SECRET
         sync: false
 
+      # THE MASTER SWITCH for every dev/test bypass below (fixed-code
+      # sign-in numbers and prefix, codes in the log, the verification
+      # bypasses). Unset or false: all of them are off, whatever else is
+      # set - see DevMode. While there is no SMS provider, test sign-in
+      # (operators included) needs this "true". At launch: an SMS provider
+      # live first, then set this false - and nothing else needs clearing.
+      - key: DEV_MODE_ENABLED
+        sync: false
+      # Every number starting with this (e.g. +91999999) signs in with
+      # DEV_OTP_TEST_CODE (default 123456) - for QA and load tests. Must be
+      # + and at least 8 digits.
+      - key: DEV_OTP_TEST_PREFIX
+        sync: false
+      - key: DEV_OTP_TEST_CODE
+        sync: false
+
       # No real SMS provider is wired up yet (see ConsoleOtpSender) - OTPs
       # only ever reach Render's logs, never a phone. These two make demoing
       # login possible without watching logs: requesting an OTP for exactly

@@ -7,6 +7,7 @@ import com.sheout.driververification.VerificationStatus;
 import com.sheout.driververification.VerificationSummary;
 import com.sheout.sharedkernel.Result;
 import com.sheout.sharedkernel.event.DomainEventPublisher;
+import com.sheout.sharedkernel.devmode.DevMode;
 import com.sheout.users.DriverWentOffline;
 import com.sheout.sharedkernel.geo.ServiceArea;
 import com.sheout.sharedkernel.storage.DocumentStorage;
@@ -42,14 +43,16 @@ public class DriverProfileService implements DriverProfileApi {
                                  DocumentStorage documentStorage,
                                  ServiceArea serviceArea,
                                  DomainEventPublisher eventPublisher,
-                                 @Value("${sheout.testing.verified-driver-bypass-phone:}") String verifiedDriverBypassPhone) {
+                                 // The partner verification bypass, only ever set with
+                                 // DEV_MODE_ENABLED - see DevMode.
+                                 DevMode devMode) {
         this.eventPublisher = eventPublisher;
         this.driverProfileRepository = driverProfileRepository;
         this.authApi = authApi;
         this.verificationApi = verificationApi;
         this.documentStorage = documentStorage;
         this.serviceArea = serviceArea;
-        this.verifiedDriverBypassPhone = verifiedDriverBypassPhone;
+        this.verifiedDriverBypassPhone = devMode.verifiedPartnerBypassPhone().orElse("");
     }
 
     @Override
