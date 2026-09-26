@@ -1,6 +1,6 @@
 package com.sheout.booking.internal;
 
-import com.sheout.dispatch.internal.DriverLocation;
+import com.sheout.dispatch.DriverLocation;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;

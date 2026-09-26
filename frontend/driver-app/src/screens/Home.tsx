@@ -38,6 +38,7 @@ import { useAppDrawer } from '../components/AppDrawer';
 import type { AggregateRating, BookingSummary, DriverProfileSummary, PaymentHold, VerificationSummary } from '../api/types';
 import { RatingPrompt } from '../components/RatingPrompt';
 import { readPositionOnce, useShareLocation } from '../lib/LocationBroadcastContext';
+import { PartnerSos } from '../components/PartnerSos';
 import { playOfferChime, unlockChime } from '../lib/offerChime';
 import { useTranslation } from '@sheout/design-system';
 
@@ -356,13 +357,19 @@ export function Home() {
             type="button"
             aria-label={unreadCount ? t('home.notificationsUnread', { count: unreadCount }) : t('notifications.title')}
             onClick={() => navigate('/notifications')}
-            className="relative flex h-9 w-9 items-center justify-center rounded-full text-text-primary hover:bg-background"
+            className="relative flex h-11 w-11 items-center justify-center rounded-full text-text-primary hover:bg-background"
           >
             <Bell className="h-5 w-5" />
             {unreadCount ? <BellBadge count={unreadCount} /> : null}
           </button>
         }
       />
+
+      {/* Always here, online or not: the drive home after the last trip is
+          still a drive alone. */}
+      <div className="-mt-3 flex justify-end">
+        <PartnerSos />
+      </div>
 
       {/* The rider app opens on an illustrated banner and this screen opened
           on white space above an alert card. Same treatment, her side of it:

@@ -26,7 +26,8 @@ import { ApiError, bookingApi, chatApi, dispatchApi, type AssignedRider } from '
 import { apiErrorText } from '../lib/apiErrors';
 import type { BookingSummary, PaymentHold, TripRoute } from '../api/types';
 import { CollectPaymentCard } from '../components/CollectPaymentCard';
-import { useShareLocation } from '../lib/LocationBroadcastContext';
+import { readPositionOnce, useShareLocation } from '../lib/LocationBroadcastContext';
+import { PartnerSos } from '../components/PartnerSos';
 import { useTranslation } from '@sheout/design-system';
 
 const POLL_INTERVAL_MS = 4000;
@@ -320,11 +321,24 @@ export function Trip() {
    * try again; the other takes it away and points her at support, because
    * five more attempts she cannot make is not useful information at a kerb.
    */
+  /**
+   * Sends where she is right now before a check that reads it. The server
+   * trusts a position for thirty seconds, and a phone that has just been
+   * unlocked at the kerb may not have sent one for longer than that - so the
+   * first tap on Start or End failed with "location too old" for no reason
+   * she could see. Best effort: the server still decides.
+   */
+  async function sendFreshPosition() {
+    const here = await readPositionOnce(myPosition);
+    if (here) await dispatchApi.recordLocation(here.lat, here.lng).catch(() => undefined);
+  }
+
   async function handleConfirmPickup() {
     if (!bookingId || pickupCode.length !== PICKUP_CODE_LENGTH) return;
     setBusy(true);
     setCodeError(null);
     try {
+      await sendFreshPosition();
       const updated = await bookingApi.start(bookingId, pickupCode);
       setBooking(updated);
       setPickupCode('');
@@ -348,6 +362,7 @@ export function Trip() {
     setBusy(true);
     setError(null);
     try {
+      await sendFreshPosition();
       const updated = await bookingApi.complete(bookingId);
       // Stays on this screen: the fare still has to be collected, and the
       // payment card below appears in place of the trip controls.
@@ -404,6 +419,13 @@ export function Trip() {
     <div className="space-y-6">
       <TopHeader variant="back" title={finished ? t('trip.detailsTitle') : t('trip.title')} onBack={goBack} />
 
+      {/* Help within one tap for as long as the trip is live. */}
+      {tripIsLive && (
+        <div className="flex justify-end">
+          <PartnerSos bookingId={bookingId} position={myPosition} />
+        </div>
+      )}
+
       <div className="space-y-1">
         <LiveMap markers={markers} route={route?.points} />
         <p className="text-xs text-text-secondary">{mapCaption()}</p>
@@ -446,6 +468,14 @@ export function Trip() {
                 {phase === 'PICKUP' ? t('trip.navigateToPickup') : t('trip.navigateToDrop')}
               </OpenInMapsButton>
             </Card>
+          )}
+
+          {/* Said, not left to guess: the code card below appears only at
+              the pickup, and without this she had no idea why it was missing. */}
+          {booking.status === 'ACCEPTED' && !pickupArrived && (
+            <p className="text-center text-sm text-text-secondary" data-testid="pickup-not-yet">
+              {t('trip.notAtPickupYet')}
+            </p>
           )}
 
           {/* The gate between the two phases. */}
@@ -606,7 +636,10 @@ export function Trip() {
                   <p className="text-center text-sm text-text-secondary">{t('trip.locationNeededToEnd')}</p>
                 )}
                 {myPosition && !atDropOff && (
-                  <p className="text-center text-sm text-text-secondary">{t('trip.mustReachDrop')}</p>
+                  <>
+                    <p className="text-center text-sm text-text-secondary">{t('trip.mustReachDrop')}</p>
+                    <p className="text-center text-xs text-text-secondary">{t('trip.riderCanEndEarly')}</p>
+                  </>
                 )}
                 <Button fullWidth variant="success" disabled={busy || !atDropOff} onClick={handleComplete}>
                 {busy ? t('trip.ending') : t('trip.endTrip')}

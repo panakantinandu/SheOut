@@ -10,6 +10,8 @@ import com.sheout.driververification.VerificationStatus;
 import com.sheout.driververification.VerificationSummary;
 import com.sheout.driververification.VerificationDropOff;
 import com.sheout.driververification.VerificationTurnaround;
+import com.sheout.driververification.LiveSelfie;
+import com.sheout.driververification.SelfiePrompt;
 import com.sheout.sharedkernel.storage.DocumentRules;
 import com.sheout.sharedkernel.storage.DocumentStorage;
 import com.sheout.sharedkernel.storage.DocumentUpload;
@@ -77,15 +79,82 @@ public class VerificationService implements VerificationApi {
         repository.save(new VerificationRecordEntity(event.accountId(), event.role()));
     }
 
+    /** How long a challenge may be answered: time to follow the prompts and fill in the rest, and no more. */
+    private static final Duration SELFIE_CHALLENGE_TTL = Duration.ofMinutes(15);
+    /** Prompts per attempt, before the final facing-the-camera frame. */
+    private static final int SELFIE_PROMPTS = 2;
+    private static final java.security.SecureRandom RANDOM = new java.security.SecureRandom();
+
     /**
-     * Takes the identity document, and for a partner the vehicle's
-     * registration certificate alongside it.
-     * <p>
-     * Both land in one call because they are evidence for one decision. Two
-     * separate endpoints would let a partner submit half her case and sit in
-     * the queue as a row an operator cannot action.
+     * The prompts for her next selfie, chosen here, at random, so the frames
+     * she sends answer a question she did not know in advance - and so the
+     * reviewer can check each frame against what was actually asked. A new
+     * challenge replaces any earlier one.
      */
     @Transactional
+    public Result<SelfieChallenge, VerificationError> issueSelfieChallenge(UUID accountId) {
+        Optional<VerificationRecordEntity> found = repository.findByAccountId(accountId);
+        if (found.isEmpty()) {
+            return Result.failure(VerificationError.RECORD_NOT_FOUND);
+        }
+        VerificationRecordEntity record = found.get();
+        if (record.getGenderVerificationStatus() == VerificationStatus.VERIFIED) {
+            return Result.failure(VerificationError.ALREADY_VERIFIED);
+        }
+        List<SelfiePrompt> pool = new java.util.ArrayList<>(List.of(SelfiePrompt.values()));
+        java.util.Collections.shuffle(pool, RANDOM);
+        List<SelfiePrompt> prompts = List.copyOf(pool.subList(0, SELFIE_PROMPTS));
+        byte[] nonce = new byte[16];
+        RANDOM.nextBytes(nonce);
+        String challengeId = java.util.HexFormat.of().formatHex(nonce);
+        Instant expiresAt = Instant.now().plus(SELFIE_CHALLENGE_TTL);
+        record.issueSelfieChallenge(challengeId, joinPrompts(prompts), expiresAt);
+        repository.save(record);
+        return Result.success(new SelfieChallenge(challengeId, prompts, expiresAt));
+    }
+
+    public record SelfieChallenge(String challengeId, List<SelfiePrompt> prompts, Instant expiresAt) {
+    }
+
+    private static String joinPrompts(List<SelfiePrompt> prompts) {
+        return String.join(",", prompts.stream().map(Enum::name).toList());
+    }
+
+    private static List<SelfiePrompt> parsePrompts(String joined) {
+        if (joined == null || joined.isBlank()) {
+            return List.of();
+        }
+        return java.util.Arrays.stream(joined.split(",")).map(SelfiePrompt::valueOf).toList();
+    }
+
+    /** A readable JPEG or PNG within the document size rules. */
+    private static boolean isPhoto(DocumentUpload upload) {
+        return upload != null && DocumentRules.check(upload) == null && DocumentRules.photoTypeOf(upload.content()) != null;
+    }
+
+    @Override
+    public Optional<LiveSelfie> findLiveSelfie(UUID accountId) {
+        return repository.findByAccountId(accountId)
+                .filter(record -> record.getSelfieDocumentKey() != null)
+                .map(record -> new LiveSelfie(
+                        documentStorage.resolveUrl(record.getSelfieDocumentKey()),
+                        record.getLivenessFramesKey() == null ? null : documentStorage.resolveUrl(record.getLivenessFramesKey()),
+                        parsePrompts(record.getSelfiePrompts()),
+                        record.getSelfieCapturedAt()));
+    }
+
+    /** A replaced document is removed; failing to is logged, never a reason to refuse the new one. */
+    private void deleteQuietly(String storageKey) {
+        if (storageKey == null) {
+            return;
+        }
+        try {
+            documentStorage.delete(storageKey);
+        } catch (RuntimeException ex) {
+            log.warn("Could not delete a replaced verification document: {}", ex.getMessage());
+        }
+    }
+
     /** The first thing wrong with either document, or null when both are usable. */
     private static VerificationError firstProblem(DocumentUpload... uploads) {
         for (DocumentUpload upload : uploads) {
@@ -105,13 +174,40 @@ public class VerificationService implements VerificationApi {
         return null;
     }
 
+    /**
+     * Takes the identity document, and for a partner the vehicle's
+     * registration certificate alongside it.
+     * <p>
+     * Both land in one call because they are evidence for one decision. Two
+     * separate endpoints would let a partner submit half her case and sit in
+     * the queue as a row an operator cannot action.
+     * <p>
+     * (The @Transactional for this method used to sit above firstProblem, a
+     * private static helper, where it did nothing.)
+     * <p>
+     * AND A LIVE SELFIE, REQUIRED. Taken in the app's own camera, with the
+     * prompts from issueSelfieChallenge, and required before this record can
+     * leave PENDING or REJECTED. It is the one part of the submission that
+     * says somebody was physically there when it was made. Nothing here
+     * compares it with the ID: an operator looks at both and decides, as
+     * with every other part of verification.
+     */
+    @Transactional
     public Result<VerificationSummary, VerificationError> submitDocument(
-            UUID accountId, DocumentUpload upload, DocumentUpload rcUpload) {
+            UUID accountId, DocumentUpload upload, DocumentUpload rcUpload, LiveSelfieUpload live) {
         Optional<VerificationRecordEntity> found = repository.findByAccountId(accountId);
         if (found.isEmpty()) {
             return Result.failure(VerificationError.RECORD_NOT_FOUND);
         }
         VerificationRecordEntity record = found.get();
+
+        // Verified is final. A verified account could upload again and the
+        // new file silently replaced the one an operator had approved, while
+        // the status stayed VERIFIED - so the ID on file was no longer the ID
+        // anybody checked. A real change of document goes through support.
+        if (record.getGenderVerificationStatus() == VerificationStatus.VERIFIED) {
+            return Result.failure(VerificationError.ALREADY_VERIFIED);
+        }
 
         // Partners submit two documents, riders one, and the difference is
         // not an inconsistency: an operator reviewing a partner has to check
@@ -131,17 +227,44 @@ public class VerificationService implements VerificationApi {
             return Result.failure(badUpload);
         }
 
+        // A photo, both of them - never a PDF, never anything else. Checked
+        // by their bytes, like every other image this server keeps.
+        if (live == null || !isPhoto(live.selfie()) || !isPhoto(live.livenessFrames())) {
+            return Result.failure(VerificationError.SELFIE_REQUIRED);
+        }
+        // Last, because it is used up by trying: a submission refused for a
+        // blurry ID should not also cost her the selfie she just took.
+        Optional<String> prompts = record.consumeSelfieChallenge(live.challengeId(), Instant.now());
+        if (prompts.isEmpty()) {
+            return Result.failure(VerificationError.SELFIE_CHALLENGE_EXPIRED);
+        }
+
         String storageKey;
         String rcStorageKey = null;
+        String selfieKey;
+        String framesKey;
         try {
-            storageKey = documentStorage.store(accountId, "aadhaar", upload);
+            // Stored under the type its bytes are, not the type the phone
+            // declared: the document is later served with this type to an
+            // operator's browser, and the declared one is the caller's to choose.
+            storageKey = documentStorage.store(accountId, "aadhaar", DocumentRules.asDetected(upload));
             if (rcUpload != null) {
-                rcStorageKey = documentStorage.store(accountId, "rc", rcUpload);
+                rcStorageKey = documentStorage.store(accountId, "rc", DocumentRules.asDetected(rcUpload));
             }
+            selfieKey = documentStorage.store(accountId, "selfie", DocumentRules.asDetected(live.selfie()));
+            framesKey = documentStorage.store(accountId, "liveness", DocumentRules.asDetected(live.livenessFrames()));
         } catch (RuntimeException ex) {
             return Result.failure(VerificationError.STORAGE_FAILED);
         }
+        String replacedSelfie = record.getSelfieDocumentKey();
+        String replacedFrames = record.getLivenessFramesKey();
+        record.recordLiveSelfie(selfieKey, framesKey, prompts.get(), Instant.now());
 
+        // A re-submission replaces the earlier file. It used to stay stored
+        // forever, unreferenced, so each retry kept another copy of her ID -
+        // and on the database store, a few dozen retries filled the disk.
+        String replacedId = record.getAadhaarDocumentKey();
+        String replacedRc = rcStorageKey != null ? record.getRcDocumentKey() : null;
         record.setAadhaarDocumentKey(storageKey);
         if (rcStorageKey != null) {
             record.setRcDocumentKey(rcStorageKey);
@@ -155,6 +278,10 @@ public class VerificationService implements VerificationApi {
         // because that is when the queue started waiting for this document.
         record.markDocumentSubmitted();
         repository.save(record);
+        deleteQuietly(replacedId);
+        deleteQuietly(replacedRc);
+        deleteQuietly(replacedSelfie);
+        deleteQuietly(replacedFrames);
         // Operations hears about it now, not when somebody next opens the
         // console: how long she waits is mostly how long it takes anybody to
         // notice, and that was nobody's job until this.

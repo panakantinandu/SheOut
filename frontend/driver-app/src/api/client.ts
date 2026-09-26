@@ -1,4 +1,4 @@
-import type { PushApi } from '@sheout/design-system';
+import type { LiveSelfieResult, PushApi, SelfieChallenge } from '@sheout/design-system';
 import type {
   ApiErrorResponse,
   AuthSession,
@@ -353,10 +353,19 @@ export const verificationApi = {
    * operator check the number she typed against the vehicle she owns.
    * Submitting half would put her in the queue as a row nobody can action.
    */
-  uploadDocuments(file: File, rcFile: File): Promise<VerificationSummary> {
+  /** The prompts for her live selfie - see LiveSelfieCapture. */
+  selfieChallenge(): Promise<SelfieChallenge> {
+    return request('/api/v1/driver-verification/selfie-challenge', { method: 'POST' });
+  },
+
+  /** ID, RC and the live selfie, together: one submission, one review. */
+  uploadDocuments(file: File, rcFile: File, live: LiveSelfieResult): Promise<VerificationSummary> {
     const form = new FormData();
     form.append('file', file);
     form.append('rcFile', rcFile);
+    form.append('selfie', live.selfie);
+    form.append('livenessFrames', live.livenessFrames);
+    form.append('selfieChallengeId', live.challengeId);
     return request('/api/v1/driver-verification/documents', { method: 'POST', body: form });
   },
 };
@@ -377,6 +386,15 @@ export const dispatchApi = {
 
   recordLocation(lat: number, lng: number): Promise<void> {
     return request('/api/v1/dispatch/location', { method: 'POST', body: { lat, lng } });
+  },
+
+  /**
+   * SOS from a partner. Records the alert with her position and pages every
+   * operator; she has no emergency contacts on file, so the operator is who
+   * answers. See PartnerSos.
+   */
+  triggerSos(input: { lat: number; lng: number; bookingId?: string }): Promise<{ alertId: string }> {
+    return request('/api/v1/notifications/sos', { method: 'POST', body: input });
   },
 
   /** null = 204 No Content (no active offer right now) - see OfferSummary comment. */

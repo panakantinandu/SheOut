@@ -92,7 +92,8 @@ class DataExportService {
                         .map(v -> new DataExport.Verification(
                                 String.valueOf(v.genderVerificationStatus()),
                                 v.policeVerificationStatus() == null ? null : v.policeVerificationStatus().name(),
-                                v.documentSubmitted()))
+                                v.documentSubmitted(),
+                                verificationApi.findLiveSelfie(id).isPresent()))
                         .orElse(null),
                 bookings.stream().map(b -> trip(b, id, given.get(b.id()))).toList(),
                 new DataExport.RatingsReceived(received.averageStars(), received.totalRatings()),

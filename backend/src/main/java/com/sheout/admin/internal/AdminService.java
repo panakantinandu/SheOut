@@ -84,6 +84,10 @@ public class AdminService {
         return verificationApi.findRcDocumentUrl(accountId);
     }
 
+    public Optional<com.sheout.driververification.LiveSelfie> liveSelfie(UUID accountId) {
+        return verificationApi.findLiveSelfie(accountId);
+    }
+
     public List<SosAlertRow> activeAlerts() {
         return sosApi.findActiveAlerts().stream()
                 .map(this::toAlertRow)
@@ -110,7 +114,12 @@ public class AdminService {
     private ReviewQueueRow toReviewRow(VerificationSummary summary) {
         return new ReviewQueueRow(
                 summary.accountId(),
-                driverProfileApi.findByAccountId(summary.accountId()).map(p -> p.name()).orElse(null),
+                // Her name from her own kind of profile. This read the partner
+                // profile for everyone, so every rider in the queue was "Name
+                // not set" - the one name a reviewer has to check the ID against.
+                summary.role() == AccountRole.DRIVER
+                        ? driverProfileApi.findByAccountId(summary.accountId()).map(p -> p.name()).orElse(null)
+                        : customerProfileApi.findByAccountId(summary.accountId()).map(p -> p.name()).orElse(null),
                 phoneFor(summary.accountId()),
                 summary.role(),
                 summary.genderVerificationStatus(),
@@ -126,10 +135,17 @@ public class AdminService {
     }
 
     private SosAlertRow toAlertRow(SosAlertSummary alert) {
+        // Partners can raise SOS too. The column keeps its old name; who
+        // raised it is read from the account, and her name from her profile.
+        boolean partner = authApi.findAccount(alert.customerAccountId())
+                .map(a -> a.role() == com.sheout.auth.AccountRole.DRIVER).orElse(false);
         return new SosAlertRow(
                 alert.id(),
                 alert.customerAccountId(),
-                customerProfileApi.findByAccountId(alert.customerAccountId()).map(p -> p.name()).orElse(null),
+                partner
+                        ? driverProfileApi.findByAccountId(alert.customerAccountId()).map(p -> p.name()).orElse(null)
+                        : customerProfileApi.findByAccountId(alert.customerAccountId()).map(p -> p.name()).orElse(null),
+                partner ? "PARTNER" : "RIDER",
                 phoneFor(alert.customerAccountId()),
                 alert.bookingId(),
                 alert.lat(),

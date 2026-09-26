@@ -1,5 +1,6 @@
 package com.sheout.dispatch.internal;
 
+import com.sheout.dispatch.DriverLocation;
 import com.sheout.auth.AccountSummary;
 import com.sheout.auth.AuthApi;
 import com.sheout.booking.BookingAccepted;
@@ -360,7 +361,15 @@ public class DispatchService {
         List<CandidateDriver> nearby = locationStore.findNearby(
                 state.pickupLat(), state.pickupLng(), state.radiusKm(), candidateCount * 3, alreadyTried);
 
+        Instant freshSince = Instant.now().minus(PREVIEW_FRESH_FOR);
         List<CandidateDriver> eligible = nearby.stream()
+                // Where she was when she last reported, not where she is: a
+                // partner who closed the app still "online" stayed in the geo
+                // set at that spot and was offered trips she never saw, each
+                // one costing the rider a whole offer window.
+                .filter(candidate -> locationStore.findLocation(candidate.driverId())
+                        .map(location -> location.recordedAt().isAfter(freshSince))
+                        .orElse(false))
                 .filter(candidate -> isEligible(candidate.driverId(), state.category()))
                 // One person can hold a rider account and a partner account
                 // on the same number. Her own ride is never offered to her.

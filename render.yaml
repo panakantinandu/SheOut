@@ -288,6 +288,10 @@ services:
         sync: false
       - key: RAZORPAY_KEY_SECRET
         sync: false
+      # Signs Razorpay's webhook calls. Without it every webhook is refused,
+      # and a payment the app never heard back about stays unpaid.
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false
       - key: FIREBASE_PROJECT_ID
         sync: false
       - key: FIREBASE_CREDENTIALS_JSON

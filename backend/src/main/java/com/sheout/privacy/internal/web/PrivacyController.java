@@ -80,6 +80,10 @@ public class PrivacyController {
                     "Type DELETE to confirm you want to delete your account.");
         }
         PrivacyFacade.DeletionOutcome outcome = privacy.deleteAccount(caller.accountId(), caller.role());
+        if (!outcome.deleted() && outcome.unpaidTrip()) {
+            throw new ApiException(HttpStatus.CONFLICT, "UNPAID_TRIP",
+                    "Your last trip is still unpaid. Pay your partner for it first, then you can delete your account.");
+        }
         if (!outcome.deleted() && outcome.pendingPayout()) {
             throw new ApiException(HttpStatus.CONFLICT, "PENDING_PAYOUT",
                     "You have a payout we have not sent yet. Once it is paid, you can delete your account.");

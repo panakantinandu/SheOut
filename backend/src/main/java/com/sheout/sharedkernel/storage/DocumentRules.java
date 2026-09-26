@@ -139,6 +139,24 @@ public final class DocumentRules {
      * name or type the phone gave it. For profile photos, which are shown
      * to other people and must be what they claim to be.
      */
+    /**
+     * The same upload, labelled with the type its bytes actually are. A
+     * document is later served to an operator's browser with its stored
+     * type, and the declared one is whatever the uploader chose - "text/html"
+     * over a file that merely starts like a PDF included. Call only on an
+     * upload {@link #check} has passed.
+     */
+    public static DocumentUpload asDetected(DocumentUpload upload) {
+        byte[] b = upload.content();
+        String type = isJpeg(b) ? "image/jpeg"
+                : isPng(b) ? "image/png"
+                : isWebp(b) ? "image/webp"
+                : isHeif(b) ? "image/heic"
+                : isPdf(b) ? "application/pdf"
+                : "application/octet-stream";
+        return new DocumentUpload(upload.filename(), type, b);
+    }
+
     public static String photoTypeOf(byte[] b) {
         if (b == null) return null;
         // JPEG and PNG must also have an image header Java can read: the

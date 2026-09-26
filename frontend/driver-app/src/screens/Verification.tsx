@@ -1,7 +1,8 @@
-import { Car, CheckCircle2, Clock, FileText, FileWarning, IdCard, ShieldCheck, Check, Upload } from 'lucide-react';
+import { Camera, Car, CheckCircle2, Clock, FileText, FileWarning, IdCard, ShieldCheck, Check, Upload } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Card, IconCircle, SkeletonCard, StatusBadge, TextField, TopHeader, verificationStatusLabel } from '@sheout/design-system';
+import { Button, Card, DocumentMasker, IconCircle, LiveSelfieCapture, SkeletonCard, StatusBadge, TextField, TopHeader, verificationStatusLabel } from '@sheout/design-system';
+import type { LiveSelfieResult } from '@sheout/design-system';
 import type { StatusTone } from '@sheout/design-system';
 import { ApiError, usersApi, verificationApi } from '../api/client';
 import type { DriverProfileSummary, VerificationStatus, VerificationSummary } from '../api/types';
@@ -47,6 +48,10 @@ export function Verification() {
   const rcInputRef = useRef<HTMLInputElement>(null);
   const [idFile, setIdFile] = useState<File | null>(null);
   const [rcFile, setRcFile] = useState<File | null>(null);
+  /** An ID photo she is covering her number on, before it is kept. */
+  const [masking, setMasking] = useState<File | null>(null);
+  /** The live selfie, required with the documents. */
+  const [selfie, setSelfie] = useState<LiveSelfieResult | null>(null);
   const [summary, setSummary] = useState<VerificationSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -99,15 +104,18 @@ export function Verification() {
    * nothing to do.
    */
   async function handleSubmit() {
-    if (!idFile || !rcFile) return;
+    if (!idFile || !rcFile || !selfie) return;
     setUploading(true);
     setError(null);
     try {
-      const updated = await verificationApi.uploadDocuments(idFile, rcFile);
+      const updated = await verificationApi.uploadDocuments(idFile, rcFile, selfie);
       setSummary(updated);
       setIdFile(null);
       setRcFile(null);
+      setSelfie(null);
     } catch (err) {
+      // A spent challenge means a new selfie, not a retry that fails the same way.
+      if (err instanceof ApiError && err.body?.error === 'SELFIE_CHALLENGE_EXPIRED') setSelfie(null);
       setError(err instanceof ApiError ? err.message : t('verification.uploadError'));
     } finally {
       setUploading(false);
@@ -259,13 +267,32 @@ export function Verification() {
                 {t('verification.yourIdBody')}
               </p>
               <p className="text-xs text-text-secondary">{t('verification.fileHint')}</p>
+              {/* The number is optional to show. A photo gets the chance to
+                  have it covered; a PDF goes as it is. */}
+              <p className="rounded-card bg-background p-3 text-xs leading-relaxed text-text-secondary" data-testid="mask-invite">
+                {t('verification.maskInvite')}
+              </p>
               <input
                 ref={idInputRef}
                 type="file"
                 accept="image/*,.pdf"
                 className="hidden"
-                onChange={(e) => pickFile(e, setIdFile)}
+                onChange={(e) => pickFile(e, (file) => {
+                  if (file && file.type.startsWith('image/')) setMasking(file);
+                  else setIdFile(file);
+                })}
               />
+              {masking && (
+                <DocumentMasker
+                  file={masking}
+                  busy={uploading}
+                  onCancel={() => setMasking(null)}
+                  onDone={(masked) => {
+                    setIdFile(masked);
+                    setMasking(null);
+                  }}
+                />
+              )}
               <Button
                 fullWidth
                 variant="secondary"
@@ -307,7 +334,24 @@ export function Verification() {
             {/* Disabled until both are chosen. The button says which one is
                 still missing rather than sitting greyed out with no
                 explanation - a dead control is its own dead end. */}
-            <Button fullWidth disabled={!canUpload || uploading || !idFile || !rcFile} onClick={handleSubmit}>
+            {/* Required, and camera only - see LiveSelfieCapture. */}
+            {canUpload && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <IconCircle size="sm" tone="soft" icon={<Camera />} />
+                  <p className="text-sm font-semibold text-text-primary">{t('verification.selfieTitle')}</p>
+                </div>
+                <LiveSelfieCapture
+                  requestChallenge={() => verificationApi.selfieChallenge()}
+                  onCaptured={setSelfie}
+                  onReset={() => setSelfie(null)}
+                  captured={selfie}
+                  busy={uploading}
+                />
+              </div>
+            )}
+
+            <Button fullWidth disabled={!canUpload || uploading || !idFile || !rcFile || !selfie} onClick={handleSubmit} data-testid="verification-submit">
               {uploading
                 ? t('common.uploading')
                 : !idFile && !rcFile
@@ -316,6 +360,8 @@ export function Verification() {
                     ? t('verification.chooseIdToContinue')
                     : !rcFile
                       ? t('verification.chooseRcToContinue')
+                      : !selfie
+                        ? t('verification.needSelfie')
                       : summary.documentSubmitted
                         ? t('verification.resubmit')
                         : t('verification.submit')}

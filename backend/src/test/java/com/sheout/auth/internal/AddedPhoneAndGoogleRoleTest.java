@@ -66,6 +66,17 @@ class AddedPhoneAndGoogleRoleTest {
     }
 
     @Test
+    void aGoogleRiderWhoAddedHerNumberCanStillSignInWithGoogle() {
+        googleAccount.attachPhoneNumber(NUMBER);
+        when(accounts.findByEmailOrderByCreatedAtAsc("rider@example.com")).thenReturn(List.of(googleAccount));
+
+        Result<?, AuthError> result = auth.verifyGoogleSignIn("rider@example.com", "R", AccountRole.CUSTOMER, "ua");
+
+        assertThat(result.isSuccess()).isTrue();
+        verify(accounts, never()).save(any());
+    }
+
+    @Test
     void aRightCodeAttachesTheNumber() {
         Result<String, AuthError> result = auth.verifyAddedPhone(googleAccountId, NUMBER, "123456");
         assertThat(result.isSuccess()).isTrue();

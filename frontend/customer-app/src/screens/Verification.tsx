@@ -1,10 +1,11 @@
-import { BadgeCheck, Clock, Eye, ShieldCheck, Upload, UserCheck } from 'lucide-react';
+import { BadgeCheck, Check, Clock, Eye, ShieldCheck, Upload, UserCheck } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Button,
   Card,
   DocumentMasker,
+  LiveSelfieCapture,
   IconCircle,
   SkeletonCard,
   StatusBadge,
@@ -12,6 +13,7 @@ import {
   verificationStatusLabel,
 } from '@sheout/design-system';
 import { ApiError, verificationApi } from '../api/client';
+import type { LiveSelfieResult } from '@sheout/design-system';
 import type { VerificationSummary, VerificationTurnaround } from '../api/types';
 import { useTranslation } from '@sheout/design-system';
 
@@ -54,6 +56,10 @@ export function Verification() {
   const [uploading, setUploading] = useState(false);
   /** Chosen, not yet sent: she is covering her number first. */
   const [masking, setMasking] = useState<File | null>(null);
+  /** The ID as it will be sent - after any covering. */
+  const [idFile, setIdFile] = useState<File | null>(null);
+  /** The live selfie, required alongside it. */
+  const [selfie, setSelfie] = useState<LiveSelfieResult | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -83,18 +89,25 @@ export function Verification() {
       setMasking(file);
       return;
     }
-    void send(file);
+    setIdFile(file);
   }
 
-  async function send(file: File) {
-    setMasking(null);
+  /** The ID and the live selfie go together - the server will not take one without the other. */
+  async function send() {
+    if (!idFile || !selfie) return;
     setError(null);
     setUploading(true);
     try {
-      const updated = await verificationApi.submitDocument(file);
+      const updated = await verificationApi.submitDocument(idFile, selfie);
       setStatus(updated);
+      setIdFile(null);
+      setSelfie(null);
       setNotice(t('verification.submitted'));
     } catch (err) {
+      // Its prompts were answered too late, or replaced by a retake: the
+      // selfie is spent, and she is asked for a new one rather than a retry
+      // that would fail the same way.
+      if (err instanceof ApiError && err.body?.error === 'SELFIE_CHALLENGE_EXPIRED') setSelfie(null);
       setError(err instanceof ApiError ? err.message : t('verification.uploadError'));
     } finally {
       setUploading(false);
@@ -212,14 +225,27 @@ export function Verification() {
                   if (file) chooseFile(file);
                 }}
               />
-              <Button
-                fullWidth
-                disabled={uploading}
-                icon={<Upload className="h-4 w-4" />}
-                onClick={() => fileRef.current?.click()}
-              >
-                {uploading ? t('common.uploading') : status.documentSubmitted ? t('verification.uploadDifferent') : t('verification.choose')}
-              </Button>
+              {idFile ? (
+                <div className="flex items-center justify-between gap-3 rounded-input bg-background px-3 py-2" data-testid="id-ready">
+                  <span className="flex min-w-0 items-center gap-2 text-sm text-text-primary">
+                    <Check className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+                    <span className="truncate">{t('verification.idReady')}</span>
+                  </span>
+                  <Button size="md" variant="secondary" disabled={uploading} onClick={() => fileRef.current?.click()}>
+                    {t('verification.changeId')}
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  fullWidth
+                  variant="secondary"
+                  disabled={uploading}
+                  icon={<Upload className="h-4 w-4" />}
+                  onClick={() => fileRef.current?.click()}
+                >
+                  {status.documentSubmitted ? t('verification.uploadDifferent') : t('verification.choose')}
+                </Button>
+              )}
 
               <p className="flex items-start gap-2 text-xs leading-relaxed text-text-secondary">
                 <Eye className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
@@ -234,9 +260,40 @@ export function Verification() {
                 file={masking}
                 busy={uploading}
                 onCancel={() => setMasking(null)}
-                onDone={(masked) => void send(masked)}
+                onDone={(masked) => {
+                  setIdFile(masked);
+                  setMasking(null);
+                }}
               />
             </Card>
+          )}
+
+          {/* Required, and camera only - see LiveSelfieCapture. */}
+          {!isVerified && !masking && (
+            <Card className="space-y-3">
+              <p className="font-heading font-semibold text-text-primary">{t('verification.selfieTitle')}</p>
+              <LiveSelfieCapture
+                requestChallenge={() => verificationApi.selfieChallenge()}
+                onCaptured={setSelfie}
+                onReset={() => setSelfie(null)}
+                captured={selfie}
+                busy={uploading}
+              />
+            </Card>
+          )}
+
+          {!isVerified && !masking && (
+            <Button fullWidth disabled={uploading || !idFile || !selfie} onClick={() => void send()} data-testid="verification-submit">
+              {uploading
+                ? t('common.uploading')
+                : !idFile && !selfie
+                  ? t('verification.needBoth')
+                  : !idFile
+                    ? t('verification.needId')
+                    : !selfie
+                      ? t('verification.needSelfie')
+                      : t('verification.submitForReview')}
+            </Button>
           )}
         </>
       )}

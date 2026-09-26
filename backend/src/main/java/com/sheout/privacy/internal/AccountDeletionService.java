@@ -54,7 +54,7 @@ class AccountDeletionService {
         this.eventPublisher = eventPublisher;
     }
 
-    public enum Outcome { DELETED, ACTIVE_TRIP, PENDING_PAYOUT }
+    public enum Outcome { DELETED, ACTIVE_TRIP, PENDING_PAYOUT, UNPAID_TRIP }
 
     public record Result(Outcome outcome, Instant requestedAt, Instant completedAt) {
     }
@@ -65,6 +65,12 @@ class AccountDeletionService {
                 .anyMatch(b -> ACTIVE.contains(b.status()));
         if (tripUnderWay) {
             return new Result(Outcome.ACTIVE_TRIP, null, null);
+        }
+        // A rider who owes a partner for a finished trip settles it first.
+        // Deleting used to be a way to walk away from the fare: the account
+        // that owed it was gone, and so was the partner's pay.
+        if (role == AccountRole.CUSTOMER && bookingApi.findPaymentHoldForCustomer(accountId).isPresent()) {
+            return new Result(Outcome.UNPAID_TRIP, null, null);
         }
         // Refused while SheOut still owes her money she asked for: deleting
         // the account would delete where to send it, and the operator paying

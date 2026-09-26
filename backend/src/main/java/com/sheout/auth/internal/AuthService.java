@@ -159,18 +159,12 @@ public class AuthService implements AuthApi {
      * code vs. this method resolving the account from an already-verified
      * outcome.
      * <p>
-     * ACCOUNT LINKING: explicitly refused, not silently done. If the
-     * matched account also has a phone number on file, this is a deliberate
-     * "don't merge auth methods without the account owner's knowledge"
-     * refusal (EMAIL_LINKED_TO_PHONE_ACCOUNT) rather than logging into it -
-     * the frontend shows a message directing them to sign in with phone
-     * instead. NOTE: no current flow can actually reach that branch today -
-     * phone+OTP signup never collects an email at all (see AccountEntity/V4
-     * migration), so a phone account's email column is always null, and
-     * this check can only ever match a *previous* Google sign-in. It's
-     * built now so the right thing happens automatically the moment some
-     * future flow (e.g. a "add email" profile field) makes it reachable,
-     * rather than needing to remember to add this check later.
+     * accounts.email is written only here, by a Google sign-in, so an account
+     * found by email is the one this Google identity created. If a future
+     * flow ever lets a phone account gain an email some other way, that flow
+     * must verify the address - otherwise this lookup would sign somebody
+     * into an account she does not own. EMAIL_LINKED_TO_PHONE_ACCOUNT is kept
+     * for that day.
      */
     @Transactional
     public Result<AuthenticatedSession, AuthError> verifyGoogleSignIn(String email, String name, AccountRole role, String userAgent) {
@@ -189,9 +183,15 @@ public class AuthService implements AuthApi {
         }
         Optional<AccountEntity> existing = onThisEmail.stream().filter(a -> a.getRole() == role).findFirst();
 
-        if (existing.isPresent() && existing.get().getPhoneNumber() != null) {
-            return Result.failure(AuthError.EMAIL_LINKED_TO_PHONE_ACCOUNT);
-        }
+        // An account found by email here is always one this same Google
+        // identity created: nothing else ever writes accounts.email. It used
+        // to be refused when it had a phone number, on the theory that a
+        // phone account had gained an email some other way - but a Google
+        // rider is REQUIRED to add a phone number before her first booking
+        // (AddPhone), so every real Google rider was locked out of "Continue
+        // with Google" from her second sign-in on, and told to use a phone
+        // number she had never signed in with. She is let in; the number she
+        // added signs in to the same account.
 
         boolean isNewAccount = existing.isEmpty();
 

@@ -7,6 +7,7 @@ import {
   Avatar,
   Button,
   CancelReasonDialog,
+  ConfirmDialog,
   Card,
   CUSTOMER_CANCELLATION_REASONS,
   IconCircle,
@@ -166,6 +167,25 @@ export function Tracking() {
   const [rebooking, setRebooking] = useState(false);
   // The code she reads out before getting in. Null except while ACCEPTED.
   const [pickupCode, setPickupCode] = useState<string | null>(null);
+  const [confirmEndHere, setConfirmEndHere] = useState(false);
+  const [endingHere, setEndingHere] = useState(false);
+  const [endHereError, setEndHereError] = useState<string | null>(null);
+
+  async function handleEndHere() {
+    if (!bookingId) return;
+    setConfirmEndHere(false);
+    setEndingHere(true);
+    setEndHereError(null);
+    try {
+      // The screen's own polling picks up COMPLETED; setting it now shows
+      // the payment card without waiting for the next tick.
+      setBooking(await bookingApi.endHere(bookingId));
+    } catch (err) {
+      setEndHereError(apiErrorText(err, 'tracking.endHereError'));
+    } finally {
+      setEndingHere(false);
+    }
+  }
 
   /** Set once the trip reaches a status that can never change again. */
   const terminalStatus =
@@ -859,6 +879,26 @@ export function Tracking() {
           {t('tracking.cancelRide')}
         </Button>
       )}
+
+      {/* "Drop me here, by the gate." Her partner cannot end the trip away
+          from the drop pin, so without this the trip could not be closed at
+          all when she got off early. */}
+      {booking?.status === 'IN_PROGRESS' && (
+        <>
+          <Button variant="secondary" fullWidth disabled={endingHere} onClick={() => { setEndHereError(null); setConfirmEndHere(true); }} data-testid="end-here">
+            {t('tracking.endHere')}
+          </Button>
+          {endHereError && <p className="text-center text-sm text-danger">{endHereError}</p>}
+        </>
+      )}
+      <ConfirmDialog
+        open={confirmEndHere}
+        title={t('tracking.endHereTitle')}
+        message={t('tracking.endHereBody')}
+        confirmLabel={t('tracking.endHereConfirm')}
+        onCancel={() => setConfirmEndHere(false)}
+        onConfirm={handleEndHere}
+      />
 
       <CancelReasonDialog
         open={askingWhy}

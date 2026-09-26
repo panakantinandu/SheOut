@@ -255,7 +255,7 @@ class NotificationEventListeners {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onSosAlertRaised(SosAlertRaised event) {
         dispatcher.deliverToRole(AccountRole.ADMIN, NotificationType.SOS_OPERATOR_ALERT, new OutboundMessage(
-                "SOS raised by a rider",
+                "SOS raised",
                 event.bookingId() == null
                         ? "Raised with no trip under way. Open the console now."
                         : "Raised during a trip. Open the console now.",

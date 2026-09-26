@@ -166,7 +166,7 @@
     "fileHint": "A clear photo (JPG, PNG or HEIC) or a PDF. Make sure the whole document is in the frame and readable.",
     "whyBody": "SheOut is a women-only platform. A quick ID check is how every rider and partner can trust who they are sharing the road with. A real person reviews it, and you can look around the app while you wait.",
     "whatWeNeed": "We only look at three things",
-    "maskInvite": "Your name, your photo and your gender. Not your Aadhaar number — you can cover it in the next step, and what you cover never leaves your phone.",
+    "maskInvite": "You can blur your ID number if you'd like, we only need your name, photo, and gender to verify you.",
     "waitUsually": "Usually reviewed in {{time}}",
     "waitTarget": "We aim to review this within {{time}}",
     "waitUnknown": "A person is reviewing your ID",
@@ -174,7 +174,14 @@
     "waitHours_other": "about {{count}} hours",
     "waitMinutes": "about {{count}} minutes",
     "waitBody": "We will send you a notification and an email the moment it is done — you do not need to keep checking.",
-    "exploreMeanwhile": "Look around while you wait"
+    "exploreMeanwhile": "Look around while you wait",
+    "selfieTitle": "Take a live selfie",
+    "needSelfie": "Take your selfie to continue",
+    "idReady": "ID ready to send",
+    "changeId": "Change",
+    "needBoth": "Add your ID and take a selfie to continue",
+    "needId": "Add your ID to continue",
+    "submitForReview": "Submit for review"
   },
   "payments": {
     "history": "Payment History",
@@ -628,7 +635,12 @@
     "shareTextNoDriver": "I've booked a SheOut ride to {{drop}}. My pickup: {{link}}",
     "shareCopied": "Trip details copied - paste them to anyone you want to keep informed.",
     "support": "Support",
-    "cancelRide": "Cancel Ride"
+    "cancelRide": "Cancel Ride",
+    "endHere": "End trip here",
+    "endHereTitle": "End your trip here?",
+    "endHereBody": "Only if you have got off and are safe. Your fare stays as quoted, and you will be asked to pay next.",
+    "endHereConfirm": "Yes, end trip",
+    "endHereError": "Could not end the trip. Try again, or ask your partner."
   },
   "nav": {
     "home": "Home",

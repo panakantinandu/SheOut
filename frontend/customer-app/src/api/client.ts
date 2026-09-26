@@ -1,4 +1,4 @@
-import type { PushApi } from '@sheout/design-system';
+import type { LiveSelfieResult, PushApi, SelfieChallenge } from '@sheout/design-system';
 import type {
   ApiErrorResponse,
   AccountSession,
@@ -528,9 +528,18 @@ export const verificationApi = {
    * a JSON content type, and a multipart body needs the browser to set its
    * own boundary.
    */
-  async submitDocument(file: File): Promise<VerificationSummary> {
+  /** The prompts for her live selfie - see LiveSelfieCapture. */
+  selfieChallenge(): Promise<SelfieChallenge> {
+    return request('/api/v1/driver-verification/selfie-challenge', { method: 'POST' });
+  },
+
+  /** The ID and the live selfie, together: one submission, one review. */
+  async submitDocument(file: File, live: LiveSelfieResult): Promise<VerificationSummary> {
     const form = new FormData();
     form.append('file', file);
+    form.append('selfie', live.selfie);
+    form.append('livenessFrames', live.livenessFrames);
+    form.append('selfieChallengeId', live.challengeId);
     const token = getStoredToken();
     const response = await fetch(`${API_BASE}/api/v1/driver-verification/documents`, {
       method: 'POST',
@@ -640,6 +649,11 @@ export const bookingApi = {
    * cancellation with no reason cannot be told apart from any other, which
    * makes every number built on it meaningless.
    */
+  /** She has got off short of the drop pin and ends the trip herself, at the quoted fare. IN_PROGRESS only. */
+  endHere(bookingId: string): Promise<BookingSummary> {
+    return request(`/api/v1/bookings/${bookingId}/end-here`, { method: 'POST' });
+  },
+
   cancel(bookingId: string, reason: CancellationReason, note?: string): Promise<BookingSummary> {
     return request(`/api/v1/bookings/${bookingId}/cancel`, {
       method: 'POST',

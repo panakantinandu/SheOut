@@ -8,6 +8,8 @@ public record SosAlertRow(
         UUID id,
         UUID customerAccountId,
         String customerName,
+        /** RIDER or PARTNER - whoever pressed it. */
+        String raisedBy,
         String customerPhone,
         UUID bookingId,
         double lat,
