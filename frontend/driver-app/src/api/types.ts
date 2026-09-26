@@ -317,7 +317,7 @@ export interface AssignedDriver {
 export type PaymentStatus = 'PENDING' | 'CAPTURED' | 'FAILED' | 'REFUNDED' | 'WAIVED';
 
 /** Recorded at capture. Before capture it is a placeholder - read it only when status is CAPTURED. */
-export type PaymentMethod = 'UPI' | 'CASH' | 'CARD' | 'NETBANKING' | 'WALLET' | 'ONLINE' | 'SHEOUT_WALLET';
+export type PaymentMethod = 'UPI' | 'CASH' | 'CARD' | 'NETBANKING' | 'WALLET' | 'ONLINE' | 'SHEOUT_WALLET' | 'PROMO_CREDIT';
 
 /** A trip's payment as the partner sees it. driverPayout is her share, null until the rider has paid. */
 export interface PaymentSummary {
@@ -329,6 +329,8 @@ export interface PaymentSummary {
   driverPayout: number | null;
   commissionPercent: number | null;
   capturedAt: string | null;
+  /** The trip's whole fare - what her share and the platform fee were worked out from. */
+  fareAmount?: number;
 }
 
 /**
