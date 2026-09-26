@@ -3,7 +3,7 @@ package com.sheout.auth.internal.otp;
 import com.sheout.sharedkernel.logging.Redact;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
+import com.sheout.sharedkernel.devmode.DevMode;
 import org.springframework.stereotype.Component;
 
 /**
@@ -29,8 +29,9 @@ public class ConsoleOtpSender implements OtpSender {
 
     private final boolean logCodes;
 
-    ConsoleOtpSender(@Value("${sheout.auth.log-otp-codes:false}") boolean logCodes) {
-        this.logCodes = logCodes;
+    /** Codes reach the log only with dev mode on and LOG_OTP_CODES set - see DevMode. */
+    ConsoleOtpSender(DevMode devMode) {
+        this.logCodes = devMode.logOtpCodes();
     }
 
     @Override

@@ -28,6 +28,7 @@ import com.sheout.booking.TripEndedBy;
 import com.sheout.dispatch.DriverLocation;
 import com.sheout.dispatch.DriverLocationApi;
 import com.sheout.sharedkernel.Result;
+import com.sheout.sharedkernel.devmode.DevMode;
 import com.sheout.sharedkernel.geo.ServiceArea;
 import com.sheout.sharedkernel.event.DomainEventPublisher;
 import org.springframework.beans.factory.annotation.Value;
@@ -78,12 +79,32 @@ public class BookingService implements BookingApi {
                            DomainEventPublisher eventPublisher,
                            AuthApi authApi,
                            ServiceArea serviceArea,
-                           @Value("${sheout.testing.verified-bypass-phone:}") String verifiedBypassPhone,
+                           // The rider verification bypass, only ever set with
+                           // DEV_MODE_ENABLED - see DevMode.
+                           DevMode devMode,
                            @Value("${sheout.booking.partner-payment-hold-minutes:10}") long partnerPaymentHoldMinutes,
                            DriverLocationApi locationStore,
                            @Value("${sheout.booking.completion.drop-off-radius-metres:150}") double dropoffRadiusMetres,
                            @Value("${sheout.booking.completion.driver-location-max-age-seconds:30}") long driverLocationMaxAgeSeconds,
                            @Value("${sheout.dispatch.arriving-radius-metres:300}") double pickupRadiusMetres,
+                           TripRouteChecker routeChecker) {
+        this(bookingRepository, verificationApi, fareCalculator, eventPublisher, authApi, serviceArea,
+                devMode.verifiedRiderBypassPhone().orElse(""), partnerPaymentHoldMinutes, locationStore,
+                dropoffRadiusMetres, driverLocationMaxAgeSeconds, pickupRadiusMetres, routeChecker);
+    }
+
+    private BookingService(BookingRepository bookingRepository,
+                           VerificationApi verificationApi,
+                           FareCalculator fareCalculator,
+                           DomainEventPublisher eventPublisher,
+                           AuthApi authApi,
+                           ServiceArea serviceArea,
+                           String verifiedBypassPhone,
+                           long partnerPaymentHoldMinutes,
+                           DriverLocationApi locationStore,
+                           double dropoffRadiusMetres,
+                           long driverLocationMaxAgeSeconds,
+                           double pickupRadiusMetres,
                            TripRouteChecker routeChecker) {
         this.routeChecker = routeChecker;
         this.partnerPaymentHold = Duration.ofMinutes(partnerPaymentHoldMinutes);
