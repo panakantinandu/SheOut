@@ -25,6 +25,18 @@ services:
     # private network) ever talks to this. Empty list = internal-only.
     ipAllowList: []
 
+  # SheOut's own routing server - OSRM with greater Hyderabad's roads, built
+  # from the day's OpenStreetMap extract on every deploy. Private: only
+  # sheout-backend reaches it. Starter (512 MB) holds it: measured at
+  # ~360 MB of routing data and ~330 MB resident. See infra/osrm/README.md.
+  - type: pserv
+    name: sheout-osrm
+    runtime: docker
+    dockerfilePath: ./infra/osrm/Dockerfile
+    dockerContext: ./infra/osrm
+    plan: starter
+    region: singapore
+
   - type: web
     name: sheout-backend
     runtime: docker
@@ -199,13 +211,22 @@ services:
       - key: FARE_TIMEZONE
         value: Asia/Kolkata
 
-      # Real road distance and duration, from OSRM. THE PUBLIC DEMO SERVER
-      # IS A DEBT: documented rate limits, no uptime guarantee, no support,
-      # and a usage policy that does not contemplate a commercial service
-      # pricing its trips on it. Self-host (it ships a Docker image) once
-      # real traffic justifies the instance, then point this at it.
+      # Real road distance and duration, from SheOut's own OSRM (sheout-osrm
+      # below) over Render's private network - host:port, which the backend
+      # turns into a URL. It replaced router.project-osrm.org, the OSRM
+      # project's rate-limited demo server, which every fare depended on.
       - key: OSRM_BASE_URL
-        value: https://router.project-osrm.org
+        fromService:
+          type: pserv
+          name: sheout-osrm
+          property: hostport
+
+      # Launch area: central Hyderabad. Must stay well inside the map
+      # sheout-osrm holds (about 37 km from the centre every way - see
+      # infra/osrm/clip_hyderabad.py); outside it, fares fall back to an
+      # estimate. Widening this past ~30 km means widening that box too.
+      - key: SERVICE_RADIUS_KM
+        value: "25"
       - key: ROUTING_TIMEOUT_MS
         value: "4000"
       # Used only when routing is unavailable, so a rider can still book
