@@ -68,7 +68,7 @@ services:
     runtime: docker
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
-    plan: free # bump to `starter` before any real user/driver testing - see README
+    plan: starter # the live plan; must match the dashboard, or a Blueprint sync changes it
     region: singapore # closest Render region to Hyderabad
     healthCheckPath: /actuator/health
     envVars:
