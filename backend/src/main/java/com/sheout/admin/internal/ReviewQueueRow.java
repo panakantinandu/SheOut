@@ -27,6 +27,8 @@ public record ReviewQueueRow(
          */
         String vehicleRegistrationNumber,
         Instant updatedAt,
+        /** When her documents were sent in - what "Submitted" and "waiting" mean. Null for records from before it was kept. */
+        Instant submittedAt,
         /** Shown as a badge in the queue: reviewing a blocked account is almost always a mistake. */
         boolean blocked
 ) {

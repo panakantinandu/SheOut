@@ -151,6 +151,8 @@ public class VerificationController {
                     new ApiException(HttpStatus.CONFLICT, "Conflict", "Gender verification is not currently under review");
             case POLICE_VERIFICATION_NOT_APPLICABLE ->
                     new ApiException(HttpStatus.CONFLICT, "Conflict", "Police verification does not apply to this account");
+            case ID_CHECK_NOT_PASSED -> new ApiException(HttpStatus.CONFLICT, "ID_CHECK_NOT_PASSED",
+                    "Approve her ID check first. The police check is recorded once her ID is verified.");
             case INVALID_DECISION ->
                     new ApiException(HttpStatus.BAD_REQUEST, "Bad Request", "Decision must be VERIFIED or REJECTED");
             case RC_DOCUMENT_REQUIRED -> new ApiException(HttpStatus.BAD_REQUEST, "RC_DOCUMENT_REQUIRED",

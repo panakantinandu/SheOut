@@ -42,6 +42,9 @@ public enum VerificationError {
     /** Police review attempted on a CUSTOMER account - not applicable. */
     POLICE_VERIFICATION_NOT_APPLICABLE,
 
+    /** A police decision was attempted before the ID check passed. */
+    ID_CHECK_NOT_PASSED,
+
     /** A decision other than VERIFIED/REJECTED was passed to a review call. */
     INVALID_DECISION
 }

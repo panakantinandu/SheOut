@@ -219,7 +219,13 @@ export function Verification() {
                 <IconCircle size="sm" tone="soft" icon={<ShieldCheck />} />
                 <span className="text-sm font-medium text-text-primary">{t('verification.police')}</span>
               </div>
-              <StatusBadge tone={statusTone(summary.policeVerificationStatus)}>{statusLabel(summary.policeVerificationStatus)}</StatusBadge>
+              {/* She submits nothing for this - SheOut runs it once her ID is
+                  approved - so "Not submitted" was the wrong thing to tell her. */}
+              <StatusBadge tone={statusTone(summary.policeVerificationStatus)}>
+                {summary.policeVerificationStatus === 'PENDING'
+                  ? summary.genderVerificationStatus === 'VERIFIED' ? t('verification.policeInProgress') : t('verification.policeAfterId')
+                  : statusLabel(summary.policeVerificationStatus)}
+              </StatusBadge>
             </div>
 
             {/* A real answer rather than the placeholder message this used to
