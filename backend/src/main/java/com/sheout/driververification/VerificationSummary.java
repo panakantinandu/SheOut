@@ -22,6 +22,8 @@ public record VerificationSummary(
         VerificationStatus policeVerificationStatus,
         boolean documentSubmitted,
         String rejectionReason,
-        Instant updatedAt
+        Instant updatedAt,
+        /** When her documents were last sent in - null until they are. Not updatedAt, which a review moves. */
+        Instant documentSubmittedAt
 ) {
 }

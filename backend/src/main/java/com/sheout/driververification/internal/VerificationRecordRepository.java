@@ -26,20 +26,25 @@ interface VerificationRecordRepository extends JpaRepository<VerificationRecordE
      * without relying on undefined precedence. Spelling the JPQL out is the
      * boring option, and it stays behind this interface either way.
      * <p>
-     * The two checks match different statuses on purpose - see
-     * VerificationApi.findAwaitingReview. The aadhaarDocumentKey test is
-     * what keeps a driver who signed up and did nothing out of the queue,
-     * while keeping one who submitted and is mid-pipeline in it. CUSTOMER
-     * accounts have a null policeVerificationStatus, so they never match
-     * the second clause.
+     * Work an operator can actually do: an ID waiting to be looked at, or a
+     * partner whose ID has passed and whose police check is still to be
+     * recorded. CUSTOMER accounts have a null policeVerificationStatus, so
+     * they never match the second clause.
+     * <p>
+     * The second clause used to be "police PENDING and a document on file",
+     * which kept a partner whose ID had just been REJECTED in the queue -
+     * the rejection itself bumped her to the top as "waiting 1 min", with
+     * nothing left to decide until she re-submits. Re-submitting puts her
+     * ID back to UNDER_REVIEW, which brings her back here.
      */
     @Query("""
             select r from VerificationRecordEntity r
             where r.genderVerificationStatus = :underReview
-               or (r.policeVerificationStatus = :pending and r.aadhaarDocumentKey is not null)
+               or (r.genderVerificationStatus = :verified and r.policeVerificationStatus = :pending)
             order by r.updatedAt desc
             """)
     List<VerificationRecordEntity> findAwaitingReview(@Param("underReview") VerificationStatus underReview,
+                                                      @Param("verified") VerificationStatus verified,
                                                       @Param("pending") VerificationStatus pending);
 
     /**

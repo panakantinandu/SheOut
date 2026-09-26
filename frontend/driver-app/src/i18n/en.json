@@ -204,7 +204,9 @@
     "fileHint": "A clear photo (JPG, PNG or HEIC) or a PDF. Make sure the whole document is in the frame and readable.",
     "maskInvite": "You can blur your ID number if you'd like, we only need your name, photo, and gender to verify you.",
     "selfieTitle": "Take a live selfie",
-    "needSelfie": "Take your selfie to continue"
+    "needSelfie": "Take your selfie to continue",
+    "policeInProgress": "In progress",
+    "policeAfterId": "After ID check"
   },
   "faq": {
     "q1": "Why can I not go online?",

@@ -407,6 +407,13 @@ public class VerificationService implements VerificationApi {
         if (record.getRole() != AccountRole.DRIVER) {
             return Result.failure(VerificationError.POLICE_VERIFICATION_NOT_APPLICABLE);
         }
+        // The police check is on the woman the ID check has confirmed. Before
+        // that - no ID yet, one under review, or one rejected - there is
+        // nobody established to check, and the console offered Approve and
+        // Reject beside "Not yet submitted" as if there were.
+        if (record.getGenderVerificationStatus() != VerificationStatus.VERIFIED) {
+            return Result.failure(VerificationError.ID_CHECK_NOT_PASSED);
+        }
 
         record.setPoliceVerificationStatus(decision);
         repository.save(record);
@@ -428,7 +435,7 @@ public class VerificationService implements VerificationApi {
     @Override
     public List<VerificationSummary> findAwaitingReview() {
         return repository
-                .findAwaitingReview(VerificationStatus.UNDER_REVIEW, VerificationStatus.PENDING)
+                .findAwaitingReview(VerificationStatus.UNDER_REVIEW, VerificationStatus.VERIFIED, VerificationStatus.PENDING)
                 .stream()
                 .map(this::toSummary)
                 .toList();
@@ -462,7 +469,8 @@ public class VerificationService implements VerificationApi {
                 record.getPoliceVerificationStatus(),
                 record.getAadhaarDocumentKey() != null,
                 record.getGenderVerificationStatus() == VerificationStatus.REJECTED ? record.getRejectionReason() : null,
-                record.getUpdatedAt()
+                record.getUpdatedAt(),
+                record.getDocumentSubmittedAt()
         );
     }
 }

@@ -822,6 +822,23 @@ function badge(v) {
   return `<span class="badge b-${STATUS_TONE[v] || 'grey'}">${esc(STATUS_TEXT[v] || v)}</span>`;
 }
 
+/**
+ * The police check in words that are true of it. She submits nothing for
+ * it - operations runs it - so "Not yet submitted" was wrong, and it can
+ * only be recorded once her ID check has passed.
+ */
+function policeBadge(r) {
+  if (r.policeVerificationStatus !== 'PENDING') return badge(r.policeVerificationStatus);
+  return r.genderVerificationStatus === 'VERIFIED'
+    ? '<span class="badge b-amber">To be recorded</span>'
+    : '<span class="badge b-grey">After ID check</span>';
+}
+
+/** When her documents actually arrived; a review moves updatedAt, which is not a submission. */
+function submittedAt(r) {
+  return r.submittedAt || r.updatedAt;
+}
+
 /** "3 days" / "4 hours" / "12 minutes", plus a tone once it has been too long. */
 function waited(iso) {
   if (!iso) return { text: '—', cls: '' };
@@ -1163,8 +1180,8 @@ const VIEWS = {
       { key: 'phoneNumber', label: 'Phone', sort: r => r.phoneNumber || '' },
       { key: 'gender', label: 'ID & gender check', sort: r => r.genderVerificationStatus || '' },
       { key: 'police', label: 'Police check', sort: r => r.policeVerificationStatus || '' },
-      { key: 'submitted', label: 'Submitted', sort: r => new Date(r.updatedAt || 0).getTime() },
-      { key: 'waiting', label: 'Waiting', sort: r => -new Date(r.updatedAt || 0).getTime() },
+      { key: 'submitted', label: 'Submitted', sort: r => new Date(submittedAt(r) || 0).getTime() },
+      { key: 'waiting', label: 'Waiting', sort: r => -new Date(submittedAt(r) || 0).getTime() },
       { key: 'doc', label: 'Document', sort: r => (r.documentSubmitted ? 0 : 1) },
     ],
     load: () => api('/admin/verification/review-queue'),
@@ -1175,9 +1192,9 @@ const VIEWS = {
       if (key === 'gender') return badge(r.genderVerificationStatus);
       if (key === 'police') return isCustomer(r)
         ? '<span class="subtle">Not required</span>'
-        : badge(r.policeVerificationStatus);
-      if (key === 'submitted') return `<span class="subtle">${time(r.updatedAt)}</span>`;
-      if (key === 'waiting') { const w = waited(r.updatedAt); return `<span class="wait ${w.cls}">${w.text}</span>`; }
+        : policeBadge(r);
+      if (key === 'submitted') return `<span class="subtle">${time(submittedAt(r))}</span>`;
+      if (key === 'waiting') { const w = waited(submittedAt(r)); return `<span class="wait ${w.cls}">${w.text}</span>`; }
       if (key === 'doc') return r.documentSubmitted
         ? '<span class="badge b-green">Submitted</span>'
         : '<span class="badge b-grey">None</span>';
@@ -1853,7 +1870,7 @@ function renderLiveSelfie(root, live) {
 }
 
 function openDriver(r) {
-  const w = waited(r.updatedAt);
+  const w = waited(submittedAt(r));
   openModal(`
     <div class="modal-head">
       <h3>${esc(r.name || 'Name not set')} ${roleBadge(r.role)}</h3>
@@ -1862,9 +1879,9 @@ function openDriver(r) {
     <div class="modal-body">
       <dl class="kv">
         <dt>Account type</dt><dd>${roleBadge(r.role)}</dd>
-        <dt>Submitted</dt><dd>${time(r.updatedAt)}</dd>
+        <dt>Submitted</dt><dd>${time(submittedAt(r))}</dd>
         <dt>ID &amp; gender check</dt><dd>${badge(r.genderVerificationStatus)}</dd>
-        ${isCustomer(r) ? '' : `<dt>Police check</dt><dd>${badge(r.policeVerificationStatus)}</dd>`}
+        ${isCustomer(r) ? '' : `<dt>Police check</dt><dd>${policeBadge(r)}</dd>`}
       </dl>
 
       <!-- Both documents together, because this is one decision made from
@@ -1913,11 +1930,14 @@ function openDriver(r) {
 
       <div class="check">
         <div class="top"><h4>ID &amp; gender check</h4>${badge(r.genderVerificationStatus)}</div>
+        ${r.genderVerificationStatus === 'UNDER_REVIEW' ? `
         <p>Confirm the document is readable and matches the ${isCustomer(r) ? "customer's" : "driver's"} name, and that the live selfie shows the same woman as the ID photo. That comparison is yours - nothing checks it automatically.</p>
         <div class="row">
           <button class="btn btn-approve" data-decide="gender" data-decision="VERIFIED" type="button">Approve</button>
           <button class="btn btn-reject" data-decide="gender" data-decision="REJECTED" type="button">Reject</button>
-        </div>
+        </div>` : r.genderVerificationStatus === 'VERIFIED'
+          ? '<p>Approved. Nothing more to decide here.</p>'
+          : '<p>Nothing to review until she sends her documents again from the app.</p>'}
       </div>
 
       ${isCustomer(r) ? `
@@ -1926,12 +1946,15 @@ function openDriver(r) {
         <p>Customers are not police-verified — only their ID is checked. Approving the ID check above is all this account needs.</p>
       </div>` : `
       <div class="check">
-        <div class="top"><h4>Police check</h4>${badge(r.policeVerificationStatus)}</div>
-        <p>Record the outcome of the police verification for this driver.</p>
+        <div class="top"><h4>Police check</h4>${policeBadge(r)}</div>
+        ${r.genderVerificationStatus !== 'VERIFIED'
+          ? '<p>Run by SheOut operations, not submitted by her. It is recorded here once her ID check above is approved.</p>'
+          : r.policeVerificationStatus === 'PENDING' ? `
+        <p>Run by SheOut operations, not submitted by her. Record the outcome of the police verification for this driver.</p>
         <div class="row">
           <button class="btn btn-approve" data-decide="police" data-decision="VERIFIED" type="button">Approve</button>
           <button class="btn btn-reject" data-decide="police" data-decision="REJECTED" type="button">Reject</button>
-        </div>
+        </div>` : '<p>Recorded.</p>'}
       </div>`}
     </div>
     <div class="modal-foot"><button class="btn" data-cancel type="button">Close</button></div>

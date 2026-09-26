@@ -130,6 +130,7 @@ public class AdminService {
                                 .map(p -> p.vehicleRegistrationNumber()).orElse(null)
                         : null,
                 summary.updatedAt(),
+                summary.documentSubmittedAt(),
                 isBlocked(summary.accountId())
         );
     }
