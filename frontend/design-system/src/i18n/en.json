@@ -347,5 +347,15 @@
       "smile": "Smile",
       "closeEyes": "Close your eyes"
     }
+  },
+  "dropOff": {
+    "CUSTOMER_REQUESTED_DIFFERENT_DROP": "Customer requested different drop point",
+    "ROAD_CLOSED_OR_BLOCKED": "Road closed/blocked",
+    "OTHER": "Other",
+    "title": "Ending away from the drop point",
+    "message": "You are not at the drop point the rider booked. Tell us why before you end the trip. The trip still ends, and the fare does not change.",
+    "confirm": "End trip",
+    "keep": "Go back",
+    "ending": "Ending trip..."
   }
 }

@@ -81,3 +81,28 @@ export const DRIVER_CANCELLATION_REASONS: CancellationReasonOption[] = optionsFo
 export function reasonRequiresNote(reason: CancellationReason | null): boolean {
   return reason === 'OTHER';
 }
+
+/**
+ * Why a partner is ending a trip away from the drop - the backend's
+ * DropOffDeviationReason. Asked for, never used to refuse her.
+ */
+export type DropOffReason = 'CUSTOMER_REQUESTED_DIFFERENT_DROP' | 'ROAD_CLOSED_OR_BLOCKED' | 'OTHER';
+
+const DROP_OFF_LABELS: Record<DropOffReason, string> = {
+  CUSTOMER_REQUESTED_DIFFERENT_DROP: 'Customer requested different drop point',
+  ROAD_CLOSED_OR_BLOCKED: 'Road closed/blocked',
+  OTHER: 'Other',
+};
+
+export function dropOffReasonLabel(reason: string | null | undefined): string {
+  if (!reason) return '';
+  return dsT(`dropOff.${reason}`, DROP_OFF_LABELS[reason as DropOffReason] ?? reason);
+}
+
+export const DROP_OFF_REASONS: { value: DropOffReason; label: string }[] =
+  (Object.keys(DROP_OFF_LABELS) as DropOffReason[]).map((value) => ({
+    value,
+    get label() {
+      return dropOffReasonLabel(value);
+    },
+  }));

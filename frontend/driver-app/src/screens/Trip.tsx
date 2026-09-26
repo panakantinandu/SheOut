@@ -9,6 +9,7 @@ import {
   Card,
   ContactSupportButton,
   DRIVER_CANCELLATION_REASONS,
+  DROP_OFF_REASONS,
   IconCircle,
   LiveMap,
   OpenInMapsButton,
@@ -21,7 +22,7 @@ import {
   TopHeader,
   bookingStatusLabel,
 } from '@sheout/design-system';
-import type { CancellationReason, MapMarker } from '@sheout/design-system';
+import type { CancellationReason, DropOffReason, MapMarker } from '@sheout/design-system';
 import { ApiError, bookingApi, chatApi, dispatchApi, type AssignedRider } from '../api/client';
 import { apiErrorText } from '../lib/apiErrors';
 import type { BookingSummary, PaymentHold, TripRoute } from '../api/types';
@@ -51,8 +52,9 @@ function formatWhen(iso: string): string {
 const ROUTE_REFRESH_METRES = 300;
 
 const EARTH_RADIUS_M = 6371000;
-// UX hint only. The backend configuration remains the final authority.
-const DROP_OFF_GEOFENCE_METRES = 100;
+// UX hint only - the backend decides (TRIP_COMPLETION_RADIUS_METRES). Away
+// from the drop she can still end the trip; she is asked why first.
+const DROP_OFF_GEOFENCE_METRES = 150;
 
 function metresBetween(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
   const toRad = (deg: number) => (deg * Math.PI) / 180;
@@ -95,6 +97,7 @@ function metresBetween(a: { lat: number; lng: number }, b: { lat: number; lng: n
  */
 export function Trip() {
   const { t } = useTranslation();
+  const { t: ds } = useTranslation('ds');
   /** Her rider's first name, photo and rating - released by the server from ACCEPTED onwards. */
   const [rider, setRider] = useState<AssignedRider | null>(null);
   const { bookingId } = useParams<{ bookingId: string }>();
@@ -103,6 +106,9 @@ export function Trip() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [askingWhy, setAskingWhy] = useState(false);
+  /** Ending away from the drop: the reason picker is open. */
+  const [askingDropReason, setAskingDropReason] = useState(false);
+  const [dropReasonError, setDropReasonError] = useState<string | null>(null);
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [supportPhoneNumber, setSupportPhoneNumber] = useState<string | null>(null);
   /** Paid, as far as this screen knows - from the booking, then from the payment card's polling. */
@@ -357,18 +363,36 @@ export function Trip() {
     }
   }
 
-  async function handleComplete() {
+  /**
+   * Ends the trip. At the drop that is one tap. Away from it - by her own
+   * GPS, or because the server says so - she is asked why first; the trip
+   * still ends, and the reason goes on the booking.
+   */
+  async function handleComplete(reason?: DropOffReason, note?: string) {
     if (!bookingId) return;
+    if (!reason && myPosition && !atDropOff) {
+      setDropReasonError(null);
+      setAskingDropReason(true);
+      return;
+    }
     setBusy(true);
     setError(null);
+    setDropReasonError(null);
     try {
       await sendFreshPosition();
-      const updated = await bookingApi.complete(bookingId);
+      const updated = await bookingApi.complete(bookingId, reason, note);
+      setAskingDropReason(false);
       // Stays on this screen: the fare still has to be collected, and the
       // payment card below appears in place of the trip controls.
       setBooking(updated);
     } catch (err) {
-      setError(apiErrorText(err, 'trip.completeError'));
+      if (err instanceof ApiError && err.body?.error === 'DROP_OFF_REASON_REQUIRED') {
+        setAskingDropReason(true);
+      } else if (reason) {
+        setDropReasonError(apiErrorText(err, 'trip.completeError'));
+      } else {
+        setError(apiErrorText(err, 'trip.completeError'));
+      }
     } finally {
       setBusy(false);
     }
@@ -635,13 +659,12 @@ export function Trip() {
                 {!myPosition && (
                   <p className="text-center text-sm text-text-secondary">{t('trip.locationNeededToEnd')}</p>
                 )}
-                {myPosition && !atDropOff && (
-                  <>
-                    <p className="text-center text-sm text-text-secondary">{t('trip.mustReachDrop')}</p>
-                    <p className="text-center text-xs text-text-secondary">{t('trip.riderCanEndEarly')}</p>
-                  </>
+                {myPosition && !atDropOff && booking.drop && (
+                  <p className="text-center text-sm text-text-secondary" data-testid="away-from-drop">
+                    {t('trip.awayFromDrop', { metres: Math.round(metresBetween(myPosition, booking.drop) / 10) * 10 })}
+                  </p>
                 )}
-                <Button fullWidth variant="success" disabled={busy || !atDropOff} onClick={handleComplete}>
+                <Button fullWidth variant="success" disabled={busy} onClick={() => handleComplete()} data-testid="end-trip">
                 {busy ? t('trip.ending') : t('trip.endTrip')}
                 </Button>
               </>
@@ -660,6 +683,21 @@ export function Trip() {
           </div>
         </>
       )}
+
+      <CancelReasonDialog<DropOffReason>
+        open={askingDropReason}
+        title={ds('dropOff.title')}
+        message={ds('dropOff.message')}
+        options={DROP_OFF_REASONS}
+        busy={busy}
+        error={dropReasonError}
+        keepLabel={ds('dropOff.keep')}
+        confirmLabel={ds('dropOff.confirm')}
+        busyLabel={ds('dropOff.ending')}
+        confirmVariant="primary"
+        onConfirm={(reason, note) => handleComplete(reason, note)}
+        onCancel={() => setAskingDropReason(false)}
+      />
 
       <CancelReasonDialog
         open={askingWhy}

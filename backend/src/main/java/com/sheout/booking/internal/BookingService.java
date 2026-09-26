@@ -22,6 +22,9 @@ import com.sheout.booking.internal.fare.FareQuote;
 import com.sheout.driververification.VerificationApi;
 import com.sheout.driververification.VerificationStatus;
 import com.sheout.driververification.VerificationSummary;
+import com.sheout.booking.DropOffDeviationReason;
+import com.sheout.booking.RouteReviewItem;
+import com.sheout.booking.TripEndedBy;
 import com.sheout.dispatch.DriverLocation;
 import com.sheout.dispatch.DriverLocationApi;
 import com.sheout.sharedkernel.Result;
@@ -66,6 +69,7 @@ public class BookingService implements BookingApi {
     private final DriverLocationApi locationStore;
     private final DropoffGeofence dropoffGeofence;
     private final DropoffGeofence pickupGeofence;
+    private final TripRouteChecker routeChecker;
 
     @Autowired
     public BookingService(BookingRepository bookingRepository,
@@ -77,9 +81,11 @@ public class BookingService implements BookingApi {
                            @Value("${sheout.testing.verified-bypass-phone:}") String verifiedBypassPhone,
                            @Value("${sheout.booking.partner-payment-hold-minutes:10}") long partnerPaymentHoldMinutes,
                            DriverLocationApi locationStore,
-                           @Value("${sheout.booking.completion.drop-off-radius-metres:100}") double dropoffRadiusMetres,
+                           @Value("${sheout.booking.completion.drop-off-radius-metres:150}") double dropoffRadiusMetres,
                            @Value("${sheout.booking.completion.driver-location-max-age-seconds:30}") long driverLocationMaxAgeSeconds,
-                           @Value("${sheout.dispatch.arriving-radius-metres:300}") double pickupRadiusMetres) {
+                           @Value("${sheout.dispatch.arriving-radius-metres:300}") double pickupRadiusMetres,
+                           TripRouteChecker routeChecker) {
+        this.routeChecker = routeChecker;
         this.partnerPaymentHold = Duration.ofMinutes(partnerPaymentHoldMinutes);
         this.bookingRepository = bookingRepository;
         this.verificationApi = verificationApi;
@@ -112,7 +118,7 @@ public class BookingService implements BookingApi {
                            long driverLocationMaxAgeSeconds) {
         this(bookingRepository, verificationApi, fareCalculator, eventPublisher, authApi, serviceArea,
                 verifiedBypassPhone, partnerPaymentHoldMinutes, locationStore, dropoffRadiusMetres,
-                driverLocationMaxAgeSeconds, 300);
+                driverLocationMaxAgeSeconds, 300, TripRouteChecker.withoutTrails());
     }
 
     /**
@@ -178,7 +184,10 @@ public class BookingService implements BookingApi {
             return Result.failure(BookingError.ACTIVE_BOOKING_EXISTS);
         }
 
-        BigDecimal fareEstimate = fareCalculator.estimate(command.category(), command.pickup(), command.drop());
+        // The quote, not just its price: the distance it was priced on is
+        // kept, so the trip can later be compared with the road actually driven.
+        FareQuote quote = fareCalculator.quote(command.category(), command.pickup(), command.drop());
+        BigDecimal fareEstimate = quote.amount();
         BookingEntity booking = new BookingEntity(
                 command.type(),
                 command.category(),
@@ -187,6 +196,8 @@ public class BookingService implements BookingApi {
                 GeoAddressEmbeddable.from(command.drop()),
                 fareEstimate
         );
+        booking.recordQuotedDistance(
+                BigDecimal.valueOf(quote.distanceKm()).setScale(2, java.math.RoundingMode.HALF_UP), quote.routed());
         bookingRepository.save(booking);
 
         eventPublisher.publish(new BookingRequested(
@@ -377,9 +388,24 @@ public class BookingService implements BookingApi {
      * lock keeps duplicate requests serialized; the authoritative drop-off
      * and the latest trusted driver location are checked before any state or
      * payment-related event can be written.
+     * <p>
+     * AWAY FROM THE DROP, A REASON - NOT A REFUSAL. This used to refuse
+     * outright unless she was within the drop-off radius, which left a real
+     * trip unendable whenever the rider asked to be let out somewhere else or
+     * the road to the pin was shut. Now, if she is not within the radius (or
+     * her position is too stale to say), she has to say why - the same shape
+     * as a cancellation reason, OTHER needing a note - and the trip ends. The
+     * reason, where she was and how far that was from the drop are kept on
+     * the booking whatever she chose.
      */
     @Transactional
     public Result<BookingSummary, BookingError> completeTrip(UUID bookingId, UUID driverId) {
+        return completeTrip(bookingId, driverId, null, null);
+    }
+
+    @Transactional
+    public Result<BookingSummary, BookingError> completeTrip(UUID bookingId, UUID driverId,
+                                                             DropOffDeviationReason reason, String note) {
         // Lock before every read involved in completion. This makes the state
         // check, location check, and final transition one atomic decision.
         Optional<BookingEntity> found = bookingRepository.findLockedById(bookingId);
@@ -398,22 +424,24 @@ public class BookingService implements BookingApi {
         }
 
         Instant now = Instant.now();
-        Optional<DriverLocation> location = locationStore.findLocation(driverId);
-        if (location.isEmpty()) {
-            return Result.failure(BookingError.DRIVER_LOCATION_UNAVAILABLE);
-        }
+        DriverLocation location = locationStore.findLocation(driverId).orElse(null);
         DropoffGeofence.Decision geofence = dropoffGeofence.check(
-                location.get(), booking.getDrop().getLat(), booking.getDrop().getLng(), now);
-        if (geofence == DropoffGeofence.Decision.LOCATION_UNAVAILABLE) {
-            return Result.failure(BookingError.DRIVER_LOCATION_UNAVAILABLE);
-        }
-        if (geofence == DropoffGeofence.Decision.OUTSIDE_DROP_OFF) {
-            return Result.failure(BookingError.DRIVER_NOT_AT_DROP_OFF);
+                location, booking.getDrop().getLat(), booking.getDrop().getLng(), now);
+        String trimmedNote = note == null || note.isBlank() ? null : note.trim();
+        if (geofence != DropoffGeofence.Decision.AT_DROP_OFF) {
+            if (reason == null) {
+                return Result.failure(BookingError.DROP_OFF_REASON_REQUIRED);
+            }
+            if (reason.requiresNote() && trimmedNote == null) {
+                return Result.failure(BookingError.DROP_OFF_NOTE_REQUIRED);
+            }
         }
 
         booking.setStatus(BookingStatus.COMPLETED);
         booking.setCompletedAt(now);
         booking.setFinalFare(booking.getFareEstimate());
+        recordEnding(booking, TripEndedBy.PARTNER, location, geofence == DropoffGeofence.Decision.LOCATION_UNAVAILABLE,
+                reason, trimmedNote, now);
         bookingRepository.save(booking);
 
         eventPublisher.publish(new BookingCompleted(
@@ -445,14 +473,81 @@ public class BookingService implements BookingApi {
             return Result.failure(transition.error());
         }
 
+        Instant now = Instant.now();
         booking.setStatus(BookingStatus.COMPLETED);
-        booking.setCompletedAt(Instant.now());
+        booking.setCompletedAt(now);
         booking.setFinalFare(booking.getFareEstimate());
+        DriverLocation partnerAt = booking.getDriverId() == null ? null
+                : locationStore.findLocation(booking.getDriverId()).orElse(null);
+        DropoffGeofence.Decision where = dropoffGeofence.check(
+                partnerAt, booking.getDrop().getLat(), booking.getDrop().getLng(), now);
+        recordEnding(booking, TripEndedBy.RIDER, partnerAt, where == DropoffGeofence.Decision.LOCATION_UNAVAILABLE,
+                null, null, now);
         bookingRepository.save(booking);
 
         eventPublisher.publish(new BookingCompleted(
                 booking.getId(), booking.getCustomerId(), booking.getDriverId(), booking.getFinalFare()));
         return Result.success(toSummary(booking));
+    }
+
+    /**
+     * How the trip ended - by whom, where, how far from the drop, and any
+     * reason - and the route check. A stale position is not recorded as
+     * where she was.
+     */
+    private void recordEnding(BookingEntity booking, TripEndedBy by, DriverLocation location, boolean locationStale,
+                              DropOffDeviationReason reason, String note, Instant now) {
+        Double lat = null;
+        Double lng = null;
+        Integer metres = null;
+        if (location != null && !locationStale) {
+            lat = location.lat();
+            lng = location.lng();
+            metres = (int) Math.round(com.sheout.sharedkernel.geo.GeoDistance.haversineKm(
+                    lat, lng, booking.getDrop().getLat(), booking.getDrop().getLng()) * 1000);
+        }
+        booking.recordCompletion(by, lat, lng, metres, reason, note);
+        routeChecker.check(booking, now);
+    }
+
+    /** Trips flagged by the route check and not yet looked at, oldest first. */
+    @Override
+    public List<RouteReviewItem> findAwaitingRouteReview() {
+        return bookingRepository.findByRouteFlaggedAtIsNotNullAndRouteReviewedAtIsNullOrderByRouteFlaggedAtAsc().stream()
+                .map(BookingService::toRouteReviewItem)
+                .toList();
+    }
+
+    /**
+     * An operator has looked at a flagged trip. The note is required - it is
+     * the record of what was decided - and nothing else about the trip
+     * changes: the fare stands, and nothing is held against anybody here.
+     */
+    @Override
+    @Transactional
+    public Result<RouteReviewItem, BookingError> recordRouteReview(UUID bookingId, UUID adminAccountId, String note) {
+        Optional<BookingEntity> found = bookingRepository.findLockedById(bookingId);
+        if (found.isEmpty() || found.get().getRouteFlaggedAt() == null) {
+            return Result.failure(BookingError.BOOKING_NOT_FOUND);
+        }
+        BookingEntity booking = found.get();
+        if (booking.getRouteReviewedAt() == null) {
+            booking.recordRouteReview(adminAccountId, note.trim(), Instant.now());
+            bookingRepository.save(booking);
+        }
+        return Result.success(toRouteReviewItem(booking));
+    }
+
+    private static RouteReviewItem toRouteReviewItem(BookingEntity b) {
+        return new RouteReviewItem(
+                b.getId(), b.getCustomerId(), b.getDriverId(), b.getCategory(),
+                b.getPickup().toGeoAddress(), b.getDrop().toGeoAddress(), b.getFinalFare(),
+                b.getQuotedDistanceKm(), Boolean.TRUE.equals(b.getQuotedDistanceRouted()),
+                b.getActualDistanceKm(), b.getRoutePoints() == null ? 0 : b.getRoutePoints(),
+                b.getCompletedBy(), b.getCompletionDistanceFromDropM(),
+                b.getDropDeviationReason(), b.getDropDeviationNote(),
+                b.getStartedAt(), b.getCompletedAt(), b.getRouteFlaggedAt(),
+                b.getRouteReviewedAt(), b.getRouteReviewNote());
     }
 
 

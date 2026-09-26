@@ -5,6 +5,8 @@ import com.sheout.booking.BookingCategory;
 import com.sheout.booking.BookingError;
 import com.sheout.booking.BookingStatus;
 import com.sheout.booking.BookingType;
+import com.sheout.booking.DropOffDeviationReason;
+import com.sheout.booking.TripEndedBy;
 import com.sheout.booking.GeoAddress;
 import com.sheout.booking.internal.fare.FareCalculator;
 import com.sheout.dispatch.DriverLocation;
@@ -46,7 +48,7 @@ class BookingServiceCompletionTest {
                 "",
                 10,
                 locations,
-                100,
+                150,
                 30);
         booking = new BookingEntity(
                 BookingType.RIDE,
@@ -73,16 +75,65 @@ class BookingServiceCompletionTest {
     }
 
     @Test
-    void driverOutsideDropoffCannotCompleteAndNoCompletionIsPersisted() {
+    void awayFromTheDropWithNoReasonTheTripIsNotEndedSilently() {
         when(locations.findLocation(driverId)).thenReturn(Optional.of(
                 new DriverLocation(17.3900, 78.4867, Instant.now())));
 
         var result = service.completeTrip(bookingId, driverId);
 
-        assertEquals(BookingError.DRIVER_NOT_AT_DROP_OFF, result.error());
+        assertEquals(BookingError.DROP_OFF_REASON_REQUIRED, result.error());
         assertEquals(BookingStatus.IN_PROGRESS, booking.getStatus());
         verify(repository, never()).save(any());
         verifyNoInteractions(events);
+    }
+
+    @Test
+    void awayFromTheDropWithAReasonTheTripEndsAndTheReasonIsKept() {
+        // ~550 m north of the drop.
+        when(locations.findLocation(driverId)).thenReturn(Optional.of(
+                new DriverLocation(17.3900, 78.4867, Instant.now())));
+
+        var result = service.completeTrip(bookingId, driverId,
+                DropOffDeviationReason.CUSTOMER_REQUESTED_DIFFERENT_DROP, null);
+
+        assertTrue(result.isSuccess());
+        assertEquals(BookingStatus.COMPLETED, booking.getStatus());
+        assertEquals(DropOffDeviationReason.CUSTOMER_REQUESTED_DIFFERENT_DROP, booking.getDropDeviationReason());
+        assertEquals(TripEndedBy.PARTNER, booking.getCompletedBy());
+        assertTrue(booking.getCompletionDistanceFromDropM() > 500 && booking.getCompletionDistanceFromDropM() < 600);
+        verify(events).publish(any());
+    }
+
+    @Test
+    void otherNeedsAFewWords() {
+        when(locations.findLocation(driverId)).thenReturn(Optional.of(
+                new DriverLocation(17.3900, 78.4867, Instant.now())));
+
+        var result = service.completeTrip(bookingId, driverId, DropOffDeviationReason.OTHER, "  ");
+
+        assertEquals(BookingError.DROP_OFF_NOTE_REQUIRED, result.error());
+        assertEquals(BookingStatus.IN_PROGRESS, booking.getStatus());
+    }
+
+    @Test
+    void withNoTrustworthyPositionAReasonIsNeededAndNoPositionIsRecorded() {
+        when(locations.findLocation(driverId)).thenReturn(Optional.of(
+                new DriverLocation(17.3850, 78.4867, Instant.now().minusSeconds(600))));
+
+        assertEquals(BookingError.DROP_OFF_REASON_REQUIRED, service.completeTrip(bookingId, driverId).error());
+
+        var result = service.completeTrip(bookingId, driverId, DropOffDeviationReason.ROAD_CLOSED_OR_BLOCKED, null);
+        assertTrue(result.isSuccess());
+        assertEquals(null, booking.getCompletionDistanceFromDropM());
+    }
+
+    @Test
+    void atTheDropNoReasonIsAsked() {
+        when(locations.findLocation(driverId)).thenReturn(Optional.of(
+                new DriverLocation(17.3860, 78.4867, Instant.now()))); // ~110 m
+
+        assertTrue(service.completeTrip(bookingId, driverId).isSuccess());
+        assertEquals(null, booking.getDropDeviationReason());
     }
 
     @Test
@@ -113,8 +164,9 @@ class BookingServiceCompletionTest {
         assertTrue(result.isSuccess());
         assertEquals(BookingStatus.COMPLETED, booking.getStatus());
         assertEquals(BigDecimal.TEN, booking.getFinalFare());
-        // Her word is enough - no GPS is consulted.
-        verifyNoInteractions(locations);
+        // Her word is enough - there is no location to satisfy - and the
+        // record says it was her.
+        assertEquals(TripEndedBy.RIDER, booking.getCompletedBy());
         verify(events).publish(any());
     }
 

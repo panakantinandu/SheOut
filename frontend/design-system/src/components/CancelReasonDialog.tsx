@@ -4,21 +4,32 @@ import { Overlay } from './Overlay';
 import {
   reasonRequiresNote,
   type CancellationReason,
-  type CancellationReasonOption,
+
 } from '../lib/cancellation';
 import { useTranslation } from 'react-i18next';
 
-export interface CancelReasonDialogProps {
+/**
+ * Generic over the reason type, so the same picker serves every "tell us why"
+ * - cancelling a trip, or ending one away from the drop. OTHER (and only
+ * OTHER) asks for a note, in every use, matching the backend's rule.
+ */
+export interface CancelReasonDialogProps<R extends string = CancellationReason> {
   open: boolean;
   title?: string;
   message?: string;
-  options: CancellationReasonOption[];
+  options: { value: R; label: string }[];
   /** Disables both buttons and shows progress while the request is in flight. */
   busy?: boolean;
-  /** A failed cancel, shown in place rather than dismissing the dialog. */
+  /** A failed request, shown in place rather than dismissing the dialog. */
   error?: string | null;
-  onConfirm: (reason: CancellationReason, note?: string) => void;
+  onConfirm: (reason: R, note?: string) => void;
   onCancel: () => void;
+  /** Button words, for uses other than cancelling. */
+  keepLabel?: string;
+  confirmLabel?: string;
+  busyLabel?: string;
+  /** Cancelling is destructive (red); ending a trip is not. */
+  confirmVariant?: 'danger' | 'primary';
 }
 
 const NOTE_MAX = 500;
@@ -43,7 +54,7 @@ const NOTE_MAX = 500;
  * cancel anything, which is why "Keep trip" says so rather than saying
  * "Cancel" next to another button that also says cancel.
  */
-export function CancelReasonDialog({
+export function CancelReasonDialog<R extends string = CancellationReason>({
   open,
   title: titleProp,
   message: messageProp,
@@ -52,11 +63,15 @@ export function CancelReasonDialog({
   error = null,
   onConfirm,
   onCancel,
-}: CancelReasonDialogProps) {
+  keepLabel,
+  confirmLabel,
+  busyLabel,
+  confirmVariant = 'danger',
+}: CancelReasonDialogProps<R>) {
   const { t } = useTranslation('ds');
   const title = titleProp ?? t('cancelDialog.title');
   const message = messageProp ?? t('cancelDialog.message');
-  const [reason, setReason] = useState<CancellationReason | null>(null);
+  const [reason, setReason] = useState<R | null>(null);
   const [note, setNote] = useState('');
 
   // A fresh dialog every time it opens. Leaving the last attempt's reason
@@ -68,7 +83,7 @@ export function CancelReasonDialog({
     }
   }, [open]);
 
-  const needsNote = reasonRequiresNote(reason);
+  const needsNote = reasonRequiresNote(reason as CancellationReason | null);
   const canConfirm = reason !== null && (!needsNote || note.trim().length > 0) && !busy;
 
   return (
@@ -126,15 +141,15 @@ export function CancelReasonDialog({
 
         <div className="mt-5 flex gap-3">
           <Button variant="secondary" fullWidth disabled={busy} onClick={onCancel}>
-            {t('cancelDialog.keepTrip')}
+            {keepLabel ?? t('cancelDialog.keepTrip')}
           </Button>
           <Button
-            variant="danger"
+            variant={confirmVariant}
             fullWidth
             disabled={!canConfirm}
             onClick={() => reason && onConfirm(reason, needsNote ? note.trim() : undefined)}
           >
-            {busy ? t('cancelDialog.cancelling') : t('cancelDialog.cancelTrip')}
+            {busy ? (busyLabel ?? t('cancelDialog.cancelling')) : (confirmLabel ?? t('cancelDialog.cancelTrip'))}
           </Button>
         </div>
       </div>

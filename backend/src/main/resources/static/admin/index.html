@@ -631,6 +631,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
         Trust Review <span class="count" id="cTrust">–</span>
       </button>
+      <button data-tab="routes" aria-current="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M8 19h6a4 4 0 0 0 0-8H10a4 4 0 0 1 0-8h6"/></svg>
+        Route Review <span class="count" id="cRoutes">–</span>
+      </button>
       <button data-tab="feedback" aria-current="false">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.3a2 2 0 002-1.7l1.4-9A2 2 0 0019.7 9z"/><path d="M7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3"/></svg>
         Feedback <span class="count" id="cFeedback">–</span>
@@ -1653,6 +1657,40 @@ const VIEWS = {
     },
   },
 
+  routes: {
+    title: 'Route Review',
+    desc: 'Trips driven measurably shorter than the route the fare was quoted on, measured from the partner\'s own location reports. Nothing has been done because a trip is listed here: the fare stands and neither account is affected. A shorter drive has innocent readings - the rider asked to get out early, a road the quote did not know - and less innocent ones. Read the distances and any reason she gave, decide, and record what you decided.',
+    cardTitle: 'Flagged trips',
+    hint: 'Nothing here is automatic - every outcome is your decision',
+    empty: { icon: ICON_EMPTY_QUEUE, title: 'No trips to review', text: 'A trip appears here only when it was driven well short of its quote - by the configured share and by at least half a kilometre - and there were enough location reports to measure it. Trips with too few reports are never flagged.' },
+    columns: [
+      { key: 'trip', label: 'Trip', sort: r => new Date(r.trip.completedAt || 0).getTime() },
+      { key: 'partner', label: 'Partner', sort: r => (r.partnerName || '').toLowerCase() },
+      { key: 'rider', label: 'Rider', sort: r => (r.riderName || '').toLowerCase() },
+      { key: 'quoted', label: 'Quoted', sort: r => Number(r.trip.quotedDistanceKm || 0) },
+      { key: 'driven', label: 'Driven', sort: r => routeShortfall(r.trip) },
+      { key: 'ended', label: 'How it ended', sort: null },
+      { key: 'flaggedAt', label: 'Flagged', sort: r => new Date(r.trip.flaggedAt || 0).getTime() },
+      { key: 'act', label: '', sort: null },
+    ],
+    load: () => api('/admin/route-review/queue'),
+    cell: (r, key) => {
+      const t = r.trip;
+      if (key === 'trip') return `<div class="strong">${esc(t.pickup.label)} → ${esc(t.drop.label)}</div>
+        <div class="subtle">${time(t.completedAt)} · ₹${esc(String(t.fare ?? '—'))}</div>`;
+      if (key === 'partner') return `<span class="strong">${esc(r.partnerName || 'Name not set')}</span><div class="subtle num">${esc(r.partnerPhone || '')}</div>`;
+      if (key === 'rider') return `<span class="strong">${esc(r.riderName || 'Name not set')}</span><div class="subtle num">${esc(r.riderPhone || '')}</div>`;
+      if (key === 'quoted') return `<span class="num strong">${esc(String(t.quotedDistanceKm))} km</span>${t.quotedRouted ? '' : '<div class="subtle">estimate - the router was unavailable when quoted</div>'}`;
+      if (key === 'driven') return `<span class="num strong">${esc(String(t.actualDistanceKm))} km</span>
+        <div><span class="badge b-amber">${routeShortfall(t)}% shorter</span></div>
+        <div class="subtle">from ${esc(String(t.routePoints))} location reports</div>`;
+      if (key === 'ended') return endedCell(t);
+      if (key === 'flaggedAt') { const w = waited(t.flaggedAt); return `<span class="subtle">${time(t.flaggedAt)}</span><div class="wait ${w.cls}">${w.text}</div>`; }
+      if (key === 'act') return `<button class="btn" data-routereview="${esc(t.bookingId)}" type="button">Mark reviewed</button>`;
+      return '—';
+    },
+  },
+
   trust: {
     title: 'Trust Review',
     desc: 'Accounts worth a look, whether because they cancel too often or because they are rated badly. One list, because an account doing both is one case, not two. Being listed here is not a penalty and nothing has been done to these accounts — read the numbers, decide, then either clear the flag or block. Every one of these figures has an innocent reading and a guilty one, and only you can tell them apart.',
@@ -1696,6 +1734,32 @@ const VIEWS = {
     },
   },
 };
+
+/** How much shorter than quoted, as a whole percentage. */
+function routeShortfall(t) {
+  const quoted = Number(t.quotedDistanceKm), driven = Number(t.actualDistanceKm);
+  return quoted > 0 ? Math.round((1 - driven / quoted) * 100) : 0;
+}
+
+const DROP_OFF_REASON_TEXT = {
+  CUSTOMER_REQUESTED_DIFFERENT_DROP: 'Customer requested different drop point',
+  ROAD_CLOSED_OR_BLOCKED: 'Road closed/blocked',
+  OTHER: 'Other',
+};
+
+/** Who ended the trip, how far from the drop, and the reason she gave - the context for the distances. */
+function endedCell(t) {
+  const who = t.endedBy === 'RIDER'
+    ? '<span class="badge b-role-customer">Rider ended it</span>'
+    : '<span class="badge b-role-driver">Partner ended it</span>';
+  const where = t.endedMetresFromDrop == null
+    ? '<div class="subtle">Partner position unknown at the end</div>'
+    : `<div class="subtle">${esc(String(t.endedMetresFromDrop))} m from the drop</div>`;
+  const why = t.dropOffReason
+    ? `<div><strong>${esc(DROP_OFF_REASON_TEXT[t.dropOffReason] || t.dropOffReason)}</strong>${t.dropOffNote ? `: ${esc(t.dropOffNote)}` : ''}</div>`
+    : '';
+  return `${who}${where}${why}`;
+}
 
 /**
  * A cancellation rate, with the counts it came from.
@@ -2592,7 +2656,7 @@ async function render(opts = {}) {
     paintRows(view, rows, narrowed && view.emptyFiltered ? view.emptyFiltered : view.empty);
     paintPager(paged);
 
-    const counts = { queue: 'cQueue', sos: 'cSos', bookings: 'cBookings', accounts: 'cAccounts', trust: 'cTrust', feedback: 'cFeedback' };
+    const counts = { queue: 'cQueue', sos: 'cSos', bookings: 'cBookings', accounts: 'cAccounts', trust: 'cTrust', routes: 'cRoutes', feedback: 'cFeedback' };
     // The badge counts everything matching, not the rows on this page -
     // "25" beside Bookings when there are 400 would be a lie. Support is
     // not in this map: its badge counts unresolved tickets whatever the
@@ -2711,6 +2775,31 @@ $('rows').addEventListener('click', async e => {
     } catch (err) {
       if (err.message === 'unauthorized') return;
       toast('bad', 'Could not block that account', err.message);
+    }
+    return;
+  }
+
+  const routeReviewBtn = e.target.closest('[data-routereview]');
+  if (routeReviewBtn) {
+    const row = lastRows[Number(routeReviewBtn.closest('tr[data-i]').dataset.i)];
+    const ok = await confirmAction({
+      title: 'Mark this trip as reviewed?',
+      message: `${row.trip.pickup.label} → ${row.trip.drop.label}: quoted ${row.trip.quotedDistanceKm} km, driven ${row.trip.actualDistanceKm} km. It comes off this list. The fare and both accounts stay exactly as they are - a refund or a word with the partner is its own step.`,
+      confirmLabel: 'Mark reviewed',
+      withReason: true,
+      reasonRequired: true,
+      reasonLabel: 'What you found (kept with the trip)',
+      reasonPlaceholder: 'e.g. Rider confirmed she asked to be dropped at the metro station',
+      reasonMaxLength: 1000,
+    });
+    if (!ok) return;
+    try {
+      await api(`/admin/route-review/${row.trip.bookingId}/reviewed`, { method: 'POST', body: JSON.stringify({ note: ok.reason }) });
+      toast('ok', 'Trip reviewed', 'It is off the route review list.');
+      render();
+    } catch (err) {
+      if (err.message === 'unauthorized') return;
+      toast('bad', 'Could not record that review', err.message);
     }
     return;
   }

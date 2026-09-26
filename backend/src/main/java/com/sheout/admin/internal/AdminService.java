@@ -219,6 +219,30 @@ public class AdminService {
      * neither users' customer half nor its driver half should have to know
      * the other exists, and joining is what this module is for.
      */
+    /**
+     * Trips driven measurably shorter than quoted, for a person to judge -
+     * see booking's RouteCheck. Nothing about the fare or either account has
+     * changed because a trip is listed here.
+     */
+    public List<RouteReviewRow> routeReviewQueue() {
+        return bookingApi.findAwaitingRouteReview().stream().map(this::toRouteRow).toList();
+    }
+
+    public Result<RouteReviewRow, com.sheout.booking.BookingError> recordRouteReview(UUID bookingId, UUID adminAccountId, String note) {
+        Result<com.sheout.booking.RouteReviewItem, com.sheout.booking.BookingError> result =
+                bookingApi.recordRouteReview(bookingId, adminAccountId, note);
+        return result.isFailure() ? Result.failure(result.error()) : Result.success(toRouteRow(result.value()));
+    }
+
+    private RouteReviewRow toRouteRow(com.sheout.booking.RouteReviewItem trip) {
+        return new RouteReviewRow(
+                trip,
+                trip.driverId() == null ? null : driverProfileApi.findByAccountId(trip.driverId()).map(p -> p.name()).orElse(null),
+                trip.driverId() == null ? null : phoneFor(trip.driverId()),
+                customerProfileApi.findByAccountId(trip.customerId()).map(p -> p.name()).orElse(null),
+                phoneFor(trip.customerId()));
+    }
+
     public List<TrustReviewRow> trustReviewQueue() {
         List<TrustReviewRow> customers = customerProfileApi.findFlaggedForReview().stream()
                 .map(p -> new TrustReviewRow(

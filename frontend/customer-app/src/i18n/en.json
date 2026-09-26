@@ -396,7 +396,8 @@
     "cannotName": "Could not name this point",
     "pinAt": "Pin dropped at",
     "useThis": "Use this location",
-    "saved": "Saved places"
+    "saved": "Saved places",
+    "areaHint": "That is an area, not an exact spot. Move the pin to the gate or building where you want to be picked up or dropped."
   },
   "contacts": {
     "loadError": "Could not load your contacts",

@@ -120,4 +120,10 @@ public interface BookingApi {
      * with a rider aboard. She is not available for another until it ends.
      */
     boolean hasActiveTripAsDriver(UUID driverId);
+
+    /** Trips the route check flagged and nobody has looked at yet, oldest first. See RouteCheck. */
+    List<RouteReviewItem> findAwaitingRouteReview();
+
+    /** An operator has looked at a flagged trip; the note records what was decided. Nothing else changes. */
+    Result<RouteReviewItem, BookingError> recordRouteReview(UUID bookingId, UUID adminAccountId, String note);
 }

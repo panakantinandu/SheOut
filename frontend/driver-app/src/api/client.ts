@@ -500,8 +500,12 @@ export const bookingApi = {
     return request(`/api/v1/bookings/${bookingId}/route?fromLat=${from.lat}&fromLng=${from.lng}`);
   },
 
-  complete(bookingId: string): Promise<BookingSummary> {
-    return request(`/api/v1/bookings/${bookingId}/complete`, { method: 'POST' });
+  /** Away from the drop the server wants a reason (409 DROP_OFF_REASON_REQUIRED); at it, none. */
+  complete(bookingId: string, reason?: string, note?: string): Promise<BookingSummary> {
+    return request(`/api/v1/bookings/${bookingId}/complete`, {
+      method: 'POST',
+      body: reason ? { reason, note } : undefined,
+    });
   },
 
   /**

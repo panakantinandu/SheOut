@@ -344,7 +344,8 @@
     },
     "fareNotCharged": "Quoted fare (not charged)",
     "notAtPickupYet": "The pickup code opens when you reach the pickup point.",
-    "riderCanEndEarly": "Rider getting off before the drop? She can end the trip from her app with \"End trip here\"."
+    "riderCanEndEarly": "Rider getting off before the drop? She can end the trip from her app with \"End trip here\".",
+    "awayFromDrop": "You are about {{metres}} m from the drop point. You can still end the trip here - you will be asked why."
   },
   "earnings": {
     "group": {

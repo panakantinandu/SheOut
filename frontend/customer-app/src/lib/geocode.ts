@@ -12,10 +12,11 @@ import type { GeoAddress } from '../api/types';
  * with a hard limit of roughly one request per second and no uptime
  * guarantee. Every call site here is debounced for that reason.
  * <p>
- * FLAGGED FOR PRODUCTION: at real traffic this should move to a paid
- * geocoder (Google Places, Mapbox, Ola Maps) behind our own backend, so the
- * key is not in the client and the rate limit is ours. Nominatim is the
- * right choice for getting this working, not for scale.
+ * TEXT SEARCH NOW GOES TO GOOGLE PLACES (lib/places.ts), which knows
+ * buildings and businesses rather than just streets. What is left here is
+ * the reverse lookup for a dropped pin - the pin already gives the exact
+ * spot, and only needs a readable name - and searchPlaces as the fallback
+ * when Places is not configured or does not answer.
  */
 const NOMINATIM = 'https://nominatim.openstreetmap.org';
 
