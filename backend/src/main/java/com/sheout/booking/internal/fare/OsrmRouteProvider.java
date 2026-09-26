@@ -12,6 +12,7 @@ import org.springframework.web.client.RestClient;
 import java.net.http.HttpClient;
 import java.time.Duration;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Real road distance and duration from OSRM.
@@ -21,19 +22,12 @@ import java.util.List;
  * API key and no account. That is why it was chosen over a commercial
  * routing API.
  * <p>
- * PUBLIC DEMO SERVER, AND THAT IS A DEBT, NOT A DECISION. router.project-osrm.org
- * is run by the OSRM project as a demonstration. It has documented rate
- * limits, no uptime guarantee, no support, and its usage policy does not
- * contemplate a commercial service running its pricing on it. It is fine
- * for development and for a launch at small volume. It is not fine as the
- * thing every fare in the city depends on.
- * <p>
- * The fix is to self-host: OSRM ships a Docker image, and a Hyderabad-sized
- * extract is a small amount of RAM. That is the right move once real
- * traffic justifies the instance, and not before - standing up
- * infrastructure for traffic that does not exist yet is its own kind of
- * waste. Point OSRM_BASE_URL at the self-hosted instance and nothing else
- * changes.
+ * SELF-HOSTED IN PRODUCTION. router.project-osrm.org is the OSRM project's
+ * demonstration server: rate limited, no uptime guarantee, and not meant
+ * for a commercial service's pricing. Production runs its own instance
+ * (render.yaml's sheout-osrm, built from infra/osrm) holding greater
+ * Hyderabad only; the demo server remains the default for local runs that
+ * set nothing.
  * <p>
  * Uses JdkClientHttpRequestFactory rather than the default. The default is
  * backed by HttpURLConnection, which this codebase has already been bitten
@@ -44,6 +38,30 @@ import java.util.List;
 public class OsrmRouteProvider implements RouteProvider {
 
     private static final Logger log = LoggerFactory.getLogger(OsrmRouteProvider.class);
+
+    /**
+     * How far, in metres, OSRM may move each end to reach a road. Without a
+     * limit OSRM snaps to the nearest road it has, however far away. The
+     * self-hosted instance holds greater Hyderabad only, so a point outside
+     * it would snap to the edge of the map and be priced on a road tens of
+     * kilometres off - confidently wrong. With this, OSRM answers NoSegment
+     * and the trip is priced by the honest fallback estimate instead. No
+     * real pickup is a kilometre from a drivable road.
+     */
+    private static final String SNAP_LIMIT = "1000;1000";
+
+    /**
+     * Render's private network hands out a service's address as host:port,
+     * with no scheme - see render.yaml's sheout-osrm. A full URL is used as
+     * it is.
+     */
+    static String normalise(String baseUrl) {
+        String trimmed = baseUrl.trim();
+        if (trimmed.endsWith("/")) {
+            trimmed = trimmed.substring(0, trimmed.length() - 1);
+        }
+        return trimmed.contains("://") ? trimmed : "http://" + trimmed;
+    }
 
     private final RestClient restClient;
     private final String baseUrl;
@@ -61,7 +79,7 @@ public class OsrmRouteProvider implements RouteProvider {
             // Hyderabad traffic, not open road. Used only for the fallback
             // duration.
             @Value("${sheout.routing.fallback-speed-kmph:22}") double fallbackSpeedKmph) {
-        this.baseUrl = baseUrl;
+        this.baseUrl = normalise(baseUrl);
         this.roadDistanceFactor = roadDistanceFactor;
         this.fallbackSpeedKmph = fallbackSpeedKmph;
 
@@ -96,8 +114,8 @@ public class OsrmRouteProvider implements RouteProvider {
             // OSRM takes lng,lat - the opposite order to almost everything
             // else here. Getting this backwards produces a plausible-looking
             // route somewhere else entirely rather than an error.
-            String path = "/route/v1/driving/%f,%f;%f,%f?overview=false"
-                    .formatted(pickup.lng(), pickup.lat(), drop.lng(), drop.lat());
+            String path = String.format(Locale.ROOT, "/route/v1/driving/%f,%f;%f,%f?overview=false&radiuses=%s",
+                    pickup.lng(), pickup.lat(), drop.lng(), drop.lat(), SNAP_LIMIT);
 
             OsrmResponse response = restClient.get()
                     .uri(baseUrl + path)
@@ -147,8 +165,8 @@ public class OsrmRouteProvider implements RouteProvider {
         try {
             // lng,lat - OSRM's order, not this codebase's. Reversing it
             // returns a confident route somewhere else entirely.
-            String path = "/route/v1/driving/%f,%f;%f,%f?overview=full&geometries=geojson"
-                    .formatted(from.lng(), from.lat(), to.lng(), to.lat());
+            String path = String.format(Locale.ROOT, "/route/v1/driving/%f,%f;%f,%f?overview=full&geometries=geojson&radiuses=%s",
+                    from.lng(), from.lat(), to.lng(), to.lat(), SNAP_LIMIT);
 
             OsrmGeometryResponse response = restClient.get()
                     .uri(baseUrl + path)

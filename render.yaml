@@ -16,6 +16,14 @@ databases:
     plan: free
     region: singapore
 
+  # Staging's own database. Render allows one free Postgres per workspace
+  # and production has it, so this is the smallest paid plan.
+  - name: sheout-db-staging
+    databaseName: sheout
+    user: sheout
+    plan: basic-256mb
+    region: singapore
+
 services:
   - type: keyvalue
     name: sheout-redis
@@ -24,6 +32,36 @@ services:
     # No external access needed - only sheout-backend (same Render account/
     # private network) ever talks to this. Empty list = internal-only.
     ipAllowList: []
+
+  # Staging's own Redis. One free Key Value per workspace, and production has
+  # it, so this is the smallest paid plan.
+  - type: keyvalue
+    name: sheout-redis-staging
+    plan: starter
+    region: singapore
+    ipAllowList: []
+
+  # SheOut's own routing server - OSRM with greater Hyderabad's roads, built
+  # from the day's OpenStreetMap extract on every deploy. Private: only
+  # sheout-backend reaches it. Starter (512 MB) holds it: measured at
+  # ~360 MB of routing data and ~330 MB resident. See infra/osrm/README.md.
+  - type: pserv
+    name: sheout-osrm
+    runtime: docker
+    dockerfilePath: ./infra/osrm/Dockerfile
+    dockerContext: ./infra/osrm
+    plan: starter
+    region: singapore
+
+  # Staging's own copy of the router, so a map or OSRM change can be proved
+  # on staging before production depends on it.
+  - type: pserv
+    name: sheout-osrm-staging
+    runtime: docker
+    dockerfilePath: ./infra/osrm/Dockerfile
+    dockerContext: ./infra/osrm
+    plan: starter
+    region: singapore
 
   - type: web
     name: sheout-backend
@@ -36,6 +74,9 @@ services:
     envVars:
       - key: SPRING_PROFILES_ACTIVE
         value: render
+      # Pricing, routing and dispatch settings, shared with staging so the two
+      # can never price a trip differently - see envVarGroups at the end.
+      - fromGroup: sheout-app-config
 
       # Browser-based calls from the two Vercel PWAs - without this, WebConfig
       # falls back to its localhost-only default and every fetch() from the
@@ -159,6 +200,117 @@ services:
       - key: GRIEVANCE_OFFICER_EMAIL
         sync: false
 
+      # Real road distance and duration, from SheOut's own OSRM (sheout-osrm
+      # below) over Render's private network - host:port, which the backend
+      # turns into a URL. It replaced router.project-osrm.org, the OSRM
+      # project's rate-limited demo server, which every fare depended on.
+      - key: OSRM_BASE_URL
+        fromService:
+          type: pserv
+          name: sheout-osrm
+          property: hostport
+
+      # Google Sign-In - see GoogleTokenVerifier. Not set yet: no real
+      # Google Cloud OAuth Client ID exists for this build. Until it's set,
+      # the /api/v1/auth/google/verify endpoint returns 503 rather than
+      # crashing the app at startup.
+      - key: GOOGLE_OAUTH_CLIENT_ID
+        sync: false
+
+      # Crash reporting. Blank means the SDK never starts and nothing is
+      # sent - see platform.SentryConfig for what is stripped from an event
+      # before it leaves. The two frontends have their own DSN, set in
+      # Vercel as VITE_SENTRY_DSN (a build-time variable, so changing it
+      # needs a redeploy).
+      - key: SENTRY_DSN
+        sync: false
+
+      # Not implemented yet - leave blank until they are.
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      # Signs Razorpay's webhook calls. Without it every webhook is refused,
+      # and a payment the app never heard back about stays unpaid.
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false
+      - key: FIREBASE_PROJECT_ID
+        sync: false
+      - key: FIREBASE_CREDENTIALS_JSON
+        sync: false
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_FROM_NUMBER
+        sync: false
+
+      # Uploaded photos and documents: not declared here, so they default to
+      # DatabaseDocumentStorage - stored in the Postgres above and served
+      # through signed links built from RENDER_EXTERNAL_URL, which Render
+      # sets itself. Never DOCUMENT_STORAGE_PROVIDER=local on Render: the
+      # container disk is wiped on every restart and redeploy. For a bucket
+      # instead, set DOCUMENT_STORAGE_PROVIDER=s3 plus
+      # DOCUMENT_STORAGE_S3_BUCKET, AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY.
+
+      # Not declared: PORT. Render injects it automatically (defaults to
+      # 10000) for every web service, Docker-based ones included - the app
+      # already binds to it via server.port=${PORT:8080} in application.yml.
+
+  # Staging: the same code and the same pricing as production, on its own
+  # database, Redis and router, for proving a deploy and for load tests
+  # (loadtest/) before production sees either. No real users and no
+  # frontends point here; test sign-in only.
+  - type: web
+    name: sheout-backend-staging
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    region: singapore
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: render
+      - fromGroup: sheout-app-config
+      - key: CORS_ALLOWED_ORIGINS
+        value: http://localhost:5173,http://localhost:5174
+      - key: DATABASE_URL
+        fromDatabase:
+          name: sheout-db-staging
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: sheout-redis-staging
+          property: connectionString
+      - key: OSRM_BASE_URL
+        fromService:
+          type: pserv
+          name: sheout-osrm-staging
+          property: hostport
+      - key: JWT_SECRET
+        generateValue: true
+      # Staging has no SMS provider and no real users: every number starting
+      # +91999999 signs in with 123456, for QA and the load test.
+      - key: DEV_MODE_ENABLED
+        value: "true"
+      - key: DEV_OTP_TEST_PREFIX
+        value: "+91999999"
+      - key: DEV_OTP_TEST_CODE
+        value: "123456"
+      - key: ADMIN_BOOTSTRAP_PHONE
+        sync: false
+      - key: VERIFIED_BYPASS_PHONE
+        sync: false
+      - key: VERIFIED_DRIVER_BYPASS_PHONE
+        sync: false
+
+envVarGroups:
+  # Settings that must be the same wherever the backend runs. Secrets and
+  # per-environment addresses stay on each service.
+  - name: sheout-app-config
+    envVars:
       # --- Fare engine ---
       #
       # Pricing is entirely configuration: there is not a rupee value in the
@@ -215,13 +367,12 @@ services:
       - key: FARE_TIMEZONE
         value: Asia/Kolkata
 
-      # Real road distance and duration, from OSRM. THE PUBLIC DEMO SERVER
-      # IS A DEBT: documented rate limits, no uptime guarantee, no support,
-      # and a usage policy that does not contemplate a commercial service
-      # pricing its trips on it. Self-host (it ships a Docker image) once
-      # real traffic justifies the instance, then point this at it.
-      - key: OSRM_BASE_URL
-        value: https://router.project-osrm.org
+      # Launch area: central Hyderabad. Must stay well inside the map
+      # sheout-osrm holds (about 37 km from the centre every way - see
+      # infra/osrm/clip_hyderabad.py); outside it, fares fall back to an
+      # estimate. Widening this past ~30 km means widening that box too.
+      - key: SERVICE_RADIUS_KM
+        value: "25"
       - key: ROUTING_TIMEOUT_MS
         value: "4000"
       # Used only when routing is unavailable, so a rider can still book
@@ -283,50 +434,3 @@ services:
       # trip staying a live threat either party can hold over the other.
       - key: RATING_WINDOW_HOURS
         value: "72"
-
-      # Google Sign-In - see GoogleTokenVerifier. Not set yet: no real
-      # Google Cloud OAuth Client ID exists for this build. Until it's set,
-      # the /api/v1/auth/google/verify endpoint returns 503 rather than
-      # crashing the app at startup.
-      - key: GOOGLE_OAUTH_CLIENT_ID
-        sync: false
-
-      # Crash reporting. Blank means the SDK never starts and nothing is
-      # sent - see platform.SentryConfig for what is stripped from an event
-      # before it leaves. The two frontends have their own DSN, set in
-      # Vercel as VITE_SENTRY_DSN (a build-time variable, so changing it
-      # needs a redeploy).
-      - key: SENTRY_DSN
-        sync: false
-
-      # Not implemented yet - leave blank until they are.
-      - key: RAZORPAY_KEY_ID
-        sync: false
-      - key: RAZORPAY_KEY_SECRET
-        sync: false
-      # Signs Razorpay's webhook calls. Without it every webhook is refused,
-      # and a payment the app never heard back about stays unpaid.
-      - key: RAZORPAY_WEBHOOK_SECRET
-        sync: false
-      - key: FIREBASE_PROJECT_ID
-        sync: false
-      - key: FIREBASE_CREDENTIALS_JSON
-        sync: false
-      - key: TWILIO_ACCOUNT_SID
-        sync: false
-      - key: TWILIO_AUTH_TOKEN
-        sync: false
-      - key: TWILIO_FROM_NUMBER
-        sync: false
-
-      # Uploaded photos and documents: not declared here, so they default to
-      # DatabaseDocumentStorage - stored in the Postgres above and served
-      # through signed links built from RENDER_EXTERNAL_URL, which Render
-      # sets itself. Never DOCUMENT_STORAGE_PROVIDER=local on Render: the
-      # container disk is wiped on every restart and redeploy. For a bucket
-      # instead, set DOCUMENT_STORAGE_PROVIDER=s3 plus
-      # DOCUMENT_STORAGE_S3_BUCKET, AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY.
-
-      # Not declared: PORT. Render injects it automatically (defaults to
-      # 10000) for every web service, Docker-based ones included - the app
-      # already binds to it via server.port=${PORT:8080} in application.yml.
