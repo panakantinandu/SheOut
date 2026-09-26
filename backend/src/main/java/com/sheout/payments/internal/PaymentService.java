@@ -416,7 +416,8 @@ public class PaymentService implements PaymentApi {
                 payment.getCommissionPercent(),
                 payment.getCreatedAt(),
                 payment.getUpdatedAt(),
-                payment.getCapturedAt()
+                payment.getCapturedAt(),
+                payment.getFareAmount()
         );
     }
 }

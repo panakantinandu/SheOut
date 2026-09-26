@@ -1,4 +1,4 @@
-import { CheckCircle2, Hourglass, ShieldCheck } from 'lucide-react';
+import { CheckCircle2, HelpCircle, Hourglass, ShieldCheck } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { AmountText, Card, IconCircle, paymentMethodLabel } from '@sheout/design-system';
 import { paymentsApi } from '../api/client';
@@ -58,6 +58,34 @@ export function CollectPaymentCard({ bookingId, onPaid }: { bookingId: string; o
   }
 
   if (paid) {
+    const earned = payment.method !== 'CASH' && payment.status !== 'WAIVED' ? payment.driverPayout : null;
+    if (earned != null) {
+      // Figures as recorded on the payment when it was captured. The fee is
+      // the difference between the two, so the lines always add up to the
+      // fare exactly as settled - nothing here is priced again.
+      const fare = payment.fareAmount ?? payment.amount;
+      const fee = Math.max(0, Math.round((fare - earned) * 100) / 100);
+      return (
+        <Card tone="success" className="space-y-4" data-testid="collect-payment-paid">
+          <div className="flex items-start gap-3">
+            <IconCircle size="md" tone="soft" color="green" icon={<CheckCircle2 />} />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-text-secondary">{t('collect.youEarned')}</p>
+              <p data-testid="earned-amount">
+                <AmountText amount={earned} size="lg" exact animate className="text-4xl leading-tight" />
+              </p>
+              <p className="text-sm text-text-secondary">{t('collect.inWallet')}</p>
+            </div>
+          </div>
+          <FareBreakdown fare={fare} fee={fee} percent={payment.commissionPercent} />
+          <p className="text-xs text-text-secondary">
+            {payment.method === 'PROMO_CREDIT'
+              ? t('collect.paidByOffer')
+              : t('collect.paidBy', { method: paymentMethodLabel(payment.method) })}
+          </p>
+        </Card>
+      );
+    }
     return (
       <Card tone="success" className="space-y-2" data-testid="collect-payment-paid">
         <div className="flex items-center gap-3">
@@ -74,11 +102,6 @@ export function CollectPaymentCard({ bookingId, onPaid }: { bookingId: string; o
           </div>
           <AmountText amount={payment.amount} size="lg" exact />
         </div>
-        {payment.driverPayout != null && payment.method !== 'CASH' && (
-          <p className="text-sm text-text-secondary">
-            {t('collect.share', { amount: payment.driverPayout.toFixed(2) })}
-          </p>
-        )}
       </Card>
     );
   }
@@ -102,5 +125,70 @@ export function CollectPaymentCard({ bookingId, onPaid }: { bookingId: string; o
         </p>
       </div>
     </Card>
+  );
+}
+
+/** Shown open the first time she sees a fee explained, and behind a link after that. */
+const FEE_EXPLAINED_KEY = 'sheout_fee_explained_seen';
+
+function readSeen(): boolean {
+  try {
+    return localStorage.getItem(FEE_EXPLAINED_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * How the fare was split, as plain facts beside each other: what the rider's
+ * trip cost, and SheOut's fee at its rate. Neutral on purpose - no minus
+ * signs, no red, no "deducted" - because this is disclosure of how her pay
+ * is worked out, not a charge being taken from her.
+ * <p>
+ * It stays on screen every time, not only on request: gig-worker rules
+ * (Telangana's 2026 Platform-Based Gig Workers Act among them) ask that the
+ * calculation behind a worker's pay be shown to her.
+ */
+function FareBreakdown({ fare, fee, percent }: { fare: number; fee: number; percent: number | null }) {
+  const { t } = useTranslation();
+  const [firstTime] = useState(() => !readSeen());
+  const [open, setOpen] = useState(firstTime);
+
+  useEffect(() => {
+    if (!firstTime) return;
+    try {
+      localStorage.setItem(FEE_EXPLAINED_KEY, '1');
+    } catch {
+      // Private mode: she simply sees the explanation open again next time.
+    }
+  }, [firstTime]);
+
+  const rate = percent == null ? null : Number(percent).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+  return (
+    <div className="space-y-2 rounded-card bg-background p-3 text-sm text-text-secondary" data-testid="fare-breakdown">
+      <div className="flex justify-between gap-3">
+        <span>{t('collect.tripFare')}</span>
+        <span className="tabular-nums" data-testid="breakdown-fare">₹{fare.toFixed(2)}</span>
+      </div>
+      <div className="flex justify-between gap-3">
+        <span>{rate == null ? t('collect.platformFee') : t('collect.platformFeeRate', { rate })}</span>
+        <span className="tabular-nums" data-testid="breakdown-fee">₹{fee.toFixed(2)}</span>
+      </div>
+      <button
+        type="button"
+        className="flex min-h-[44px] items-center gap-1.5 text-left text-xs font-semibold text-primary"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        data-testid="fee-help"
+      >
+        <HelpCircle className="h-4 w-4 shrink-0" />
+        {t('collect.feeHelp')}
+      </button>
+      {open && (
+        <p className="text-xs leading-relaxed" data-testid="fee-explained">
+          {t('collect.feeExplained')}
+        </p>
+      )}
+    </div>
   );
 }

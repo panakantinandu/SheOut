@@ -459,10 +459,17 @@
     "settledEarlier": "Settled before in-app payment was required",
     "cash": "Cash, collected by you",
     "paidBy": "Paid by your rider · {{method}}",
-    "share": "Your share, ₹{{amount}}, is in your wallet.",
     "waiting": "Waiting for payment",
     "howPaid": "Your rider pays in her SheOut app, from her wallet or online. This updates on its own the moment she does.",
-    "noCash": "Please don't take cash or a transfer to your own account. Fares paid outside SheOut can't be recorded, and your trip won't count as paid."
+    "noCash": "Please don't take cash or a transfer to your own account. Fares paid outside SheOut can't be recorded, and your trip won't count as paid.",
+    "youEarned": "You earned",
+    "inWallet": "Added to your SheOut wallet",
+    "tripFare": "Trip fare",
+    "platformFee": "Platform fee",
+    "platformFeeRate": "Platform fee ({{rate}}%)",
+    "feeHelp": "What does the platform fee pay for?",
+    "feeExplained": "The platform fee keeps SheOut running for you: partner support whenever you need it, safety features like SOS, live trip sharing and ID-checked riders, and the app, maps and payments themselves. The rate is the same on every trip.",
+    "paidByOffer": "Your rider's fare was covered by a SheOut offer. Your earnings are exactly the same."
   },
   "sos": {
     "button": "SOS",

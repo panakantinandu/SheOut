@@ -34,6 +34,12 @@ public record PaymentSummary(
         BigDecimal commissionPercent,
         Instant createdAt,
         Instant updatedAt,
-        Instant capturedAt
+        Instant capturedAt,
+        /**
+         * The trip's whole fare. The same as amount unless a promotion paid
+         * part of it: amount is what the rider was charged, this is what the
+         * partner's share and the platform fee were worked out from.
+         */
+        BigDecimal fareAmount
 ) {
 }
