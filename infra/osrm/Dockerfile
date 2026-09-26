@@ -12,7 +12,13 @@
 
 # ---- 1. clip ---------------------------------------------------------------
 FROM python:3.12-slim AS clip
-RUN pip install --no-cache-dir osmium==4.3.1
+# The osmium wheel bundles bz2 and lz4 but links expat, zlib and the C++
+# runtime from the system, and the slim image leaves out expat. The import
+# check fails the build here, in one line, if another one goes missing.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends libexpat1 libstdc++6 zlib1g \
+ && rm -rf /var/lib/apt/lists/*
+RUN pip install --no-cache-dir osmium==4.3.1 && python -c "import osmium"
 WORKDIR /data
 # Changing this (or redeploying without the build cache) fetches a fresh map.
 ARG EXTRACT_URL=http://download.openstreetmap.fr/extracts/asia/india/telangana-latest.osm.pbf
