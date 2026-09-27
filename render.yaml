@@ -68,7 +68,10 @@ services:
     runtime: docker
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
-    plan: starter # the live plan; must match the dashboard, or a Blueprint sync changes it
+    # Standard: 1 CPU, 2 GB. The JVM settings in backend/Dockerfile are
+    # relative (heap 60% of the container), so they follow the plan.
+    # Must match the dashboard, or a Blueprint sync changes it.
+    plan: standard
     region: singapore # closest Render region to Hyderabad
     # Readiness, not liveness: it stays 503 until the instance has warmed up
     # (platform.WarmUpRunner), and Render sends traffic only once it is 200.
