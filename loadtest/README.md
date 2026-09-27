@@ -126,7 +126,7 @@ Class-data sharing (the archive built in the Dockerfile) then takes startup
 from 13-14 s to 9.5 s on one core.
 
 Confirmed on staging (Render Starter, half a CPU), 27 Sep 03:22-03:40 UTC,
-straight after deploying 4da0946 - the same 16-minute run as "run 1: cold"
+straight after deploying 5e96f99 - the same 16-minute run as "run 1: cold"
 above:
 
 | | run 1: cold, before | run 3: cold, heap + C1 + CDS + warm-up |
