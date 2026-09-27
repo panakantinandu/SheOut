@@ -15,6 +15,38 @@ interface RazorpayCheckoutOptions {
   prefill?: { contact?: string };
   handler: (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => void;
   modal?: { ondismiss?: () => void };
+  config?: {
+    display: {
+      blocks: Record<string, { name: string; instruments: { method: string; flows?: string[]; apps?: string[] }[] }>;
+      sequence: string[];
+      preferences: { show_default_blocks: boolean };
+    };
+  };
+}
+
+/**
+ * UPI first, with the apps people in India actually pay with named: on a
+ * phone, "intent" opens PhonePe, Google Pay or Paytm directly; on a
+ * computer, "qr" shows a code to scan with any of them. Cards, netbanking
+ * and wallets follow as Razorpay's own blocks.
+ * <p>
+ * Razorpay shows this block only when UPI is enabled on the SheOut Razorpay
+ * account (Dashboard, Payment Methods). While it is not, Checkout silently
+ * leaves it out - which is why riders saw no UPI option at all.
+ */
+function upiFirst(name: string): RazorpayCheckoutOptions['config'] {
+  return {
+    display: {
+      blocks: {
+        upiApps: {
+          name,
+          instruments: [{ method: 'upi', flows: ['intent', 'qr', 'collect'], apps: ['google_pay', 'phonepe', 'paytm'] }],
+        },
+      },
+      sequence: ['block.upiApps'],
+      preferences: { show_default_blocks: true },
+    },
+  };
 }
 
 interface RazorpayInstance {
@@ -102,6 +134,7 @@ export async function openRazorpayCheckout(
       modal: {
         ondismiss: () => resolve(lastFailure ? { kind: 'failed', message: lastFailure } : { kind: 'dismissed' }),
       },
+      config: upiFirst(i18next.t('payment.upiApps')),
     });
     checkout.on('payment.failed', (response) => {
       lastFailure = response.error?.description ?? i18next.t('payment.didNotGoThrough');

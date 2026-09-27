@@ -13,4 +13,6 @@ interface RiderWalletEntryRepository extends JpaRepository<RiderWalletEntryEntit
     boolean existsByTopupIdAndType(UUID topupId, RiderWalletEntryEntity.Type type);
 
     boolean existsByBookingIdAndType(UUID bookingId, RiderWalletEntryEntity.Type type);
+
+    boolean existsByPaymentIdAndType(UUID paymentId, RiderWalletEntryEntity.Type type);
 }

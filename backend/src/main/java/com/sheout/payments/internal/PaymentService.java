@@ -8,6 +8,8 @@ import com.sheout.payments.ListingFeeCheckout;
 import com.sheout.payments.ListingFeePaid;
 import com.sheout.payments.PaymentApi;
 import com.sheout.payments.PaymentPurpose;
+import com.sheout.payments.UpiQr;
+import com.sheout.payments.internal.gateway.GatewayQr;
 import com.sheout.payments.internal.wallet.RiderWalletService;
 import com.sheout.payments.PaymentCaptured;
 import com.sheout.payments.internal.gateway.GatewayPayment;
@@ -27,6 +29,7 @@ import org.springframework.data.domain.Pageable;
 
 import java.time.Instant;
 import java.util.Collection;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -123,6 +126,12 @@ public class PaymentService implements PaymentApi {
         // free for her next offer. Same transaction as the capture. A refusal
         // here is logged, not thrown - money Razorpay has already taken must
         // never be un-recorded because of a booking-side problem.
+        if (payment.getRazorpayQrId() != null) {
+            // Paid - by the QR or another way while it was out. Either way it
+            // must not take a second payment; closing a used one is harmless.
+            String qrId = payment.getRazorpayQrId();
+            afterCommit(() -> paymentGateway.closeQr(qrId));
+        }
         Result<BookingSummary, BookingError> settled = bookingApi.markPaymentSettled(payment.getBookingId());
         if (settled.isFailure()) {
             log.error("Payment {} captured but booking {} could not be marked settled - {}",
@@ -491,6 +500,144 @@ public class PaymentService implements PaymentApi {
     @Transactional(readOnly = true)
     public Optional<PaymentSummary> listingFeeFor(UUID sellerId) {
         return paymentRepository.findBySellerId(sellerId).map(this::toSummary);
+    }
+
+    @Override
+    public Result<PaymentSummary, PaymentError> payListingFeeFromWallet(UUID payerAccountId, UUID sellerId, BigDecimal amount) {
+        if (amount == null || amount.signum() <= 0) {
+            return Result.failure(PaymentError.INVALID_AMOUNT);
+        }
+        return transactions.execute(status -> {
+            PaymentEntity payment = paymentRepository.findLockedBySellerId(sellerId)
+                    .orElseGet(() -> paymentRepository.save(PaymentEntity.listingFee(payerAccountId, sellerId, amount)));
+            if (!payerAccountId.equals(payment.getPayerAccountId())) {
+                return Result.<PaymentSummary, PaymentError>failure(PaymentError.PAYMENT_NOT_FOUND);
+            }
+            if (settled(payment)) {
+                return Result.<PaymentSummary, PaymentError>failure(PaymentError.ALREADY_CAPTURED);
+            }
+            Result<BigDecimal, PaymentError> debit =
+                    riderWalletService.debitForListingFee(payerAccountId, payment.getId(), payment.getAmount());
+            if (debit.isFailure()) {
+                status.setRollbackOnly();
+                return Result.<PaymentSummary, PaymentError>failure(debit.error());
+            }
+            return Result.<PaymentSummary, PaymentError>success(markCaptured(payment, PaymentMethod.SHEOUT_WALLET, null));
+        });
+    }
+
+    // ------------------------------------------------------------ the partner's UPI QR
+
+    /** How long a QR takes payments. Long enough to open an app and scan; short enough that an old one is not lying around. */
+    private static final java.time.Duration QR_LIFETIME = java.time.Duration.ofMinutes(15);
+
+    /**
+     * The QR the partner shows at the end of a trip. The same one while it
+     * is still good for a few minutes; a new one once it is nearly closed.
+     * The Razorpay call is made with no transaction open, as for an order.
+     */
+    public Result<UpiQr, PaymentError> upiQrForTrip(UUID bookingId) {
+        Optional<PaymentEntity> found = ensurePayment(bookingId);
+        if (found.isEmpty()) {
+            return Result.failure(PaymentError.TRIP_NOT_ENDED);
+        }
+        PaymentEntity payment = found.get();
+        if (settled(payment)) {
+            return Result.failure(PaymentError.ALREADY_CAPTURED);
+        }
+        Instant now = Instant.now();
+        if (payment.getRazorpayQrId() != null && payment.getQrExpiresAt() != null
+                && payment.getQrExpiresAt().isAfter(now.plus(java.time.Duration.ofMinutes(2)))) {
+            return Result.success(new UpiQr(payment.getQrImageUrl(), payment.getAmount(), payment.getQrExpiresAt()));
+        }
+        String previous = payment.getRazorpayQrId();
+        Result<GatewayQr, PaymentError> created = paymentGateway.createUpiQr(payment.getId(), payment.getAmount(),
+                "SheOut trip fare", now.plus(QR_LIFETIME));
+        if (created.isFailure()) {
+            return Result.failure(created.error());
+        }
+        GatewayQr qr = created.value();
+        transactions.executeWithoutResult(status -> paymentRepository.findLockedByBookingId(bookingId).ifPresent(p -> {
+            p.setQr(qr.qrId(), qr.imageUrl(), qr.closesAt());
+            paymentRepository.save(p);
+        }));
+        if (previous != null) {
+            // Anything already paid on the old one is still found by the
+            // webhook - it was closed, not forgotten; see applyQrCredit.
+            paymentGateway.closeQr(previous);
+        }
+        return Result.success(new UpiQr(qr.imageUrl(), payment.getAmount(), qr.closesAt()));
+    }
+
+    /**
+     * Asks Razorpay whether the QR has been paid - the partner's screen does
+     * this while it shows the QR, so a trip is settled even when a webhook
+     * is slow or missing. Answers with the payment as it now stands.
+     */
+    public Result<PaymentSummary, PaymentError> checkUpiQr(UUID bookingId) {
+        Optional<PaymentEntity> found = paymentRepository.findByBookingId(bookingId);
+        if (found.isEmpty()) {
+            return Result.failure(PaymentError.PAYMENT_NOT_FOUND);
+        }
+        PaymentEntity payment = found.get();
+        if (payment.getRazorpayQrId() != null && !settled(payment)) {
+            Result<List<GatewayQr.QrPayment>, PaymentError> paid = paymentGateway.qrPayments(payment.getRazorpayQrId());
+            if (paid.isSuccess()) {
+                for (GatewayQr.QrPayment p : paid.value()) {
+                    if (p.captured()) {
+                        applyQrCredit(payment.getRazorpayQrId(), p.paymentId(), p.amountPaise(), p.method());
+                    }
+                }
+            }
+        }
+        return Result.success(toSummary(paymentRepository.findByBookingId(bookingId).orElseThrow()));
+    }
+
+    /**
+     * A payment arrived on a partner's QR - by webhook (qr_code.credited) or
+     * found by checkUpiQr. Captures the fare if it is still owed and the
+     * amount is right. If the fare was already paid another way, this second
+     * payment is refunded in full: a rider is never charged twice for a trip.
+     * False when the QR is not one of ours.
+     */
+    public boolean applyQrCredit(String qrId, String razorpayPaymentId, long amountPaise, PaymentMethod method) {
+        Boolean known = transactions.execute(status -> {
+            Optional<PaymentEntity> found = qrId == null ? Optional.empty() : paymentRepository.findLockedByRazorpayQrId(qrId);
+            if (found.isEmpty()) {
+                return false;
+            }
+            PaymentEntity payment = found.get();
+            if (razorpayPaymentId.equals(payment.getRazorpayPaymentId())) {
+                return true;
+            }
+            long expected = payment.getAmount().multiply(BigDecimal.valueOf(100)).setScale(0, java.math.RoundingMode.HALF_UP).longValueExact();
+            if (!settled(payment) && amountPaise == expected) {
+                markCaptured(payment, method == null ? PaymentMethod.UPI : method, razorpayPaymentId);
+                return true;
+            }
+            log.error("QR payment {} on {} for booking {} could not be applied (settled={}, {} paise, expected {}) - refunding",
+                    razorpayPaymentId, qrId, payment.getBookingId(), settled(payment), amountPaise, expected);
+            return null;
+        });
+        if (known == null) {
+            paymentGateway.refund(razorpayPaymentId);
+            return true;
+        }
+        return known;
+    }
+
+    private static void afterCommit(Runnable action) {
+        if (org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive()) {
+            org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                    new org.springframework.transaction.support.TransactionSynchronization() {
+                        @Override
+                        public void afterCommit() {
+                            action.run();
+                        }
+                    });
+        } else {
+            action.run();
+        }
     }
 
     private PaymentSummary toSummary(PaymentEntity payment) {

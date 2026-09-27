@@ -43,4 +43,11 @@ public interface PaymentApi {
 
     /** The seller's listing fee as it stands, if one was ever started. */
     Optional<PaymentSummary> listingFeeFor(UUID sellerId);
+
+    /**
+     * The fee paid from her SheOut wallet: the debit and the capture in one
+     * transaction, and ListingFeePaid published with it. INSUFFICIENT_BALANCE
+     * when her balance is short; ALREADY_CAPTURED when it is paid already.
+     */
+    Result<PaymentSummary, PaymentError> payListingFeeFromWallet(UUID payerAccountId, UUID sellerId, BigDecimal amount);
 }

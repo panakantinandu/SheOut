@@ -966,6 +966,11 @@ export const marketplaceApi = {
     return request('/api/v1/marketplace/seller/me/listing-fee/checkout', { method: 'POST' });
   },
 
+  /** The fee from her SheOut wallet; her shop goes live at once. 409 INSUFFICIENT_BALANCE when short. */
+  payListingFeeFromWallet(): Promise<SellerShop> {
+    return request('/api/v1/marketplace/seller/me/listing-fee/wallet', { method: 'POST' });
+  },
+
   /** Verified with Razorpay by the server before her shop goes live. */
   confirmListingFee(result: CheckoutResult): Promise<SellerShop> {
     return request('/api/v1/marketplace/seller/me/listing-fee/confirm', { method: 'POST', body: result });

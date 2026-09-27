@@ -80,6 +80,20 @@ public class PaymentEntity extends BaseEntity {
 
     private Instant capturedAt;
 
+    /**
+     * The partner's UPI QR for this fare, while there is one: Razorpay's id,
+     * the image to show, and when it stops accepting payments. One live QR
+     * at a time; an expired one is replaced when she asks again.
+     */
+    @Column(name = "razorpay_qr_id", unique = true, length = 64)
+    private String razorpayQrId;
+
+    @Column(name = "qr_image_url", length = 500)
+    private String qrImageUrl;
+
+    @Column(name = "qr_expires_at")
+    private Instant qrExpiresAt;
+
     protected PaymentEntity() {
         // JPA
     }
@@ -99,6 +113,24 @@ public class PaymentEntity extends BaseEntity {
         payment.sellerId = sellerId;
         payment.fareAmount = amount;
         return payment;
+    }
+
+    public String getRazorpayQrId() {
+        return razorpayQrId;
+    }
+
+    public String getQrImageUrl() {
+        return qrImageUrl;
+    }
+
+    public Instant getQrExpiresAt() {
+        return qrExpiresAt;
+    }
+
+    public void setQr(String razorpayQrId, String qrImageUrl, Instant qrExpiresAt) {
+        this.razorpayQrId = razorpayQrId;
+        this.qrImageUrl = qrImageUrl;
+        this.qrExpiresAt = qrExpiresAt;
     }
 
     public PaymentPurpose getPurpose() {

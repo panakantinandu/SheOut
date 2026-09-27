@@ -731,7 +731,28 @@ export const paymentsApi = {
   },
   // No cash confirmation any more: every fare is paid by the rider in her
   // app and lands in the partner's wallet. See the backend's PaymentController.
+
+  /**
+   * A UPI QR for exactly this fare, for the rider to scan with PhonePe,
+   * Google Pay, Paytm or any UPI app. It is SheOut's (Razorpay's), not her
+   * own UPI ID, so the fare still reaches her SheOut wallet with a record.
+   * 502 UPI_QR_UNAVAILABLE when one cannot be made.
+   */
+  upiQr(bookingId: string): Promise<UpiQr> {
+    return request(`/api/v1/payments/bookings/${bookingId}/upi-qr`, { method: 'POST' });
+  },
+
+  /** Asks Razorpay whether the QR has been paid, and records it if so. */
+  checkUpiQr(bookingId: string): Promise<PaymentSummary> {
+    return request(`/api/v1/payments/bookings/${bookingId}/upi-qr/check`, { method: 'POST' });
+  },
 };
+
+export interface UpiQr {
+  imageUrl: string;
+  amount: number;
+  expiresAt: string;
+}
 
 export const payoutsApi = {
   overview(): Promise<PayoutOverview> {

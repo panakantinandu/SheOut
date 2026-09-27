@@ -1,7 +1,8 @@
-import { CheckCircle2, HelpCircle, Hourglass, ShieldCheck } from 'lucide-react';
+import { CheckCircle2, HelpCircle, Hourglass, QrCode, RefreshCw, ShieldCheck } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { AmountText, Card, IconCircle, paymentMethodLabel } from '@sheout/design-system';
-import { paymentsApi } from '../api/client';
+import { AmountText, Button, Card, IconCircle, paymentMethodLabel } from '@sheout/design-system';
+import { paymentsApi, type UpiQr } from '../api/client';
+import { apiErrorText } from '../lib/apiErrors';
 import type { PaymentSummary } from '../api/types';
 import { useTranslation } from '@sheout/design-system';
 
@@ -21,6 +22,12 @@ const POLL_INTERVAL_MS = 4000;
 export function CollectPaymentCard({ bookingId, onPaid }: { bookingId: string; onPaid?: () => void }) {
   const { t } = useTranslation();
   const [payment, setPayment] = useState<PaymentSummary | null>(null);
+  /** The UPI QR she is showing, if she opened it. While it is up, each poll asks Razorpay too. */
+  const [qr, setQr] = useState<UpiQr | null>(null);
+  const [qrBusy, setQrBusy] = useState(false);
+  const [qrError, setQrError] = useState<string | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+  const qrExpired = qr ? new Date(qr.expiresAt).getTime() <= now : false;
 
   const paid = payment?.status === 'CAPTURED' || payment?.status === 'WAIVED';
 
@@ -34,8 +41,7 @@ export function CollectPaymentCard({ bookingId, onPaid }: { bookingId: string; o
     if (paid) return;
     let cancelled = false;
     const load = () =>
-      paymentsApi
-        .getForBooking(bookingId)
+      (qr && !qrExpired ? paymentsApi.checkUpiQr(bookingId) : paymentsApi.getForBooking(bookingId))
         .then((p) => {
           if (!cancelled) setPayment(p);
         })
@@ -47,7 +53,27 @@ export function CollectPaymentCard({ bookingId, onPaid }: { bookingId: string; o
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [bookingId, paid]);
+  }, [bookingId, paid, qr, qrExpired]);
+
+  // The clock the QR's expiry is read against.
+  useEffect(() => {
+    if (!qr || paid) return;
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [qr, paid]);
+
+  async function showQr() {
+    setQrBusy(true);
+    setQrError(null);
+    try {
+      setQr(await paymentsApi.upiQr(bookingId));
+      setNow(Date.now());
+    } catch (err) {
+      setQrError(apiErrorText(err, 'collect.qrError'));
+    } finally {
+      setQrBusy(false);
+    }
+  }
 
   if (!payment) {
     return (
@@ -118,6 +144,27 @@ export function CollectPaymentCard({ bookingId, onPaid }: { bookingId: string; o
       <p className="text-sm text-text-secondary">
         {t('collect.howPaid')}
       </p>
+      {qr && !qrExpired ? (
+        <div className="flex flex-col items-center gap-2 rounded-card border border-border bg-white p-4 text-center" data-testid="upi-qr">
+          <img src={qr.imageUrl} alt={t('collect.qrAlt')} className="w-full max-w-[18rem]" />
+          <p className="text-sm font-semibold text-[#1a1a1a]">{t('collect.qrScan')}</p>
+          <p className="text-xs text-[#555]">
+            {t('collect.qrValidTill', { time: new Date(qr.expiresAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) })}
+          </p>
+        </div>
+      ) : (
+        <Button
+          fullWidth
+          variant={qr ? 'secondary' : 'primary'}
+          icon={qr ? <RefreshCw className="h-4 w-4" /> : <QrCode className="h-4 w-4" />}
+          onClick={showQr}
+          disabled={qrBusy}
+          data-testid="show-upi-qr"
+        >
+          {qrBusy ? t('collect.qrLoading') : qr ? t('collect.qrNew') : t('collect.qrShow')}
+        </Button>
+      )}
+      {qrError && <p className="text-sm text-danger" role="alert">{qrError}</p>}
       <div className="flex items-start gap-2 rounded-card bg-background p-3 text-sm text-text-secondary">
         <ShieldCheck className="mt-1 h-4 w-4 shrink-0 text-primary" />
         <p>

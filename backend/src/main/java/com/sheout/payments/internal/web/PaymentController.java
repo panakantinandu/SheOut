@@ -9,6 +9,7 @@ import com.sheout.booking.BookingParticipants;
 import com.sheout.payments.PaymentError;
 import com.sheout.payments.PaymentStatus;
 import com.sheout.payments.PaymentSummary;
+import com.sheout.payments.UpiQr;
 import com.sheout.payments.internal.PaymentService;
 import com.sheout.sharedkernel.Result;
 import com.sheout.sharedkernel.web.ApiException;
@@ -123,6 +124,33 @@ public class PaymentController {
     public ResponseEntity<PaymentSummary> payFromWallet(@PathVariable UUID bookingId) {
         UUID customerId = requireCustomerOf(bookingId);
         return respond(paymentService.payFromWallet(bookingId, customerId));
+    }
+
+    /**
+     * The UPI QR the partner shows at the end of the trip, for the rider to
+     * scan with PhonePe, Google Pay, Paytm or any UPI app. Either of the two
+     * on the trip may ask for it. The money goes through SheOut's Razorpay
+     * account to the partner's wallet - it is not the partner's own UPI ID.
+     */
+    @PostMapping("/bookings/{bookingId}/upi-qr")
+    public ResponseEntity<UpiQr> upiQr(@PathVariable UUID bookingId) {
+        requireParticipant(bookingId);
+        Result<UpiQr, PaymentError> qr = paymentService.upiQrForTrip(bookingId);
+        if (qr.isFailure()) {
+            if (qr.error() == PaymentError.GATEWAY_ERROR) {
+                throw new ApiException(HttpStatus.BAD_GATEWAY, "UPI_QR_UNAVAILABLE",
+                        "A UPI QR could not be made right now. The rider can pay in her app instead.");
+            }
+            throw toApiException(qr.error());
+        }
+        return ResponseEntity.ok(qr.value());
+    }
+
+    /** Has the QR been paid? Asks Razorpay, so the trip settles even without the webhook. */
+    @PostMapping("/bookings/{bookingId}/upi-qr/check")
+    public ResponseEntity<PaymentSummary> checkUpiQr(@PathVariable UUID bookingId) {
+        requireParticipant(bookingId);
+        return respond(paymentService.checkUpiQr(bookingId));
     }
 
     /** What the rider's app opens Razorpay Checkout with. The rider on the booking only. */

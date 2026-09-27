@@ -3,6 +3,7 @@ import { ApiError } from '../api/client';
 
 /** Server error codes the app has its own translated wording for. */
 const KNOWN_CODES = new Set([
+  'UPI_QR_UNAVAILABLE',
   'REFERRAL_CODE_INVALID',
   'REFERRAL_OWN_CODE',
   'REFERRAL_ALREADY_APPLIED',

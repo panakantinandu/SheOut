@@ -23,6 +23,8 @@ public enum MarketplaceError {
     /** The listing fee is asked for only once she has been approved. */
     NOT_AWAITING_PAYMENT,
     ALREADY_PAID,
+    /** Her SheOut wallet is short of the fee. */
+    INSUFFICIENT_BALANCE,
     PAYMENT_FAILED,
     PAYMENT_NOT_VERIFIED,
     /** Console: no such seller, or not in a state that action applies to. */

@@ -19,7 +19,9 @@ public class RiderWalletEntryEntity extends BaseEntity {
         /** Money she added through Razorpay. Positive. */
         TOPUP,
         /** A trip she paid from her balance. Negative. */
-        TRIP_PAYMENT
+        TRIP_PAYMENT,
+        /** Her SheOut Seller listing fee, paid from her balance. Negative. */
+        LISTING_FEE
     }
 
     @Column(nullable = false)
@@ -39,6 +41,9 @@ public class RiderWalletEntryEntity extends BaseEntity {
     private UUID bookingId;
 
     private UUID topupId;
+
+    /** The payment a LISTING_FEE entry paid. */
+    private UUID paymentId;
 
     protected RiderWalletEntryEntity() {
         // JPA
@@ -62,6 +67,17 @@ public class RiderWalletEntryEntity extends BaseEntity {
         e.amount = amount.negate();
         e.balanceAfter = balanceAfter;
         e.bookingId = bookingId;
+        return e;
+    }
+
+    static RiderWalletEntryEntity listingFee(UUID customerAccountId, BigDecimal amount, BigDecimal balanceAfter,
+                                             UUID paymentId) {
+        RiderWalletEntryEntity e = new RiderWalletEntryEntity();
+        e.customerAccountId = customerAccountId;
+        e.type = Type.LISTING_FEE;
+        e.amount = amount.negate();
+        e.balanceAfter = balanceAfter;
+        e.paymentId = paymentId;
         return e;
     }
 

@@ -154,6 +154,13 @@ public class MarketplaceController {
         return ResponseEntity.ok(unwrap(sellers.startListingFeePayment(caller.accountId())));
     }
 
+    /** The fee from her SheOut wallet - she goes live at once. 409 INSUFFICIENT_BALANCE when it is short. */
+    @PostMapping("/seller/me/listing-fee/wallet")
+    public ResponseEntity<SellerView> payFeeFromWallet() {
+        CurrentAccount caller = requireCustomer();
+        return ResponseEntity.ok(unwrap(sellers.payListingFeeFromWallet(caller.accountId())));
+    }
+
     @PostMapping("/seller/me/listing-fee/confirm")
     public ResponseEntity<SellerView> confirmFee(@Valid @RequestBody ConfirmFeeRequest request) {
         CurrentAccount caller = requireCustomer();
@@ -226,6 +233,8 @@ public class MarketplaceController {
             case IMAGE_STORAGE_FAILED -> new ApiException(HttpStatus.SERVICE_UNAVAILABLE, error.name(), "The photo could not be saved. Please try again.");
             case NOT_AWAITING_PAYMENT -> new ApiException(HttpStatus.CONFLICT, error.name(), "The listing fee is due only once your shop is approved.");
             case ALREADY_PAID -> new ApiException(HttpStatus.CONFLICT, error.name(), "Your listing fee is already paid.");
+            case INSUFFICIENT_BALANCE -> new ApiException(HttpStatus.CONFLICT, error.name(),
+                    "Your SheOut wallet does not have enough for the listing fee. Add money or pay online.");
             case PAYMENT_FAILED -> new ApiException(HttpStatus.BAD_GATEWAY, error.name(), "The payment could not be started or confirmed. Please try again.");
             case PAYMENT_NOT_VERIFIED -> new ApiException(HttpStatus.BAD_REQUEST, error.name(), "The payment could not be verified.");
             case SELLER_NOT_FOUND -> new ApiException(HttpStatus.NOT_FOUND, error.name(), "No such seller.");

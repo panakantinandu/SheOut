@@ -4,6 +4,8 @@ import com.sheout.payments.PaymentError;
 import com.sheout.sharedkernel.Result;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -43,4 +45,21 @@ public interface PaymentGateway {
      * different amount being attached to this order.
      */
     Result<GatewayPayment, PaymentError> confirmCapture(String paymentId, String expectedOrderId, BigDecimal expectedAmount);
+
+    /**
+     * A single-use UPI QR for exactly this amount, closing at closesAt -
+     * what a partner shows her rider to scan with PhonePe, Google Pay, Paytm
+     * or any UPI app. The money goes to SheOut's Razorpay account like any
+     * other payment, never to the partner directly.
+     */
+    Result<GatewayQr, PaymentError> createUpiQr(UUID receipt, BigDecimal amount, String description, Instant closesAt);
+
+    /** Every payment made against the QR so far, from Razorpay. */
+    Result<List<GatewayQr.QrPayment>, PaymentError> qrPayments(String qrId);
+
+    /** Stops the QR accepting payments. Best effort: a QR also closes itself at closesAt. */
+    void closeQr(String qrId);
+
+    /** A full refund - for money that arrived twice for one fare. */
+    Result<Void, PaymentError> refund(String paymentId);
 }

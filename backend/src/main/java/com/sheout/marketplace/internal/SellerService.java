@@ -179,6 +179,31 @@ public class SellerService implements SellerApi, MarketplaceAdminApi {
     }
 
     @Override
+    public Result<SellerView, MarketplaceError> payListingFeeFromWallet(UUID accountId) {
+        Optional<SellerProfileEntity> found = sellers.findByAccountId(accountId);
+        if (found.isEmpty()) {
+            return Result.failure(MarketplaceError.NOT_A_SELLER);
+        }
+        SellerProfileEntity seller = found.get();
+        if (seller.getStatus() != SellerStatus.APPROVED_AWAITING_PAYMENT) {
+            return Result.failure(seller.getStatus() == SellerStatus.ACTIVE
+                    ? MarketplaceError.ALREADY_PAID : MarketplaceError.NOT_AWAITING_PAYMENT);
+        }
+        Result<PaymentSummary, PaymentError> paid =
+                paymentApi.payListingFeeFromWallet(accountId, seller.getId(), seller.getListingFeeAmount());
+        if (paid.isFailure()) {
+            return Result.failure(switch (paid.error()) {
+                case INSUFFICIENT_BALANCE -> MarketplaceError.INSUFFICIENT_BALANCE;
+                case ALREADY_CAPTURED -> MarketplaceError.ALREADY_PAID;
+                default -> MarketplaceError.PAYMENT_FAILED;
+            });
+        }
+        // ListingFeePaid has run as the payment committed; this covers it if it could not.
+        activateIfPaid(seller.getId());
+        return Result.success(mySeller(accountId).orElseThrow());
+    }
+
+    @Override
     public Result<SellerView, MarketplaceError> confirmListingFeePayment(UUID accountId, String orderId,
                                                                          String razorpayPaymentId, String signature) {
         Optional<SellerProfileEntity> found = sellers.findByAccountId(accountId);

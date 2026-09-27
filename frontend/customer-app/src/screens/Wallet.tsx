@@ -1,4 +1,4 @@
-import { ArrowDownLeft, PlusCircle, Receipt, ShieldCheck } from 'lucide-react';
+import { ArrowDownLeft, PlusCircle, Receipt, ShieldCheck, Store } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { AmountText, Button, Card, IconCircle, ListEmptyState, LoadMore, PullToRefresh, SkeletonCard, SkeletonList, TextField, TopHeader, usePagedList, ServiceArt } from '@sheout/design-system';
@@ -317,12 +317,18 @@ export function Wallet() {
               >
                 {entry.type === 'TOPUP' ? (
                   <IconCircle tone="soft" size="sm" color="green" icon={<ArrowDownLeft />} />
+                ) : entry.type === 'LISTING_FEE' ? (
+                  <IconCircle tone="soft" size="sm" color="primary" icon={<Store />} />
                 ) : (
                   <ServiceArt kind="ride" size="sm" />
                 )}
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-text-primary">
-                    {entry.type === 'TOPUP' ? t('wallet.moneyAdded') : t('wallet.tripPayment')}
+                    {entry.type === 'TOPUP'
+                      ? t('wallet.moneyAdded')
+                      : entry.type === 'LISTING_FEE'
+                        ? t('payments.listingFee')
+                        : t('wallet.tripPayment')}
                   </p>
                   <p className="text-xs text-text-secondary">
                     {new Date(entry.createdAt).toLocaleString(undefined, {

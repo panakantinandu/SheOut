@@ -32,4 +32,8 @@ interface PaymentRepository extends JpaRepository<PaymentEntity, UUID>, JpaSpeci
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<PaymentEntity> findLockedBySellerId(UUID sellerId);
+
+    /** The payment a partner's UPI QR is for. */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    Optional<PaymentEntity> findLockedByRazorpayQrId(String razorpayQrId);
 }

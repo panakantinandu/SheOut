@@ -28,6 +28,9 @@ public interface SellerApi {
     /** Once approved: the Razorpay order for her listing fee. */
     Result<ListingFeeCheckout, MarketplaceError> startListingFeePayment(UUID accountId);
 
+    /** Pays the fee from her SheOut wallet, and she goes live at once. */
+    Result<SellerView, MarketplaceError> payListingFeeFromWallet(UUID accountId);
+
     /** Checkout said it went through; verified with Razorpay before she goes live. */
     Result<SellerView, MarketplaceError> confirmListingFeePayment(UUID accountId, String orderId, String razorpayPaymentId,
                                                                   String signature);

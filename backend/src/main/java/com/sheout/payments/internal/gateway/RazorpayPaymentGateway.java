@@ -5,6 +5,7 @@ import com.razorpay.RazorpayClient;
 import com.razorpay.RazorpayException;
 import com.razorpay.Utils;
 import com.razorpay.Payment;
+import com.razorpay.QrCode;
 import com.sheout.payments.PaymentError;
 import com.sheout.payments.PaymentMethod;
 import com.sheout.sharedkernel.Result;
@@ -16,6 +17,9 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -129,6 +133,74 @@ public class RazorpayPaymentGateway implements PaymentGateway {
             return Result.success(new GatewayPayment(paymentId, methodOf(json.optString("method"))));
         } catch (RazorpayException e) {
             log.error("Razorpay payment {} could not be confirmed: {}", paymentId, e.getMessage());
+            return Result.failure(PaymentError.GATEWAY_ERROR);
+        }
+    }
+
+    @Override
+    public Result<GatewayQr, PaymentError> createUpiQr(UUID receipt, BigDecimal amount, String description, Instant closesAt) {
+        long paise = amount.multiply(BigDecimal.valueOf(100)).setScale(0, RoundingMode.HALF_UP).longValueExact();
+        try {
+            JSONObject request = new JSONObject();
+            request.put("type", "upi_qr");
+            request.put("name", "SheOut");
+            request.put("usage", "single_use");
+            request.put("fixed_amount", true);
+            request.put("payment_amount", paise);
+            request.put("description", description);
+            request.put("close_by", closesAt.getEpochSecond());
+            JSONObject notes = new JSONObject();
+            notes.put("receipt", receipt.toString());
+            request.put("notes", notes);
+            QrCode qr = client.qrCode.create(request);
+            JSONObject json = qr.toJson();
+            log.info("Razorpay UPI QR created - receipt: {}, qrId: {}, amount: {} paise", receipt, json.optString("id"), paise);
+            return Result.success(new GatewayQr(json.optString("id"), json.optString("image_url"),
+                    Instant.ofEpochSecond(json.optLong("close_by", closesAt.getEpochSecond()))));
+        } catch (RazorpayException e) {
+            // Most often: QR codes (or UPI) are not enabled on the Razorpay account.
+            log.error("Razorpay UPI QR creation failed - receipt: {}: {}", receipt, e.getMessage());
+            return Result.failure(PaymentError.GATEWAY_ERROR);
+        } catch (Exception e) {
+            log.error("Unexpected error creating Razorpay UPI QR - receipt: {}", receipt, e);
+            return Result.failure(PaymentError.GATEWAY_ERROR);
+        }
+    }
+
+    @Override
+    public Result<List<GatewayQr.QrPayment>, PaymentError> qrPayments(String qrId) {
+        try {
+            List<GatewayQr.QrPayment> payments = new ArrayList<>();
+            for (QrCode p : client.qrCode.fetchAllPayments(qrId)) {
+                JSONObject json = p.toJson();
+                payments.add(new GatewayQr.QrPayment(json.optString("id"), json.optLong("amount"),
+                        json.optString("status"), methodOf(json.optString("method"))));
+            }
+            return Result.success(payments);
+        } catch (RazorpayException e) {
+            log.warn("Could not read payments of Razorpay QR {}: {}", qrId, e.getMessage());
+            return Result.failure(PaymentError.GATEWAY_ERROR);
+        }
+    }
+
+    @Override
+    public void closeQr(String qrId) {
+        try {
+            client.qrCode.close(qrId);
+        } catch (Exception e) {
+            // Already closed, or closing by itself at close_by anyway.
+            log.debug("Razorpay QR {} not closed: {}", qrId, e.getMessage());
+        }
+    }
+
+    @Override
+    public Result<Void, PaymentError> refund(String paymentId) {
+        try {
+            client.payments.refund(paymentId);
+            log.warn("Razorpay payment {} refunded in full", paymentId);
+            return Result.success(null);
+        } catch (RazorpayException e) {
+            log.error("Razorpay refund of {} failed: {}", paymentId, e.getMessage());
             return Result.failure(PaymentError.GATEWAY_ERROR);
         }
     }

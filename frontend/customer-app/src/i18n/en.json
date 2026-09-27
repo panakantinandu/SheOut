@@ -423,12 +423,16 @@
       "free": "Review is free. You pay the {{amount}} listing fee only after your shop is approved."
     },
     "fee": {
-      "pay": "Pay {{amount}} listing fee",
+      "pay": "Pay {{amount}} with UPI or card",
       "opening": "Opening payment...",
       "oneTime": "One-time fee. SheOut takes nothing from your sales.",
       "checkoutDescription": "SheOut Seller listing fee",
       "failed": "The payment did not go through: {{reason}}",
-      "error": "The payment could not be completed. Please try again."
+      "error": "The payment could not be completed. Please try again.",
+      "payWallet": "Pay {{amount}} from SheOut wallet (balance {{balance}})",
+      "paying": "Paying...",
+      "walletShort": "Your SheOut wallet has {{balance}}.",
+      "addMoney": "Add money"
     },
     "editor": {
       "newTitle": "Add a product",
@@ -613,7 +617,8 @@
   },
   "payment": {
     "windowLoadError": "Could not load the payment window. Check your connection and try again.",
-    "didNotGoThrough": "The payment did not go through."
+    "didNotGoThrough": "The payment did not go through.",
+    "upiApps": "PhonePe, Google Pay, Paytm or any UPI app"
   },
   "wallet": {
     "loadError": "Could not load your wallet.",
@@ -666,8 +671,8 @@
     "payFromWallet": "Pay from SheOut wallet",
     "payFromWalletBalance": "Pay from wallet (balance ₹{{amount}})",
     "addToWallet": "Add ₹{{amount}} or more to your wallet",
-    "payOnline": "Pay online: UPI, card or netbanking",
-    "appOnlyNote": "Pay only in the app, never in cash or to your partner's own account. Your fare goes to her SheOut wallet, and you can book your next trip once it is paid.",
+    "payOnline": "Pay with PhonePe, Google Pay, Paytm or card",
+    "appOnlyNote": "Pay here in the app, or scan your partner's SheOut QR with any UPI app. Never pay in cash or to her own account - your fare goes to her SheOut wallet, and you can book again once it is paid.",
     "coveredByPromo": "Covered by {{name}}"
   },
   "unpaid": {

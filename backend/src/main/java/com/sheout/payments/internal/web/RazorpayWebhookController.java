@@ -75,8 +75,24 @@ public class RazorpayWebhookController {
         // first; an order that is neither is logged and acknowledged, since
         // asking Razorpay to redeliver it would not make it one of ours.
         switch (eventType) {
-            case "payment.captured" -> apply(orderId, razorpayPaymentId, true, null,
-                    methodOf(entity.optString("method", "")));
+            // A payment on a partner's UPI QR belongs to no order; the QR
+            // says which fare it is. Razorpay also sends payment.captured for
+            // it, with no order id - that one is left to this event.
+            case "qr_code.credited" -> {
+                JSONObject qr = event.getJSONObject("payload").optJSONObject("qr_code");
+                String qrId = qr != null && qr.optJSONObject("entity") != null ? qr.getJSONObject("entity").optString("id", null) : null;
+                if (!paymentService.applyQrCredit(qrId, razorpayPaymentId, entity.optLong("amount"),
+                        methodOf(entity.optString("method", "")))) {
+                    log.warn("Razorpay webhook for unknown QR {}", qrId);
+                }
+            }
+            case "payment.captured" -> {
+                if (orderId == null || orderId.isBlank()) {
+                    log.debug("payment.captured {} has no order - a QR payment, handled by qr_code.credited", razorpayPaymentId);
+                } else {
+                    apply(orderId, razorpayPaymentId, true, null, methodOf(entity.optString("method", "")));
+                }
+            }
             case "payment.failed" -> apply(orderId, razorpayPaymentId, false,
                     entity.optString("error_description", "Payment failed"), null);
             default -> log.debug("Ignoring unhandled Razorpay webhook event {}", eventType);

@@ -178,7 +178,7 @@ export interface RiderWallet {
   maxBalance: number;
 }
 
-export type RiderWalletEntryType = 'TOPUP' | 'TRIP_PAYMENT';
+export type RiderWalletEntryType = 'TOPUP' | 'TRIP_PAYMENT' | 'LISTING_FEE';
 
 export interface RiderWalletEntry {
   id: string;

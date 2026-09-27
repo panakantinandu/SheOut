@@ -1,4 +1,4 @@
-import { AlertTriangle, BadgeCheck, CheckCircle2, Circle, Clock, ImageOff, IndianRupee, Info, PackagePlus, PauseCircle, Pencil, Store } from 'lucide-react';
+import { AlertTriangle, BadgeCheck, CheckCircle2, Circle, Clock, ImageOff, IndianRupee, Info, PackagePlus, PauseCircle, Pencil, Store, Wallet } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -13,7 +13,7 @@ import {
   showToast,
   useTranslation,
 } from '@sheout/design-system';
-import { ApiError, marketplaceApi, usersApi } from '../api/client';
+import { ApiError, marketplaceApi, usersApi, walletApi } from '../api/client';
 import type { SellerCategory, SellerDetailsInput, SellerShop as Shop } from '../api/types';
 import { apiErrorText } from '../lib/apiErrors';
 import { openRazorpayCheckout } from '../lib/razorpayCheckout';
@@ -37,6 +37,13 @@ export function SellerShop() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [justWentLive, setJustWentLive] = useState(false);
+  /** Her SheOut wallet balance, while the fee is due - null until known, or if it could not be read. */
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  const feeDue = shop?.status === 'APPROVED_AWAITING_PAYMENT';
+  useEffect(() => {
+    if (!feeDue) return;
+    walletApi.get().then((w) => setWalletBalance(w.balance)).catch(() => setWalletBalance(null));
+  }, [feeDue]);
 
   const load = () =>
     marketplaceApi
@@ -57,6 +64,24 @@ export function SellerShop() {
     } catch (err) {
       setError(apiErrorText(err, 'seller.shop.actionError'));
       return false;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function payFeeFromWallet() {
+    setBusy(true);
+    setError(null);
+    try {
+      const updated = await marketplaceApi.payListingFeeFromWallet();
+      setShop(updated);
+      if (updated.status === 'ACTIVE') setJustWentLive(true);
+    } catch (err) {
+      if (err instanceof ApiError && err.body?.error === 'ALREADY_PAID') {
+        await load();
+        return;
+      }
+      setError(apiErrorText(err, 'seller.fee.error'));
     } finally {
       setBusy(false);
     }
@@ -107,7 +132,14 @@ export function SellerShop() {
 
       {shop && (
         <>
-          <StatusCard shop={shop} busy={busy} onPay={payFee} justWentLive={justWentLive} />
+          <StatusCard
+            shop={shop}
+            busy={busy}
+            onPay={payFee}
+            onPayFromWallet={payFeeFromWallet}
+            walletBalance={walletBalance}
+            justWentLive={justWentLive}
+          />
           {error && <p className="text-sm text-danger" role="alert">{error}</p>}
 
           <section className="space-y-3">
@@ -363,7 +395,21 @@ function ShopFields({
 
 // ---------------------------------------------------------------- where she is
 
-function StatusCard({ shop, busy, onPay, justWentLive }: { shop: Shop; busy: boolean; onPay: () => void; justWentLive: boolean }) {
+function StatusCard({
+  shop,
+  busy,
+  onPay,
+  onPayFromWallet,
+  walletBalance,
+  justWentLive,
+}: {
+  shop: Shop;
+  busy: boolean;
+  onPay: () => void;
+  onPayFromWallet: () => void;
+  walletBalance: number | null;
+  justWentLive: boolean;
+}) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const icon = {
@@ -402,9 +448,31 @@ function StatusCard({ shop, busy, onPay, justWentLive }: { shop: Shop; busy: boo
       )}
       {shop.status === 'APPROVED_AWAITING_PAYMENT' && (
         <>
-          <Button className="w-full" size="lg" icon={<IndianRupee className="h-4 w-4" />} onClick={onPay} disabled={busy} data-testid="pay-listing-fee">
+          {/* Her SheOut wallet first when it covers the fee: one tap, no app to open. */}
+          {walletBalance != null && walletBalance >= shop.listingFee.amount && (
+            <Button className="w-full" size="lg" icon={<Wallet className="h-4 w-4" />} onClick={onPayFromWallet} disabled={busy} data-testid="pay-fee-wallet">
+              {busy ? t('seller.fee.paying') : t('seller.fee.payWallet', { amount: priceText(shop.listingFee.amount), balance: priceText(walletBalance) })}
+            </Button>
+          )}
+          <Button
+            className="w-full"
+            size="lg"
+            variant={walletBalance != null && walletBalance >= shop.listingFee.amount ? 'secondary' : 'primary'}
+            icon={<IndianRupee className="h-4 w-4" />}
+            onClick={onPay}
+            disabled={busy}
+            data-testid="pay-listing-fee"
+          >
             {busy ? t('seller.fee.opening') : t('seller.fee.pay', { amount: priceText(shop.listingFee.amount) })}
           </Button>
+          {walletBalance != null && walletBalance < shop.listingFee.amount && (
+            <p className="text-caption text-text-secondary" data-testid="fee-wallet-short">
+              {t('seller.fee.walletShort', { balance: priceText(walletBalance) })}{' '}
+              <button type="button" className="font-semibold text-primary" onClick={() => navigate('/wallet', { state: { returnTo: '/seller/manage' } })}>
+                {t('seller.fee.addMoney')}
+              </button>
+            </p>
+          )}
           <p className="text-caption text-text-secondary">{t('seller.fee.oneTime')}</p>
         </>
       )}

@@ -195,6 +195,27 @@ public class RiderWalletService {
         return Result.success(wallet.getBalance());
     }
 
+    /**
+     * Her SheOut Seller listing fee, from her balance. Joins the caller's
+     * transaction, which holds the payment row's lock and captures the fee
+     * in the same commit - the wallet is never debited for a fee that is
+     * not then recorded as paid, or the other way round.
+     */
+    public Result<BigDecimal, PaymentError> debitForListingFee(UUID customerAccountId, UUID paymentId, BigDecimal fee) {
+        if (entries.existsByPaymentIdAndType(paymentId, RiderWalletEntryEntity.Type.LISTING_FEE)) {
+            return Result.failure(PaymentError.ALREADY_CAPTURED);
+        }
+        RiderWalletEntity wallet = lockedWallet(customerAccountId);
+        if (wallet.getBalance().compareTo(fee) < 0) {
+            return Result.failure(PaymentError.INSUFFICIENT_BALANCE);
+        }
+        wallet.debit(fee);
+        wallets.save(wallet);
+        entries.save(RiderWalletEntryEntity.listingFee(customerAccountId, fee, wallet.getBalance(), paymentId));
+        log.info("Listing fee payment {} paid from wallet of {} - {}", paymentId, customerAccountId, fee);
+        return Result.success(wallet.getBalance());
+    }
+
     private void credit(WalletTopupEntity topup, String razorpayPaymentId, PaymentMethod method) {
         topup.markCaptured(razorpayPaymentId, method);
         topups.save(topup);

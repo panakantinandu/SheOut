@@ -109,6 +109,8 @@ class MarketplaceFlowTest {
     @AfterEach
     void cleanUp() {
         for (UUID account : accounts) {
+            jdbc.update("delete from rider_wallet_entries where customer_account_id = ?", account);
+            jdbc.update("delete from rider_wallets where customer_account_id = ?", account);
             jdbc.update("delete from payments where payer_account_id = ?", account);
             jdbc.update("delete from seller_product_images where seller_id in (select id from seller_profiles where account_id = ?)", account);
             jdbc.update("delete from seller_products where seller_id in (select id from seller_profiles where account_id = ?)", account);
@@ -231,6 +233,32 @@ class MarketplaceFlowTest {
         payments.applyWebhookUpdate(checkout.orderId(), "pay_checkout", true, null, PaymentMethod.UPI);
         assertThat(events.stream(ListingFeePaid.class)).isEmpty();
         assertThat(directory(SellerCategory.MEHANDI, tag)).hasSize(1);
+    }
+
+    @Test
+    void theFeeCanBePaidFromHerSheOutWallet() throws IOException {
+        SellerView shop = ok(sellers.applyAsSeller(bina, details("Bina " + tag + " Gifts", "9876500005", null)));
+        UUID p = ok(products.addProduct(bina, product("Hamper", "Festive hamper", "800"))).products().get(0).id();
+        ok(products.addProductImage(bina, p, photo()));
+        ok(sellers.submitForReview(bina));
+        ok(sellers.approve(shop.id(), admin));
+
+        jdbc.update("insert into rider_wallets (id, customer_account_id, balance, version, created_at, updated_at) "
+                + "values (gen_random_uuid(), ?, 100, 0, now(), now())", bina);
+        assertThat(sellers.payListingFeeFromWallet(bina).error()).isEqualTo(MarketplaceError.INSUFFICIENT_BALANCE);
+        assertThat(sellers.mySeller(bina).orElseThrow().status()).isEqualTo(SellerStatus.APPROVED_AWAITING_PAYMENT);
+
+        jdbc.update("update rider_wallets set balance = 500 where customer_account_id = ?", bina);
+        SellerView live = ok(sellers.payListingFeeFromWallet(bina));
+
+        assertThat(live.status()).isEqualTo(SellerStatus.ACTIVE);
+        assertThat(live.listingFee().method()).isEqualTo(PaymentMethod.SHEOUT_WALLET);
+        assertThat(jdbc.queryForObject("select balance from rider_wallets where customer_account_id = ?", BigDecimal.class, bina))
+                .isEqualByComparingTo("201");
+        assertThat(jdbc.queryForObject("select count(*) from rider_wallet_entries where customer_account_id = ? and entry_type = 'LISTING_FEE' and amount = -299",
+                Integer.class, bina)).isEqualTo(1);
+        assertThat(sellers.payListingFeeFromWallet(bina).error()).isEqualTo(MarketplaceError.ALREADY_PAID);
+        assertThat(directory(SellerCategory.FASHION_SAREE, tag)).extracting(ListingCard::title).contains("Hamper");
     }
 
     @Test

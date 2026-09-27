@@ -281,7 +281,8 @@
     "REFERRAL_CODE_INVALID": "That referral code isn't valid. Check it with the friend who sent it, or leave the field empty.",
     "REFERRAL_OWN_CODE": "You can't use your own referral code.",
     "REFERRAL_ALREADY_APPLIED": "You have already joined with a referral code.",
-    "REFERRAL_NOT_ELIGIBLE": "Referral codes are for new accounts, entered while signing up."
+    "REFERRAL_NOT_ELIGIBLE": "Referral codes are for new accounts, entered while signing up.",
+    "UPI_QR_UNAVAILABLE": "A UPI QR can't be made right now. Your rider can pay in her SheOut app instead."
   },
   "offer": {
     "loadError": "Could not load this request",
@@ -477,7 +478,7 @@
     "cash": "Cash, collected by you",
     "paidBy": "Paid by your rider · {{method}}",
     "waiting": "Waiting for payment",
-    "howPaid": "Your rider pays in her SheOut app, from her wallet or online. This updates on its own the moment she does.",
+    "howPaid": "Your rider pays in her SheOut app - wallet, PhonePe, Google Pay, Paytm or card - or by scanning your SheOut QR below. This updates on its own the moment she does.",
     "noCash": "Please don't take cash or a transfer to your own account. Fares paid outside SheOut can't be recorded, and your trip won't count as paid.",
     "youEarned": "You earned",
     "inWallet": "Added to your SheOut wallet",
@@ -486,7 +487,14 @@
     "platformFeeRate": "Platform fee ({{rate}}%)",
     "feeHelp": "What does the platform fee pay for?",
     "feeExplained": "The platform fee keeps SheOut running for you: partner support whenever you need it, safety features like SOS, live trip sharing and ID-checked riders, and the app, maps and payments themselves. The rate is the same on every trip.",
-    "paidByOffer": "Your rider's fare was covered by a SheOut offer. Your earnings are exactly the same."
+    "paidByOffer": "Your rider's fare was covered by a SheOut offer. Your earnings are exactly the same.",
+    "qrShow": "Show UPI QR to rider",
+    "qrNew": "Show a new QR",
+    "qrLoading": "Getting QR...",
+    "qrAlt": "SheOut UPI QR for this fare",
+    "qrScan": "Scan with PhonePe, Google Pay, Paytm or any UPI app",
+    "qrValidTill": "Valid till {{time}}. The fare goes to your SheOut wallet.",
+    "qrError": "The QR could not be shown. Your rider can pay in her app instead."
   },
   "sos": {
     "button": "SOS",
