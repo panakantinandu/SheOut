@@ -125,9 +125,9 @@ function Bubble({ mine, label, text, at }: { mine: boolean; label: string; text:
           mine ? 'bg-primary text-text-inverse' : 'bg-surface text-text-primary',
         ].join(' ')}
       >
-        <p className={['text-[10px] font-semibold', mine ? 'text-text-inverse/80' : 'text-primary'].join(' ')}>{label}</p>
+        <p className={['text-caption font-semibold', mine ? 'text-text-inverse/80' : 'text-primary'].join(' ')}>{label}</p>
         <p className="whitespace-pre-wrap break-words text-sm">{text}</p>
-        <p className={['mt-1 text-[10px]', mine ? 'text-text-inverse/70' : 'text-text-secondary'].join(' ')}>
+        <p className={['mt-1 text-caption', mine ? 'text-text-inverse/70' : 'text-text-secondary'].join(' ')}>
           {new Date(at).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
         </p>
       </div>

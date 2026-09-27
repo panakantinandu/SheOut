@@ -1,5 +1,5 @@
-import { Bike } from 'lucide-react';
-import { AmountText, Card, IconCircle } from '@sheout/design-system';
+
+import { AmountText, Card, IconCircle, ServiceArt, serviceArtFor, type ServiceArtKind } from '@sheout/design-system';
 import type { FareQuoteState } from '../lib/useFareQuote';
 import { PromoFareLines } from './PromoFareLines';
 import { useTranslation } from '@sheout/design-system';
@@ -19,14 +19,14 @@ import { useTranslation } from '@sheout/design-system';
  * The distance is straight-line, the distance the fare was derived from,
  * not the distance the trip will cover - hence "approx".
  */
-export function FareEstimateCard({ state }: { state: FareQuoteState }) {
+export function FareEstimateCard({ state, kind = 'ride' }: { state: FareQuoteState; kind?: ServiceArtKind }) {
   const { t } = useTranslation();
   const { quote, loading, error } = state;
 
   if (error) {
     return (
       <Card className="flex items-center gap-3">
-        <IconCircle tone="soft" size="sm" icon={<Bike />} />
+        <ServiceArt kind={kind} size="sm" />
         <p className="text-sm text-text-secondary">{t('fare.errorNote', { error })}</p>
       </Card>
     );
@@ -39,11 +39,11 @@ export function FareEstimateCard({ state }: { state: FareQuoteState }) {
   return (
     <Card className="space-y-3" data-testid="fare-estimate">
       <div className="flex items-center gap-3">
-        <IconCircle tone="soft" icon={<Bike />} />
+        <ServiceArt kind={quote ? serviceArtFor(quote.category) : kind} size="md" />
         <div className="flex-1">
           <p className="text-sm text-text-secondary">{t('fare.estimated')}</p>
           {loading && !quote ? (
-            <p className="font-heading font-semibold text-text-secondary">{t('fare.calculating')}</p>
+            <p className="font-heading text-card-title text-text-secondary">{t('fare.calculating')}</p>
           ) : (
             <p className="text-xs text-text-secondary">{t('fare.approxKm', { km: quote!.distanceKm })}</p>
           )}

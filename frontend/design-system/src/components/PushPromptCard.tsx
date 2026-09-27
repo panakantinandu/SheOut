@@ -22,8 +22,8 @@ export function PushPromptCard({ audience, busy, onTurnOn, onDismiss }: PushProm
       <div className="flex items-start gap-3">
         <IconCircle tone="soft" icon={<BellRing />} />
         <div className="min-w-0 flex-1">
-          <p className="font-heading font-semibold text-text-primary">{t(`push.${audience}.title`)}</p>
-          <p className="mt-0.5 text-sm text-text-secondary">{t(`push.${audience}.body`)}</p>
+          <p className="font-heading text-card-title text-text-primary">{t(`push.${audience}.title`)}</p>
+          <p className="mt-1 text-sm text-text-secondary">{t(`push.${audience}.body`)}</p>
         </div>
       </div>
       <div className="flex gap-2">

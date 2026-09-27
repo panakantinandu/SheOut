@@ -104,7 +104,7 @@ export function RaiseIssueForm({
       />
 
       <label className="block" htmlFor="description">
-        <span className="mb-1.5 block text-sm font-medium text-text-primary">{t('raiseIssue.description')}</span>
+        <span className="mb-2 block text-sm font-medium text-text-primary">{t('raiseIssue.description')}</span>
         <textarea
           id="description"
           name="description"

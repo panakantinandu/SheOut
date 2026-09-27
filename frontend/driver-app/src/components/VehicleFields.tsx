@@ -25,7 +25,7 @@ export function VehicleFields({
   return (
     <>
       <div>
-        <span className="mb-1.5 block text-sm font-medium text-text-primary">{t('vehicle.type')}</span>
+        <span className="mb-2 block text-sm font-medium text-text-primary">{t('vehicle.type')}</span>
         <div className="flex gap-2">
           {VEHICLE_OPTIONS.map((opt) => (
             <button
@@ -34,8 +34,8 @@ export function VehicleFields({
               onClick={() => onChange({ vehicleType: opt.key, registration })}
               className={
                 vehicleType === opt.key
-                  ? 'flex flex-1 items-center justify-center gap-1.5 rounded-full bg-primary py-2 text-sm font-semibold text-text-inverse'
-                  : 'flex flex-1 items-center justify-center gap-1.5 rounded-full border border-border py-2 text-sm font-medium text-text-secondary'
+                  ? 'flex flex-1 items-center justify-center gap-2 rounded-full bg-primary py-2 text-sm font-semibold text-text-inverse'
+                  : 'flex flex-1 items-center justify-center gap-2 rounded-full border border-border py-2 text-sm font-medium text-text-secondary'
               }
             >
               {opt.icon} {vehicleLabel(opt.key)}

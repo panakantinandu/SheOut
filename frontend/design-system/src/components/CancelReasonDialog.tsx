@@ -94,8 +94,8 @@ export function CancelReasonDialog<R extends string = CancellationReason>({
       open={open}
       onDismiss={busy ? undefined : onCancel}
     >
-      <div className="max-h-[88vh] w-full overflow-y-auto rounded-card bg-surface p-5 shadow-card motion-safe:animate-sheet-up">
-        <p className="font-heading text-lg font-semibold text-text-primary">{title}</p>
+      <div className="max-h-[88vh] w-full overflow-y-auto rounded-card bg-surface p-5 shadow-overlay motion-safe:animate-sheet-up">
+        <p className="font-heading text-section text-text-primary">{title}</p>
         <p className="mt-2 text-sm text-text-secondary">{message}</p>
 
         <div className="mt-4 space-y-2">
@@ -125,7 +125,7 @@ export function CancelReasonDialog<R extends string = CancellationReason>({
 
         {needsNote && (
           <label className="mt-3 block">
-            <span className="mb-1.5 block text-sm font-medium text-text-primary">{t('cancelDialog.noteLabel')}</span>
+            <span className="mb-2 block text-sm font-medium text-text-primary">{t('cancelDialog.noteLabel')}</span>
             <textarea
               className="min-h-[80px] w-full rounded-input border border-border bg-surface p-3 text-sm text-text-primary outline-none transition-colors focus:border-primary"
               maxLength={NOTE_MAX}

@@ -94,7 +94,7 @@ function App() {
       <Route path="/tracking/:bookingId" element={protectedOnly(<Tracking />)} />
       <Route path="/chat/:bookingId" element={protectedOnly(<Chat />)} />
 
-      <Route path="/seller" element={protectedOnly(<Seller />)} />
+      <Route path="/seller" element={shell(<Seller />)} />
       <Route path="/refer" element={protectedOnly(<Refer />)} />
 
       <Route path="*" element={<Navigate to="/" replace />} />

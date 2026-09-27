@@ -28,7 +28,7 @@
     "title": "Language",
     "subtitle": "Choose the language for SheOut. You can change it any time from the menu.",
     "saved": "Language changed",
-    "saveError": "Changed on this phone. We could not save it to your account - it will try again next time."
+    "saveError": "Changed on this phone. We could not save it to your account, so it will try again next time."
   },
   "cancelDialog": {
     "title": "Why are you cancelling?",
@@ -72,7 +72,7 @@
   "push": {
     "rider": {
       "title": "Turn on notifications",
-      "body": "Know the moment your partner accepts, when she is arriving, and when support replies - even with SheOut closed."
+      "body": "Know the moment your partner accepts, when she is arriving, and when support replies, even with SheOut closed."
     },
     "partner": {
       "title": "Turn on trip alerts",
@@ -97,7 +97,18 @@
     "unread_one": "{{count}} unread",
     "unread_other": "{{count}} unread",
     "markAllRead": "Mark all read",
-    "unreadMarker": "unread"
+    "unreadMarker": "unread",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "earlier": "Earlier",
+    "category": {
+      "booking": "Trip update",
+      "payment": "Payment",
+      "safety": "Safety alert",
+      "support": "Support reply",
+      "account": "Account",
+      "news": "News from SheOut"
+    }
   },
   "list": {
     "showing": "Showing {{shown}} of {{total}}",
@@ -158,7 +169,7 @@
     "you": "You",
     "support": "SheOut Support",
     "placeholder": "Add more detail or reply to support",
-    "noReplyYet": "No reply yet. Support will answer here - check back on this screen."
+    "noReplyYet": "No reply yet. Support will answer here, so check back on this screen."
   },
   "raiseIssue": {
     "missingCategory": "Choose what this is about.",
@@ -169,7 +180,7 @@
     "subject": "Subject",
     "subjectPlaceholder": "e.g. Charged twice for one trip",
     "description": "What happened?",
-    "descriptionPlaceholder": "Tell us as much as you can - when, where, and what you would like us to do.",
+    "descriptionPlaceholder": "Tell us as much as you can: when, where, and what you would like us to do.",
     "trip": "Is this about a trip? (optional)",
     "noTrip": "Not about a specific trip",
     "submit": "Send to support"
@@ -184,7 +195,7 @@
     "download": "Download my data",
     "downloadSub": "A copy of everything SheOut holds about you",
     "grievance": "Grievance Officer",
-    "grievancePending": "Contact details are being set up - use Help & Support meanwhile",
+    "grievancePending": "Contact details are being set up. Use Help & Support meanwhile.",
     "delete": "Delete my account",
     "deleteSub": "Close your account and remove your personal details",
     "deleteTitle": "Delete your account?",
@@ -197,8 +208,8 @@
     "deleteError": "Could not delete your account. Try again.",
     "explain": {
       "closed": "Your account is closed straight away: you are signed out everywhere and cannot sign back in to it.",
-      "removedDriver": "You go offline permanently and stop receiving trips. Your name, vehicle registration, profile photo and ID documents are removed - the photo and documents are deleted from storage, not just hidden.",
-      "removedRider": "Your name, saved addresses, emergency contacts and ID documents are removed - the documents are deleted from storage, not just hidden.",
+      "removedDriver": "You go offline permanently and stop receiving trips. Your name, vehicle registration, profile photo and ID documents are removed. The photo and documents are deleted from storage, not just hidden.",
+      "removedRider": "Your name, saved addresses, emergency contacts and ID documents are removed. The documents are deleted from storage, not just hidden.",
       "messages": "Your messages are deleted, except on a trip with an open support dispute, where they are kept as \"[deleted]\".",
       "kept": "Completed trips and payments are kept for the period Indian tax and dispute rules require, but with your name shown as \"Deleted User\" and your phone number removed.",
       "final": "This cannot be undone. Signing in with the same number later starts a new, empty account."
@@ -325,7 +336,7 @@
     "cannotSave": "Could not prepare the photo. Try again."
   },
   "selfie": {
-    "why": "A quick selfie with your camera shows a real person is signing up. A reviewer compares it with your ID photo - nothing is matched automatically.",
+    "why": "A quick selfie with your camera shows a real person is signing up. A reviewer compares it with your ID photo, and nothing is matched automatically.",
     "start": "Open camera",
     "opening": "Opening your camera...",
     "tryAgain": "Try again",
@@ -334,7 +345,7 @@
     "done": "Selfie taken.",
     "previewAlt": "Your selfie",
     "noMotion": "We could not see you move. Hold your phone at face height, follow each instruction on the screen, and try again.",
-    "denied": "Camera access is blocked. Allow the camera for SheOut in your browser or phone settings, then try again. This step needs your camera - a photo from your gallery cannot be used.",
+    "denied": "Camera access is blocked. Allow the camera for SheOut in your browser or phone settings, then try again. This step needs your camera, and a photo from your gallery cannot be used.",
     "noCamera": "No front camera was found on this device. This step needs a phone with a camera.",
     "cameraBusy": "The camera could not be started. Close other apps that may be using it, then try again.",
     "unsupported": "Your browser cannot open the camera here. Update your browser, or open SheOut in Chrome or Safari.",

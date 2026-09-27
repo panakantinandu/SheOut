@@ -46,7 +46,7 @@ export function PartnerSos({ bookingId, position }: {
       <button
         type="button"
         onClick={() => { setState('idle'); setOpen(true); }}
-        className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full bg-danger px-4 text-sm font-semibold text-text-inverse shadow-card"
+        className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-danger px-4 text-sm font-semibold text-text-inverse shadow-card"
         data-testid="partner-sos"
       >
         <ShieldAlert className="h-4 w-4" aria-hidden />
@@ -55,7 +55,7 @@ export function PartnerSos({ bookingId, position }: {
 
       <Overlay open={open} label={t('sos.title')} onDismiss={() => setOpen(false)} className="px-6">
         <div className="w-full max-w-sm space-y-4 rounded-card bg-surface p-5 shadow-card motion-safe:animate-pop-in">
-          <p className="font-heading text-lg font-semibold text-text-primary">
+          <p className="font-heading text-section text-text-primary">
             <SafetyText k="sos.title" />
           </p>
           <p className="text-sm text-text-secondary"><SafetyText k="sos.body" /></p>

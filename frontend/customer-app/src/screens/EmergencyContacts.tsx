@@ -117,7 +117,7 @@ export function EmergencyContacts() {
         <p className="text-center text-sm text-text-secondary">{t('contacts.loading')}</p>
       ) : contacts && contacts.length === 0 ? (
         <Card tone="warning" className="space-y-1 text-center">
-          <p className="font-heading font-semibold text-text-primary">{t('contacts.emptyTitle')}</p>
+          <p className="font-heading text-card-title text-text-primary">{t('contacts.emptyTitle')}</p>
           <p className="text-sm text-text-secondary">
             <SafetyText k="contacts.emptyWarning" />
           </p>
@@ -148,7 +148,7 @@ export function EmergencyContacts() {
 
       {adding ? (
         <Card className="space-y-4">
-          <p className="font-heading font-semibold text-text-primary">{t('contacts.add')}</p>
+          <p className="font-heading text-card-title text-text-primary">{t('contacts.add')}</p>
           <TextField
             label={t('contacts.theirName')}
             placeholder={t('contacts.namePlaceholder')}
@@ -156,11 +156,11 @@ export function EmergencyContacts() {
             onChange={(e) => setName(e.target.value)}
           />
           <div>
-            <span className="mb-1.5 block text-sm font-medium text-text-primary">{t('contacts.theirPhone')}</span>
+            <span className="mb-2 block text-sm font-medium text-text-primary">{t('contacts.theirPhone')}</span>
             <PhoneField value={digits} onChange={setDigits} placeholder={t('login.phonePlaceholder')} />
           </div>
           <div>
-            <span className="mb-1.5 block text-sm font-medium text-text-primary">{t('contacts.relationship')}</span>
+            <span className="mb-2 block text-sm font-medium text-text-primary">{t('contacts.relationship')}</span>
             <div className="flex flex-wrap gap-2">
               {RELATIONSHIPS.map((option) => (
                 <button
@@ -169,8 +169,8 @@ export function EmergencyContacts() {
                   onClick={() => setRelationship(option)}
                   className={
                     relationship === option
-                      ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-text-inverse'
-                      : 'rounded-full border border-border px-3 py-1.5 text-sm font-medium text-text-secondary'
+                      ? 'rounded-full bg-primary px-3 py-2 text-sm font-semibold text-text-inverse'
+                      : 'rounded-full border border-border px-3 py-2 text-sm font-medium text-text-secondary'
                   }
                 >
                   {t(`contacts.rel.${option}`)}

@@ -1,27 +1,7 @@
-import { Bell, Bike, CheckCircle2, ClipboardList, CloudOff, Globe2, Hourglass, IndianRupee, MapPinOff, Navigation2, Power, RefreshCw, ShieldCheck } from 'lucide-react';
+import { Bell, CheckCircle2, ClipboardList, CloudOff, Globe2, Hourglass, IndianRupee, MapPinOff, Navigation2, Power, RefreshCw, ShieldCheck } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  AggregateRatingText,
-  AmountText,
-  Avatar,
-  BellBadge,
-  Button,
-  Card,
-  IconCircle,
-  LiveMap,
-  PushPromptCard,
-  SkeletonCard,
-  StatusDot,
-  TopHeader,
-  bookingStatusLabel,
-  brandIllustration,
-  useCountUp,
-  usePushMessages,
-  usePushNotifications,
-  useUnreadNotifications,
-  vehicleLabel,
-} from '@sheout/design-system';
+import { AggregateRatingText, AmountText, Avatar, BellBadge, Button, Card, IconCircle, LiveMap, PushPromptCard, SkeletonCard, StatusDot, TopHeader, bookingStatusLabel, brandIllustration, useCountUp, usePushMessages, usePushNotifications, useUnreadNotifications, vehicleLabel, ServiceArt, serviceArtFor } from '@sheout/design-system';
 import {
   ApiError,
   PUSH_TOKEN_KEY,
@@ -63,8 +43,8 @@ function LoadError({ title, detail, onRetry }: { title: string; detail: string; 
     <Card tone="danger" className="flex items-start gap-3">
       <IconCircle color="red" tone="soft" icon={<CloudOff />} />
       <div className="min-w-0 flex-1">
-        <p className="font-heading font-semibold text-text-primary">{title}</p>
-        <p className="mt-0.5 text-xs text-text-secondary">{detail}</p>
+        <p className="font-heading text-card-title text-text-primary">{title}</p>
+        <p className="mt-1 text-xs text-text-secondary">{detail}</p>
       </div>
       <Button variant="secondary" size="md" icon={<RefreshCw className="h-4 w-4" />} onClick={onRetry}>
         {t('common.tryAgain')}
@@ -379,7 +359,7 @@ export function Home() {
           rather than a second drawing for one banner. */}
       <Card variant="primary" className="relative overflow-hidden">
         <div className="relative z-10 max-w-[64%]">
-          <p className="font-heading text-lg font-semibold">
+          <p className="font-heading text-section">
             {profile?.name ? t('home.welcomeNamed', { name: profile.name.split(' ')[0] }) : t('home.welcome')}
           </p>
           <p className="mt-1 text-sm opacity-90">
@@ -409,8 +389,8 @@ export function Home() {
         <Card tone="warning" className="flex items-start gap-3">
           <IconCircle color="orange" tone="soft" icon={<Globe2 />} />
           <div className="min-w-0 flex-1">
-            <p className="font-heading font-semibold text-text-primary">{t('home.outsideArea')}</p>
-            <p className="mt-0.5 text-xs text-text-secondary">{outOfArea}</p>
+            <p className="font-heading text-card-title text-text-primary">{t('home.outsideArea')}</p>
+            <p className="mt-1 text-xs text-text-secondary">{outOfArea}</p>
           </div>
         </Card>
       )}
@@ -424,7 +404,7 @@ export function Home() {
         <Card tone="danger" className="flex items-start gap-3">
           <IconCircle color="red" tone="soft" icon={<MapPinOff />} />
           <div className="flex-1">
-            <p className="font-heading font-semibold text-text-primary">{t('home.locationNotShared')}</p>
+            <p className="font-heading text-card-title text-text-primary">{t('home.locationNotShared')}</p>
             <p className="text-xs text-text-secondary">{location.error}</p>
           </div>
         </Card>
@@ -440,13 +420,13 @@ export function Home() {
             glyph even for partners who had uploaded one. */}
         <Avatar url={profile.profilePhotoUrl} name={profile.name} size="lg" />
         <div className="flex-1">
-          <p className="font-heading font-semibold text-text-primary">{profile.name || t('profile.addName')}</p>
+          <p className="font-heading text-card-title text-text-primary">{profile.name || t('profile.addName')}</p>
           <div className="flex items-center gap-2">
             {/* Online/offline dot, as the mockup shows beside the name. Real
                 state from the profile, not decoration - and it breathes while
                 she is online, which is the one place this screen says "the
                 app is awake and listening" without words. */}
-            <span className="flex items-center gap-1.5 text-xs text-text-secondary">
+            <span className="flex items-center gap-2 text-xs text-text-secondary">
               <StatusDot live={isOnline} />
               {isOnline ? t('home.online') : t('home.offline')}
             </span>
@@ -474,21 +454,21 @@ export function Home() {
           The money counts up when it first lands; the counts beside it do
           too, so the row settles together rather than one figure moving. */}
       <Card className="flex items-stretch p-0">
-        <div className="flex flex-1 flex-col items-center gap-1.5 p-3 text-center">
+        <div className="flex flex-1 flex-col items-center gap-2 p-3 text-center">
           <IconCircle size="sm" tone="soft" color="primary" icon={<IndianRupee />} />
           <AmountText amount={todayEarnings} size="sm" animate />
           <p className="text-xs text-text-secondary">{t('home.earnedToday')}</p>
         </div>
         <div className="w-px self-stretch bg-border" aria-hidden="true" />
-        <div className="flex flex-1 flex-col items-center gap-1.5 p-3 text-center">
+        <div className="flex flex-1 flex-col items-center gap-2 p-3 text-center">
           <IconCircle size="sm" tone="soft" color="green" icon={<CheckCircle2 />} />
-          <p className="font-heading text-sm font-semibold tabular-nums text-text-primary">{ridesShown}</p>
+          <p className="font-heading text-card-title tabular-nums text-text-primary">{ridesShown}</p>
           <p className="text-xs text-text-secondary">{t('home.ridesToday')}</p>
         </div>
         <div className="w-px self-stretch bg-border" aria-hidden="true" />
-        <div className="flex flex-1 flex-col items-center gap-1.5 p-3 text-center">
+        <div className="flex flex-1 flex-col items-center gap-2 p-3 text-center">
           <IconCircle size="sm" tone="soft" color="orange" icon={<ClipboardList />} />
-          <p className="font-heading text-sm font-semibold tabular-nums text-text-primary">{activeTripsShown}</p>
+          <p className="font-heading text-card-title tabular-nums text-text-primary">{activeTripsShown}</p>
           <p className="text-xs text-text-secondary">{t('home.activeTrips')}</p>
         </div>
       </Card>
@@ -501,7 +481,7 @@ export function Home() {
         <Card tone="warning" className="flex items-center gap-3">
           <IconCircle color="orange" tone="soft" icon={<ShieldCheck />} />
           <div className="flex-1">
-            <p className="font-heading font-semibold text-text-primary">{t('home.completeVerification')}</p>
+            <p className="font-heading text-card-title text-text-primary">{t('home.completeVerification')}</p>
             <p className="text-xs text-text-secondary">{t('home.verificationRequired')}</p>
           </div>
           <Button size="md" onClick={() => navigate('/verification')}>
@@ -517,7 +497,7 @@ export function Home() {
       ) : (
         <Card variant={isOnline ? 'primary' : 'surface'} className="flex items-center justify-between">
           <div>
-            <p className="font-heading text-lg font-semibold">{isOnline ? t('home.youreOnline') : t('home.youreOffline')}</p>
+            <p className="font-heading text-section">{isOnline ? t('home.youreOnline') : t('home.youreOffline')}</p>
             <p className="mt-1 text-sm opacity-80">{isOnline ? t('home.lookingForRequests') : t('home.goOnlineHint')}</p>
           </div>
           <Button
@@ -544,7 +524,7 @@ export function Home() {
         >
           <IconCircle tone="soft" color="orange" icon={<Hourglass className="h-5 w-5" />} />
           <div className="flex-1">
-            <p className="font-heading font-semibold text-text-primary">
+            <p className="font-heading text-card-title text-text-primary">
               {t('home.holdTitle', { amount: paymentHold.amount.toFixed(0) })}
             </p>
             <p className="text-xs text-text-secondary">
@@ -558,9 +538,9 @@ export function Home() {
 
       {activeTrip && (
         <Card className="flex items-center gap-3 p-3" onClick={() => navigate(`/trip/${activeTrip.id}`)}>
-          <IconCircle tone="soft" size="sm" icon={activeTrip.type === 'RIDE' ? <Bike className="h-4 w-4" /> : <Navigation2 className="h-4 w-4" />} />
+          <ServiceArt kind={serviceArtFor(activeTrip.category)} size="md" />
           <div className="min-w-0 flex-1">
-            <p className="font-heading text-sm font-semibold text-text-primary">{t('home.activeTrip', { status: bookingStatusLabel(activeTrip.status) })}</p>
+            <p className="font-heading text-card-title text-text-primary">{t('home.activeTrip', { status: bookingStatusLabel(activeTrip.status) })}</p>
             <p className="truncate text-xs text-text-secondary">{activeTrip.drop.label}</p>
           </div>
         </Card>
@@ -583,11 +563,11 @@ export function Home() {
 
       {recentTrips.length > 0 && (
         <div>
-          <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">{t('home.recentTrips')}</h2>
+          <h2 className="mb-3 font-heading text-section text-text-primary">{t('home.recentTrips')}</h2>
           <Card className="divide-y divide-border p-0">
             {recentTrips.map((trip) => (
               <div key={trip.id} className="flex items-center gap-3 p-4">
-                <IconCircle tone="soft" size="sm" icon={<Bike />} />
+                <ServiceArt kind={serviceArtFor(trip.category)} size="sm" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-text-primary">{trip.drop.label}</p>
                   <p className="text-xs text-text-secondary">{new Date(trip.completedAt!).toLocaleString()}</p>

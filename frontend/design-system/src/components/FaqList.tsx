@@ -36,7 +36,7 @@ export function FaqList({ items, heading, className }: FaqListProps) {
   return (
     <section className={className}>
       {heading && (
-        <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">{heading}</h2>
+        <h2 className="mb-3 font-heading text-section text-text-primary">{heading}</h2>
       )}
       <Card className="divide-y divide-border p-0">
         {items.map((item) => (

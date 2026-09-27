@@ -6,7 +6,8 @@ import {
   useApiLoadingStatus,
   useMap,
 } from '@vis.gl/react-google-maps';
-import { Bike, LocateFixed, MapPinOff } from 'lucide-react';
+import { LocateFixed, MapPinOff } from 'lucide-react';
+import { ServiceArt } from './ServiceArt';
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import * as Sentry from '@sentry/react';
 import { createPortal } from 'react-dom';
@@ -339,7 +340,7 @@ function MarkerGlyph({ kind, heading }: { kind: MapMarker['kind']; heading: numb
         data-testid="nearby-driver"
         aria-hidden="true"
       >
-        <Bike className="h-4 w-4" strokeWidth={2.25} />
+        <ServiceArt kind="ride" size="xs" className="rounded-md" />
       </span>
     );
   }
@@ -357,10 +358,10 @@ function MarkerGlyph({ kind, heading }: { kind: MapMarker['kind']; heading: numb
         </span>
       )}
       <span
-        className="flex h-10 w-10 items-center justify-center rounded-full border-[3px] border-white text-white"
+        className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border-[3px] border-white text-white"
         style={{ background: colors.primary, boxShadow: '0 2px 6px rgba(36,26,51,.4)' }}
       >
-        <Bike className="h-5 w-5" strokeWidth={2.25} />
+        <ServiceArt kind="ride" className="h-9 w-9 scale-125" />
       </span>
     </span>
   );

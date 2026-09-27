@@ -1,21 +1,7 @@
-import { Bike, Camera, Landmark, LogOut, ShieldCheck, User } from 'lucide-react';
+import { Camera, Car, Landmark, LogOut, ShieldCheck, User } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Avatar,
-  Button,
-  Card,
-  ConfirmDialog,
-  IconCircle,
-  ListRow,
-  PrivacyDataSection,
-  ThemeToggle,
-  StatusBadge,
-  TopHeader,
-  vehicleLabel,
-  ProfileCompletionForm,
-  shrinkPhoto,
-} from '@sheout/design-system';
+import { Avatar, Button, Card, ConfirmDialog, IconCircle, ListRow, PrivacyDataSection, ThemeToggle, StatusBadge, TopHeader, vehicleLabel, ProfileCompletionForm, shrinkPhoto, ServiceArt } from '@sheout/design-system';
 import { useAppDrawer } from '../components/AppDrawer';
 import { ApiError, privacyApi, supportApi, usersApi } from '../api/client';
 import type { DriverProfileSummary, VehicleType } from '../api/types';
@@ -90,7 +76,7 @@ export function Profile() {
       <Card className="flex items-center gap-3">
         <Avatar url={profile?.profilePhotoUrl} name={profile?.name} size="lg" />
         <div className="min-w-0 flex-1">
-          <p className="font-heading font-semibold text-text-primary">
+          <p className="font-heading text-card-title text-text-primary">
             {profile ? profile.name || t('profile.addName') : error || t('common.loading')}
           </p>
           <p className="text-sm text-text-secondary">{profile?.phoneNumber ?? ''}</p>
@@ -115,7 +101,7 @@ export function Profile() {
               icon={profile.hasProfilePhoto ? <User /> : <Camera />}
             />
             <div className="flex-1">
-              <p className="font-heading font-semibold text-text-primary">
+              <p className="font-heading text-card-title text-text-primary">
                 {profile.hasProfilePhoto ? t('profile.yourPhoto') : t('profile.addPhotoToGoOnline')}
               </p>
               <p className="mt-1 text-sm text-text-secondary">
@@ -159,8 +145,12 @@ export function Profile() {
           {/* Headed like the photo card above it, rather than two bare
               label-value lines - see the Part E polish pass. */}
           <div className="flex items-center gap-3">
-            <IconCircle tone="soft" color="orange" icon={<Bike />} />
-            <p className="font-heading font-semibold text-text-primary">{t('profile.yourVehicle')}</p>
+            {profile.vehicleType === 'BIKE' || !profile.vehicleType ? (
+              <ServiceArt kind="ride" size="md" />
+            ) : (
+              <IconCircle tone="soft" color="orange" icon={<Car />} />
+            )}
+            <p className="font-heading text-card-title text-text-primary">{t('profile.yourVehicle')}</p>
           </div>
           <div className="flex items-center justify-between text-sm">
             <span className="text-text-secondary">{t('profile.vehicle')}</span>
@@ -239,7 +229,7 @@ export function Profile() {
       {/* Per device, not per account: the right answer in bed on a phone is
           not the right answer at a desk - see ThemeToggle. */}
       <section data-testid="appearance">
-        <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">{ds('theme.label')}</h2>
+        <h2 className="mb-3 font-heading text-section text-text-primary">{ds('theme.label')}</h2>
         <Card className="space-y-3">
           <p className="text-sm text-text-secondary">{ds('theme.description')}</p>
           <ThemeToggle />

@@ -477,10 +477,10 @@ export function Trip() {
                   icon={phase === 'PICKUP' ? <MapPin /> : <Navigation />}
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="font-heading font-semibold text-text-primary">
+                  <p className="font-heading text-card-title text-text-primary">
                     {phase === 'PICKUP' ? t('trip.goToPickup') : t('trip.goToDrop')}
                   </p>
-                  <p className="mt-0.5 text-sm text-text-secondary">{destination.label}</p>
+                  <p className="mt-1 text-sm text-text-secondary">{destination.label}</p>
                 </div>
               </div>
               <OpenInMapsButton
@@ -508,8 +508,8 @@ export function Trip() {
               <div className="flex items-start gap-3">
                 <IconCircle tone="soft" icon={<CheckCircle2 />} />
                 <div className="min-w-0 flex-1">
-                  <p className="font-heading font-semibold text-text-primary">{t('trip.confirmPickup')}</p>
-                  <p className="mt-0.5 text-sm text-text-secondary">
+                  <p className="font-heading text-card-title text-text-primary">{t('trip.confirmPickup')}</p>
+                  <p className="mt-1 text-sm text-text-secondary">
                     {codeLocked
                       ? <SafetyText k="pickupCode.locked" />
                       : <SafetyText k="pickupCode.askForCode" />}
@@ -543,7 +543,7 @@ export function Trip() {
 
           <Card className="space-y-3">
             <div className="flex items-center justify-between">
-              <p className="font-heading font-semibold text-text-primary">{booking.type === 'RIDE' ? t('trip.ride') : t('trip.delivery')}</p>
+              <p className="font-heading text-card-title text-text-primary">{booking.type === 'RIDE' ? t('trip.ride') : t('trip.delivery')}</p>
               <StatusBadge
                 tone={
                   booking.status === 'COMPLETED' ? (settled ? 'success' : 'warning')
@@ -556,22 +556,22 @@ export function Trip() {
             </div>
             <div className="space-y-2 text-sm">
               <div className="flex items-start gap-2">
-                <Navigation className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                <Navigation className="mt-1 h-4 w-4 shrink-0 text-primary" />
                 <span className="text-text-primary">{booking.pickup.label}</span>
               </div>
               <div className="flex items-start gap-2">
-                <Navigation className="mt-0.5 h-4 w-4 shrink-0 text-accent-orange" />
+                <Navigation className="mt-1 h-4 w-4 shrink-0 text-accent-orange" />
                 <span className="text-text-primary">{booking.drop.label}</span>
               </div>
             </div>
             <div className="flex justify-between border-t border-border pt-3 text-sm">
               <span className="text-text-secondary">{booking.status === 'CANCELLED' ? t('trip.fareNotCharged') : t('trip.fare')}</span>
-              <span className="font-heading font-semibold text-text-primary">₹{booking.finalFare ?? booking.fareEstimate}</span>
+              <span className="font-heading text-card-title text-text-primary">₹{booking.finalFare ?? booking.fareEstimate}</span>
             </div>
             {/* When it happened - the first thing anybody looks for in a
                 past trip, and what support will ask for. */}
             {finished && (
-              <dl className="space-y-1.5 border-t border-border pt-3 text-sm" data-testid="trip-timeline">
+              <dl className="space-y-2 border-t border-border pt-3 text-sm" data-testid="trip-timeline">
                 {[
                   ['trip.when.requested', booking.requestedAt],
                   ['trip.when.started', booking.startedAt],
@@ -595,7 +595,7 @@ export function Trip() {
           <Card className="flex items-center gap-3" data-testid="trip-rider">
             <Avatar url={rider?.photoUrl} name={rider?.firstName ?? undefined} size="md" />
             <div className="min-w-0 flex-1">
-              <p className="font-heading font-semibold text-text-primary">{rider?.firstName || t('trip.yourRider')}</p>
+              <p className="font-heading text-card-title text-text-primary">{rider?.firstName || t('trip.yourRider')}</p>
               <p className="text-xs text-text-secondary">
                 {rider ? (
                   <AggregateRatingText averageStars={rider.averageStars} totalRatings={rider.totalRatings} emptyLabel={t('trip.newRider')} />
@@ -623,7 +623,7 @@ export function Trip() {
             {booking.status === 'COMPLETED' && settled && justEnded && (
               <Card className="flex flex-col items-center gap-2 py-6 text-center">
                 <SuccessCheck size={64} label={t('trip.completed')} />
-                <p className="font-heading font-semibold text-text-primary">{t('trip.completed')}</p>
+                <p className="font-heading text-card-title text-text-primary">{t('trip.completed')}</p>
                 <p className="text-sm text-text-secondary">
                   {t('trip.earningsInWallet')}
                 </p>

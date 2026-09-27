@@ -51,10 +51,10 @@ export function OutOfAreaBanner() {
     <Card tone="warning" className="flex items-start gap-3">
       <IconCircle color="orange" tone="soft" icon={<Globe2 />} />
       <div className="min-w-0 flex-1">
-        <p className="font-heading font-semibold text-text-primary">
+        <p className="font-heading text-card-title text-text-primary">
           {t('serviceArea.youOutside')}
         </p>
-        <p className="mt-0.5 text-sm text-text-secondary">
+        <p className="mt-1 text-sm text-text-secondary">
           {t('serviceArea.youOutsideBody', { city: SERVICE_CENTRE_NAME, km: SERVICE_RADIUS_KM })}
         </p>
       </div>

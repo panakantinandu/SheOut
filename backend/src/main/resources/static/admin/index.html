@@ -67,6 +67,13 @@
 
     --radius: 10px;
     --shadow: 0 1px 2px rgba(27,29,33,.06), 0 4px 12px rgba(27,29,33,.05);
+    /* Elevation, the apps' four levels (design-system tokens.js): lift for
+       what rests on the page, float for what sits above it, overlay for what
+       covers it, pressed for a control being pushed. */
+    --elev-1: 0 1px 2px rgba(27,29,33,.05), 0 4px 14px rgba(27,29,33,.06);
+    --elev-2: 0 6px 14px rgba(74,26,158,.10), 0 18px 36px rgba(27,29,33,.10);
+    --elev-3: 0 16px 40px rgba(27,29,33,.20), 0 40px 80px rgba(27,29,33,.16);
+    --elev-pressed: inset 0 2px 4px rgba(27,29,33,.14);
     color-scheme: light;
   }
 
@@ -112,6 +119,10 @@
     --word-out: #FF8A4C;
 
     --shadow: 0 1px 2px rgba(0,0,0,.4), 0 4px 12px rgba(0,0,0,.35);
+    --elev-1: 0 1px 2px rgba(0,0,0,.40), 0 4px 14px rgba(0,0,0,.30);
+    --elev-2: 0 6px 14px rgba(0,0,0,.45), 0 18px 36px rgba(0,0,0,.45);
+    --elev-3: 0 16px 40px rgba(0,0,0,.60), 0 40px 80px rgba(0,0,0,.55);
+    --elev-pressed: inset 0 2px 4px rgba(0,0,0,.50);
     color-scheme: dark;
   }
   * { box-sizing: border-box; }
@@ -153,14 +164,22 @@
     display: flex; align-items: center; gap: 10px;
     padding: 16px 16px 14px; border-bottom: 1px solid var(--line-soft);
   }
-  .brand .logo { width: 54px; height: 36px; flex: none; object-fit: contain; display: block; }
+  /* The mark sits on its own tinted tile, lifted, so it reads as a logo
+     rather than a picture dropped into the corner. */
+  .brand .logo-tile {
+    width: 48px; height: 48px; flex: none; border-radius: 14px; display: grid; place-items: center;
+    background: linear-gradient(145deg, var(--brand-tint), var(--panel)); border: 1px solid var(--brand-line);
+    box-shadow: var(--elev-1);
+  }
+  .brand .logo { width: 40px; height: 28px; flex: none; object-fit: contain; display: block; }
   .wordmark {
     font-weight: 850; font-size: 18px; line-height: 1; letter-spacing: .03em;
     color: var(--word-she); white-space: nowrap;
   }
   .wordmark span { color: var(--word-out); }
   .brand .sub {
-    margin-top: 4px; font-size: 10.5px; color: var(--muted); font-weight: 650;
+    display: inline-block; margin-top: 6px; padding: 2px 8px; border-radius: 999px;
+    background: var(--brand-tint); color: var(--brand); font-size: 10px; font-weight: 700;
     text-transform: uppercase; letter-spacing: .09em;
   }
 
@@ -222,7 +241,7 @@
   :root[data-theme="dark"] .btn-approve { color: #0B2519; }
   :root[data-theme="dark"] .nav .count.urgent { color: #2B0F0D; }
 
-  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--elev-1); }
   .card-head {
     padding: 13px 16px; border-bottom: 1px solid var(--line-soft);
     display: flex; align-items: center; gap: 10px;
@@ -244,6 +263,63 @@
   td { padding: 11px 14px; border-bottom: 1px solid var(--line-soft); vertical-align: middle; }
   tr:last-child td { border-bottom: 0; }
   tbody tr.clickable { cursor: pointer; }
+  /* Row accents: an edge in the colour of what the row is - red urgent,
+     amber waiting, green done, blue in flight, purple a rider - and, on the
+     tables where the kind of row matters most, a leading icon in the same
+     colour. Set per section by view.accent / view.rowIcon. */
+  tbody tr[data-acc] td:first-child { box-shadow: inset 3px 0 0 var(--acc); }
+  tbody tr[data-acc="red"] { --acc: var(--red); --acc-bg: var(--red-bg); }
+  tbody tr[data-acc="amber"] { --acc: var(--amber); --acc-bg: var(--amber-bg); }
+  tbody tr[data-acc="green"] { --acc: var(--green); --acc-bg: var(--green-bg); }
+  tbody tr[data-acc="blue"] { --acc: var(--blue); --acc-bg: var(--blue-bg); }
+  tbody tr[data-acc="brand"] { --acc: var(--brand); --acc-bg: var(--brand-tint); }
+  tbody tr[data-acc="grey"] { --acc: var(--line); --acc-bg: var(--bg); }
+  .row-lead { display: flex; align-items: center; gap: 10px; }
+  .row-ico {
+    width: 28px; height: 28px; flex: none; border-radius: 8px; display: grid; place-items: center;
+    background: var(--acc-bg, var(--bg)); color: var(--acc, var(--muted));
+  }
+  .row-ico svg { width: 15px; height: 15px; }
+  .btn:active { box-shadow: var(--elev-pressed); transform: translateY(1px); }
+  .btn-primary { box-shadow: var(--elev-1); }
+
+  /* ---------- overview ---------- */
+  .ov-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+  .kpi {
+    text-align: left; font: inherit; color: inherit; cursor: pointer;
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 16px; box-shadow: var(--elev-1); display: flex; flex-direction: column; gap: 10px;
+    transition: box-shadow .15s, transform .15s;
+  }
+  .kpi:hover { box-shadow: var(--elev-2); transform: translateY(-1px); }
+  .kpi:active { box-shadow: var(--elev-pressed); transform: none; }
+  .kpi .top { display: flex; align-items: center; justify-content: space-between; }
+  .kpi .ico { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; }
+  .kpi .ico svg { width: 18px; height: 18px; }
+  .kpi .num { font-size: 30px; font-weight: 750; letter-spacing: -.02em; line-height: 1; font-variant-numeric: tabular-nums; }
+  .kpi .lbl { font-weight: 650; font-size: 13.5px; }
+  .kpi .sub { color: var(--muted); font-size: 12.5px; min-height: 18px; }
+  .kpi .go { color: var(--muted-soft); font-size: 12px; }
+  .kpi.t-red .ico { background: var(--red-bg); color: var(--red); }
+  .kpi.t-amber .ico { background: var(--amber-bg); color: var(--amber); }
+  .kpi.t-green .ico { background: var(--green-bg); color: var(--green); }
+  .kpi.t-blue .ico { background: var(--blue-bg); color: var(--blue); }
+  .kpi.t-brand .ico { background: var(--brand-tint); color: var(--brand); }
+  .kpi.t-red.hot { border-color: var(--red-line); box-shadow: 0 0 0 3px var(--red-bg), var(--elev-1); }
+  .kpi.t-red.hot .num { color: var(--red); }
+  .ov-section { margin-top: 22px; }
+  .ov-section h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin: 0 0 10px; }
+  .attn { display: flex; flex-direction: column; gap: 8px; }
+  .attn button {
+    display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; font: inherit; color: inherit; cursor: pointer;
+    padding: 12px 14px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--panel); box-shadow: var(--elev-1);
+  }
+  .attn button:hover { box-shadow: var(--elev-2); }
+  .attn .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+  .attn .dot.red { background: var(--red); } .attn .dot.amber { background: var(--amber); } .attn .dot.blue { background: var(--blue); }
+  .attn .clear { color: var(--muted); padding: 12px 14px; border: 1px dashed var(--line); border-radius: var(--radius); }
+  .budget-bar { height: 8px; border-radius: 999px; background: var(--line-soft); overflow: hidden; }
+  .budget-bar > span { display: block; height: 100%; background: var(--green); }
   tbody tr.clickable:hover { background: var(--hover); }
   .num { font-variant-numeric: tabular-nums; }
   .subtle { color: var(--muted); font-size: 12px; }
@@ -337,7 +413,7 @@
     position: fixed; inset: 0; background: rgba(27,29,33,.46); z-index: 50;
     display: flex; align-items: center; justify-content: center; padding: 20px;
   }
-  .modal { background: var(--panel); border-radius: 12px; width: 100%; max-width: 460px; box-shadow: 0 18px 48px rgba(0,0,0,.22); }
+  .modal { background: var(--panel); border-radius: 12px; width: 100%; max-width: 460px; box-shadow: var(--elev-3); }
   .modal.wide { max-width: 680px; }
   .modal-head { padding: 18px 20px 0; }
   .modal-head h3 { font-size: 16px; font-weight: 700; }
@@ -481,7 +557,7 @@
   /* ---------- toasts ---------- */
   .toasts { position: fixed; right: 18px; bottom: 18px; z-index: 60; display: flex; flex-direction: column; gap: 9px; max-width: 380px; }
   .toast {
-    padding: 12px 14px; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.16);
+    padding: 12px 14px; border-radius: 10px; box-shadow: var(--elev-2);
     font-size: 13px; display: flex; gap: 10px; align-items: flex-start; background: var(--panel); border-left: 4px solid var(--muted);
     animation: rise .18s ease;
   }
@@ -588,7 +664,7 @@
   <div class="login">
     <div class="card">
       <div class="brand">
-        <img class="logo" src="sheout-mark.png" alt="" width="54" height="36">
+        <span class="logo-tile"><img class="logo" src="sheout-mark.png" alt="" width="40" height="28"></span>
         <div>
           <div class="wordmark">SHE<span>OUT</span></div>
           <div class="sub">Ops Console</div>
@@ -626,7 +702,7 @@
 <div class="shell" id="app" hidden>
   <aside class="side">
     <div class="brand">
-      <img class="logo" src="sheout-mark.png" alt="" width="54" height="36">
+      <span class="logo-tile"><img class="logo" src="sheout-mark.png" alt="" width="40" height="28"></span>
       <div>
         <div class="wordmark" aria-label="SheOut">SHE<span>OUT</span></div>
         <div class="sub">Ops Console</div>
@@ -634,8 +710,12 @@
     </div>
 
     <nav class="nav" id="nav">
+      <button data-tab="overview" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        Overview
+      </button>
       <div class="label">Operations</div>
-      <button data-tab="queue" aria-current="page">
+      <button data-tab="queue" aria-current="false">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 12l2 2 4-4"/><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
         Verification Queue <span class="count" id="cQueue">–</span>
       </button>
@@ -709,7 +789,7 @@
   <main class="content">
     <div class="page-head">
       <div>
-        <h1 id="pageTitle">Verification Queue</h1>
+        <h1 id="pageTitle">Overview</h1>
         <p id="pageDesc"></p>
       </div>
       <div class="actions">
@@ -749,7 +829,7 @@
 <script>
 const API = '/api/v1';
 let token = localStorage.getItem('sheout.admin.token') || '';
-let tab = 'queue';
+let tab = 'overview';
 let sort = { key: null, dir: 'asc' };
 let lastRows = [];
 
@@ -1469,6 +1549,17 @@ const VIEWS = {
       if (key === 'sentAt') return `<span class="subtle nowrap">${time(r.sentAt)}</span>${r.note ? `<div class="subtle clamp" title="${esc(r.note)}">${esc(r.note)}</div>` : ''}`;
       return '—';
     },
+  },
+
+  overview: {
+    title: 'Overview',
+    desc: 'What needs a person right now, and how today is going. Every number opens the section it comes from.',
+    cardTitle: 'Right now',
+    hint: 'Counts are live when this page loads - press Refresh to update',
+    custom: true,
+    columns: [],
+    load: loadOverview,
+    paint: paintOverview,
   },
 
   campaigns: {
@@ -2776,6 +2867,83 @@ $('panel').addEventListener('click', async e => {
   }
 });
 
+// ---- overview -------------------------------------------------------------
+const OV_ICON = {"check":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M9 12l2 2 4-4\"/><path d=\"M21 12a9 9 0 11-18 0 9 9 0 0118 0z\"/></svg>","siren":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M12 9v4M12 17h.01\"/><path d=\"M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L14.7 3.9a2 2 0 00-3.4 0z\"/></svg>","trip":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"6\" cy=\"17\" r=\"3\"/><circle cx=\"18\" cy=\"17\" r=\"3\"/><path d=\"M9 17h6l-3-8h4M6 17l4-8\"/></svg>","chat":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z\"/></svg>","wallet":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><rect x=\"2\" y=\"6\" width=\"20\" height=\"13\" rx=\"2\"/><path d=\"M2 10h20M6 15h4\"/></svg>","route":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"6\" cy=\"19\" r=\"2\"/><circle cx=\"18\" cy=\"5\" r=\"2\"/><path d=\"M8 19h6a4 4 0 0 0 0-8H10a4 4 0 0 1 0-8h6\"/></svg>","gift":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M20 12v9H4v-9\"/><path d=\"M2 7h20v5H2z\"/><path d=\"M12 21V7\"/></svg>","user":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"12\" cy=\"8\" r=\"4\"/><path d=\"M4 21a8 8 0 0116 0\"/></svg>","scooter":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"5.5\" cy=\"17.5\" r=\"2.5\"/><circle cx=\"18.5\" cy=\"17.5\" r=\"2.5\"/><path d=\"M8 17.5h7l2-6h-4M15 5h2l1.5 6.5\"/></svg>","parcel":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M21 8l-9-5-9 5 9 5 9-5z\"/><path d=\"M3 8v8l9 5 9-5V8M12 13v8\"/></svg>"};
+
+/** Each number from the endpoint its own section uses; one that fails shows "-", not an error page. */
+async function loadOverview() {
+  const today = new Date().toISOString().slice(0, 10);
+  const q = (path) => api(path).catch((err) => { if (err.message === 'unauthorized') throw err; return null; });
+  const [queue, sos, support, payouts, bookingsToday, completedToday, noPartnerToday, routes, trust, campaigns] = await Promise.all([
+    q('/admin/verification/review-queue'),
+    q('/admin/sos/active'),
+    q('/admin/support/counts'),
+    q(`/admin/payouts${filterQuery({}, { pageSize: 100 })}`),
+    q(`/admin/bookings${filterQuery({ from: today }, { pageSize: 1 })}`),
+    q(`/admin/bookings${filterQuery({ from: today, status: 'COMPLETED' }, { pageSize: 1 })}`),
+    q(`/admin/bookings${filterQuery({ from: today, status: 'NO_DRIVERS_AVAILABLE' }, { pageSize: 1 })}`),
+    q('/admin/route-review/queue'),
+    q('/admin/trust/review-queue'),
+    q('/admin/campaigns'),
+  ]);
+  return { queue, sos, support, payouts, bookingsToday, completedToday, noPartnerToday, routes, trust, campaigns };
+}
+
+function paintOverview(d) {
+  const n = (v) => (v === null || v === undefined ? '-' : Number(v).toLocaleString('en-IN'));
+  const len = (a) => (Array.isArray(a) ? a.length : null);
+  const total = (p) => (p && typeof p.totalItems === 'number' ? p.totalItems : null);
+  const queueN = len(d.queue), sosN = len(d.sos), routesN = len(d.routes), trustN = len(d.trust);
+  const oldest = (d.queue || []).map((r) => waited(submittedAt(r))).sort((a, b) => (b.mins || 0) - (a.mins || 0))[0];
+  const payoutItems = d.payouts ? d.payouts.items || [] : [];
+  const payoutSum = payoutItems.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+  const signup = d.campaigns ? (d.campaigns.promotions || []).find((p) => p.type === 'SIGNUP_CREDIT') : null;
+  const activeCampaigns = d.campaigns ? [...(d.campaigns.promotions || []), ...(d.campaigns.incentives || [])].filter((c) => c.status === 'ACTIVE').length : null;
+  // The sidebar badges, from the same numbers.
+  if (queueN !== null) $('cQueue').textContent = queueN;
+  if (sosN !== null) $('cSos').textContent = sosN;
+  if (routesN !== null) $('cRoutes').textContent = routesN;
+  if (trustN !== null) $('cTrust').textContent = trustN;
+
+  const kpi = (tab, tone, icon, num, label, sub, hot) => `<button type="button" class="kpi t-${tone}${hot ? ' hot' : ''}" data-go="${tab}">
+      <div class="top"><span class="ico">${OV_ICON[icon]}</span><span class="go">Open →</span></div>
+      <div class="num">${num}</div>
+      <div><div class="lbl">${esc(label)}</div><div class="sub">${sub}</div></div>
+    </button>`;
+
+  const attention = [];
+  if (sosN > 0) attention.push(['red', `${sosN} active SOS alert${sosN === 1 ? '' : 's'}: a rider or partner may need help now`, 'sos']);
+  if (d.support && d.support.unresolvedHigh > 0) attention.push(['red', `${d.support.unresolvedHigh} high-priority support ticket${d.support.unresolvedHigh === 1 ? '' : 's'} unresolved`, 'support']);
+  if (oldest && oldest.mins >= 1440) attention.push(['amber', `Verification waiting ${oldest.text}: people cannot ride or drive until it is decided`, 'queue']);
+  if (payoutItems.length) attention.push(['amber', `${payoutItems.length} payout${payoutItems.length === 1 ? '' : 's'} waiting to be paid, ${rupees(payoutSum)} in all`, 'payouts']);
+  if (routesN > 0) attention.push(['blue', `${routesN} trip${routesN === 1 ? '' : 's'} flagged for route review`, 'routes']);
+
+  const budget = signup && Number(signup.budgetCap) > 0 ? Math.min(100, (Number(signup.spent) / Number(signup.budgetCap)) * 100) : null;
+  $('panel').innerHTML = `
+    <div class="ov-grid" data-overview>
+      ${kpi('sos', sosN > 0 ? 'red' : 'green', 'siren', n(sosN), 'Active SOS alerts', sosN > 0 ? 'Needs a person now' : 'All clear', sosN > 0)}
+      ${kpi('queue', 'amber', 'check', n(queueN), 'Waiting for verification', oldest ? 'Oldest waiting ' + esc(oldest.text) : 'Nobody waiting')}
+      ${kpi('bookings', 'brand', 'trip', n(total(d.bookingsToday)), "Today's bookings", n(total(d.completedToday)) + ' completed · ' + n(total(d.noPartnerToday)) + ' found no partner')}
+      ${kpi('support', 'blue', 'chat', n(d.support ? d.support.unresolved : null), 'Open support tickets', d.support && d.support.unresolvedHigh ? d.support.unresolvedHigh + ' high priority' : 'None high priority')}
+      ${kpi('payouts', 'green', 'wallet', n(d.payouts ? total(d.payouts) : null), 'Payouts waiting', payoutItems.length ? rupees(payoutSum) + ' to pay' : 'Nothing to pay')}
+      ${kpi('routes', 'amber', 'route', n(routesN), 'Route reviews', (trustN !== null ? n(trustN) + ' account' + (trustN === 1 ? '' : 's') + ' in trust review' : ''))}
+      ${kpi('campaigns', 'brand', 'gift', n(activeCampaigns), 'Campaigns running', signup ? 'Signup credit: ' + rupees(signup.spent) + ' of ' + rupees(signup.budgetCap) : '')}
+    </div>
+    ${budget !== null ? `<div class="ov-section"><h3>Signup credit budget</h3><div class="budget-bar" title="${budget.toFixed(1)}% used"><span style="width:${budget.toFixed(1)}%"></span></div></div>` : ''}
+    <div class="ov-section">
+      <h3>Needs attention</h3>
+      <div class="attn">${attention.length
+        ? attention.map(([tone, text, tab]) => `<button type="button" data-go="${tab}"><span class="dot ${tone}"></span><span>${esc(text)}</span></button>`).join('')
+        : '<div class="clear">Nothing is waiting on a person right now.</div>'}</div>
+    </div>`;
+}
+
+$('panel').addEventListener('click', (e) => {
+  if (tab !== 'overview') return;
+  const go = e.target.closest('[data-go]');
+  if (go) switchTab(go.dataset.go);
+});
+
 function paintContent(blocks) {
   const view = VIEWS.content;
   const state = stateFor('content');
@@ -2877,12 +3045,41 @@ function paintRows(view, data, emptyState) {
       });
     }
   }
-  $('rows').innerHTML = sorted.map((r, i) =>
-    `<tr class="${view.onRowClick ? 'clickable' : ''}" data-i="${i}">` +
-    cols.map(c => `<td>${view.cell(r, c.key)}</td>`).join('') + '</tr>'
-  ).join('');
+  $('rows').innerHTML = sorted.map((r, i) => {
+    const acc = ROW_ACCENT[tab] ? ROW_ACCENT[tab](r) : null;
+    const icon = acc && ROW_ICON[tab] ? ROW_ICON[tab](r) : null;
+    return `<tr class="${view.onRowClick ? 'clickable' : ''}" data-i="${i}"${acc ? ` data-acc="${acc}"` : ''}>` +
+      cols.map((c, ci) => ci === 0 && icon
+        ? `<td><div class="row-lead"><span class="row-ico">${icon}</span><div>${view.cell(r, c.key)}</div></div></td>`
+        : `<td>${view.cell(r, c.key)}</td>`).join('') + '</tr>';
+  }).join('');
   lastRows = sorted;
 }
+
+/**
+ * The colour of a row, by what it is. Kept beside paintRows rather than in
+ * each section's definition so the whole palette reads in one place:
+ * red urgent, amber waiting, green done, blue in flight, purple a rider,
+ * grey finished without incident.
+ */
+const ROW_ACCENT = {
+  queue: (r) => (waited(submittedAt(r)).mins >= 2880 ? 'red' : r.role === 'DRIVER' ? 'blue' : 'brand'),
+  sos: () => 'red',
+  support: (r) => (r.status === 'CLOSED' || r.status === 'RESOLVED' ? 'grey' : r.priority === 'HIGH' ? 'red' : r.status === 'OPEN' ? 'amber' : 'blue'),
+  payouts: (r) => (r.status === 'PAID' ? 'green' : 'amber'),
+  bookings: (r) => ({ COMPLETED: 'green', CANCELLED: 'grey', NO_DRIVERS_AVAILABLE: 'amber', REQUESTED: 'brand' })[r.status] || 'blue',
+  accounts: (r) => (r.blocked ? 'red' : r.role === 'DRIVER' ? 'blue' : r.role === 'ADMIN' ? 'grey' : 'brand'),
+  trust: (r) => (r.blocked ? 'red' : 'amber'),
+  routes: () => 'amber',
+  feedback: (r) => (r.averageStars == null ? 'grey' : r.averageStars < 3 ? 'red' : r.averageStars < 4 ? 'amber' : 'green'),
+  announcements: () => 'brand',
+};
+const ROW_ICON = {
+  queue: (r) => (r.role === 'DRIVER' ? OV_ICON.scooter : OV_ICON.user),
+  accounts: (r) => (r.role === 'DRIVER' ? OV_ICON.scooter : OV_ICON.user),
+  bookings: (r) => (r.type === 'DELIVERY' || r.category === 'PARCEL' || r.category === 'LUNCHBOX' ? OV_ICON.parcel : OV_ICON.scooter),
+  sos: () => OV_ICON.siren,
+};
 
 function paintHead(view) {
   $('head').innerHTML = '<tr>' + view.columns.map(c => {
@@ -3340,7 +3537,7 @@ applyTheme((() => {
 function start() {
   $('loginWrap').hidden = true;
   $('app').hidden = false;
-  $('who').textContent = localStorage.getItem('sheout.admin.phone') || '—';
+  $('who').textContent = localStorage.getItem('sheout.admin.phone') || 'Operator';
   render();
   setUpPush(false);
 }

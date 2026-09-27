@@ -29,7 +29,7 @@ export function About() {
 
       <Card className="text-center">
         <IconCircle size="lg" tone="soft" icon={<Heart />} className="mx-auto" />
-        <p className="mt-3 font-heading text-lg font-semibold text-text-primary">SheOut</p>
+        <p className="mt-3 font-heading text-section text-text-primary">SheOut</p>
         <p className="text-sm text-text-secondary">{t('about.version', { version: APP_VERSION })}</p>
         <p className="mt-3 whitespace-pre-line text-sm text-text-secondary">
           {text('about.body', 'about.body')}

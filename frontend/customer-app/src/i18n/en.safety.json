@@ -5,23 +5,23 @@
   },
   "contacts": {
     "whatSosDoes": "If you raise an SOS, everyone here is sent an SMS with your location.",
-    "tellThem": "They are never messaged at any other time. Please tell them you have added their number - it is their number, not yours, and they have not agreed to anything with us.",
+    "tellThem": "They are never messaged at any other time. Please tell them you have added their number. It is their number, not yours, and they have not agreed to anything with us.",
     "emptyWarning": "SOS cannot reach anyone until you add at least one person.",
     "removeWarning": "{{name}} will no longer be told if you raise an SOS."
   },
   "sos": {
     "noGeolocation": "This browser cannot read your location.",
-    "locationDenied": "Could not get your location - allow location access and try again.",
+    "locationDenied": "Could not get your location. Allow location access and try again.",
     "noLocation": "Could not get your location.",
     "ifInDanger": "If you are in danger, call {{number}}.",
     "cannotReachSheout": "Could not reach SheOut. Text your contacts from your phone below, or call {{number}}.",
-    "smsNamed": "SOS - {{name}} needs help. My location: {{link}} (sent from SheOut)",
-    "smsUnnamed": "SOS - I need help. My location: {{link}} (sent from SheOut)",
+    "smsNamed": "SOS: {{name}} needs help. My location: {{link}} (sent from SheOut)",
+    "smsUnnamed": "SOS: I need help. My location: {{link}} (sent from SheOut)",
     "noContactsSaved": "No emergency contacts saved yet. Tap Safety Features below to add one.",
     "resultNoContacts": "Your alert is recorded with SheOut, but you have no emergency contacts saved, so nobody was texted. Share your location below or call {{number}}.",
     "resultRecent": "Alert recorded with your latest location. Your contacts were texted less than a minute ago. Call {{number}} if you need help right now.",
-    "resultNoneReached_one": "Your alert is recorded with SheOut, but our text to your contact didn't go through. Send it from your own phone now - it takes one tap.",
-    "resultNoneReached_other": "Your alert is recorded with SheOut, but our text to your {{count}} contacts didn't go through. Send it from your own phone now - it takes one tap.",
+    "resultNoneReached_one": "Your alert is recorded with SheOut, but our text to your contact didn't go through. Send it from your own phone now. It takes one tap.",
+    "resultNoneReached_other": "Your alert is recorded with SheOut, but our text to your {{count}} contacts didn't go through. Send it from your own phone now. It takes one tap.",
     "resultSomeReached": "Texted {{notified}} of {{total}} contacts. Send it from your phone to reach everyone.",
     "resultAllReached_one": "Your location was texted to your emergency contact.",
     "resultAllReached_other": "Your location was texted to all {{count}} emergency contacts.",
@@ -35,7 +35,7 @@
     "gettingLocation": "Getting location...",
     "shareLocation": "Share Location",
     "callContact": "Call Contact",
-    "noContactsYet": "You have no emergency contacts yet - add at least one.",
+    "noContactsYet": "You have no emergency contacts yet. Add at least one.",
     "alertsGoTo": "SOS alerts go to {{names}}."
   },
   "pickupCode": {

@@ -12,15 +12,17 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantClasses: Record<ButtonVariant, string> = {
-  primary: 'bg-primary text-text-inverse hover:bg-primary-dark active:bg-primary-dark',
-  secondary: 'bg-surface text-text-primary border border-border hover:bg-background',
-  danger: 'bg-danger text-text-inverse hover:brightness-95',
-  success: 'bg-accent-green text-text-inverse hover:brightness-95',
+  // The screen's main action floats (tokens.js ELEVATION); a secondary one
+  // rests. Both press in.
+  primary: 'bg-primary text-text-inverse shadow-float hover:bg-primary-dark active:bg-primary-dark',
+  secondary: 'bg-surface text-text-primary border border-border shadow-lift hover:bg-background',
+  danger: 'bg-danger text-text-inverse shadow-lift hover:brightness-95',
+  success: 'bg-accent-green text-text-inverse shadow-lift hover:brightness-95',
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
   md: 'h-11 px-5 text-sm gap-2',
-  lg: 'h-14 px-6 text-base gap-2.5',
+  lg: 'h-14 px-6 text-base gap-3',
 };
 
 /**
@@ -39,12 +41,12 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           // by the time anything moves - this can never delay an action,
           // only acknowledge one. Three per cent: felt rather than seen.
           // motion-safe, so somebody who asked for less movement gets none.
-          'transition-[color,background-color,transform] duration-100 motion-safe:active:scale-[0.97]',
+          'transition-[color,background-color,transform,box-shadow] duration-100 active:shadow-pressed motion-safe:active:scale-[0.97]',
           // A disabled button is grey, not a paler version of the live one.
           // A washed-out purple pill still reads as "press me" - it was the
           // first thing on the rating sheet and looked broken rather than
           // waiting for an answer. Colour is the difference, not opacity.
-          'disabled:pointer-events-none disabled:border-transparent disabled:bg-border disabled:text-text-secondary',
+          'disabled:pointer-events-none disabled:border-transparent disabled:bg-border disabled:text-text-secondary disabled:shadow-none',
           variantClasses[variant],
           sizeClasses[size],
           fullWidth && 'w-full',

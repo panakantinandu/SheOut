@@ -154,7 +154,7 @@ export function Verification() {
             />
             <div className="flex-1">
               <div className="flex items-center gap-2">
-                <p className="font-heading font-semibold text-text-primary">{t('verification.idVerification')}</p>
+                <p className="font-heading text-card-title text-text-primary">{t('verification.idVerification')}</p>
                 <StatusBadge tone={isVerified ? 'success' : isRejected ? 'danger' : 'warning'}>
                   {verificationStatusLabel(gender ?? 'PENDING')}
                 </StatusBadge>
@@ -197,7 +197,7 @@ export function Verification() {
 
           {!isVerified && !masking && (
             <Card className="space-y-3">
-              <p className="font-heading font-semibold text-text-primary">
+              <p className="font-heading text-card-title text-text-primary">
                 {isUnderReview ? t('verification.replace') : t('verification.upload')}
               </p>
               <p className="text-sm text-text-secondary">{t('verification.acceptedIds')}</p>
@@ -248,7 +248,7 @@ export function Verification() {
               )}
 
               <p className="flex items-start gap-2 text-xs leading-relaxed text-text-secondary">
-                <Eye className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                <Eye className="mt-1 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                 {t('verification.privacyNote')}
               </p>
             </Card>
@@ -271,7 +271,7 @@ export function Verification() {
           {/* Required, and camera only - see LiveSelfieCapture. */}
           {!isVerified && !masking && (
             <Card className="space-y-3">
-              <p className="font-heading font-semibold text-text-primary">{t('verification.selfieTitle')}</p>
+              <p className="font-heading text-card-title text-text-primary">{t('verification.selfieTitle')}</p>
               <LiveSelfieCapture
                 requestChallenge={() => verificationApi.selfieChallenge()}
                 onCaptured={setSelfie}

@@ -70,7 +70,7 @@ export function SupportTicket() {
       {ticket && thread && (
         <>
           <Card className="space-y-1">
-            <p className="font-heading font-semibold text-text-primary">{ticket.subject}</p>
+            <p className="font-heading text-card-title text-text-primary">{ticket.subject}</p>
             <p className="text-xs text-text-secondary">
               {supportCategoryLabel(ticket.category, 'driver')} &middot;{' '}
               {t('help.raisedOn', { date: new Date(ticket.createdAt).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' }) })}

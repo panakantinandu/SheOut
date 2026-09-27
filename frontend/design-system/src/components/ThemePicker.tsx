@@ -37,14 +37,14 @@ export function ThemePicker({ open, onClose }: ThemePickerProps) {
   return (
     <Overlay open={open} label={t('theme.label')} align="sheet" onDismiss={onClose}>
       <div
-        className="w-full rounded-t-[28px] bg-surface px-screen pb-8 pt-3 shadow-card motion-safe:animate-sheet-up"
+        className="w-full rounded-t-[28px] bg-surface px-screen pb-8 pt-3 shadow-overlay motion-safe:animate-sheet-up"
         data-testid="theme-picker"
       >
         <span className="mx-auto mb-4 block h-1.5 w-10 rounded-full bg-border" aria-hidden="true" />
         <div className="mb-4 flex items-center gap-3">
           <IconCircle tone="soft" icon={<Moon />} />
           <div>
-            <p className="font-heading text-lg font-semibold text-text-primary">{t('theme.label')}</p>
+            <p className="font-heading text-section text-text-primary">{t('theme.label')}</p>
             <p className="text-sm text-text-secondary">{t('theme.description')}</p>
           </div>
         </div>

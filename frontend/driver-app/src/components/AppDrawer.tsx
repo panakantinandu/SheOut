@@ -83,7 +83,7 @@ export function AppDrawerProvider({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-3">
             <Avatar url={profile?.profilePhotoUrl} name={profile?.name} size="lg" />
             <div className="min-w-0">
-              <p className="truncate font-heading text-lg font-semibold">{profile?.name || t('profile.addName')}</p>
+              <p className="truncate font-heading text-section">{profile?.name || t('profile.addName')}</p>
               <p className="truncate text-sm opacity-85">
                 {profile ? `${t('drawer.partner')} · ${vehicleLabel(profile.vehicleType)}` : t('drawer.partner')}
               </p>

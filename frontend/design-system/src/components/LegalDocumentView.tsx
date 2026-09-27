@@ -42,7 +42,7 @@ export function LegalDocumentView({ document, onBack }: LegalDocumentViewProps) 
 
       {document.sections.map((section) => (
         <section key={section.heading}>
-          <h2 className="mb-2 font-heading text-base font-semibold text-text-primary">{section.heading}</h2>
+          <h2 className="mb-2 font-heading text-section text-text-primary">{section.heading}</h2>
           <Card className="space-y-3">
             {section.paragraphs.map((text, i) => (
               <p key={i} className="text-sm leading-relaxed text-text-secondary">

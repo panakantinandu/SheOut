@@ -49,7 +49,7 @@ export function OtpCodeField({ value, onChange, error, disabled, onComplete }: O
   const digits = Array.from({ length: OTP_CODE_LENGTH }, (_, i) => value[i] ?? '');
 
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-2">
       <div className="relative" onClick={() => inputRef.current?.focus()}>
         <input
           ref={inputRef}
@@ -87,7 +87,7 @@ export function OtpCodeField({ value, onChange, error, disabled, onComplete }: O
                 key={i}
                 data-testid="otp-box"
                 className={cn(
-                  'flex h-12 flex-1 items-center justify-center rounded-input border-2 bg-surface font-heading text-xl font-bold transition-colors',
+                  'flex h-12 flex-1 items-center justify-center rounded-input border-2 bg-surface font-heading text-title transition-colors',
                   error
                     ? 'border-danger text-danger'
                     : digit

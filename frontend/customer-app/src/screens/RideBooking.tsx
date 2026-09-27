@@ -1,7 +1,7 @@
-import { MapPin, Bike } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Card, IconCircle, LiveMap, TopHeader } from '@sheout/design-system';
+import { Button, Card, IconCircle, LiveMap, TopHeader, ServiceArt } from '@sheout/design-system';
 import type { MapMarker } from '@sheout/design-system';
 import { UnpaidTripBanner } from '../components/UnpaidTripBanner';
 import { ApiError, bookingApi } from '../api/client';
@@ -131,8 +131,8 @@ export function RideBooking() {
           {drop ? t('booking.mapBoth') : t('booking.mapPickDrop')}
         </p>
         {nearby.length > 0 && (
-          <p className="flex items-center gap-1.5 text-xs font-medium text-primary" data-testid="nearby-count">
-            <Bike className="h-3.5 w-3.5" aria-hidden="true" />
+          <p className="flex items-center gap-2 text-xs font-medium text-primary" data-testid="nearby-count">
+            <ServiceArt kind="ride" size="xs" />
             {t('booking.nearbyCount', { count: nearby.length })}
           </p>
         )}

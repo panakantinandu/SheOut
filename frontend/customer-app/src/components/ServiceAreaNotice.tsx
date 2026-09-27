@@ -33,7 +33,7 @@ export function ServiceAreaNotice({ pickup, drop }: ServiceAreaNoticeProps) {
       <IconCircle color="red" tone="soft" size="sm" icon={<MapPinOff />} />
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold text-text-primary">{badPickup && badDrop ? t('serviceArea.bothOutside') : badPickup ? t('serviceArea.pickupOutside') : t('serviceArea.dropOutside')}</p>
-        <p className="mt-0.5 text-xs text-text-secondary">{t('serviceArea.message', { city: SERVICE_CENTRE_NAME })}</p>
+        <p className="mt-1 text-xs text-text-secondary">{t('serviceArea.message', { city: SERVICE_CENTRE_NAME })}</p>
       </div>
     </Card>
   );

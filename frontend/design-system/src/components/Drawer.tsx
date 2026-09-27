@@ -85,7 +85,7 @@ export function Drawer({ open, onClose, header, sections, footer }: DrawerProps)
         aria-label={t('drawer.label')}
         tabIndex={-1}
         className={cn(
-          'absolute inset-y-0 left-0 flex w-[82%] max-w-[320px] flex-col bg-surface shadow-card outline-none transition-transform duration-300 ease-out',
+          'absolute inset-y-0 left-0 flex w-[82%] max-w-[320px] flex-col bg-surface shadow-overlay outline-none transition-transform duration-300 ease-out',
           open ? 'translate-x-0' : '-translate-x-full'
         )}
         data-testid="drawer"
@@ -116,7 +116,7 @@ export function Drawer({ open, onClose, header, sections, footer }: DrawerProps)
                       type="button"
                       onClick={item.onClick}
                       className={cn(
-                        'flex w-full items-center gap-3 rounded-card px-3 py-2.5 text-left transition-colors hover:bg-background active:scale-[0.99]',
+                        'flex w-full items-center gap-3 rounded-card px-3 py-3 text-left transition-colors hover:bg-background active:scale-[0.99]',
                         item.tone === 'danger' ? 'text-danger' : 'text-text-primary'
                       )}
                       data-testid={`drawer-${item.key}`}

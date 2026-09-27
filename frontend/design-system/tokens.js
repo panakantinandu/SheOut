@@ -11,13 +11,33 @@
 // light violet, where the mockup is a much deeper #4A1A9E, which is why the
 // built apps did not read as the same design.
 
+/*
+ * COLOUR DEPTH. Every hue has a tint (a wash to sit things on), its base
+ * (fills, icons, the thing you notice), and a strong shade (text and icons
+ * placed ON the tint, where the base would be too faint to read). Primary
+ * also has a mid tone, for the second-most important thing on a purple
+ * screen. Use them for hierarchy: the one element that matters most on a
+ * screen gets the base or strong shade; everything around it steps down to
+ * a tint. Blue is for information - support and announcements - so it never
+ * competes with the brand purple for "this is SheOut".
+ */
 export const colors = {
   primary: '#4A1A9E',
   primaryDark: '#36116F',
+  primaryMid: '#7B4FD6',
   primaryLight: '#EDE5FA',
   accentOrange: '#FCA325',
+  accentOrangeTint: '#FFF2DE',
+  accentOrangeStrong: '#A15C00',
   accentGreen: '#1AB65A',
+  accentGreenTint: '#E2F6EA',
+  accentGreenStrong: '#0B7A3A',
   accentRed: '#FA2A36',
+  accentRedTint: '#FFE5E7',
+  accentRedStrong: '#B0121C',
+  accentBlue: '#2F6FEB',
+  accentBlueTint: '#E4EDFF',
+  accentBlueStrong: '#1C4BB4',
   background: '#FBFAFD',
   surface: '#FFFFFF',
   border: '#E8E3F1',
@@ -36,9 +56,37 @@ export const radii = {
   chip: '10px',
 };
 
+/*
+ * ELEVATION. Four levels, each for one job - never one shadow for everything:
+ *  1 lift     cards and list rows resting on the page
+ *  2 float    things that sit above the page: the bottom bar, a primary
+ *             call to action, the hero card of a screen (brand-tinted)
+ *  3 overlay  dialogs, sheets and menus, which cover the page
+ *  pressed    a control being pushed in
+ * shadow-card and shadow-raised remain as aliases for lift and float.
+ */
 export const shadows = {
-  card: '0 4px 16px rgba(36, 26, 51, 0.08)',
-  raised: '0 10px 24px rgba(123, 63, 228, 0.30)',
+  lift: '0 1px 2px rgba(36, 26, 51, 0.05), 0 4px 14px rgba(36, 26, 51, 0.06)',
+  float: '0 6px 14px rgba(74, 26, 158, 0.14), 0 18px 36px rgba(74, 26, 158, 0.16)',
+  overlay: '0 16px 40px rgba(36, 26, 51, 0.20), 0 40px 80px rgba(36, 26, 51, 0.18)',
+  pressed: 'inset 0 2px 5px rgba(36, 26, 51, 0.16)',
+};
+
+/*
+ * TYPE SCALE. Six steps, plus micro for badges, each a size AND a weight AND a line height, so a
+ * heading is never "text-sm but bold". Poppins for the first four (read as
+ * headings), Inter for body and caption.
+ */
+export const typeScale = {
+  display: ['30px', { lineHeight: '36px', fontWeight: '700', letterSpacing: '-0.02em' }],
+  title: ['22px', { lineHeight: '28px', fontWeight: '600', letterSpacing: '-0.01em' }],
+  section: ['17px', { lineHeight: '24px', fontWeight: '600' }],
+  'card-title': ['15px', { lineHeight: '20px', fontWeight: '600' }],
+  body: ['15px', { lineHeight: '22px', fontWeight: '400' }],
+  caption: ['12px', { lineHeight: '16px', fontWeight: '500', letterSpacing: '0.01em' }],
+  // Badge numerals and one-word tags only (an unread count, "Soon"). Never
+  // for a sentence: anything a person reads is caption or larger.
+  micro: ['10px', { lineHeight: '12px', fontWeight: '700', letterSpacing: '0.02em' }],
 };
 
 export const spacing = {
@@ -68,10 +116,20 @@ export const fonts = {
 export const darkColors = {
   primary: '#B69BFF',
   primaryDark: '#9B79FF',
+  primaryMid: '#8F6BF0',
   primaryLight: '#2A2142',
   accentOrange: '#FFB545',
+  accentOrangeTint: '#3A2A14',
+  accentOrangeStrong: '#FFC56E',
   accentGreen: '#35D07F',
+  accentGreenTint: '#16301F',
+  accentGreenStrong: '#6BE2A3',
   accentRed: '#FF6B72',
+  accentRedTint: '#3A1A21',
+  accentRedStrong: '#FF9BA0',
+  accentBlue: '#6E9BFF',
+  accentBlueTint: '#1A2442',
+  accentBlueStrong: '#A3C0FF',
   background: '#131020',
   surface: '#1B1730',
   border: '#2E2847',
@@ -82,8 +140,10 @@ export const darkColors = {
 };
 
 export const darkShadows = {
-  card: '0 4px 16px rgba(0, 0, 0, 0.45)',
-  raised: '0 10px 24px rgba(0, 0, 0, 0.55)',
+  lift: '0 1px 2px rgba(0, 0, 0, 0.40), 0 4px 14px rgba(0, 0, 0, 0.30)',
+  float: '0 6px 14px rgba(0, 0, 0, 0.45), 0 18px 36px rgba(0, 0, 0, 0.45)',
+  overlay: '0 16px 40px rgba(0, 0, 0, 0.60), 0 40px 80px rgba(0, 0, 0, 0.55)',
+  pressed: 'inset 0 2px 5px rgba(0, 0, 0, 0.50)',
 };
 
 /** "#4A1A9E" -> "74 26 158", the form a CSS variable needs to keep /opacity working. */

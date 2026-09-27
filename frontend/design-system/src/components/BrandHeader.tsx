@@ -1,4 +1,4 @@
-import illustration from '../assets/sheout-illustration.png';
+import illustration from '../assets/sheout-illustration.webp';
 import { cn } from '../lib/cn';
 import { useTranslation } from 'react-i18next';
 

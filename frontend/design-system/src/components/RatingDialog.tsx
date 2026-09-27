@@ -117,7 +117,7 @@ export function RatingDialog({
 
   return (
     <Overlay open={open} label={title} align="sheet" onDismiss={busy ? undefined : onSkip}>
-      <div className="max-h-[92vh] overflow-y-auto rounded-t-[28px] bg-surface px-5 pb-6 pt-3 shadow-card motion-safe:animate-sheet-up">
+      <div className="max-h-[92vh] overflow-y-auto rounded-t-[28px] bg-surface px-5 pb-6 pt-3 shadow-overlay motion-safe:animate-sheet-up">
         {/* The grabber: what every sheet on a phone has, so this reads as
             something she can push back down rather than something stuck. */}
         <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-border" aria-hidden="true" />
@@ -126,7 +126,7 @@ export function RatingDialog({
           {(counterpartName || counterpartPhotoUrl) && (
             <Avatar url={counterpartPhotoUrl ?? null} name={counterpartName ?? ''} size="lg" />
           )}
-          <h2 className="mt-3 font-heading text-xl font-bold text-text-primary">
+          <h2 className="mt-3 font-heading text-title text-text-primary">
             {counterpartName ? t('rating.titleNamed', { name: counterpartName }) : title}
           </h2>
           {tripSummary && (
@@ -171,7 +171,7 @@ export function RatingDialog({
                       )
                     }
                     className={
-                      'rounded-full border px-3.5 py-2 text-sm font-medium transition-colors ' +
+                      'rounded-full border px-4 py-2 text-sm font-medium transition-colors ' +
                       (chosen
                         ? 'border-primary bg-primary text-text-inverse'
                         : 'border-border bg-background text-text-primary')
@@ -187,7 +187,7 @@ export function RatingDialog({
 
         {stars !== null && (
           <label className="mt-4 block">
-            <span className="mb-1.5 block text-sm font-medium text-text-primary">{t('rating.commentLabel')}</span>
+            <span className="mb-2 block text-sm font-medium text-text-primary">{t('rating.commentLabel')}</span>
             <textarea
               className="min-h-[76px] w-full rounded-input border border-border bg-background p-3 text-sm text-text-primary outline-none transition-colors focus:border-primary"
               maxLength={COMMENT_MAX}
@@ -220,7 +220,7 @@ export function RatingDialog({
             type="button"
             disabled={busy}
             onClick={onSkip}
-            className="block w-full py-2.5 text-center text-sm font-semibold text-text-secondary disabled:opacity-50"
+            className="block w-full py-3 text-center text-sm font-semibold text-text-secondary disabled:opacity-50"
             data-testid="rating-skip"
           >
             {t('common.notNow')}

@@ -21,7 +21,7 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
     const inputId = id ?? props.name;
     return (
       <label className="block" htmlFor={inputId}>
-        {label && <span className="mb-1.5 block text-sm font-medium text-text-primary">{label}</span>}
+        {label && <span className="mb-2 block text-sm font-medium text-text-primary">{label}</span>}
         <span
           className={cn(
             'flex h-14 items-center gap-2 rounded-input border bg-surface px-4 transition-colors',

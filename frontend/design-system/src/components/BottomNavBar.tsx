@@ -8,6 +8,8 @@ export interface BottomNavItem {
   active?: boolean;
   /** The floating circular center item (SOS on customer screens). */
   raised?: boolean;
+  /** A short word pinned to the tab's corner, e.g. "Soon" on a feature to come. */
+  badge?: string;
   onClick?: () => void;
 }
 
@@ -53,7 +55,7 @@ export function BottomNavBar({ items, className }: BottomNavBarProps) {
     <nav
       className={cn(
         // The bar sits over scrolling content, so it needs an edge of its own.
-        'flex items-end justify-between rounded-t-card border-t border-border bg-surface px-2 pt-2 shadow-card',
+        'flex items-end justify-between rounded-t-card border-t border-border bg-surface px-2 pt-2 shadow-float',
         // Clear of the iPhone home indicator, without a gap on everything else.
         'pb-[max(0.5rem,env(safe-area-inset-bottom))]',
         className
@@ -74,7 +76,7 @@ export function BottomNavBar({ items, className }: BottomNavBarProps) {
             <span
               className={cn(
                 '-mt-9 flex h-16 w-16 items-center justify-center rounded-full bg-danger text-text-inverse',
-                'shadow-raised ring-4 ring-surface [&_svg]:h-7 [&_svg]:w-7',
+                'shadow-float ring-4 ring-surface [&_svg]:h-7 [&_svg]:w-7',
                 'transition-transform duration-100 motion-safe:group-active:scale-90'
               )}
             >
@@ -114,8 +116,13 @@ export function BottomNavBar({ items, className }: BottomNavBarProps) {
               >
                 {item.icon}
               </span>
+              {item.badge && (
+                <span className="absolute -right-2 -top-2 rounded-full bg-accent-orange px-1 py-px text-micro leading-none text-text-primary shadow-lift">
+                  {item.badge}
+                </span>
+              )}
             </span>
-            <span className={cn('text-xs', item.active ? 'font-semibold text-primary' : 'font-medium text-text-secondary')}>
+            <span className={cn('text-caption', item.active ? 'font-semibold text-primary' : 'font-medium text-text-secondary')}>
               {item.label}
             </span>
           </button>

@@ -96,7 +96,7 @@ export function PrivacyDataSection({
 
   return (
     <section>
-      <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">{t('privacy.heading')}</h2>
+      <h2 className="mb-3 font-heading text-section text-text-primary">{t('privacy.heading')}</h2>
       <Card className="divide-y divide-border p-0">
         <ListRow
           icon={<IconCircle tone="soft" size="sm" icon={<Download />} />}
@@ -137,7 +137,7 @@ export function PrivacyDataSection({
           onDismiss={deleting ? undefined : () => setStep('idle')}
         >
           <div className="w-full max-w-xs rounded-card bg-surface p-5 shadow-card motion-safe:animate-pop-in">
-            <p className="font-heading text-lg font-semibold text-text-primary">{t('privacy.typeToConfirm')}</p>
+            <p className="font-heading text-section text-text-primary">{t('privacy.typeToConfirm')}</p>
             <p className="mt-2 text-sm text-text-secondary">
               {t('privacy.permanent')}
             </p>

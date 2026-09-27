@@ -1,29 +1,7 @@
 import { CalendarX, SearchX, Star, UtensilsCrossed } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import bikeTaxiImage from '../../../../public/BikeTaxiImage.png';
-import parcelImage from '../../../../public/ParcelImage.png';
-import {
-  AmountText,
-  Card,
-  DateRangeFields,
-  IconCircle,
-  ListEmptyState,
-  PullToRefresh,
-  SkeletonList,
-  ListFilterBar,
-  LoadMore,
-  SelectField,
-  StatusBadge,
-  TopHeader,
-  bookingCategoryLabel,
-  bookingStatusLabel,
-  isAwaitingPayment,
-  tripStatusLabel,
-  endOfDayIso,
-  startOfDayIso,
-  usePagedList,
-} from '@sheout/design-system';
+import { AmountText, Card, DateRangeFields, IconCircle, ListEmptyState, PullToRefresh, SkeletonList, ListFilterBar, LoadMore, SelectField, StatusBadge, TopHeader, bookingCategoryLabel, bookingStatusLabel, isAwaitingPayment, tripStatusLabel, endOfDayIso, startOfDayIso, usePagedList, ServiceArt } from '@sheout/design-system';
 import type { DateRangeValue, StatusTone } from '@sheout/design-system';
 import { bookingApi } from '../api/client';
 import type { BookingCategory, BookingStatus, BookingSummary } from '../api/types';
@@ -75,14 +53,14 @@ function categoryIcon(category: BookingCategory) {
   if (category === 'PARCEL') {
     return (
       <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-[#F3C385]/25 ring-1 ring-[#D98338]/20">
-        <img src={parcelImage} alt="Parcel Delivery" className="h-7 w-7 object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.18)]" />
+        <ServiceArt kind="parcel" size="sm" label="Parcel Delivery" />
       </div>
     );
   }
   if (category === 'LUNCHBOX') return <IconCircle color="green" tone="soft" size="sm" icon={<UtensilsCrossed />} />;
   return (
     <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-[#DCC7FF]/25 ring-1 ring-[#8A6AE6]/20">
-      <img src={bikeTaxiImage} alt="Bike Taxi" className="h-7 w-7 object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.18)]" />
+      <ServiceArt kind="ride" size="sm" label="Bike Taxi" />
     </div>
   );
 }
@@ -148,8 +126,8 @@ export function Bookings() {
             onClick={() => setTab(tabItem.key)}
             className={
               tab === tabItem.key
-                ? 'shrink-0 rounded-full bg-primary px-4 py-1.5 text-sm font-semibold text-text-inverse'
-                : 'shrink-0 rounded-full border border-border px-4 py-1.5 text-sm font-medium text-text-secondary'
+                ? 'shrink-0 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-text-inverse'
+                : 'shrink-0 rounded-full border border-border px-4 py-2 text-sm font-medium text-text-secondary'
             }
           >
             {t(tabItem.label)}

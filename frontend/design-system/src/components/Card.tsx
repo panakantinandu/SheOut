@@ -23,14 +23,17 @@ const variantBackground: Record<CardVariant, string> = {
 };
 
 const variantRest: Record<CardVariant, string> = {
-  surface: 'text-text-primary shadow-card',
-  primary: 'text-text-inverse shadow-raised',
+  // Elevation (tokens.js): a surface card rests on the page; the brand card
+  // is the screen's hero and floats above it.
+  surface: 'text-text-primary shadow-lift',
+  primary: 'text-text-inverse shadow-float',
 };
 
 const toneBackground: Record<Exclude<CardTone, 'default'>, string> = {
-  danger: 'bg-danger/10',
-  warning: 'bg-accent-orange/10',
-  success: 'bg-accent-green/10',
+  // Tints, not the base colour at 10% - see COLOUR DEPTH in tokens.js.
+  danger: 'bg-accent-red-tint',
+  warning: 'bg-accent-orange-tint',
+  success: 'bg-accent-green-tint',
   brand: 'bg-primary-light',
 };
 
@@ -44,7 +47,11 @@ export function Card({ variant = 'surface', tone = 'default', className, childre
   return (
     <div
       className={cn(
-        'rounded-card p-5',
+        // p-5 unless the caller sets its own padding. Both classes on one
+        // element do not override each other by order - Tailwind emits p-5
+        // after p-0, so p-5 always won and a p-0 list card kept its inset.
+        'rounded-card',
+        !/(^|\s)p[xytblr]?-/.test(className ?? '') && 'p-5',
         variantRest[variant],
         tone === 'default' ? variantBackground[variant] : toneBackground[tone],
         className

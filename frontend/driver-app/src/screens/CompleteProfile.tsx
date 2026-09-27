@@ -47,7 +47,7 @@ export function CompleteProfile() {
     <div className="space-y-6 py-4">
       <BrandHeader size="md" />
       <div>
-        <h1 className="font-heading text-2xl font-bold text-text-primary">{t('completeProfile.title')}</h1>
+        <h1 className="font-heading text-title text-text-primary">{t('completeProfile.title')}</h1>
         <p className="mt-1 text-sm text-text-secondary">{t('completeProfile.subtitle')}</p>
         {notice && (
           <p className="mt-3 rounded-input bg-primary-light px-4 py-3 text-sm font-medium text-primary" data-testid="new-account-notice">

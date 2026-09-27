@@ -20,7 +20,7 @@ export function About() {
 
       <Card variant="primary" className="relative overflow-hidden">
         <div className="relative z-10 max-w-[62%]">
-          <p className="font-heading text-xl font-bold">SheOut</p>
+          <p className="font-heading text-title">SheOut</p>
           <p className="mt-1 text-sm opacity-90">{t('about.tagline')}</p>
           <p className="mt-2 text-xs opacity-80">{t('about.version', { version: APP_VERSION })}</p>
         </div>

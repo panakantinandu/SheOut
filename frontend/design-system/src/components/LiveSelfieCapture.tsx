@@ -285,7 +285,7 @@ export function LiveSelfieCapture({ requestChallenge, onCaptured, onReset, captu
   return (
     <div className="space-y-3" data-testid="live-selfie">
       <div className="flex items-start gap-2">
-        <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+        <ShieldCheck className="mt-1 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
         <p className="text-xs leading-relaxed text-text-secondary">{t('selfie.why')}</p>
       </div>
 
@@ -311,12 +311,12 @@ export function LiveSelfieCapture({ requestChallenge, onCaptured, onReset, captu
             />
             <div className="pointer-events-none absolute inset-[12%] rounded-[50%] border-4 border-white/70" aria-hidden="true" />
             {countdown > 0 && (
-              <span className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-black/60 font-heading text-lg font-semibold text-white">
+              <span className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-black/60 font-heading text-section text-white">
                 {countdown}
               </span>
             )}
           </div>
-          <p className="text-center font-heading text-base font-semibold text-text-primary" aria-live="assertive" data-testid="selfie-instruction">
+          <p className="text-center font-heading text-section text-text-primary" aria-live="assertive" data-testid="selfie-instruction">
             {instruction}
           </p>
           <Button fullWidth variant="secondary" onClick={cancel}>{t('common.cancel')}</Button>

@@ -268,7 +268,7 @@ export function LocationPicker({
     createPortal(
     <div className="fixed inset-0 z-50 flex flex-col bg-background">
       <div className="flex items-center gap-3 px-screen pt-6">
-        <h2 className="flex-1 font-heading text-lg font-semibold text-text-primary">{title}</h2>
+        <h2 className="flex-1 font-heading text-section text-text-primary">{title}</h2>
         <button
           type="button"
           aria-label={t('common.close')}
@@ -296,8 +296,8 @@ export function LocationPicker({
               aria-pressed={mode === tab.key}
               className={
                 mode === tab.key
-                  ? 'flex flex-1 items-center justify-center gap-1.5 rounded-full bg-primary py-2 text-sm font-semibold text-text-inverse'
-                  : 'flex flex-1 items-center justify-center gap-1.5 rounded-full border border-border py-2 text-sm font-medium text-text-secondary'
+                  ? 'flex flex-1 items-center justify-center gap-2 rounded-full bg-primary py-2 text-sm font-semibold text-text-inverse'
+                  : 'flex flex-1 items-center justify-center gap-2 rounded-full border border-border py-2 text-sm font-medium text-text-secondary'
               }
             >
               {tab.icon}

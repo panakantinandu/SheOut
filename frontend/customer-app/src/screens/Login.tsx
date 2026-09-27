@@ -265,7 +265,7 @@ export function Login() {
         <button
           type="button"
           onClick={() => setPickingLanguage(true)}
-          className="flex items-center gap-1.5 rounded-full border border-border bg-surface/80 px-3 py-1.5 text-xs font-semibold text-primary shadow-sm"
+          className="flex items-center gap-2 rounded-full border border-border bg-surface/80 px-3 py-2 text-xs font-semibold text-primary shadow-lift"
           data-testid="login-language"
         >
           <Languages className="h-4 w-4" aria-hidden="true" />
@@ -308,7 +308,7 @@ export function Login() {
             </div>
           )}
 
-          <h1 className="font-heading text-2xl font-bold text-text-primary">{t(`login.${mode}.heading`)}</h1>
+          <h1 className="font-heading text-title text-text-primary">{t(`login.${mode}.heading`)}</h1>
           <p className="mb-6 text-sm text-text-secondary">{t(`login.${mode}.subtitle`)}</p>
 
           {notice && (
@@ -406,23 +406,23 @@ export function Login() {
         style={{ animationDelay: '240ms' }}
         data-testid="login-trust"
       >
-        <span className="flex flex-1 flex-col items-center gap-1.5 text-center">
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-surface/80 text-primary shadow-sm">
+        <span className="flex flex-1 flex-col items-center gap-2 text-center">
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-surface/80 text-primary shadow-lift">
             <ShieldCheck className="h-4 w-4" aria-hidden="true" />
           </span>
-          <span className="text-[11px] font-medium leading-tight text-text-secondary">{t('login.trust.women')}</span>
+          <span className="text-caption leading-tight text-text-secondary">{t('login.trust.women')}</span>
         </span>
-        <span className="flex flex-1 flex-col items-center gap-1.5 text-center">
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-surface/80 text-primary shadow-sm">
+        <span className="flex flex-1 flex-col items-center gap-2 text-center">
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-surface/80 text-primary shadow-lift">
             <BadgeCheck className="h-4 w-4" aria-hidden="true" />
           </span>
-          <span className="text-[11px] font-medium leading-tight text-text-secondary">{t('login.trust.verified')}</span>
+          <span className="text-caption leading-tight text-text-secondary">{t('login.trust.verified')}</span>
         </span>
-        <span className="flex flex-1 flex-col items-center gap-1.5 text-center">
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-surface/80 text-primary shadow-sm">
+        <span className="flex flex-1 flex-col items-center gap-2 text-center">
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-surface/80 text-primary shadow-lift">
             <Siren className="h-4 w-4" aria-hidden="true" />
           </span>
-          <span className="text-[11px] font-medium leading-tight text-text-secondary">{t('login.trust.sos')}</span>
+          <span className="text-caption leading-tight text-text-secondary">{t('login.trust.sos')}</span>
         </span>
       </div>
       )}

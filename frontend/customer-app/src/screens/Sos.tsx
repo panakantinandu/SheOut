@@ -246,13 +246,13 @@ export function Sos() {
         >
           <span className="absolute inset-0 rounded-full bg-danger/15" aria-hidden="true" />
           <span className="absolute inset-3 rounded-full bg-danger/25" aria-hidden="true" />
-          <span className="relative flex h-32 w-32 flex-col items-center justify-center gap-0.5 rounded-full bg-danger text-text-inverse shadow-card">
+          <span className="relative flex h-32 w-32 flex-col items-center justify-center gap-1 rounded-full bg-danger text-text-inverse shadow-card">
             <Bell className="h-9 w-9" />
-            <span className="font-heading text-2xl font-extrabold tracking-wide">SOS</span>
+            <span className="font-heading text-display tracking-wide">SOS</span>
           </span>
         </button>
 
-        <p className="font-heading text-lg font-semibold text-text-primary">
+        <p className="font-heading text-section text-text-primary">
           <SafetyText k="sos.inEmergency" />
         </p>
         <p className="text-sm text-text-secondary">
@@ -343,7 +343,7 @@ export function Sos() {
           onClick={() => navigate('/profile/emergency-contacts')}
           className="mb-3 flex w-full items-center justify-between text-left"
         >
-          <h2 className="font-heading text-base font-semibold text-text-primary">{t('sos.safetyFeatures')}</h2>
+          <h2 className="font-heading text-section text-text-primary">{t('sos.safetyFeatures')}</h2>
           <ChevronRight className="h-5 w-5 text-text-secondary" aria-hidden="true" />
         </button>
         <Card className="space-y-3">

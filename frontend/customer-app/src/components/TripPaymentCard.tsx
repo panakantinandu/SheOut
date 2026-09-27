@@ -146,7 +146,7 @@ export function TripPaymentCard({ booking, onPaid }: { booking: BookingSummary; 
         <div className="flex items-center gap-3">
           <IconCircle size="md" tone="soft" color="green" icon={<CheckCircle2 />} />
           <div className="flex-1">
-            <p className="font-heading font-semibold text-text-primary">{t('tripPay.paid')}</p>
+            <p className="font-heading text-card-title text-text-primary">{t('tripPay.paid')}</p>
             <p className="text-sm text-text-secondary">
               {payment.status === 'WAIVED'
                 ? t('tripPay.settledEarlier')
@@ -170,7 +170,7 @@ export function TripPaymentCard({ booking, onPaid }: { booking: BookingSummary; 
   return (
     <Card data-testid="trip-payment-due" className="space-y-3">
       <div className="flex items-center justify-between">
-        <p className="font-heading font-semibold text-text-primary">{t('tripPay.payForTrip')}</p>
+        <p className="font-heading text-card-title text-text-primary">{t('tripPay.payForTrip')}</p>
         <AmountText amount={payment.amount} size="lg" exact />
       </div>
       {promo}
@@ -211,7 +211,7 @@ export function TripPaymentCard({ booking, onPaid }: { booking: BookingSummary; 
       </Button>
 
       <div className="flex items-start gap-2 text-sm text-text-secondary">
-        <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+        <ShieldCheck className="mt-1 h-4 w-4 shrink-0 text-primary" />
         <p>
           {t('tripPay.appOnlyNote')}
         </p>

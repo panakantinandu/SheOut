@@ -1,7 +1,7 @@
-import { Bike, Package } from 'lucide-react';
+
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { BrandSplash, splashDestination, useTranslation } from '@sheout/design-system';
+import { BrandSplash, splashDestination, useTranslation, ServiceArt } from '@sheout/design-system';
 import { useAuth } from '../auth/AuthContext';
 
 /** How long the splash is shown before it moves on. */
@@ -48,8 +48,8 @@ export function Splash() {
       durationMs={FADE_START_MS}
       fading={fading}
       items={[
-        { key: 'bike', label: t('home.serviceRide'), icon: <Bike /> },
-        { key: 'parcel', label: t('home.serviceParcel'), icon: <Package /> },
+        { key: 'bike', label: t('home.serviceRide'), icon: <ServiceArt kind="ride" size="lg" className="rounded-2xl ring-2 ring-white/40" /> },
+        { key: 'parcel', label: t('home.serviceParcel'), icon: <ServiceArt kind="parcel" size="lg" className="rounded-2xl ring-2 ring-white/40" /> },
       ]}
       footerLine={t('splash.footer')}
     />

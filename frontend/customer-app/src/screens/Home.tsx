@@ -1,28 +1,13 @@
 import { ArrowRight, Clock, MapPinned, ShieldAlert, Wallet as WalletIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  brandIllustration,
-  Card,
-  IconCircle,
-  ListRow,
-  PushPromptCard,
-  TopHeader,
-  contentText,
-  useContentSection,
-  useAppLanguage,
-  usePushNotifications,
-  useUnreadNotifications,
-} from '@sheout/design-system';
+import { brandIllustration, Card, IconCircle, ListRow, PushPromptCard, TopHeader, contentText, useContentSection, useAppLanguage, usePushNotifications, useUnreadNotifications, bikeTaxiArt, parcelArt, womenArt } from '@sheout/design-system';
 import { OutOfAreaBanner } from '../components/OutOfAreaBanner';
 import { UnpaidTripBanner } from '../components/UnpaidTripBanner';
 import { useAppDrawer } from '../components/AppDrawer';
 import { PUSH_TOKEN_KEY, contentApi, notificationsApi, pushApi, usersApi } from '../api/client';
 import type { CustomerProfileSummary } from '../api/types';
 import { useTranslation } from '@sheout/design-system';
-import bikeTaxiImage from '../../../../public/BikeTaxiImage.png';
-import parcelImage from '../../../../public/ParcelImage.png';
-import womenImage from '../../../../public/Women.png';
 
 /**
  * Two of the mockup's three service tiles - Lunch Box is deferred for
@@ -30,8 +15,8 @@ import womenImage from '../../../../public/Women.png';
  * is one entry, not another copy of the tile.
  */
 const SERVICES = [
-  { key: 'ride', labelKey: 'home.serviceRide', to: '/book/ride', bg: 'bg-primary', image: bikeTaxiImage, alt: 'Bike Taxi' },
-  { key: 'parcel', labelKey: 'home.serviceParcel', to: '/book/parcel', bg: 'bg-accent-orange', image: parcelImage, alt: 'Parcel Delivery' },
+  { key: 'ride', labelKey: 'home.serviceRide', to: '/book/ride', bg: 'bg-primary', image: bikeTaxiArt, alt: 'Bike Taxi' },
+  { key: 'parcel', labelKey: 'home.serviceParcel', to: '/book/parcel', bg: 'bg-accent-orange', image: parcelArt, alt: 'Parcel Delivery' },
 ];
 
 /**
@@ -106,7 +91,7 @@ export function Home() {
           cropped by the card's overflow so the rider fills the corner. */}
       <Card variant="primary" className="relative overflow-hidden">
         <div className="relative z-10 max-w-[62%]">
-          <p className="font-heading text-lg font-semibold">{fromContent('home.banner.title', 'home.bannerTitle')}</p>
+          <p className="font-heading text-section">{fromContent('home.banner.title', 'home.bannerTitle')}</p>
           <p className="mt-1 text-sm opacity-90">{fromContent('home.banner.subtitle', 'home.bannerSubtitle')}</p>
         </div>
         <img
@@ -118,7 +103,7 @@ export function Home() {
       </Card>
 
       <div>
-        <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">{t('home.services')}</h2>
+        <h2 className="mb-3 font-heading text-section text-text-primary">{t('home.services')}</h2>
         {/* Two equal service tiles keep the artwork, label, and action aligned
           as one compact option. Lunch Box is deferred for launch; the
           backend still accepts LUNCHBOX and its tile can return here. */}
@@ -128,7 +113,7 @@ export function Home() {
               key={service.key}
               type="button"
               onClick={() => navigate(service.to)}
-              className="flex min-w-0 flex-col items-center gap-1.5 text-center"
+              className="flex min-w-0 flex-col items-center gap-2 text-center"
             >
               <span
                 className={`flex aspect-square w-[92%] items-center justify-center overflow-hidden rounded-card p-1 text-text-inverse ${service.bg}`}
@@ -151,7 +136,7 @@ export function Home() {
         </div>
         <div className="relative flex h-20 w-[42%] max-w-[180px] shrink-0 items-end justify-end overflow-visible">
           <img
-            src={womenImage}
+            src={womenArt}
             alt={t('home.threeWomen')}
             className="h-full w-full object-contain object-right-bottom"
           />
@@ -165,7 +150,7 @@ export function Home() {
             two of them earned their place on the screen by doing nothing.
             They now open the same screen scoped to genuinely different
             questions: what is happening now, and what already happened. */}
-        <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">{t('home.quickAccess')}</h2>
+        <h2 className="mb-3 font-heading text-section text-text-primary">{t('home.quickAccess')}</h2>
         <div className="flex justify-around">
           <ListRow layout="stacked" icon={<IconCircle color="red" tone="soft" icon={<ShieldAlert />} />} label={t('home.sos')} onClick={() => navigate('/sos')} />
           <ListRow layout="stacked" icon={<IconCircle tone="soft" icon={<MapPinned />} />} label={t('home.liveTrack')} onClick={() => navigate('/bookings?view=live')} />

@@ -1,7 +1,7 @@
 import type { HTMLAttributes, ReactNode } from 'react';
 import { cn } from '../lib/cn';
 
-export type IconCircleColor = 'primary' | 'orange' | 'green' | 'red' | 'neutral';
+export type IconCircleColor = 'primary' | 'orange' | 'green' | 'red' | 'blue' | 'neutral';
 export type IconCircleTone = 'solid' | 'soft';
 export type IconCircleSize = 'sm' | 'md' | 'lg';
 
@@ -17,14 +17,18 @@ const solidClasses: Record<IconCircleColor, string> = {
   orange: 'bg-accent-orange text-text-inverse',
   green: 'bg-accent-green text-text-inverse',
   red: 'bg-danger text-text-inverse',
+  blue: 'bg-accent-blue text-text-inverse',
   neutral: 'bg-text-secondary text-text-inverse',
 };
 
 const softClasses: Record<IconCircleColor, string> = {
+  // Tint behind, strong shade in front: the base orange or green on its own
+  // wash is too faint to read, which is what the /15 versions were.
   primary: 'bg-primary-light text-primary',
-  orange: 'bg-accent-orange/15 text-accent-orange',
-  green: 'bg-accent-green/15 text-accent-green',
-  red: 'bg-danger/15 text-danger',
+  orange: 'bg-accent-orange-tint text-accent-orange-strong',
+  green: 'bg-accent-green-tint text-accent-green-strong',
+  red: 'bg-accent-red-tint text-accent-red-strong',
+  blue: 'bg-accent-blue-tint text-accent-blue-strong',
   neutral: 'bg-border text-text-secondary',
 };
 

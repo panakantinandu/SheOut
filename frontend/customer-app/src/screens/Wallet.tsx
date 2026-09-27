@@ -1,20 +1,7 @@
-import { ArrowDownLeft, Bike, PlusCircle, Receipt, ShieldCheck } from 'lucide-react';
+import { ArrowDownLeft, PlusCircle, Receipt, ShieldCheck } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import {
-  AmountText,
-  Button,
-  Card,
-  IconCircle,
-  ListEmptyState,
-  LoadMore,
-  PullToRefresh,
-  SkeletonCard,
-  SkeletonList,
-  TextField,
-  TopHeader,
-  usePagedList,
-} from '@sheout/design-system';
+import { AmountText, Button, Card, IconCircle, ListEmptyState, LoadMore, PullToRefresh, SkeletonCard, SkeletonList, TextField, TopHeader, usePagedList, ServiceArt } from '@sheout/design-system';
 import { ApiError, bookingApi, usersApi, walletApi } from '../api/client';
 import type { PaymentHold, RiderWallet, RiderWalletEntry } from '../api/types';
 import { openRazorpayCheckout } from '../lib/razorpayCheckout';
@@ -213,7 +200,7 @@ export function Wallet() {
 
       {adding && wallet && (
         <Card className="space-y-3" data-testid="wallet-add-panel">
-          <p className="font-heading font-semibold text-text-primary">{t('wallet.addMoneyTitle')}</p>
+          <p className="font-heading text-card-title text-text-primary">{t('wallet.addMoneyTitle')}</p>
           <div className="flex flex-wrap gap-2">
             {QUICK_AMOUNTS.filter((q) => wallet.balance + q <= wallet.maxBalance).map((q) => (
               <button
@@ -222,8 +209,8 @@ export function Wallet() {
                 onClick={() => setAmount(String(q))}
                 className={
                   amount === String(q)
-                    ? 'rounded-full bg-primary px-4 py-1.5 text-sm font-semibold text-text-inverse'
-                    : 'rounded-full border border-border px-4 py-1.5 text-sm font-medium text-text-secondary'
+                    ? 'rounded-full bg-primary px-4 py-2 text-sm font-semibold text-text-inverse'
+                    : 'rounded-full border border-border px-4 py-2 text-sm font-medium text-text-secondary'
                 }
               >
                 ₹{q}
@@ -272,19 +259,19 @@ export function Wallet() {
       )}
 
       <div className="flex justify-around">
-        <button type="button" className="flex flex-col items-center gap-1.5" onClick={() => setAdding(true)}>
+        <button type="button" className="flex flex-col items-center gap-2" onClick={() => setAdding(true)}>
           <IconCircle tone="soft" icon={<PlusCircle />} />
           <span className="text-xs font-medium text-text-primary">{t('wallet.addMoney')}</span>
         </button>
         <button
           type="button"
-          className="flex flex-col items-center gap-1.5"
+          className="flex flex-col items-center gap-2"
           onClick={handlePayTrip}
           disabled={busy}
           data-testid="wallet-pay-trip"
         >
           <span className="relative">
-            <IconCircle tone="soft" color={hold ? 'orange' : 'green'} icon={<Bike />} />
+            <ServiceArt kind="ride" size="md" className={hold ? 'rounded-2xl ring-2 ring-accent-orange' : undefined} />
             {/* A fare is owed: said here, before she taps, because it also
                 blocks her next booking. */}
             {hold && (
@@ -295,21 +282,21 @@ export function Wallet() {
             {hold ? t('wallet.payTripDue', { amount: hold.amount.toFixed(0) }) : t('wallet.payTrip')}
           </span>
         </button>
-        <button type="button" className="flex flex-col items-center gap-1.5" onClick={() => navigate('/profile/payments')}>
+        <button type="button" className="flex flex-col items-center gap-2" onClick={() => navigate('/profile/payments')}>
           <IconCircle tone="soft" color="orange" icon={<Receipt />} />
           <span className="text-xs font-medium text-text-primary">{t('wallet.tripPayments')}</span>
         </button>
       </div>
 
       <div className="flex items-start gap-2 text-xs text-text-secondary">
-        <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+        <ShieldCheck className="mt-1 h-4 w-4 shrink-0 text-primary" />
         <p>
           {t('wallet.closedLoopNote')}
         </p>
       </div>
 
       <div className="space-y-3">
-        <h2 className="font-heading text-base font-semibold text-text-primary">{t('wallet.activity')}</h2>
+        <h2 className="font-heading text-section text-text-primary">{t('wallet.activity')}</h2>
         {list.error && <p className="text-sm text-danger">{list.error}</p>}
         {list.loading && <SkeletonList rows={3} label={t('wallet.activityLoading')} />}
         {!list.loading && !list.error && list.items.length === 0 && (
@@ -328,12 +315,11 @@ export function Wallet() {
                 className={`flex items-center gap-3 p-4 ${entry.bookingId ? 'cursor-pointer' : ''}`}
                 onClick={entry.bookingId ? () => navigate(`/tracking/${entry.bookingId}`) : undefined}
               >
-                <IconCircle
-                  tone="soft"
-                  size="sm"
-                  color={entry.type === 'TOPUP' ? 'green' : undefined}
-                  icon={entry.type === 'TOPUP' ? <ArrowDownLeft /> : <Bike />}
-                />
+                {entry.type === 'TOPUP' ? (
+                  <IconCircle tone="soft" size="sm" color="green" icon={<ArrowDownLeft />} />
+                ) : (
+                  <ServiceArt kind="ride" size="sm" />
+                )}
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-text-primary">
                     {entry.type === 'TOPUP' ? t('wallet.moneyAdded') : t('wallet.tripPayment')}

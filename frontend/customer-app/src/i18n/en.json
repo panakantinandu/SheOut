@@ -6,12 +6,12 @@
     "bothOutside": "Your pickup and drop are outside our service area",
     "pickupOutside": "Your pickup is outside our service area",
     "dropOutside": "Your drop is outside our service area",
-    "message": "SheOut currently operates only in and around {{city}} - this location is outside our service area right now.",
+    "message": "SheOut currently operates only in and around {{city}}. This location is outside our service area right now.",
     "youOutside": "You are outside our service area",
-    "youOutsideBody": "SheOut runs in {{city}} only, within about {{km}}km of the city. You can still book a trip for someone here - just set the pickup and drop yourself instead of using your current location."
+    "youOutsideBody": "SheOut runs in {{city}} only, within about {{km}}km of the city. You can still book a trip for someone here. Just set the pickup and drop yourself instead of using your current location."
   },
   "fare": {
-    "errorNote": "{{error}}. You can still book - the fare is confirmed on booking.",
+    "errorNote": "{{error}}. You can still book, and the fare is confirmed on booking.",
     "estimated": "Estimated Fare",
     "calculating": "Calculating...",
     "approxKm": "approx. {{km}} km",
@@ -41,7 +41,7 @@
   "about": {
     "title": "About SheOut",
     "version": "Version {{version}}",
-    "body": "Rides and deliveries built around women's safety - women riders, women drivers.",
+    "body": "Rides and deliveries built around women's safety, with women riders and women drivers.",
     "feature1Title": "Verified drivers",
     "feature1Body": "Every driver passes an ID and police-verification review before they can accept a trip.",
     "feature2Title": "Emergency contacts",
@@ -130,7 +130,7 @@
     "note": "Saved addresses are only yours. Partners see a pickup or drop only once you book a trip.",
     "intro": "Set Home and Work once, then pick them with one tap when you book.",
     "notSet": "Not set yet",
-    "needsPin": "Saved as text - set it on the map to use it when booking",
+    "needsPin": "Saved as text. Set it on the map to use it when booking.",
     "set": "Set",
     "change": "Change",
     "remove": "Remove",
@@ -173,7 +173,7 @@
     "waitHours": "about {{count}} hour",
     "waitHours_other": "about {{count}} hours",
     "waitMinutes": "about {{count}} minutes",
-    "waitBody": "We will send you a notification and an email the moment it is done — you do not need to keep checking.",
+    "waitBody": "We will send you a notification and an email the moment it is done, so you do not need to keep checking.",
     "exploreMeanwhile": "Look around while you wait",
     "selfieTitle": "Take a live selfie",
     "needSelfie": "Take your selfie to continue",
@@ -185,8 +185,8 @@
   },
   "payments": {
     "history": "Payment History",
-    "howPaid": "Each trip is paid in the app - from your SheOut wallet, or online by UPI, card or netbanking.",
-    "nothingStored": "No card or UPI ID is stored on your account - there is nothing saved to manage here, so this shows what you have actually been charged.",
+    "howPaid": "Each trip is paid in the app, from your SheOut wallet or online by UPI, card or netbanking.",
+    "nothingStored": "No card or UPI ID is stored on your account, so there is nothing saved to manage here. This shows what you have actually been charged.",
     "status": "Status",
     "anyStatus": "Any status",
     "amountRange": "Amount range",
@@ -220,7 +220,7 @@
     "q4": "Who can see my SOS alert?",
     "a4": "The emergency contacts saved on your account are sent an SMS with your live location, and the alert is raised to SheOut operators. If the SMS cannot be sent, the SOS screen lets you text them from your own phone.",
     "q5": "How am I charged?",
-    "a5": "Per trip, in the app - from your SheOut wallet, or online by UPI, card or netbanking. Cash is not accepted. See Payment History for what you have paid."
+    "a5": "Per trip, in the app: from your SheOut wallet, or online by UPI, card or netbanking. Cash is not accepted. See Payment History for what you have paid."
   },
   "list": {
     "noResults": "No results match your filters",
@@ -237,7 +237,7 @@
       "heading": "Get Started",
       "subtitle": "Create your account to book safe rides"
     },
-    "alreadyRegistered": "That number is already registered - signing you in instead.",
+    "alreadyRegistered": "That number is already registered, so we are signing you in instead.",
     "createdForYou": "There was no rider account on this number yet, so we’ve set one up for you.",
     "invalidPhone": "Enter a valid 10-digit mobile number",
     "sendError": "Could not send the code. Please check your connection and try again.",
@@ -255,9 +255,9 @@
     "or": "or",
     "signingIn": "Signing in...",
     "google": "Continue with Google",
-    "newHint": "New to SheOut? Tap <link>Sign Up</link> above - we'll set up your account after the OTP.",
-    "existingHint": "Already have an account? Tap <link>Login</link> above - same number, same OTP.",
-    "googleLoadError": "Could not load Google sign-in - check your connection",
+    "newHint": "New to SheOut? Tap <link>Sign Up</link> above and we'll set up your account after the OTP.",
+    "existingHint": "Already have an account? Tap <link>Login</link> above. Same number, same OTP.",
+    "googleLoadError": "Could not load Google sign-in. Check your connection.",
     "googleUnavailable": "Google sign-in is unavailable",
     "googleCancelled": "Google sign-in was cancelled",
     "ended": {
@@ -282,13 +282,14 @@
     "support": "Contact Support",
     "version": "SheOut version {{version}}",
     "languageSaved": "Language changed",
-    "languageSavedLocally": "Language changed on this phone. It will be saved to your account next time."
+    "languageSavedLocally": "Language changed on this phone. It will be saved to your account next time.",
+    "profile": "My profile"
   },
   "seller": {
     "title": "SheOut Seller",
     "comingSoon": "Coming soon",
     "headline": "Become a SheOut Seller",
-    "subhead": "Sell what you make or offer - from home, to women across the city, delivered by women.",
+    "subhead": "Sell what you make or offer from home, to women across the city, delivered by women.",
     "howItWorks": "How it will work",
     "steps": {
       "profile": {
@@ -326,15 +327,27 @@
     "notifyNote": "We only record that you are interested. No shop is created and nothing is shared.",
     "notifyError": "Could not save that. Please try again.",
     "joinedTitle": "You're on the list",
-    "joinedBody": "We'll tell you first when SheOut Seller launches."
+    "joinedBody": "We'll tell you first when SheOut Seller launches.",
+    "onTheList": "You're on the list. We'll tell you first.",
+    "notifyShort": "Notify me",
+    "categoriesSub": "Six ways women already earn from home, soon with SheOut customers and delivery.",
+    "categoryHints": {
+      "fashion": "Sarees, kurtis and more",
+      "beauty": "Salon care at her home",
+      "tailoring": "Stitching and alterations",
+      "mehandi": "Bridal and festive designs",
+      "gifts": "Hampers and handmade gifts",
+      "ornaments": "Jewellery and accessories"
+    },
+    "closingTitle": "Be the first to open your shop"
   },
   "refer": {
     "headline": "Invite a friend to SheOut",
-    "subhead": "Safe rides with verified women partners - share it with someone who needs it.",
+    "subhead": "Safe rides with verified women partners. Share it with someone who needs it.",
     "notYet": "Referral rewards are not live yet. When they are, your invite link and rewards will show here. Until then you can still share SheOut.",
     "share": "Share SheOut",
-    "shareText": "I ride with SheOut - safe rides and deliveries by verified women partners.",
-    "copied": "Link copied - paste it anywhere to share."
+    "shareText": "I ride with SheOut: safe rides and deliveries by verified women partners.",
+    "copied": "Link copied. Paste it anywhere to share."
   },
   "booking": {
     "pickup": "Pickup",
@@ -465,9 +478,9 @@
     "capHint": "Your wallet can hold up to ₹{{max}}. You can add up to ₹{{room}}.",
     "rangeHint": "Enter an amount from ₹{{min}} to ₹{{max}}.",
     "checkoutDescription": "Add money to SheOut wallet",
-    "checkoutFailed": "{{reason}} Nothing was added - you can try again.",
+    "checkoutFailed": "{{reason}} Nothing was added, and you can try again.",
     "added": "₹{{amount}} added to your wallet.",
-    "notVerified": "We could not verify that payment. If money left your account, it will be added shortly or refunded - contact support if not.",
+    "notVerified": "We could not verify that payment. If money left your account, it will be added shortly or refunded. Contact support if not.",
     "addError": "Could not add money right now. Please try again.",
     "title": "Wallet",
     "loading": "Loading your wallet",
@@ -500,7 +513,7 @@
     "walletError": "Could not pay from your wallet. Please try again.",
     "deliveryFare": "Delivery fare",
     "rideFare": "Ride fare",
-    "checkoutFailed": "{{reason}} Nothing was taken - you can try again.",
+    "checkoutFailed": "{{reason}} Nothing was taken, and you can try again.",
     "onlineUnavailable": "Online payment is not available right now. Please try again in a minute, or pay from your wallet.",
     "gettingReady": "Getting your fare ready...",
     "paid": "Paid",
@@ -511,8 +524,8 @@
     "payFromWallet": "Pay from SheOut wallet",
     "payFromWalletBalance": "Pay from wallet (balance ₹{{amount}})",
     "addToWallet": "Add ₹{{amount}} or more to your wallet",
-    "payOnline": "Pay online - UPI, card or netbanking",
-    "appOnlyNote": "Pay only in the app - never in cash or to your partner's own account. Your fare goes to her SheOut wallet, and you can book your next trip once it is paid.",
+    "payOnline": "Pay online: UPI, card or netbanking",
+    "appOnlyNote": "Pay only in the app, never in cash or to your partner's own account. Your fare goes to her SheOut wallet, and you can book your next trip once it is paid.",
     "coveredByPromo": "Covered by {{name}}"
   },
   "unpaid": {
@@ -524,7 +537,7 @@
     "shareText": "I am here:",
     "shareTextNamed": "{{name}} is here:",
     "shared": "Location shared.",
-    "linkCopied": "Your location link is copied - paste it anywhere, or use the buttons below.",
+    "linkCopied": "Your location link is copied. Paste it anywhere, or use the buttons below.",
     "useButtons": "Use the buttons below to send your location.",
     "sendingAria": "Sending SOS alert",
     "sendAria": "Send SOS alert",
@@ -605,7 +618,7 @@
     "noDriversTitle": "No drivers available right now",
     "noDriversBody": "We could not find anyone free near {{place}}. Nothing has been charged, and you can try again straight away.",
     "tryAgain": "Try Again",
-    "arrivedTitle": "You've arrived - payment due",
+    "arrivedTitle": "You've arrived. Payment is due.",
     "arrivedBody": "Pay below to finish this trip. You can book your next ride once it is paid.",
     "cancelledTitle": "This trip was cancelled",
     "completedTitle": "Trip completed",
@@ -624,11 +637,11 @@
     "comingToCollect": "Coming to collect you",
     "onYourWayBody": "Your trip has started. The map now follows you to your drop.",
     "mapFinished": "Where this trip would have started and ended.",
-    "mapUpdated": "Driver position updated {{seconds}}s ago - refreshes every {{every}}s",
+    "mapUpdated": "Driver position updated {{seconds}}s ago. It refreshes every {{every}}s.",
     "mapWaiting": "Waiting for the driver to report a position...",
     "mapPreview": "Showing your pickup and drop. The driver appears once one is assigned.",
     "openInMaps": "Open her position in Google Maps",
-    "fareNotCharged": "Estimated fare - not charged",
+    "fareNotCharged": "Estimated fare, not charged",
     "etaToPickup": "Arriving in",
     "etaToDrop": "To your drop",
     "aboutMinutes_one": "about {{count}} min",
@@ -637,7 +650,7 @@
     "shareTrip": "Share trip",
     "shareText": "I'm on a SheOut ride with {{name}}{{vehicle}}, going to {{drop}}. Her live position: {{link}}",
     "shareTextNoDriver": "I've booked a SheOut ride to {{drop}}. My pickup: {{link}}",
-    "shareCopied": "Trip details copied - paste them to anyone you want to keep informed.",
+    "shareCopied": "Trip details copied. Paste them to anyone you want to keep informed.",
     "support": "Support",
     "cancelRide": "Cancel Ride",
     "endHere": "End trip here",
@@ -651,7 +664,9 @@
     "bookings": "Bookings",
     "sos": "SOS",
     "wallet": "Wallet",
-    "profile": "Profile"
+    "profile": "Profile",
+    "seller": "Seller",
+    "soon": "Soon"
   },
   "splash": {
     "footer": "Safe · Fast · Women Focused"
@@ -683,7 +698,7 @@
     },
     "safety": {
       "title": "Safety is the product",
-      "body": "Not a setting you have to find - it is how every trip works.",
+      "body": "Not a setting you have to find. It is how every trip works.",
       "verified": "ID-checked partners",
       "contacts": "Emergency contacts",
       "sos": "SOS on every trip"
@@ -694,14 +709,14 @@
     },
     "ready": {
       "title": "You are all set",
-      "body": "Add money to your SheOut wallet whenever you like - every fare is paid in the app, never in cash."
+      "body": "Add money to your SheOut wallet whenever you like. Every fare is paid in the app, never in cash."
     }
   },
   "promo": {
     "fare": "Fare",
     "offer": "Offer",
     "youPayApplied": "You pay (promo applied)",
-    "youPayCovered": "You pay - covered by your offer",
+    "youPayCovered": "You pay, covered by your offer",
     "title": "Offers",
     "none": "No offers right now.",
     "creditLeft": "{{name}}: ₹{{amount}} left",

@@ -1,19 +1,7 @@
-import { Bike, Calendar, ChevronDown, Package, TrendingUp, UtensilsCrossed, Wallet } from 'lucide-react';
+import { Calendar, ChevronDown, TrendingUp, Wallet } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  AmountText,
-  PullToRefresh,
-  SkeletonCard,
-  Button,
-  Card,
-  DateRangeFields,
-  IconCircle,
-  ListFilterBar,
-  LoadMore,
-  SelectField,
-  TopHeader,
-} from '@sheout/design-system';
+import { AmountText, PullToRefresh, SkeletonCard, Button, Card, DateRangeFields, IconCircle, ListFilterBar, LoadMore, SelectField, TopHeader, ServiceArt } from '@sheout/design-system';
 import type { DateRangeValue } from '@sheout/design-system';
 import { ApiError, bookingApi } from '../api/client';
 import type { BookingCategory, BookingSummary } from '../api/types';
@@ -36,9 +24,8 @@ function groupOf(category: BookingCategory): EarningsGroup {
 }
 
 function groupIcon(group: EarningsGroup) {
-  if (group === 'PARCELS') return <Package className="h-4 w-4" />;
-  if (group === 'LUNCH_BOX') return <UtensilsCrossed className="h-4 w-4" />;
-  return <Bike className="h-4 w-4" />;
+  // SheOut's own art for its two services; a lunch box is a parcel.
+  return <ServiceArt kind={group === 'RIDES' ? 'ride' : 'parcel'} size="xs" />;
 }
 
 type Period = 'TODAY' | 'WEEK' | 'ALL';
@@ -207,7 +194,7 @@ export function Earnings() {
                 type="button"
                 onClick={() => setPickingPeriod((v) => !v)}
                 aria-expanded={pickingPeriod}
-                className="flex shrink-0 items-center gap-1.5 rounded-full bg-text-inverse/15 px-3 py-1.5 text-xs font-semibold text-text-inverse"
+                className="flex shrink-0 items-center gap-2 rounded-full bg-text-inverse/15 px-3 py-2 text-xs font-semibold text-text-inverse"
               >
                 {periodLabel}
                 <ChevronDown className="h-3.5 w-3.5" />
@@ -226,8 +213,8 @@ export function Earnings() {
                     }}
                     className={
                       p === period
-                        ? 'flex-1 rounded-full bg-text-inverse px-3 py-1.5 text-xs font-semibold text-primary'
-                        : 'flex-1 rounded-full border border-text-inverse/40 px-3 py-1.5 text-xs font-medium text-text-inverse'
+                        ? 'flex-1 rounded-full bg-text-inverse px-3 py-2 text-xs font-semibold text-primary'
+                        : 'flex-1 rounded-full border border-text-inverse/40 px-3 py-2 text-xs font-medium text-text-inverse'
                     }
                   >
                     {t(`earnings.period.${p}`)}
@@ -255,14 +242,14 @@ export function Earnings() {
               <IconCircle tone="soft" color="green" icon={<Calendar />} />
               <div>
                 <p className="text-xs text-text-secondary">{t('earnings.tripsIn', { period: periodLabel })}</p>
-                <p className="font-heading font-semibold text-text-primary">{completedTrips}</p>
+                <p className="font-heading text-card-title text-text-primary">{completedTrips}</p>
               </div>
             </Card>
           </div>
 
           {byGroup.length > 0 ? (
             <div>
-              <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">{t('earnings.byCategory')}</h2>
+              <h2 className="mb-3 font-heading text-section text-text-primary">{t('earnings.byCategory')}</h2>
               <Card className="divide-y divide-border p-0">
                 {byGroup.map(([group, { amount, count }]) => (
                   <div key={group} className="flex items-center gap-3 p-4">

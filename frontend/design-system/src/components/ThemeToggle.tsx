@@ -49,7 +49,7 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
             onClick={() => setChoice(option.value)}
             data-testid={`theme-${option.value}`}
             className={cn(
-              'flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold transition-colors',
+              'flex flex-1 items-center justify-center gap-2 rounded-full px-3 py-2 text-xs font-semibold transition-colors',
               selected ? 'bg-primary text-text-inverse' : 'text-text-secondary'
             )}
           >

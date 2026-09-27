@@ -41,8 +41,8 @@ export function ConfirmDialog({
 
   return (
     <Overlay open={open} label={title} onDismiss={onCancel} className="px-6">
-      <div className="w-full max-w-xs rounded-card bg-surface p-5 shadow-card motion-safe:animate-pop-in">
-        <p className="font-heading text-lg font-semibold text-text-primary">{title}</p>
+      <div className="w-full max-w-xs rounded-card bg-surface p-5 shadow-overlay motion-safe:animate-pop-in">
+        <p className="font-heading text-section text-text-primary">{title}</p>
         {message && <p className="mt-2 max-h-[55vh] overflow-y-auto whitespace-pre-line text-sm text-text-secondary">{message}</p>}
         <div className="mt-5 flex gap-3">
           <Button variant="secondary" fullWidth onClick={onCancel}>

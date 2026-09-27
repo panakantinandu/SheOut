@@ -196,7 +196,7 @@ export function Payouts() {
           <Card variant="primary" className="space-y-3" data-testid="wallet-card">
             <div>
               <p className="text-sm opacity-90">{t('payouts.available')}</p>
-              <p className="font-heading text-3xl font-bold" data-testid="wallet-available">
+              <p className="font-heading text-display" data-testid="wallet-available">
                 {wallet.availableBalance < 0 ? '-' : ''}
                 {rupees(Math.abs(wallet.availableBalance))}
               </p>
@@ -233,7 +233,7 @@ export function Payouts() {
             <div className="flex items-center gap-3">
               <IconCircle tone="soft" icon={<Landmark />} />
               <div className="flex-1">
-                <p className="font-heading font-semibold text-text-primary">{t('payouts.whereTitle')}</p>
+                <p className="font-heading text-card-title text-text-primary">{t('payouts.whereTitle')}</p>
                 <p className="text-xs text-text-secondary">{t('payouts.whereSub')}</p>
               </div>
               {account && !editing && (
@@ -277,8 +277,8 @@ export function Payouts() {
                           onClick={() => setBankChoice(choice)}
                           className={
                             bankChoice === choice
-                              ? 'rounded-full bg-primary px-4 py-1.5 text-xs font-semibold text-text-inverse'
-                              : 'rounded-full border border-border px-4 py-1.5 text-xs font-medium text-text-primary'
+                              ? 'rounded-full bg-primary px-4 py-2 text-xs font-semibold text-text-inverse'
+                              : 'rounded-full border border-border px-4 py-2 text-xs font-medium text-text-primary'
                           }
                         >
                           {label}
@@ -352,7 +352,7 @@ export function Payouts() {
           <Card className="space-y-3">
             <div className="flex items-center gap-3">
               <IconCircle tone="soft" color="green" icon={<Wallet />} />
-              <p className="flex-1 font-heading font-semibold text-text-primary">{t('payouts.requestTitle')}</p>
+              <p className="flex-1 font-heading text-card-title text-text-primary">{t('payouts.requestTitle')}</p>
             </div>
             {!account ? (
               <p className="text-sm text-text-secondary">{t('payouts.saveFirst')}</p>
@@ -381,7 +381,7 @@ export function Payouts() {
           </Card>
 
           <div>
-            <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">{t('payouts.history')}</h2>
+            <h2 className="mb-3 font-heading text-section text-text-primary">{t('payouts.history')}</h2>
             {overview.requests.length === 0 ? (
               <p className="text-center text-sm text-text-secondary">
                 {t('payouts.historyEmpty')}
@@ -402,7 +402,7 @@ export function Payouts() {
                       )}
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-1">
-                      <span className="font-heading font-semibold tabular-nums text-text-primary">{rupees(r.amount)}</span>
+                      <span className="font-heading text-card-title tabular-nums text-text-primary">{rupees(r.amount)}</span>
                       <StatusBadge tone={r.status === 'PAID' ? 'success' : 'warning'}>
                         {r.status === 'PAID' ? t('payouts.statusPaid') : t('payouts.statusPending')}
                       </StatusBadge>

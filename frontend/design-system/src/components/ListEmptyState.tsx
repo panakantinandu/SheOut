@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import brandIllustration from '../assets/sheout-illustration.png';
+import brandIllustration from '../assets/sheout-illustration.webp';
 import { Button } from './Button';
 import { Card } from './Card';
 import { IconCircle } from './IconCircle';
@@ -62,7 +62,7 @@ export function ListEmptyState({ icon, title, message, action, illustrated = fal
         <IconCircle size="lg" tone="soft" icon={icon} />
       )}
       <div>
-        <p className="font-heading font-semibold text-text-primary">{title}</p>
+        <p className="font-heading text-card-title text-text-primary">{title}</p>
         <p className="mt-1 text-sm text-text-secondary">{message}</p>
       </div>
       {action && (

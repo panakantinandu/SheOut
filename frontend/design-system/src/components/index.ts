@@ -53,3 +53,4 @@ export * from './ResendCode';
 export * from './AuthBackdrop';
 export * from './OtpCodeField';
 export * from './ConsentCheckbox';
+export * from './ServiceArt';

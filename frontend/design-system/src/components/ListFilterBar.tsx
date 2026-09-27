@@ -74,7 +74,7 @@ export function ListFilterBar({
           <SlidersHorizontal className="h-4 w-4" />
           Filters
           {activeCount > 0 && (
-            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-bold text-text-inverse">
+            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-2 text-xs font-bold text-text-inverse">
               {activeCount}
             </span>
           )}
@@ -88,7 +88,7 @@ export function ListFilterBar({
             <button
               type="button"
               onClick={onClearAll}
-              className="flex items-center gap-1.5 text-sm font-medium text-danger"
+              className="flex items-center gap-2 text-sm font-medium text-danger"
             >
               <X className="h-4 w-4" />
               Clear {activeCount === 1 ? 'filter' : 'all filters'}

@@ -1,15 +1,4 @@
-import {
-  FileText,
-  Gift,
-  Info,
-  Languages,
-  LifeBuoy,
-  Lock,
-  LogOut,
-  Moon,
-  Star,
-  Store,
-} from 'lucide-react';
+import { FileText, Gift, Info, Languages, LifeBuoy, Lock, LogOut, Moon, Star, UserRound } from 'lucide-react';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -95,18 +84,24 @@ export function AppDrawerProvider({ children }: { children: ReactNode }) {
         open={isOpen}
         onClose={close}
         header={
-          <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => go('/profile')}
+            className="flex w-full items-center gap-3 text-left"
+            data-testid="drawer-profile"
+          >
             <Avatar url={profile?.profilePhotoUrl} name={profile?.name} size="lg" />
             <div className="min-w-0">
-              <p className="truncate font-heading text-lg font-semibold">{profile?.name || t('profile.addName')}</p>
+              <p className="truncate font-heading text-section">{profile?.name || t('profile.addName')}</p>
               <p className="truncate text-sm opacity-85">{profile?.phoneNumber ?? ''}</p>
             </div>
-          </div>
+          </button>
         }
         sections={[
           {
             key: 'main',
             items: [
+              { key: 'profile', label: t('drawer.profile'), icon: <UserRound />, onClick: () => go('/profile') },
               {
                 key: 'language',
                 label: t('drawer.language'),
@@ -128,7 +123,6 @@ export function AppDrawerProvider({ children }: { children: ReactNode }) {
                 },
               },
               { key: 'refer', label: t('drawer.refer'), sublabel: t('drawer.comingSoon'), icon: <Gift />, onClick: () => go('/refer') },
-              { key: 'seller', label: t('drawer.seller'), sublabel: t('drawer.comingSoon'), icon: <Store />, onClick: () => go('/seller') },
               {
                 key: 'rate',
                 label: t('drawer.rate'),

@@ -122,7 +122,7 @@ export function SavedAddresses() {
       )}
 
       <div className="flex items-start gap-2 text-xs text-text-secondary">
-        <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+        <MapPin className="mt-1 h-4 w-4 shrink-0 text-primary" />
         <p>{t('addresses.note')}</p>
       </div>
 

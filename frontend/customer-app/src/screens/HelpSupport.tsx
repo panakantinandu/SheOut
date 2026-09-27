@@ -98,7 +98,7 @@ export function HelpSupport() {
         <div className="flex items-center gap-3">
           <IconCircle size="lg" tone="soft" icon={<LifeBuoy />} />
           <div>
-            <p className="font-heading font-semibold text-text-primary">{fromContent(intro, 'help.customer.intro.title', 'help.introTitle')}</p>
+            <p className="font-heading text-card-title text-text-primary">{fromContent(intro, 'help.customer.intro.title', 'help.introTitle')}</p>
             <p className="text-sm text-text-secondary">{fromContent(intro, 'help.customer.intro.subtitle', 'help.introSubtitle')}</p>
           </div>
         </div>
@@ -108,12 +108,12 @@ export function HelpSupport() {
       </Card>
 
       <section>
-        <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">{t('help.myTickets')}</h2>
+        <h2 className="mb-3 font-heading text-section text-text-primary">{t('help.myTickets')}</h2>
         <SupportTicketList audience="customer" fetchPage={fetchPage} onOpen={(id) => navigate(`/help/tickets/${id}`)} />
       </section>
 
       <section>
-        <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">{t('help.otherWays')}</h2>
+        <h2 className="mb-3 font-heading text-section text-text-primary">{t('help.otherWays')}</h2>
         <Card className="divide-y divide-border p-0">
           <ListRow
             icon={<IconCircle color="red" tone="soft" size="sm" icon={<Siren />} />}

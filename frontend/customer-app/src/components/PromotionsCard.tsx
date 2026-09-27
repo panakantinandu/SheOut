@@ -47,7 +47,7 @@ export function PromotionsCard() {
     <Card className="space-y-3" data-testid="promotions-card">
       <div className="flex items-center gap-3">
         <IconCircle tone="soft" size="sm" icon={<Gift />} />
-        <p className="font-heading font-semibold text-text-primary">{t('promo.title')}</p>
+        <p className="font-heading text-card-title text-text-primary">{t('promo.title')}</p>
       </div>
 
       {held && held.length === 0 && <p className="text-sm text-text-secondary">{t('promo.none')}</p>}

@@ -1,7 +1,7 @@
-import { MapPin, Bike } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Button, Card, IconCircle, TextField, LiveMap, TopHeader } from '@sheout/design-system';
+import { Button, Card, IconCircle, TextField, LiveMap, TopHeader, ServiceArt } from '@sheout/design-system';
 import type { MapMarker } from '@sheout/design-system';
 import { UnpaidTripBanner } from '../components/UnpaidTripBanner';
 import { ApiError, bookingApi } from '../api/client';
@@ -169,8 +169,8 @@ export function DeliveryBooking() {
           {drop ? t('booking.mapBoth') : t('booking.mapPickDrop')}
         </p>
         {nearby.length > 0 && (
-          <p className="flex items-center gap-1.5 text-xs font-medium text-primary" data-testid="nearby-count">
-            <Bike className="h-3.5 w-3.5" aria-hidden="true" />
+          <p className="flex items-center gap-2 text-xs font-medium text-primary" data-testid="nearby-count">
+            <ServiceArt kind="ride" size="xs" />
             {t('booking.nearbyCount', { count: nearby.length })}
           </p>
         )}
@@ -198,7 +198,7 @@ export function DeliveryBooking() {
       {isLunchbox && (
         <>
           <div>
-            <span className="mb-1.5 block text-sm font-medium text-text-primary">{t('delivery.mealType')}</span>
+            <span className="mb-2 block text-sm font-medium text-text-primary">{t('delivery.mealType')}</span>
             <div className="flex gap-2">
               <Button
                 type="button"
@@ -222,7 +222,7 @@ export function DeliveryBooking() {
           </div>
 
           <div>
-            <span className="mb-1.5 block text-sm font-medium text-text-primary">{t('delivery.choosePlan')}</span>
+            <span className="mb-2 block text-sm font-medium text-text-primary">{t('delivery.choosePlan')}</span>
             <div className="flex gap-2">
               {PLANS.map((p) => (
                 <button
@@ -266,7 +266,7 @@ export function DeliveryBooking() {
 
       <ServiceAreaNotice pickup={pickup} drop={drop} />
 
-      {servableTrip && <FareEstimateCard state={fare} />}
+      {servableTrip && <FareEstimateCard state={fare} kind="parcel" />}
 
       <Button fullWidth disabled={!pickup || !drop || !servableTrip || submitting} onClick={handleContinue}>
         {submitting ? t('booking.booking') : t(`delivery.${config.key}.cta`)}

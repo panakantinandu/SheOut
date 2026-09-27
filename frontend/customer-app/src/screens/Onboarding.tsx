@@ -1,12 +1,14 @@
 import { BadgeCheck, Bike, MapPin, ShieldAlert, Siren, Wallet } from 'lucide-react';
 import { useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, IconCircle, brandIllustration, useTranslation } from '@sheout/design-system';
+import { Button, IconCircle, brandIllustration, useTranslation, ServiceArt } from '@sheout/design-system';
 import { usersApi } from '../api/client';
 
 interface Slide {
   key: string;
   icon: ReactNode;
+  /** SheOut artwork, shown instead of the icon when the slide is about a service. */
+  art?: ReactNode;
   title: string;
   body: string;
   points?: { icon: ReactNode; label: string }[];
@@ -38,10 +40,11 @@ export function Onboarding() {
     {
       key: 'what',
       icon: <Bike />,
+      art: <ServiceArt kind="ride" size="lg" />,
       title: t('onboarding.what.title'),
       body: t('onboarding.what.body'),
       points: [
-        { icon: <Bike />, label: t('home.serviceRide') },
+        { icon: <ServiceArt kind="ride" size="xs" />, label: t('home.serviceRide') },
         { icon: <MapPin />, label: t('home.serviceParcel') },
       ],
     },
@@ -90,7 +93,7 @@ export function Onboarding() {
         <button
           type="button"
           onClick={finish}
-          className="rounded-full px-3 py-1.5 text-sm font-semibold text-text-secondary"
+          className="rounded-full px-3 py-2 text-sm font-semibold text-text-secondary"
           data-testid="onboarding-skip"
         >
           {t('onboarding.skip')}
@@ -116,15 +119,15 @@ export function Onboarding() {
               <span className="absolute h-40 w-40 rounded-full bg-accent-orange/15 blur-2xl" aria-hidden="true" />
               <img src={brandIllustration} alt="" className="relative h-36 w-36 object-contain motion-safe:animate-float" />
             </div>
-            <IconCircle tone="soft" size="md" icon={slide.icon} />
-            <h1 className="font-heading text-2xl font-bold text-text-primary">{slide.title}</h1>
+            {slide.art ?? <IconCircle tone="soft" size="md" icon={slide.icon} />}
+            <h1 className="font-heading text-title text-text-primary">{slide.title}</h1>
             <p className="max-w-xs text-sm leading-relaxed text-text-secondary">{slide.body}</p>
             {slide.points && (
               <div className="flex flex-wrap items-center justify-center gap-2">
                 {slide.points.map((point) => (
                   <span
                     key={point.label}
-                    className="flex items-center gap-1.5 rounded-full bg-surface/80 px-3 py-1.5 text-xs font-medium text-text-primary shadow-sm"
+                    className="flex items-center gap-2 rounded-full bg-surface/80 px-3 py-2 text-xs font-medium text-text-primary shadow-lift"
                   >
                     <span className="text-primary [&>svg]:h-3.5 [&>svg]:w-3.5">{point.icon}</span>
                     {point.label}

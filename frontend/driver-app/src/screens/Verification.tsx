@@ -180,7 +180,7 @@ export function Verification() {
               icon={readyToWork ? <ShieldCheck /> : <Clock />}
             />
             <div className="flex-1">
-              <p className="font-heading font-semibold text-text-primary">
+              <p className="font-heading text-card-title text-text-primary">
                 {readyToWork
                   ? t('verification.readyTitle')
                   : bothVerified
@@ -254,7 +254,7 @@ export function Verification() {
           <Card className="space-y-4">
             <div className="flex items-center gap-3">
               <IconCircle tone="soft" icon={<FileText />} />
-              <p className="font-heading font-semibold text-text-primary">
+              <p className="font-heading text-card-title text-text-primary">
                 {summary.documentSubmitted ? t('verification.docsSubmitted') : t('verification.uploadDocs')}
               </p>
             </div>
@@ -384,7 +384,7 @@ export function Verification() {
             <div className="flex items-start gap-3">
               <IconCircle tone="soft" color="green" icon={<IdCard />} />
               <div>
-                <p className="font-heading font-semibold text-text-primary">{t('verification.panTitle')}</p>
+                <p className="font-heading text-card-title text-text-primary">{t('verification.panTitle')}</p>
                 <p className="mt-1 text-xs text-text-secondary">{t('verification.panBody')}</p>
               </div>
             </div>

@@ -91,7 +91,7 @@ export function CollectPaymentCard({ bookingId, onPaid }: { bookingId: string; o
         <div className="flex items-center gap-3">
           <IconCircle size="md" tone="soft" color="green" icon={<CheckCircle2 />} />
           <div className="flex-1">
-            <p className="font-heading font-semibold text-text-primary">{t('collect.paid')}</p>
+            <p className="font-heading text-card-title text-text-primary">{t('collect.paid')}</p>
             <p className="text-sm text-text-secondary">
               {payment.status === 'WAIVED'
                 ? t('collect.settledEarlier')
@@ -111,7 +111,7 @@ export function CollectPaymentCard({ bookingId, onPaid }: { bookingId: string; o
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <IconCircle size="sm" tone="soft" color="orange" icon={<Hourglass />} />
-          <p className="font-heading font-semibold text-text-primary">{t('collect.waiting')}</p>
+          <p className="font-heading text-card-title text-text-primary">{t('collect.waiting')}</p>
         </div>
         <AmountText amount={payment.amount} size="lg" exact />
       </div>
@@ -119,7 +119,7 @@ export function CollectPaymentCard({ bookingId, onPaid }: { bookingId: string; o
         {t('collect.howPaid')}
       </p>
       <div className="flex items-start gap-2 rounded-card bg-background p-3 text-sm text-text-secondary">
-        <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+        <ShieldCheck className="mt-1 h-4 w-4 shrink-0 text-primary" />
         <p>
           {t('collect.noCash')}
         </p>
@@ -176,7 +176,7 @@ function FareBreakdown({ fare, fee, percent }: { fare: number; fee: number; perc
       </div>
       <button
         type="button"
-        className="flex min-h-[44px] items-center gap-1.5 text-left text-xs font-semibold text-primary"
+        className="flex min-h-[44px] items-center gap-2 text-left text-xs font-semibold text-primary"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
         data-testid="fee-help"

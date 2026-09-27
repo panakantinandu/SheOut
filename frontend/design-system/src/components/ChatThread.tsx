@@ -113,7 +113,7 @@ export function ChatThread({
                   ].join(' ')}
                 >
                   <p className="whitespace-pre-wrap break-words text-sm">{message.body}</p>
-                  <p className={['mt-1 text-[10px]', mine ? 'text-text-inverse/70' : 'text-text-secondary'].join(' ')}>
+                  <p className={['mt-1 text-caption', mine ? 'text-text-inverse/70' : 'text-text-secondary'].join(' ')}>
                     {timeOf(message.sentAt)}
                   </p>
                 </div>

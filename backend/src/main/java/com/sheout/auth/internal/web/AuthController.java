@@ -192,7 +192,7 @@ public class AuthController {
                     // rather than the 404 used for per-resource authorization.
                     ApiException.forbidden("ADMIN accounts cannot be created via self-service signup");
             case EMAIL_LINKED_TO_PHONE_ACCOUNT ->
-                    new ApiException(HttpStatus.CONFLICT, "Conflict", "An account already exists with this email - sign in with your phone number instead");
+                    new ApiException(HttpStatus.CONFLICT, "Conflict", "An account already exists with this email. Sign in with your phone number instead.");
             case GOOGLE_NOT_FOR_ROLE ->
                     ApiException.forbidden("Google sign-in is only for the rider app. Partners sign in with their phone number.");
             case PHONE_ALREADY_SET ->

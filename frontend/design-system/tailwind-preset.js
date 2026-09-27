@@ -1,4 +1,4 @@
-import { radii, spacing, fonts } from './tokens.js';
+import { radii, spacing, fonts, typeScale } from './tokens.js';
 
 /**
  * Every colour is a CSS variable, not a hex value, so one stylesheet can
@@ -25,16 +25,27 @@ export default {
     },
     extend: {
       colors: {
+        // Depth, not opacity: see COLOUR DEPTH in tokens.js.
         primary: {
           DEFAULT: token('primary'),
           dark: token('primary-dark'),
+          mid: token('primary-mid'),
           light: token('primary-light'),
         },
         accent: {
           orange: token('accent-orange'),
+          'orange-tint': token('accent-orange-tint'),
+          'orange-strong': token('accent-orange-strong'),
           'brand-orange': token('brand-orange'),
           green: token('accent-green'),
+          'green-tint': token('accent-green-tint'),
+          'green-strong': token('accent-green-strong'),
           red: token('accent-red'),
+          'red-tint': token('accent-red-tint'),
+          'red-strong': token('accent-red-strong'),
+          blue: token('accent-blue'),
+          'blue-tint': token('accent-blue-tint'),
+          'blue-strong': token('accent-blue-strong'),
         },
         danger: token('accent-red'),
         background: token('background'),
@@ -58,10 +69,19 @@ export default {
         'brand-wash': 'var(--brand-wash)',
       },
 
+      // ELEVATION in tokens.js: four levels, each for one job.
       boxShadow: {
-        card: 'var(--shadow-card)',
-        raised: 'var(--shadow-raised)',
+        lift: 'var(--elev-lift)',
+        float: 'var(--elev-float)',
+        overlay: 'var(--elev-overlay)',
+        pressed: 'var(--elev-pressed)',
+        card: 'var(--elev-lift)',
+        raised: 'var(--elev-float)',
       },
+      // TYPE SCALE in tokens.js: text-display, text-title, text-section,
+      // text-card-title, text-body, text-caption - each a size, weight and
+      // line height together. Pair the first four with font-heading.
+      fontSize: typeScale,
       spacing: {
         screen: spacing.screen,
       },

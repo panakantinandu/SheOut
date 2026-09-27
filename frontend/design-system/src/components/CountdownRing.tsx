@@ -68,7 +68,7 @@ export function CountdownRing({ secondsLeft, totalSeconds, size = 56, className 
       </svg>
       <span
         className={cn(
-          'absolute font-heading text-sm font-semibold tabular-nums',
+          'absolute font-heading font-semibold tabular-nums',
           urgent ? 'text-danger' : 'text-primary'
         )}
       >

@@ -46,7 +46,7 @@ export function StarRating({
 
   if (!interactive) {
     return (
-      <div className="flex items-center gap-0.5" role="img" aria-label={t('rating.aria', { label, value: value ?? t('rating.none') })}>
+      <div className="flex items-center gap-1" role="img" aria-label={t('rating.aria', { label, value: value ?? t('rating.none') })}>
         {STARS.map((star) => (
           <Star
             key={star}

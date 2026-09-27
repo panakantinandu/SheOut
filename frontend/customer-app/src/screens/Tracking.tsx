@@ -563,7 +563,7 @@ export function Tracking() {
         <Card tone="warning" className="flex items-start gap-3">
           <IconCircle size="lg" tone="soft" color="orange" icon={<SearchX />} />
           <div className="flex-1">
-            <p className="font-heading font-semibold text-text-primary">{t('tracking.noDriversTitle')}</p>
+            <p className="font-heading text-card-title text-text-primary">{t('tracking.noDriversTitle')}</p>
             <p className="mt-1 text-sm text-text-secondary">
               {t('tracking.noDriversBody', { place: booking.pickup.label })}
             </p>
@@ -584,7 +584,7 @@ export function Tracking() {
         <Card tone="warning" className="flex items-start gap-3" data-testid="trip-payment-due-banner">
           <IconCircle size="lg" tone="soft" color="orange" icon={<WalletIcon />} />
           <div className="flex-1">
-            <p className="font-heading font-semibold text-text-primary">{t('tracking.arrivedTitle')}</p>
+            <p className="font-heading text-card-title text-text-primary">{t('tracking.arrivedTitle')}</p>
             <p className="mt-1 text-sm text-text-secondary">
               {t('tracking.arrivedBody')}
             </p>
@@ -605,7 +605,7 @@ export function Tracking() {
             <SuccessCheck size={48} label={t('tracking.header.completed')} />
           )}
           <div className="flex-1">
-            <p className="font-heading font-semibold text-text-primary">
+            <p className="font-heading text-card-title text-text-primary">
               {booking.status === 'CANCELLED' ? t('tracking.cancelledTitle') : t('tracking.completedTitle')}
             </p>
             <p className="mt-1 text-sm text-text-secondary">
@@ -641,7 +641,7 @@ export function Tracking() {
               "Partner assigned", which contradicts itself. This says what is
               actually happening - somebody has the request and is deciding -
               without naming her, because she has not agreed to come yet. */}
-          <p className="font-heading font-semibold text-text-primary">
+          <p className="font-heading text-card-title text-text-primary">
             {booking.status === 'MATCHED' ? t('tracking.confirming') : t(`tracking.search.${searchStage(searchedSeconds).key}.title`)}
           </p>
           <p className="mt-1 text-sm text-text-secondary">
@@ -681,7 +681,7 @@ export function Tracking() {
             {/* All real now, and released by the server only once she has
                 accepted. Nothing here is rendered during MATCHED: the
                 request is not even made - see DRIVER_DETAILS_STATUSES. */}
-            <p className="truncate font-heading font-semibold text-text-primary">
+            <p className="truncate font-heading text-card-title text-text-primary">
               {driver?.name || t('tracking.yourPartner')}
             </p>
             {/* Rendered only once the server has actually released her
@@ -702,7 +702,7 @@ export function Tracking() {
               // The number to look for, set apart rather than buried in the
               // line above: at night, at a kerb, it is the thing she is
               // actually checking.
-              <p className="mt-1 inline-block rounded bg-background px-2 py-0.5 font-heading text-sm font-semibold tracking-wide text-text-primary">
+              <p className="mt-1 inline-block rounded bg-background px-2 py-1 font-heading text-card-title tracking-wide text-text-primary">
                 {driver.vehicleRegistrationNumber}
               </p>
             )}
@@ -735,7 +735,7 @@ export function Tracking() {
             icon={booking?.status === 'IN_PROGRESS' ? <Navigation /> : <Radio />}
           />
           <div className="min-w-0 flex-1">
-            <p className="font-heading font-semibold text-text-primary">
+            <p className="font-heading text-card-title text-text-primary">
               {booking?.status === 'IN_PROGRESS' ? t('tracking.onYourWay') : t('tracking.comingToCollect')}
             </p>
             <p className="mt-1 text-sm text-text-secondary">
@@ -833,11 +833,11 @@ export function Tracking() {
                 <p className="text-text-secondary">
                   {booking.status === 'IN_PROGRESS' ? t('tracking.etaToDrop') : t('tracking.etaToPickup')}
                 </p>
-                <p className="font-heading font-semibold text-text-primary">{t('tracking.aboutMinutes', { count: minutes })}</p>
+                <p className="font-heading text-card-title text-text-primary">{t('tracking.aboutMinutes', { count: minutes })}</p>
               </div>
               <div className="text-right">
                 <p className="text-text-secondary">{t('tracking.distance')}</p>
-                <p className="font-heading font-semibold text-text-primary">{t('fare.approxKm', { km: km.toFixed(1) })}</p>
+                <p className="font-heading text-card-title text-text-primary">{t('fare.approxKm', { km: km.toFixed(1) })}</p>
               </div>
             </div>
           </Card>

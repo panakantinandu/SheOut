@@ -102,7 +102,7 @@ export function AddPhone() {
     <div className="space-y-6 py-4">
       <BrandHeader size="md" />
       <div>
-        <h1 className="font-heading text-2xl font-bold text-text-primary">{t('addPhone.title')}</h1>
+        <h1 className="font-heading text-title text-text-primary">{t('addPhone.title')}</h1>
         <p className="mt-1 text-sm text-text-secondary">{t('addPhone.subtitle')}</p>
         {notice && (
           <p className="mt-3 rounded-input bg-primary-light px-4 py-3 text-sm font-medium text-primary" data-testid="new-account-notice">
@@ -113,7 +113,7 @@ export function AddPhone() {
 
       <Card className="space-y-4 p-5">
         <div className="flex items-start gap-3 rounded-input bg-primary-light px-4 py-3 text-sm text-primary">
-          <Phone className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          <Phone className="mt-1 h-4 w-4 shrink-0" aria-hidden="true" />
           <span>{t('addPhone.why')}</span>
         </div>
 

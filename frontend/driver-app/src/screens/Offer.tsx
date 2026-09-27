@@ -191,7 +191,7 @@ export function Offer() {
           <Card className="space-y-3">
             {offer.pickup && (
               <div className="flex items-start gap-2">
-                <Navigation className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                <Navigation className="mt-1 h-4 w-4 shrink-0 text-primary" />
                 <span className="min-w-0">
                   <span className="block text-xs text-text-secondary">{t('trip.pickup')}</span>
                   <span className="block text-sm text-text-primary">{offer.pickup.label}</span>
@@ -200,7 +200,7 @@ export function Offer() {
             )}
             {offer.drop && (
               <div className="flex items-start gap-2">
-                <Navigation className="mt-0.5 h-4 w-4 shrink-0 text-accent-orange" />
+                <Navigation className="mt-1 h-4 w-4 shrink-0 text-accent-orange" />
                 <span className="min-w-0">
                   <span className="block text-xs text-text-secondary">{t('trip.drop')}</span>
                   <span className="block text-sm text-text-primary">{offer.drop.label}</span>
@@ -228,7 +228,7 @@ export function Offer() {
 
       {unavailable && (
         <Card className="space-y-3 text-center">
-          <p className="font-heading font-semibold text-text-primary">{t('offer.unavailableTitle')}</p>
+          <p className="font-heading text-card-title text-text-primary">{t('offer.unavailableTitle')}</p>
           <p className="text-sm text-text-secondary">{t('offer.unavailableBody')}</p>
           <Button fullWidth onClick={() => navigate('/home', { replace: true })}>
             {t('offer.backHome')}

@@ -34,10 +34,10 @@ export function PickupCodeCard({ code, className }: PickupCodeCardProps) {
       <div className="flex items-center gap-3">
         <IconCircle tone="soft" icon={<KeyRound />} />
         <div className="min-w-0 flex-1">
-          <p className="font-heading font-semibold text-text-primary">
+          <p className="font-heading text-card-title text-text-primary">
             <SafetyText k="pickupCode.title" />
           </p>
-          <p className="mt-0.5 text-sm text-text-secondary">
+          <p className="mt-1 text-sm text-text-secondary">
             <SafetyText k="pickupCode.instruction" />
           </p>
         </div>
@@ -45,7 +45,7 @@ export function PickupCodeCard({ code, className }: PickupCodeCardProps) {
       <p
         // Spaced so the digits are read as four separate numbers rather than
         // as one four-digit number, which is how somebody says them aloud.
-        className="mt-3 text-center font-heading text-4xl font-bold tracking-[0.35em] text-primary"
+        className="mt-3 text-center font-heading text-display tracking-[0.35em] text-primary"
         aria-label={t('pickupCode.aria', { digits: code.split('').join(' ') })}
       >
         {code}

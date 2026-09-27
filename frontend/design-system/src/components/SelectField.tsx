@@ -29,7 +29,7 @@ export const SelectField = forwardRef<HTMLSelectElement, SelectFieldProps>(
     const selectId = id ?? props.name;
     return (
       <label className="block" htmlFor={selectId}>
-        {label && <span className="mb-1.5 block text-sm font-medium text-text-primary">{label}</span>}
+        {label && <span className="mb-2 block text-sm font-medium text-text-primary">{label}</span>}
         <span className="relative flex items-center">
           <select
             ref={ref}

@@ -77,7 +77,7 @@ export function TopHeader(props: TopHeaderProps) {
         )}
         <h1
           className={cn(
-            'font-heading text-lg font-semibold text-text-primary',
+            'font-heading text-section text-text-primary',
             props.centerTitle && 'flex-1 text-center'
           )}
         >
@@ -106,7 +106,7 @@ export function TopHeader(props: TopHeaderProps) {
         <Menu className="h-5 w-5" />
       </button>
       <div className="flex-1 px-3">
-        <p className="font-heading text-lg font-semibold text-text-primary">{props.title}</p>
+        <p className="font-heading text-section text-text-primary">{props.title}</p>
         {props.subtitle && <p className="text-sm text-text-secondary">{props.subtitle}</p>}
       </div>
       <button
@@ -127,7 +127,7 @@ export function BellBadge({ count }: { count: number }) {
   return (
     <span
       data-testid="bell-badge"
-      className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-bold leading-none text-text-inverse"
+      className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-micro leading-none text-text-inverse"
       aria-hidden="true"
     >
       {count > 99 ? '99+' : count}

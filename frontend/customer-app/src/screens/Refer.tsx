@@ -38,7 +38,7 @@ export function Refer() {
           {t('drawer.comingSoon')}
         </span>
         <div className="relative z-10 mt-3 max-w-[62%]">
-          <p className="font-heading text-xl font-bold">{t('refer.headline')}</p>
+          <p className="font-heading text-title">{t('refer.headline')}</p>
           <p className="mt-1 text-sm opacity-90">{t('refer.subhead')}</p>
         </div>
         <img

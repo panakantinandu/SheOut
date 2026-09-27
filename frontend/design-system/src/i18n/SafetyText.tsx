@@ -48,7 +48,7 @@ export function SafetyText({ k, values, className, englishClassName }: SafetyTex
   return (
     <span className={className}>
       {text}
-      <span lang="en" className={cn('mt-0.5 block text-[0.85em] opacity-75', englishClassName)} data-testid="safety-english">
+      <span lang="en" className={cn('mt-1 block text-[0.85em] opacity-75', englishClassName)} data-testid="safety-english">
         {english}
       </span>
     </span>

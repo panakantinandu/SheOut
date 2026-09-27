@@ -96,7 +96,7 @@ export function Devices() {
               <button
                 type="button"
                 onClick={() => setEnding(session)}
-                className="flex shrink-0 items-center gap-1 rounded-input px-2 py-1.5 text-sm font-semibold text-primary"
+                className="flex shrink-0 items-center gap-1 rounded-input px-2 py-2 text-sm font-semibold text-primary"
               >
                 <LogOut className="h-4 w-4" />
                 {t('devices.signOut')}

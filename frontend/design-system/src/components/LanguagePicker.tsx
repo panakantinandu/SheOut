@@ -28,14 +28,14 @@ export function LanguagePicker({ open, onClose, onSelect }: LanguagePickerProps)
   return (
     <Overlay open={open} label={t('language.title')} align="sheet" onDismiss={onClose}>
       <div
-        className="w-full rounded-t-[28px] bg-surface px-screen pb-8 pt-3 shadow-card motion-safe:animate-sheet-up"
+        className="w-full rounded-t-[28px] bg-surface px-screen pb-8 pt-3 shadow-overlay motion-safe:animate-sheet-up"
         data-testid="language-picker"
       >
         <span className="mx-auto mb-4 block h-1.5 w-10 rounded-full bg-border" aria-hidden="true" />
         <div className="mb-4 flex items-center gap-3">
           <IconCircle tone="soft" icon={<Languages />} />
           <div>
-            <p className="font-heading text-lg font-semibold text-text-primary">{t('language.title')}</p>
+            <p className="font-heading text-section text-text-primary">{t('language.title')}</p>
             <p className="text-sm text-text-secondary">{t('language.subtitle')}</p>
           </div>
         </div>
@@ -57,7 +57,7 @@ export function LanguagePicker({ open, onClose, onSelect }: LanguagePickerProps)
                   data-testid={`language-${language.code}`}
                 >
                   <span>
-                    <span className="block font-heading text-base font-semibold text-text-primary">{language.nativeName}</span>
+                    <span className="block font-heading text-section text-text-primary">{language.nativeName}</span>
                     {language.nativeName !== language.englishName && (
                       <span className="block text-xs text-text-secondary" lang="en">
                         {language.englishName}

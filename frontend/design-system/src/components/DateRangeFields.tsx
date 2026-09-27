@@ -31,7 +31,7 @@ export function DateRangeFields({ value, onChange, label: labelProp }: DateRange
   const label = labelProp ?? t('filters.dateRange');
   return (
     <div>
-      <span className="mb-1.5 block text-sm font-medium text-text-primary">{label}</span>
+      <span className="mb-2 block text-sm font-medium text-text-primary">{label}</span>
       <div className="flex items-center gap-2">
         <div className="min-w-0 flex-1">
           <TextField

@@ -43,7 +43,7 @@ export function UnpaidTripBanner({ refreshKey = 0 }: { refreshKey?: number }) {
     >
       <IconCircle tone="soft" color="orange" icon={<AlertCircle />} />
       <div className="min-w-0 flex-1">
-        <p className="font-heading font-semibold text-text-primary">{t('unpaid.title', { amount: hold.amount.toFixed(0) })}</p>
+        <p className="font-heading text-card-title text-text-primary">{t('unpaid.title', { amount: hold.amount.toFixed(0) })}</p>
         <p className="text-xs text-text-secondary">{t('unpaid.body')}</p>
       </div>
       <ChevronRight className="h-5 w-5 shrink-0 text-text-secondary" />

@@ -51,7 +51,7 @@ export function Profile() {
       <Card className="flex items-center gap-3">
         <Avatar url={profile?.profilePhotoUrl} name={profile?.name} size="lg" />
         <div>
-          <p className="font-heading font-semibold text-text-primary">{profile?.name || t('profile.addName')}</p>
+          <p className="font-heading text-card-title text-text-primary">{profile?.name || t('profile.addName')}</p>
           <p className="text-sm text-text-secondary">
             {profile ? profile.phoneNumber || t('profile.googleSignIn') : error || t('common.loading')}
           </p>
@@ -65,7 +65,7 @@ export function Profile() {
           named sections instead, the same heading-over-card shape Home and
           Wallet already use. */}
       <section>
-        <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">{t('profile.sectionAccount')}</h2>
+        <h2 className="mb-3 font-heading text-section text-text-primary">{t('profile.sectionAccount')}</h2>
         <Card className="divide-y divide-border p-0">
           <ListRow icon={<IconCircle tone="soft" size="sm" icon={<User />} />} label={t('profile.personalDetails')} onClick={() => navigate('/profile/details')} />
           <ListRow icon={<IconCircle tone="soft" size="sm" icon={<MapPin />} />} label={t('addresses.title')} onClick={() => navigate('/profile/addresses')} />
@@ -74,7 +74,7 @@ export function Profile() {
       </section>
 
       <section>
-        <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">{t('profile.sectionSafety')}</h2>
+        <h2 className="mb-3 font-heading text-section text-text-primary">{t('profile.sectionSafety')}</h2>
         <Card className="divide-y divide-border p-0">
           <ListRow icon={<IconCircle tone="soft" size="sm" icon={<BadgeCheck />} />} label={t('verification.title')} onClick={() => navigate('/verification')} />
           <ListRow icon={<IconCircle color="red" tone="soft" size="sm" icon={<ShieldAlert />} />} label={t('profile.emergencyContacts')} sublabel={t('profile.emergencyContactsSub')} onClick={() => navigate('/profile/emergency-contacts')} />
@@ -82,7 +82,7 @@ export function Profile() {
       </section>
 
       <section>
-        <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">{t('profile.sectionPayments')}</h2>
+        <h2 className="mb-3 font-heading text-section text-text-primary">{t('profile.sectionPayments')}</h2>
         <Card className="p-0">
           <ListRow icon={<IconCircle tone="soft" size="sm" icon={<Receipt />} />} label={t('payments.history')} onClick={() => navigate('/profile/payments')} />
         </Card>
@@ -92,7 +92,7 @@ export function Profile() {
       {/* Per device, not per account: the right answer in bed on a phone is
           not the right answer at a desk - see ThemeToggle. */}
       <section data-testid="appearance">
-        <h2 className="mb-3 font-heading text-base font-semibold text-text-primary">{ds('theme.label')}</h2>
+        <h2 className="mb-3 font-heading text-section text-text-primary">{ds('theme.label')}</h2>
         <Card className="space-y-3">
           <p className="text-sm text-text-secondary">{ds('theme.description')}</p>
           <ThemeToggle />

@@ -1,30 +1,7 @@
 import { CalendarX, MapPinned, SearchX, Star, UtensilsCrossed } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import bikeTaxiImage from '../../../../public/BikeTaxiImage.png';
-import parcelImage from '../../../../public/ParcelImage.png';
-import {
-  AmountText,
-  Button,
-  Card,
-  DateRangeFields,
-  IconCircle,
-  ListEmptyState,
-  ListFilterBar,
-  PullToRefresh,
-  SkeletonList,
-  LoadMore,
-  SelectField,
-  StatusBadge,
-  TopHeader,
-  bookingCategoryLabel,
-  bookingStatusLabel,
-  isAwaitingPayment,
-  tripStatusLabel,
-  endOfDayIso,
-  startOfDayIso,
-  usePagedList,
-} from '@sheout/design-system';
+import { AmountText, Button, Card, DateRangeFields, IconCircle, ListEmptyState, ListFilterBar, PullToRefresh, SkeletonList, LoadMore, SelectField, StatusBadge, TopHeader, bookingCategoryLabel, bookingStatusLabel, isAwaitingPayment, tripStatusLabel, endOfDayIso, startOfDayIso, usePagedList, ServiceArt } from '@sheout/design-system';
 import type { DateRangeValue, StatusTone } from '@sheout/design-system';
 import { bookingApi } from '../api/client';
 import type { BookingCategory, BookingStatus, BookingSummary } from '../api/types';
@@ -146,14 +123,14 @@ function categoryIcon(category: BookingCategory) {
   if (category === 'PARCEL') {
     return (
       <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-[#F3C385]/25 ring-1 ring-[#D98338]/20">
-        <img src={parcelImage} alt="Parcel Delivery" className="h-7 w-7 object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.18)]" />
+        <ServiceArt kind="parcel" size="sm" label="Parcel Delivery" />
       </div>
     );
   }
   if (category === 'LUNCHBOX') return <IconCircle color="green" tone="soft" size="sm" icon={<UtensilsCrossed />} />;
   return (
     <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-[#DCC7FF]/25 ring-1 ring-[#8A6AE6]/20">
-      <img src={bikeTaxiImage} alt="Bike Taxi" className="h-7 w-7 object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.18)]" />
+      <ServiceArt kind="ride" size="sm" label="Bike Taxi" />
     </div>
   );
 }
@@ -251,8 +228,8 @@ export function MyBookings() {
             onClick={() => setTab(tabItem.key)}
             className={
               tab === tabItem.key
-                ? 'shrink-0 rounded-full bg-primary px-4 py-1.5 text-sm font-semibold text-text-inverse'
-                : 'shrink-0 rounded-full border border-border px-4 py-1.5 text-sm font-medium text-text-secondary'
+                ? 'shrink-0 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-text-inverse'
+                : 'shrink-0 rounded-full border border-border px-4 py-2 text-sm font-medium text-text-secondary'
             }
           >
             {t(tabItem.label)}
@@ -311,15 +288,15 @@ export function MyBookings() {
 
       <div className="space-y-3">
         {list.items.map((booking) => (
-          <Card key={booking.id} className="flex items-start gap-3 overflow-hidden p-3.5" onClick={() => navigate(`/tracking/${booking.id}`)}>
-            <div className="mt-0.5 shrink-0">{categoryIcon(booking.category)}</div>
+          <Card key={booking.id} className="flex items-start gap-3 overflow-hidden p-4" onClick={() => navigate(`/tracking/${booking.id}`)}>
+            <div className="mt-1 shrink-0">{categoryIcon(booking.category)}</div>
             <div className="min-w-0 flex-1">
               <div className="flex items-start justify-between gap-2">
                 <p className="truncate text-sm font-semibold text-text-primary">{bookingCategoryLabel(booking.category)}</p>
                 {copy.trackable ? (
                   // Named, not just a chevron. In the live view the useful thing
                   // is the map, and the whole row already opens it - this says so.
-                  <span className="flex shrink-0 items-center gap-1 text-[11px] font-semibold text-primary">
+                  <span className="flex shrink-0 items-center gap-1 text-caption font-semibold text-primary">
                     <MapPinned className="h-3.5 w-3.5" />
                     {t('bookings.track')}
                   </span>
@@ -333,9 +310,9 @@ export function MyBookings() {
               <p className="mt-1 truncate text-xs text-text-secondary">
                 {t('bookings.to', { place: booking.drop.label })}
               </p>
-              <p className="mt-1 text-[11px] text-text-secondary">{new Date(booking.requestedAt).toLocaleString()}</p>
+              <p className="mt-1 text-caption text-text-secondary">{new Date(booking.requestedAt).toLocaleString()}</p>
 
-              <StatusBadge tone={statusTone(booking)} className="mt-1.5">
+              <StatusBadge tone={statusTone(booking)} className="mt-2">
                 {tripStatusLabel(booking)}
               </StatusBadge>
               {/* Says which of the three a completed trip is in: already
@@ -345,14 +322,14 @@ export function MyBookings() {
                   dismiss without reading. */}
               {booking.status === 'COMPLETED' && ratingMarks.has(booking.id) && (
                 ratingMarks.get(booking.id)!.stars !== null ? (
-                  <p className="mt-1 flex items-center gap-1 text-[11px] text-text-secondary">
+                  <p className="mt-1 flex items-center gap-1 text-caption text-text-secondary">
                     <Star className="h-3.5 w-3.5 fill-accent-orange text-accent-orange" />
                     {t('bookings.youRated', { stars: ratingMarks.get(booking.id)!.stars })}
                   </p>
                 ) : new Date(ratingMarks.get(booking.id)!.rateableUntil) > new Date() ? (
                   <button
                     type="button"
-                    className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-primary"
+                    className="mt-1 inline-flex items-center gap-1 text-caption font-semibold text-primary"
                     onClick={(e) => {
                       e.stopPropagation();
                       setRatingBookingId(booking.id);
