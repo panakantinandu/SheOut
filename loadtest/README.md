@@ -60,3 +60,36 @@ rate, trip outcomes, per-minute latency) and `results.json`.
 other 4xx the endpoint should not return. Business refusals the apps expect
 (404 while a partner has not reported a position, 409 when another partner
 claimed an offer first) are counted but not as errors.
+
+## Results: staging, 2026-09-27
+
+`sheout-backend-staging` on Render Starter (0.5 CPU, 512 MB, the same instance
+as production), its own OSRM, Postgres and Key Value, all in Singapore. The
+client ran from Kansas City, so every figure below includes a ~245 ms round
+trip (measured before each run); the server's own share is roughly the figure
+minus 245 ms. 100 riders, all booking within the first minute and riding
+again and again; 40 partners sending their location every 7 s; 16 minutes.
+
+| | run 1: server just redeployed (cold) | run 2: warm |
+|---|---|---|
+| requests | 43,269 (45.1/s) | 44,851 (46.7/s) |
+| errors | 1 (0.002%): one nearby-partners call timed out at 30 s, minute 2 | 0 |
+| all requests p50 / p95 / p99 | 251 / 881 / 4,658 ms | 248 / 407 / 692 ms |
+| create booking p95 / p99 | 12,725 / 24,716 ms | 1,657 / 2,600 ms |
+| nearby partners p95 / p99 | 22,869 / 27,605 ms | 1,413 / 2,323 ms |
+| partner location p95 | 849 ms | 365 ms |
+| p95 by minute | 5.4 s and 5.7 s in minutes 1-2, then 369-474 ms | 708 ms in minute 1, then 359-450 ms |
+| trips booked / accepted / completed | 347 / 74 / 34 | 357 / 76 / 36 |
+
+"No partner available" (254 and 263) is supply, not failure: from the second
+minute on, 37-40 of the 40 partners were already on a trip (booking table,
+per minute). Trips run at a simulated 25 km/h, so most take longer than a few
+minutes and many were still under way when the run ended.
+
+What it shows: a warm Starter instance carries this load with no errors and
+a steady p95 of about 400 ms from here (~150 ms at the server). A burst of
+bookings in the first minutes after a deploy, while the JVM is still cold,
+is slow: deploy outside busy hours.
+
+Not measured here: Redis (staging's is internal-only) and the server's CPU
+and memory, which are in the service's Metrics tab on Render.

@@ -119,10 +119,18 @@ const riderPhone = (i) => phoneFor(RIDER_PREFIX, i);
 const partnerPhone = (i) => phoneFor(PARTNER_PREFIX, i);
 
 async function signIn(phone, role) {
-  await call('setup', 'POST', '/api/v1/auth/otp/request', null, { phoneNumber: phone, role });
-  const r = await call('setup', 'POST', '/api/v1/auth/otp/verify', null, { phoneNumber: phone, code: CODE, role });
-  if (!r.body?.accessToken) throw new Error(`sign-in ${phone} ${role}: ${r.status} ${JSON.stringify(r.body)}`);
-  return { token: r.body.accessToken, id: r.body.accountId };
+  // Setup is not what is being measured: a sign-in that fails is retried,
+  // and what failed is printed, so a flaky moment does not end the run.
+  let last = '';
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const q = await call('setup', 'POST', '/api/v1/auth/otp/request', null, { phoneNumber: phone, role });
+    const r = await call('setup', 'POST', '/api/v1/auth/otp/verify', null, { phoneNumber: phone, code: CODE, role });
+    if (r.body?.accessToken) return { token: r.body.accessToken, id: r.body.accountId };
+    last = `request ${q.status} ${JSON.stringify(q.body)}, verify ${r.status} ${JSON.stringify(r.body)}`;
+    console.log(`sign-in ${phone} ${role}, attempt ${attempt}: ${last}`);
+    await sleep(2000 * attempt);
+  }
+  throw new Error(`sign-in ${phone} ${role}: ${last}`);
 }
 
 async function setup() {
