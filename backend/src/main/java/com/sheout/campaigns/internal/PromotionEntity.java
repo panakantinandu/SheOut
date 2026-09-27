@@ -49,7 +49,7 @@ public class PromotionEntity extends BudgetedCampaign {
      */
     BigDecimal discountOn(BigDecimal fare, BigDecimal creditLeft) {
         BigDecimal wanted = switch (type) {
-            case SIGNUP_CREDIT -> creditLeft == null ? BigDecimal.ZERO : creditLeft;
+            case SIGNUP_CREDIT, REFERRAL_REWARD, REFERRAL_WELCOME -> creditLeft == null ? BigDecimal.ZERO : creditLeft;
             case FLAT_DISCOUNT -> value;
             case PERCENTAGE_DISCOUNT -> {
                 BigDecimal pct = fare.multiply(value).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);

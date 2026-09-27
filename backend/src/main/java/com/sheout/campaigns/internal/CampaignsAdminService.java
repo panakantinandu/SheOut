@@ -101,6 +101,9 @@ public class CampaignsAdminService implements CampaignsAdminApi {
         }
         requireDates(d.validFrom(), d.validUntil());
         String code = PromotionService.normaliseCode(d.code());
+        if (code != null && d.type().isCredit()) {
+            throw new CampaignValidationException("A credit is given automatically, not with a code. Leave the code empty.");
+        }
         if (code != null) {
             if (!code.matches("[A-Z0-9]{4,20}")) {
                 throw new CampaignValidationException("A code is 4-20 letters and digits, e.g. WELCOME50.");

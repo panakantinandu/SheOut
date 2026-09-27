@@ -21,7 +21,7 @@ interface PromotionRepository extends JpaRepository<PromotionEntity, UUID> {
 
     List<PromotionEntity> findByType(PromotionType type);
 
-    List<PromotionEntity> findByCodeIsNullAndTypeNot(PromotionType type);
+    List<PromotionEntity> findByCodeIsNullAndTypeIn(java.util.Collection<PromotionType> types);
 
     Optional<PromotionEntity> findByCodeIgnoreCase(String code);
 

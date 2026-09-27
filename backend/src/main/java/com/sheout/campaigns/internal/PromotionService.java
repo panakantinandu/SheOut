@@ -44,6 +44,9 @@ import java.util.UUID;
 public class PromotionService implements CampaignsApi {
 
     private static final Logger log = LoggerFactory.getLogger(PromotionService.class);
+    /** The promotions that are a discount on each trip rather than a balance - the ones that can apply to everyone. */
+    private static final EnumSet<PromotionType> PER_TRIP_TYPES =
+            EnumSet.of(PromotionType.PERCENTAGE_DISCOUNT, PromotionType.FLAT_DISCOUNT);
     private static final EnumSet<PromotionRedemptionEntity.Status> HELD_OR_USED =
             EnumSet.of(PromotionRedemptionEntity.Status.RESERVED, PromotionRedemptionEntity.Status.CONSUMED);
 
@@ -90,6 +93,54 @@ public class PromotionService implements CampaignsApi {
         return byDays.isBefore(byCampaign) ? byDays : byCampaign;
     }
 
+    // ------------------------------------------------------------ referrals
+
+    /**
+     * A referral credit for this rider, from the running promotion of this
+     * type - the same kind of balance as the signup credit, held and spent
+     * the same way, and counted against that promotion's budget as she
+     * spends it. A rider rewarded for a second friend has her balance topped
+     * up rather than given a second one.
+     * <p>
+     * Nothing when no such promotion is running - paused, ended, or stopped
+     * by its budget: a budget that has run out stops referral credit exactly
+     * as it stops every other promotion. Returns what was granted.
+     */
+    @Transactional
+    public BigDecimal grantReferralCredit(PromotionType type, UUID accountId, Instant now) {
+        if (type != PromotionType.REFERRAL_REWARD && type != PromotionType.REFERRAL_WELCOME) {
+            throw new IllegalArgumentException("Not a referral promotion: " + type);
+        }
+        Optional<PromotionEntity> running = runningReferralPromotion(type, now);
+        if (running.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+        PromotionEntity promotion = running.get();
+        BigDecimal amount = promotion.getValue();
+        Instant expiry = expiryFor(promotion, now);
+        grants.findByPromotionIdAndAccountId(promotion.getId(), accountId)
+                .flatMap(g -> grants.findLockedById(g.getId()))
+                .ifPresentOrElse(g -> {
+                    g.topUp(amount, expiry);
+                    grants.save(g);
+                }, () -> grants.save(PromotionGrantEntity.credit(promotion.getId(), accountId, amount, now, expiry)));
+        log.info("{} credit {} granted to rider {} from '{}'", type, amount, accountId, promotion.getName());
+        return amount;
+    }
+
+    /** What the running promotion of this type gives, for the Refer screen; empty when none is running. */
+    @Transactional(readOnly = true)
+    public Optional<BigDecimal> referralCreditAmount(PromotionType type) {
+        return runningReferralPromotion(type, Instant.now()).map(PromotionEntity::getValue);
+    }
+
+    /** The newest running one, if the console holds more than one of a type. */
+    private Optional<PromotionEntity> runningReferralPromotion(PromotionType type, Instant now) {
+        return promotions.findByType(type).stream()
+                .filter(p -> p.activeAt(now))
+                .max(java.util.Comparator.comparing(PromotionEntity::getCreatedAt, java.util.Comparator.nullsFirst(java.util.Comparator.naturalOrder())));
+    }
+
     // ------------------------------------------------------------ codes
 
     public enum RedeemOutcome { REDEEMED, ALREADY_REDEEMED, UNKNOWN_OR_ENDED }
@@ -99,7 +150,7 @@ public class PromotionService implements CampaignsApi {
     public RedeemOutcome redeemCode(UUID customerId, String code) {
         Instant now = Instant.now();
         Optional<PromotionEntity> found = promotions.findByCodeIgnoreCase(code.trim())
-                .filter(p -> p.getType() != PromotionType.SIGNUP_CREDIT)
+                .filter(p -> !p.getType().isCredit())
                 .filter(p -> p.activeAt(now));
         if (found.isEmpty()) {
             return RedeemOutcome.UNKNOWN_OR_ENDED;
@@ -130,7 +181,7 @@ public class PromotionService implements CampaignsApi {
                             p.affordable(p.discountOn(fare, grant.getCreditRemaining())))));
         }
         // Promotions with no code that apply to every rider, up to their per-rider limit.
-        for (PromotionEntity p : promotions.findByCodeIsNullAndTypeNot(PromotionType.SIGNUP_CREDIT)) {
+        for (PromotionEntity p : promotions.findByCodeIsNullAndTypeIn(PER_TRIP_TYPES)) {
             if (!p.activeAt(now)) continue;
             long used = redemptions.countByPromotionIdAndAccountIdAndStatusIn(p.getId(), customerId, HELD_OR_USED);
             if (used >= p.getMaxUsesPerAccount()) continue;

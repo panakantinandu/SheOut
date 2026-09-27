@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { BrandHeader, ProfileCompletionForm, ConsentCheckbox } from '@sheout/design-system';
-import { ApiError, authApi, usersApi } from '../api/client';
+import { BrandHeader, ProfileCompletionForm, ConsentCheckbox, ReferralCodeField, clearPendingReferralCode, pendingReferralCode } from '@sheout/design-system';
+import { apiErrorText } from '../lib/apiErrors';
+import { ApiError, authApi, referralsApi, usersApi } from '../api/client';
 import type { CustomerProfileSummary } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { markProfileComplete } from '../auth/ProtectedRoute';
@@ -27,6 +28,12 @@ export function CompleteProfile() {
    * without a consent record, so this is the ask, not the enforcement.
    */
   const [consent, setConsent] = useState(false);
+  /** A friend's code, from her invite link or typed in. Offered only while the server says she can still use one. */
+  const [referralCode, setReferralCode] = useState(pendingReferralCode());
+  const [canUseReferral, setCanUseReferral] = useState(false);
+  useEffect(() => {
+    referralsApi.mine().then((s) => setCanUseReferral(s.canApplyCode)).catch(() => setCanUseReferral(false));
+  }, []);
 
   useEffect(() => {
     usersApi
@@ -65,6 +72,16 @@ export function CompleteProfile() {
             }
           }}
           onSubmit={async (values) => {
+            // The friend's code first: a wrong code is hers to fix before
+            // anything is saved, and an empty field is simply skipped.
+            if (canUseReferral && referralCode.trim()) {
+              try {
+                await referralsApi.apply(referralCode.trim());
+                clearPendingReferralCode();
+              } catch (err) {
+                throw new Error(apiErrorText(err, 'refer.applyError'));
+              }
+            }
             try {
               await authApi.acceptConsent();
               await usersApi.updateMyProfile({
@@ -85,6 +102,7 @@ export function CompleteProfile() {
             navigate('/welcome', { replace: true });
           }}
         >
+          {canUseReferral && <ReferralCodeField value={referralCode} onChange={setReferralCode} />}
           <ConsentCheckbox
             checked={consent}
             onChange={setConsent}

@@ -7,7 +7,7 @@ import { LocationBroadcastProvider } from './lib/LocationBroadcastContext'
 import './index.css'
 import { initErrorReporting } from '@sheout/design-system'
 import { registerAppUpdates } from './lib/appUpdates'
-import { routeColdStartThroughSplash } from '@sheout/design-system'
+import { captureReferralFromUrl, routeColdStartThroughSplash } from '@sheout/design-system'
 import './i18n'
 
 // First, so a crash in anything below is still reported. Does nothing at all
@@ -16,6 +16,9 @@ initErrorReporting({ dsn: import.meta.env.VITE_SENTRY_DSN, environment: import.m
 
 // Before the router reads the URL: a cold launch of the installed app goes
 // through Splash first, wherever it was opened - see coldStart.ts.
+// A friend's invite link (?ref=CODE) is kept for the signup screen, and
+// taken off the URL, before anything else reads it.
+captureReferralFromUrl()
 routeColdStartThroughSplash()
 
 registerAppUpdates()

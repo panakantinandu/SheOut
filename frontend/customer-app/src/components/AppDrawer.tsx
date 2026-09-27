@@ -122,7 +122,7 @@ export function AppDrawerProvider({ children }: { children: ReactNode }) {
                   setPickingTheme(true);
                 },
               },
-              { key: 'refer', label: t('drawer.refer'), sublabel: t('drawer.comingSoon'), icon: <Gift />, onClick: () => go('/refer') },
+              { key: 'refer', label: t('drawer.refer'), icon: <Gift />, onClick: () => go('/refer') },
               {
                 key: 'rate',
                 label: t('drawer.rate'),

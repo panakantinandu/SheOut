@@ -2603,11 +2603,18 @@ const PROMOTION_TYPES = {
   SIGNUP_CREDIT: 'Signup credit',
   PERCENTAGE_DISCOUNT: 'Percentage off',
   FLAT_DISCOUNT: 'Flat amount off',
+  REFERRAL_REWARD: 'Referral reward (to the rider who referred)',
+  REFERRAL_WELCOME: 'Referral welcome (to the friend)',
 };
 const INCENTIVE_TYPES = {
   PER_TRIP_BONUS: 'Bonus per trip',
   MINIMUM_EARNINGS_GUARANTEE: 'Minimum earnings per trip',
+  REFERRAL_REWARD: 'Referral reward (to the partner who referred)',
+  REFERRAL_WELCOME: 'Referral welcome (to the friend)',
 };
+/** Rider promotions held as a rupee balance rather than taken off each trip. */
+const CREDIT_TYPES = ['SIGNUP_CREDIT', 'REFERRAL_REWARD', 'REFERRAL_WELCOME'];
+const REFERRAL_TYPES = ['REFERRAL_REWARD', 'REFERRAL_WELCOME'];
 let campaignsData = null;
 let campaignsTimer = null;
 
@@ -2620,14 +2627,20 @@ function campaignBadge(status) {
 function promotionTerms(p) {
   const parts = [];
   if (p.type === 'SIGNUP_CREDIT') parts.push(esc(`${rupees(p.value)} credit for every new rider${p.creditValidDays ? `, usable for ${p.creditValidDays} days` : ''}`));
+  if (p.type === 'REFERRAL_REWARD') parts.push(esc(`${rupees(p.value)} credit to a rider each time a friend she referred takes her first paid trip${p.creditValidDays ? `, usable for ${p.creditValidDays} days` : ''}`));
+  if (p.type === 'REFERRAL_WELCOME') parts.push(esc(`${rupees(p.value)} credit to a rider who joined with a friend's code, after her first paid trip${p.creditValidDays ? `, usable for ${p.creditValidDays} days` : ''}`));
   if (p.type === 'PERCENTAGE_DISCOUNT') parts.push(esc(`${Number(p.value)}% off${p.maxDiscountPerBooking ? ` (up to ${rupees(p.maxDiscountPerBooking)})` : ''}`));
   if (p.type === 'FLAT_DISCOUNT') parts.push(esc(`${rupees(p.value)} off`));
-  if (p.type !== 'SIGNUP_CREDIT') parts.push(`${p.maxUsesPerAccount} trip${p.maxUsesPerAccount === 1 ? '' : 's'} per rider`);
-  parts.push(p.code ? `code <span class="num strong">${esc(p.code)}</span>` : (p.type === 'SIGNUP_CREDIT' ? 'given automatically at signup' : 'no code - every rider gets it'));
+  if (!CREDIT_TYPES.includes(p.type)) parts.push(`${p.maxUsesPerAccount} trip${p.maxUsesPerAccount === 1 ? '' : 's'} per rider`);
+  parts.push(p.code ? `code <span class="num strong">${esc(p.code)}</span>`
+    : (p.type === 'SIGNUP_CREDIT' ? 'given automatically at signup'
+      : REFERRAL_TYPES.includes(p.type) ? 'given by the referral programme' : 'no code - every rider gets it'));
   return parts.join(' · ');
 }
 
 function incentiveTerms(i) {
+  if (i.type === 'REFERRAL_REWARD') return `${rupees(i.value)} to a partner each time a partner she referred is paid for her first trip`;
+  if (i.type === 'REFERRAL_WELCOME') return `${rupees(i.value)} to a partner who joined with a friend's code, on her first paid trip`;
   const scope = i.firstNTrips ? `on each of a partner's first ${i.firstNTrips} completed trips` : 'on every completed trip';
   return i.type === 'PER_TRIP_BONUS'
     ? `${rupees(i.value)} bonus ${scope}`
@@ -2755,12 +2768,17 @@ const CAMPAIGN_VALUE_LABEL = {
   FLAT_DISCOUNT: 'Amount off (₹)',
   PER_TRIP_BONUS: 'Bonus per trip (₹)',
   MINIMUM_EARNINGS_GUARANTEE: 'Minimum share per trip (₹)',
+  REFERRAL_REWARD: 'Reward per referral (₹)',
+  REFERRAL_WELCOME: 'Welcome amount (₹)',
 };
 
 function openCampaignForm(kind, c) {
   const editing = !!c;
   const promo = kind === 'promotion';
-  const types = promo ? PROMOTION_TYPES : INCENTIVE_TYPES;
+  const allTypes = promo ? PROMOTION_TYPES : INCENTIVE_TYPES;
+  // The referral programme runs on the ones it came with: edited, paused and
+  // budgeted here, but not created alongside.
+  const types = editing ? allTypes : Object.fromEntries(Object.entries(allTypes).filter(([v]) => !REFERRAL_TYPES.includes(v)));
   const type = c ? c.type : Object.keys(types)[0];
   openModal(`
     <div class="modal-head"><h3>${editing ? 'Edit' : 'New'} ${promo ? 'rider promotion' : 'partner incentive'}</h3>
@@ -2775,11 +2793,11 @@ function openCampaignForm(kind, c) {
         <div><label for="cfValue" id="cfValueLabel">Value</label><input id="cfValue" type="number" min="0" step="0.01" value="${c ? Number(c.value) : ''}"></div>
         ${promo ? `
         <div data-show="PERCENTAGE_DISCOUNT"><label for="cfMaxPer">Most off one trip (₹, optional)</label><input id="cfMaxPer" type="number" min="0" step="0.01" value="${c && c.maxDiscountPerBooking != null ? Number(c.maxDiscountPerBooking) : ''}"></div>
-        <div data-hide="SIGNUP_CREDIT"><label for="cfUses">Trips per rider</label><input id="cfUses" type="number" min="1" step="1" value="${c ? c.maxUsesPerAccount : 1}"></div>
-        <div data-show="SIGNUP_CREDIT"><label for="cfDays">Credit usable for (days, optional)</label><input id="cfDays" type="number" min="1" step="1" value="${c && c.creditValidDays != null ? c.creditValidDays : ''}"></div>
-        <div data-hide="SIGNUP_CREDIT" class="span2"><label for="cfCode">Code (optional)</label><input id="cfCode" maxlength="20" value="${esc(c && c.code ? c.code : '')}" style="text-transform:uppercase">
+        <div data-hide-credit><label for="cfUses">Trips per rider</label><input id="cfUses" type="number" min="1" step="1" value="${c ? c.maxUsesPerAccount : 1}"></div>
+        <div data-show-credit><label for="cfDays">Credit usable for (days, optional)</label><input id="cfDays" type="number" min="1" step="1" value="${c && c.creditValidDays != null ? c.creditValidDays : ''}"></div>
+        <div data-hide-credit class="span2"><label for="cfCode">Code (optional)</label><input id="cfCode" maxlength="20" value="${esc(c && c.code ? c.code : '')}" style="text-transform:uppercase">
           <div class="help">4-20 letters and digits. Without a code, every rider gets it automatically.</div></div>`
-        : `<div class="span2"><label for="cfFirstN">Only a partner's first N completed trips (optional)</label><input id="cfFirstN" type="number" min="1" step="1" value="${c && c.firstNTrips != null ? c.firstNTrips : ''}">
+        : `<div class="span2" data-hide-referral><label for="cfFirstN">Only a partner's first N completed trips (optional)</label><input id="cfFirstN" type="number" min="1" step="1" value="${c && c.firstNTrips != null ? c.firstNTrips : ''}">
           <div class="help">Empty means every completed trip.</div></div>`}
         <div><label for="cfFrom">Starts</label><input id="cfFrom" type="datetime-local" value="${toLocalInput(c ? c.validFrom : new Date().toISOString())}"></div>
         <div><label for="cfUntil">Ends (optional)</label><input id="cfUntil" type="datetime-local" value="${toLocalInput(c && c.validUntil)}"></div>
@@ -2798,6 +2816,9 @@ function openCampaignForm(kind, c) {
     const t = val('cfType');
     root.querySelectorAll('[data-show]').forEach(el => { el.hidden = el.dataset.show !== t; });
     root.querySelectorAll('[data-hide]').forEach(el => { el.hidden = el.dataset.hide === t; });
+    root.querySelectorAll('[data-show-credit]').forEach(el => { el.hidden = !CREDIT_TYPES.includes(t); });
+    root.querySelectorAll('[data-hide-credit]').forEach(el => { el.hidden = CREDIT_TYPES.includes(t); });
+    root.querySelectorAll('[data-hide-referral]').forEach(el => { el.hidden = REFERRAL_TYPES.includes(t); });
     root.querySelector('#cfValueLabel').textContent = CAMPAIGN_VALUE_LABEL[t];
   };
   root.querySelector('#cfType').addEventListener('change', syncType);
@@ -2812,11 +2833,11 @@ function openCampaignForm(kind, c) {
     };
     const body = promo ? {
       ...common,
-      code: t === 'SIGNUP_CREDIT' ? null : (val('cfCode').trim() || null),
+      code: CREDIT_TYPES.includes(t) ? null : (val('cfCode').trim() || null),
       maxDiscountPerBooking: t === 'PERCENTAGE_DISCOUNT' ? numOrNull(val('cfMaxPer')) : null,
-      maxUsesPerAccount: t === 'SIGNUP_CREDIT' ? 1 : numOrNull(val('cfUses')),
-      creditValidDays: t === 'SIGNUP_CREDIT' ? numOrNull(val('cfDays')) : null,
-    } : { ...common, firstNTrips: numOrNull(val('cfFirstN')) };
+      maxUsesPerAccount: CREDIT_TYPES.includes(t) ? 1 : numOrNull(val('cfUses')),
+      creditValidDays: CREDIT_TYPES.includes(t) ? numOrNull(val('cfDays')) : null,
+    } : { ...common, firstNTrips: REFERRAL_TYPES.includes(t) ? null : numOrNull(val('cfFirstN')) };
     const btn = root.querySelector('[data-go]');
     btn.disabled = true;
     try {

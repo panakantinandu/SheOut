@@ -1,4 +1,5 @@
 import type { LiveSelfieResult, PushApi, SelfieChallenge } from '@sheout/design-system';
+import { installId, type ReferralSummary } from '@sheout/design-system';
 import type {
   ApiErrorResponse,
   AuthSession,
@@ -159,6 +160,8 @@ interface RequestOptions {
   method?: string;
   body?: unknown;
   auth?: boolean;
+  /** Extra headers for this one call - the referral calls' X-Install-Id. */
+  headers?: Record<string, string>;
 }
 
 /**
@@ -173,7 +176,7 @@ interface RequestOptions {
  */
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { method = 'GET', body, auth = true } = options;
-  const headers: Record<string, string> = {};
+  const headers: Record<string, string> = { ...(options.headers ?? {}) };
   const isFormData = body instanceof FormData;
   if (body !== undefined && !isFormData) headers['Content-Type'] = 'application/json';
   if (auth) {
@@ -743,5 +746,25 @@ export const payoutsApi = {
   /** 409 NO_PAYOUT_DETAILS before details are saved, 409 INSUFFICIENT_BALANCE above the available balance. */
   requestPayout(amount: number): Promise<PayoutRequestView> {
     return request('/api/v1/payouts/me/requests', { method: 'POST', body: { amount } });
+  },
+};
+
+/**
+ * Refer a Friend. X-Install-Id goes with these two calls only: it is how the
+ * server recognises a friend entering a code from the phone it was shared from.
+ */
+function installHeader(): Record<string, string> {
+  const id = installId();
+  return id ? { 'X-Install-Id': id } : {};
+}
+
+export const referralsApi = {
+  mine(): Promise<ReferralSummary> {
+    return request('/api/v1/referrals/me', { headers: installHeader() });
+  },
+
+  /** A new account enters a friend's code while signing up. 204 on success. */
+  apply(code: string): Promise<void> {
+    return request('/api/v1/referrals/apply', { method: 'POST', body: { code }, headers: installHeader() });
   },
 };

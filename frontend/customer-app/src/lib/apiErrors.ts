@@ -3,6 +3,10 @@ import { ApiError } from '../api/client';
 
 /** Server error codes the app has its own translated wording for. */
 const KNOWN_CODES = new Set([
+  'REFERRAL_CODE_INVALID',
+  'REFERRAL_OWN_CODE',
+  'REFERRAL_ALREADY_APPLIED',
+  'REFERRAL_NOT_ELIGIBLE',
   'UNPAID_TRIP',
   'ACTIVE_BOOKING_EXISTS',
   'CUSTOMER_PHONE_REQUIRED',

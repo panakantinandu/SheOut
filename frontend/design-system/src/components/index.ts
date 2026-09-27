@@ -55,3 +55,4 @@ export * from './OtpCodeField';
 export * from './ConsentCheckbox';
 export * from './ServiceArt';
 export * from './DestinationChangeCompare';
+export * from './ReferAFriend';

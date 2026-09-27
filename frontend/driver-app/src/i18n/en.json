@@ -277,7 +277,11 @@
     "INVALID_PICKUP_CODE": "That code doesn't match. Ask your rider to read it out again from her screen.",
     "PICKUP_CODE_REQUIRED": "Enter the four-digit code your rider reads out to you.",
     "PICKUP_VERIFICATION_LOCKED": "Too many wrong codes for this trip. Call support and they will sort it out with you.",
-    "DESTINATION_CHANGE_NOT_PENDING": "This request is no longer waiting for an answer - it ran out of time, or the trip has ended. The trip continues as it is."
+    "DESTINATION_CHANGE_NOT_PENDING": "This request is no longer waiting for an answer - it ran out of time, or the trip has ended. The trip continues as it is.",
+    "REFERRAL_CODE_INVALID": "That referral code isn't valid. Check it with the friend who sent it, or leave the field empty.",
+    "REFERRAL_OWN_CODE": "You can't use your own referral code.",
+    "REFERRAL_ALREADY_APPLIED": "You have already joined with a referral code.",
+    "REFERRAL_NOT_ELIGIBLE": "Referral codes are for new accounts, entered while signing up."
   },
   "offer": {
     "loadError": "Could not load this request",
@@ -489,5 +493,10 @@
     "sending": "Sending your location...",
     "alertTeam": "Alert SheOut safety team",
     "close": "Close"
+  },
+  "refer": {
+    "applyError": "We couldn't check that referral code. Try again.",
+    "loadError": "We couldn't load your referral code. Try again.",
+    "title": "Refer a Friend"
   }
 }

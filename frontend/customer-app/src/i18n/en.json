@@ -347,7 +347,10 @@
     "notYet": "Referral rewards are not live yet. When they are, your invite link and rewards will show here. Until then you can still share SheOut.",
     "share": "Share SheOut",
     "shareText": "I ride with SheOut: safe rides and deliveries by verified women partners.",
-    "copied": "Link copied. Paste it anywhere to share."
+    "copied": "Link copied. Paste it anywhere to share.",
+    "applyError": "We couldn't check that referral code. Try again.",
+    "loadError": "We couldn't load your referral code. Try again.",
+    "title": "Refer a Friend"
   },
   "booking": {
     "pickup": "Pickup",
@@ -390,7 +393,11 @@
     "PROMO_ALREADY_REDEEMED": "You have already added this code.",
     "DESTINATION_CHANGE_LIMIT_REACHED": "You have already changed your destination once on this trip. You can end the trip here instead.",
     "DESTINATION_CHANGE_PENDING": "Your partner hasn't answered your last request yet.",
-    "DESTINATION_UNCHANGED": "That is where you are already going. Choose a different place."
+    "DESTINATION_UNCHANGED": "That is where you are already going. Choose a different place.",
+    "REFERRAL_CODE_INVALID": "That referral code isn't valid. Check it with the friend who sent it, or leave the field empty.",
+    "REFERRAL_OWN_CODE": "You can't use your own referral code.",
+    "REFERRAL_ALREADY_APPLIED": "You have already joined with a referral code.",
+    "REFERRAL_NOT_ELIGIBLE": "Referral codes are for new accounts, entered while signing up."
   },
   "picker": {
     "noAddress": "No address found at that point. Move the pin somewhere closer to a road or landmark.",
@@ -729,7 +736,10 @@
     "codeLabel": "Have a code?",
     "apply": "Apply",
     "codeAdded": "Code added. It will be applied to your next trip.",
-    "codeError": "Could not add that code"
+    "codeError": "Could not add that code",
+    "creditOf": "₹{{total}} in all, ₹{{used}} used so far",
+    "referralRewardHow": "For friends you referred. Used automatically on your rides.",
+    "referralWelcomeHow": "For joining with a friend's code. Used automatically on your rides."
   },
   "changeDestination": {
     "button": "Change destination",

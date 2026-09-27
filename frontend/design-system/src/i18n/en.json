@@ -382,5 +382,48 @@
     "confirm": "End trip",
     "keep": "Go back",
     "ending": "Ending trip..."
+  },
+  "refer": {
+    "yourCode": "Your referral code",
+    "copyCode": "Copy code",
+    "copiedCode": "Code copied",
+    "copiedLink": "Invite copied - paste it into a message",
+    "share": "Share invite",
+    "whatsapp": "Share on WhatsApp",
+    "pausedHeadline": "Referral rewards are paused",
+    "pausedBody": "Your code still works for signing up. Rewards will be given again when the programme restarts.",
+    "atLimit": "You have been rewarded for {{max}} friends, the most per person. Friends who join with your code still get their welcome reward.",
+    "howTitle": "How it works",
+    "fieldLabel": "Have a referral code? (optional)",
+    "fieldPlaceholder": "e.g. K7M2QX9P",
+    "fieldHelp": "From a friend's invite. You both get a reward after your first paid trip.",
+    "rider": {
+      "headline": "Give {{theirs}}, get {{mine}}",
+      "subhead": "Invite a friend to SheOut. When she takes her first paid ride, you both get ride credit.",
+      "message": "Join me on SheOut, rides by women for women. Sign up with my code {{code}} and get {{amount}} ride credit after your first ride:",
+      "successfulLabel": "friends have ridden",
+      "earnedLabel": "ride credit earned",
+      "pending_one": "{{count}} friend has joined and not ridden yet.",
+      "pending_other": "{{count}} friends have joined and not ridden yet.",
+      "joinedPending": "You joined with a friend's code. Take your first paid ride to get {{amount}} ride credit.",
+      "joinedDone": "You got {{amount}} ride credit for joining with a friend's code.",
+      "step1": "Share your code or link with a friend.",
+      "step2": "She signs up with your code and takes a ride she pays for.",
+      "step3": "You both get ride credit, used automatically on your next rides. You are rewarded for up to {{max}} friends."
+    },
+    "partner": {
+      "headline": "Earn {{mine}} for each partner you bring",
+      "subhead": "When a partner you invite completes her first paid trip, you get {{mine}} and she gets {{theirs}}, paid into your wallets.",
+      "message": "Drive with SheOut, the ride app for women. Sign up as a partner with my code {{code}} and get {{amount}} after your first paid trip:",
+      "successfulLabel": "partners have driven",
+      "earnedLabel": "paid into your wallet",
+      "pending_one": "{{count}} partner has joined and not been paid for a trip yet.",
+      "pending_other": "{{count}} partners have joined and not been paid for a trip yet.",
+      "joinedPending": "You joined with a partner's code. You get {{amount}} in your wallet after your first paid trip.",
+      "joinedDone": "You got {{amount}} in your wallet for joining with a partner's code.",
+      "step1": "Share your code or link with a woman who could drive with SheOut.",
+      "step2": "She signs up as a partner with your code, is verified, and completes a paid trip.",
+      "step3": "You both get money in your SheOut wallet, paid out with your earnings. You are rewarded for up to {{max}} partners."
+    }
   }
 }

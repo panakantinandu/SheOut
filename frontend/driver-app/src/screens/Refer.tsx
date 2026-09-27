@@ -6,10 +6,10 @@ import { referralsApi } from '../api/client';
 import { apiErrorText } from '../lib/apiErrors';
 
 /**
- * Refer a Friend: her own code and invite link, how many friends have ridden
- * and the ride credit that earned her, and what the programme gives each
+ * Refer a Friend: her own code and invite link, how many partners she brought have driven
+ * and what that has paid her, and what the programme gives each
  * side today. Everything on it comes from the server - see ReferralService.
- * The credit itself shows in the Wallet, beside the signup credit.
+ * A reward is money in her wallet, paid out with her earnings.
  */
 export function Refer() {
   const { t } = useTranslation();
@@ -25,7 +25,7 @@ export function Refer() {
 
   return (
     <div className="space-y-6">
-      <TopHeader variant="back" title={t('drawer.refer')} onBack={() => navigate(-1)} />
+      <TopHeader variant="back" title={t('refer.title')} onBack={() => navigate(-1)} />
       {summary ? (
         <ReferAFriend summary={summary} />
       ) : error ? (

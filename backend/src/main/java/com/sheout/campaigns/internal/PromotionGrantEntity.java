@@ -78,6 +78,20 @@ public class PromotionGrantEntity extends BaseEntity {
         exhaustedAt = null;
     }
 
+    /**
+     * More credit on a balance she already holds from this promotion - a
+     * second friend's referral reward. Her expiry moves out if the new one is
+     * later, never in.
+     */
+    void topUp(BigDecimal amount, Instant newExpiry) {
+        creditTotal = (creditTotal == null ? BigDecimal.ZERO : creditTotal).add(amount);
+        creditRemaining = (creditRemaining == null ? BigDecimal.ZERO : creditRemaining).add(amount);
+        exhaustedAt = null;
+        if (expiresAt != null && (newExpiry == null || newExpiry.isAfter(expiresAt))) {
+            expiresAt = newExpiry;
+        }
+    }
+
     /** A held discount is now spent for good; if nothing is left, this is the moment it ran out. */
     void settle(Instant now, boolean nothingElseHeld) {
         boolean empty = creditRemaining != null ? creditRemaining.signum() == 0 : usesRemaining != null && usesRemaining == 0;

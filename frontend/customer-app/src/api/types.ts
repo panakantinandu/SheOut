@@ -152,7 +152,7 @@ export interface BookingSummary {
 /** A promotion she holds - the signup credit, or a code she entered. */
 export interface HeldPromotion {
   name: string;
-  type: 'SIGNUP_CREDIT' | 'PERCENTAGE_DISCOUNT' | 'FLAT_DISCOUNT';
+  type: 'SIGNUP_CREDIT' | 'PERCENTAGE_DISCOUNT' | 'FLAT_DISCOUNT' | 'REFERRAL_REWARD' | 'REFERRAL_WELCOME';
   creditLeft: number | null;
   creditTotal: number | null;
   usesLeft: number | null;

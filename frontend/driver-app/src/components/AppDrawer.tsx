@@ -1,4 +1,4 @@
-import { FileText, Info, Languages, LifeBuoy, Lock, LogOut, Moon } from 'lucide-react';
+import { FileText, Gift, Info, Languages, LifeBuoy, Lock, LogOut, Moon } from 'lucide-react';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -35,8 +35,8 @@ export function useAppDrawer(): DrawerControls {
 
 /**
  * The partner app's menu. Language, payouts, support, the legal pages and
- * signing out - the things that are not a tab. No Seller or Refer entries:
- * those are rider features.
+ * signing out - the things that are not a tab, and Refer a Friend, which
+ * brings in partners. No Seller entry: that is a rider feature.
  * <p>
  * Also keeps the language in step with her account once she is signed in -
  * see syncLanguageWithAccount.
@@ -120,6 +120,7 @@ export function AppDrawerProvider({ children }: { children: ReactNode }) {
             key: 'info',
             title: t('drawer.helpAndInfo'),
             items: [
+              { key: 'refer', label: t('refer.title'), icon: <Gift />, onClick: () => go('/refer') },
               { key: 'support', label: t('drawer.support'), icon: <LifeBuoy />, onClick: () => go('/help') },
               { key: 'about', label: t('about.title'), icon: <Info />, onClick: () => go('/about') },
               { key: 'privacy', label: t('legal.privacy'), icon: <Lock />, onClick: () => go('/privacy') },

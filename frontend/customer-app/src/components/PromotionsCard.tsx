@@ -12,6 +12,9 @@ import { useTranslation } from '@sheout/design-system';
  * is SheOut's money, spent only as a discount on her own fares, never
  * withdrawn or topped up.
  */
+/** Promotions held as a rupee balance and spent across trips, rather than taken off each one. */
+const CREDIT_TYPES: HeldPromotion['type'][] = ['SIGNUP_CREDIT', 'REFERRAL_REWARD', 'REFERRAL_WELCOME'];
+
 export function PromotionsCard() {
   const { t, i18n } = useTranslation();
   const [held, setHeld] = useState<HeldPromotion[] | null>(null);
@@ -54,12 +57,22 @@ export function PromotionsCard() {
       {held?.map((p, i) => (
         <div key={i} className="rounded-xl bg-primary-light px-3 py-2 text-sm" data-testid="held-promotion">
           <p className="font-semibold text-text-primary">
-            {p.type === 'SIGNUP_CREDIT' && p.creditLeft !== null
+            {CREDIT_TYPES.includes(p.type) && p.creditLeft !== null
               ? t('promo.creditLeft', { name: p.name, amount: p.creditLeft.toFixed(0) })
               : p.name}
           </p>
+          {/* A balance built from more than one gift - two friends' referral
+              rewards - says what it came to in all, so "₹60 left" is never
+              a figure she has to reconcile on her own. */}
+          {CREDIT_TYPES.includes(p.type) && p.creditTotal !== null && p.creditLeft !== null && p.creditTotal !== p.creditLeft && (
+            <p className="text-xs text-text-secondary" data-testid="held-promotion-total">
+              {t('promo.creditOf', { total: p.creditTotal.toFixed(0), used: (p.creditTotal - p.creditLeft).toFixed(0) })}
+            </p>
+          )}
           <p className="text-xs text-text-secondary">
-            {p.type === 'SIGNUP_CREDIT' ? t('promo.creditHow') : t('promo.discountHow')}
+            {p.type === 'REFERRAL_REWARD' ? t('promo.referralRewardHow')
+              : p.type === 'REFERRAL_WELCOME' ? t('promo.referralWelcomeHow')
+                : CREDIT_TYPES.includes(p.type) ? t('promo.creditHow') : t('promo.discountHow')}
             {p.expiresAt && ` · ${t('promo.until', { date: date(p.expiresAt) })}`}
           </p>
         </div>

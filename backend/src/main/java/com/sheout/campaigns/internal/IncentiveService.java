@@ -4,6 +4,7 @@ import com.sheout.booking.BookingApi;
 import com.sheout.booking.BookingError;
 import com.sheout.booking.BookingParticipants;
 import com.sheout.campaigns.DriverIncentiveAwarded;
+import com.sheout.campaigns.IncentiveType;
 import com.sheout.payments.PaymentCaptured;
 import com.sheout.sharedkernel.Result;
 import com.sheout.sharedkernel.event.DomainEventPublisher;
@@ -17,6 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
+import java.util.Comparator;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -88,5 +91,53 @@ public class IncentiveService {
             log.info("Incentive '{}' paid {} to partner {} for trip {} (her trip #{})",
                     incentive.getName(), amount, driverId, event.bookingId(), trip.tripOrdinal());
         }
+    }
+
+    /**
+     * A partner referral, paid once: to the partner who referred (REFERRAL_REWARD)
+     * or to the friend she referred (REFERRAL_WELCOME), on the friend's first
+     * paid trip. The same path as every incentive - the running incentive of
+     * that type, locked, the amount cut to what its budget has left and
+     * counted against it, an award keyed on the trip so it cannot be paid
+     * twice, and the event payouts credits her wallet from.
+     * <p>
+     * Nothing when no such incentive is running. Returns what was paid.
+     */
+    @Transactional
+    public BigDecimal awardReferral(IncentiveType type, UUID driverId, UUID bookingId, Instant now) {
+        if (type != IncentiveType.REFERRAL_REWARD && type != IncentiveType.REFERRAL_WELCOME) {
+            throw new IllegalArgumentException("Not a referral incentive: " + type);
+        }
+        Optional<DriverIncentiveEntity> running = runningReferralIncentive(type, now);
+        if (running.isEmpty() || awards.existsByIncentiveIdAndBookingId(running.get().getId(), bookingId)) {
+            return BigDecimal.ZERO;
+        }
+        DriverIncentiveEntity incentive = incentives.findLockedById(running.get().getId()).orElse(null);
+        if (incentive == null || !incentive.activeAt(now)) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal amount = incentive.affordable(incentive.getValue()).setScale(2, RoundingMode.HALF_UP);
+        if (amount.signum() <= 0) {
+            return BigDecimal.ZERO;
+        }
+        incentive.spend(amount, now);
+        incentives.save(incentive);
+        IncentiveAwardEntity award = awards.save(new IncentiveAwardEntity(incentive.getId(), driverId, bookingId, amount));
+        events.publish(new DriverIncentiveAwarded(award.getId(), driverId, bookingId, amount, incentive.getName()));
+        log.info("Referral incentive '{}' paid {} to partner {} (friend's first paid trip {})",
+                incentive.getName(), amount, driverId, bookingId);
+        return amount;
+    }
+
+    /** What the running incentive of this type pays, for the Refer screen; empty when none is running. */
+    @Transactional(readOnly = true)
+    public Optional<BigDecimal> referralAmount(IncentiveType type) {
+        return runningReferralIncentive(type, Instant.now()).map(DriverIncentiveEntity::getValue);
+    }
+
+    private Optional<DriverIncentiveEntity> runningReferralIncentive(IncentiveType type, Instant now) {
+        return incentives.findAllByOrderByCreatedAtDesc().stream()
+                .filter(i -> i.getType() == type && i.activeAt(now))
+                .max(Comparator.comparing(DriverIncentiveEntity::getCreatedAt, Comparator.nullsFirst(Comparator.naturalOrder())));
     }
 }
