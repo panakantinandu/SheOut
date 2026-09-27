@@ -162,6 +162,14 @@ function LoadedMap({ markers, route, className, autoFit = true, onPick, center, 
   return (
     <div className={cn('relative', className)} data-testid="live-map">
       <GoogleMap
+        // colorScheme is fixed when a map is created, and maps are reused
+        // between screens (reuseMaps), so each theme gets its own instance.
+        key={theme === 'dark' ? 'dark' : 'light'}
+        // Google's own interface in the matching scheme: the "Map data /
+        // Terms" strip and the logo come in their dark variant on a dark
+        // map, instead of a light box cutting across it. This is Google
+        // restyling its own attribution; nothing here overrides it.
+        colorScheme={theme === 'dark' ? 'DARK' : 'LIGHT'}
         defaultCenter={initialCenter}
         defaultZoom={initialZoom}
         mapId={MAP_ID}
@@ -199,6 +207,7 @@ function LoadedMap({ markers, route, className, autoFit = true, onPick, center, 
         )}
         <Markers markers={markers} draggable={Boolean(onPick)} onPick={onPick} />
         <CameraControl markers={markers} route={route} autoFit={autoFit} center={center} zoom={zoom} />
+        {theme === 'dark' && <AttributionScrim />}
       </GoogleMap>
     </div>
   );
@@ -214,6 +223,50 @@ function LoadedMap({ markers, route, className, autoFit = true, onPick, center, 
  * every gesture. 'nearby' markers are left out of the fit - they come and go
  * every few seconds, and the view should hold on the pickup, not on them.
  */
+/**
+ * A soft dark band along the bottom of a dark map, so Google's logo and its
+ * "Map data / Terms" text read clearly without a hard strip.
+ * <p>
+ * It is drawn in the map's own lowest overlay layer (mapPane): above the
+ * tiles and underneath every one of Google's controls, the attribution
+ * included. It never covers, hides or restyles the attribution - Google's
+ * terms forbid all three - it only darkens the map behind it. Kept pinned
+ * to the bottom edge of the view as the map pans and zooms.
+ */
+function AttributionScrim() {
+  const map = useMap();
+  useEffect(() => {
+    if (!map) return;
+    const band = document.createElement('div');
+    band.setAttribute('data-testid', 'attribution-scrim');
+    band.style.cssText = 'position:absolute;height:56px;pointer-events:none;'
+      + 'background:linear-gradient(to bottom, rgba(12,10,22,0) 0%, rgba(12,10,22,0.55) 70%, rgba(12,10,22,0.7) 100%);';
+    const overlay = new google.maps.OverlayView();
+    const place = () => {
+      const projection = overlay.getProjection();
+      const container = map.getDiv();
+      if (!projection || !container) return;
+      // Where the view's top-left corner is in the pane's own coordinates.
+      const corner = projection.fromContainerPixelToLatLng(new google.maps.Point(0, 0));
+      const origin = corner && projection.fromLatLngToDivPixel(corner);
+      if (!origin) return;
+      band.style.left = `${origin.x}px`;
+      band.style.top = `${origin.y + container.clientHeight - 56}px`;
+      band.style.width = `${container.clientWidth}px`;
+    };
+    overlay.onAdd = () => overlay.getPanes()?.mapPane.appendChild(band);
+    overlay.draw = place;
+    overlay.onRemove = () => band.remove();
+    overlay.setMap(map);
+    const listeners = ['bounds_changed', 'drag', 'zoom_changed', 'resize'].map((event) => map.addListener(event, place));
+    return () => {
+      listeners.forEach((l) => l.remove());
+      overlay.setMap(null);
+    };
+  }, [map]);
+  return null;
+}
+
 function CameraControl({ markers, route, autoFit, center, zoom }: { markers: MapMarker[]; route?: RoutePoint[]; autoFit: boolean; center?: RoutePoint; zoom?: number }) {
   const map = useMap();
   const [userMoved, setUserMoved] = useState(false);
