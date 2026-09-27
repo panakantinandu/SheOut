@@ -8,6 +8,7 @@ import type { AssignedDriver, BookingStatus, BookingSummary, DriverLocation } fr
 import { RatingPrompt } from '../components/RatingPrompt';
 import { TripPaymentCard } from '../components/TripPaymentCard';
 import { PromoFareLines } from '../components/PromoFareLines';
+import { ChangeDestination } from '../components/ChangeDestination';
 import { apiErrorText } from '../lib/apiErrors';
 import { mapsLink, shareViaDevice } from '../lib/emergency';
 import { useTranslation } from '@sheout/design-system';
@@ -879,6 +880,9 @@ export function Tracking() {
           {t('tracking.cancelRide')}
         </Button>
       )}
+
+      {/* Somewhere else instead - asked, and only once her partner agrees. */}
+      {booking?.status === 'IN_PROGRESS' && <ChangeDestination booking={booking} />}
 
       {/* "Drop me here, by the gate." Her partner cannot end the trip away
           from the drop pin, so without this the trip could not be closed at

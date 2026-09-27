@@ -5,6 +5,8 @@ import type {
   BookingCategory,
   BookingStatus,
   BookingSummary,
+  DestinationChange,
+  DestinationChangeState,
   PaymentHold,
   CancellationReason,
   ChatMessage,
@@ -513,6 +515,16 @@ export const bookingApi = {
       method: 'POST',
       body: reason ? { reason, note } : undefined,
     });
+  },
+
+  /** Her rider's latest request to change the drop, if any. */
+  getDestinationChange(bookingId: string): Promise<DestinationChangeState> {
+    return request(`/api/v1/bookings/${bookingId}/destination-change`);
+  },
+
+  /** Yes changes the trip's drop and fare; no leaves the trip as booked. */
+  answerDestinationChange(bookingId: string, accept: boolean): Promise<DestinationChange> {
+    return request(`/api/v1/bookings/${bookingId}/destination-change/${accept ? 'accept' : 'decline'}`, { method: 'POST' });
   },
 
   /**

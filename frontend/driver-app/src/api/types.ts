@@ -118,6 +118,36 @@ export interface GeoAddress {
   lng: number;
 }
 
+/**
+ * A rider's mid-trip request to go somewhere else, and her partner's answer.
+ * Nothing about the trip changes until the partner accepts. secondsLeft is
+ * worked out by the server, so a phone with a wrong clock cannot shorten it.
+ */
+export type DestinationChangeStatus = 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'EXPIRED';
+
+export interface DestinationChange {
+  id: string;
+  bookingId: string;
+  status: DestinationChangeStatus;
+  oldDrop: GeoAddress;
+  newDrop: GeoAddress;
+  oldFare: number;
+  newFare: number;
+  oldDistanceKm: number | null;
+  newDistanceKm: number;
+  newDistanceRouted: boolean;
+  requestedAt: string;
+  expiresAt: string;
+  answeredAt: string | null;
+  secondsLeft: number;
+}
+
+/** The latest request on a trip, if any; canRequest is only ever true for the rider. */
+export interface DestinationChangeState {
+  change: DestinationChange | null;
+  canRequest: boolean;
+}
+
 export interface BookingSummary {
   id: string;
   type: BookingType;

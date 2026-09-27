@@ -276,7 +276,8 @@
     "TRIP_NOT_ENDED": "This trip has not ended yet.",
     "INVALID_PICKUP_CODE": "That code doesn't match. Ask your rider to read it out again from her screen.",
     "PICKUP_CODE_REQUIRED": "Enter the four-digit code your rider reads out to you.",
-    "PICKUP_VERIFICATION_LOCKED": "Too many wrong codes for this trip. Call support and they will sort it out with you."
+    "PICKUP_VERIFICATION_LOCKED": "Too many wrong codes for this trip. Call support and they will sort it out with you.",
+    "DESTINATION_CHANGE_NOT_PENDING": "This request is no longer waiting for an answer - it ran out of time, or the trip has ended. The trip continues as it is."
   },
   "offer": {
     "loadError": "Could not load this request",
@@ -345,7 +346,19 @@
     "fareNotCharged": "Quoted fare (not charged)",
     "notAtPickupYet": "The pickup code opens when you reach the pickup point.",
     "riderCanEndEarly": "Rider getting off before the drop? She can end the trip from her app with \"End trip here\".",
-    "awayFromDrop": "You are about {{metres}} m from the drop point. You can still end the trip here, and you will be asked why."
+    "awayFromDrop": "You are about {{metres}} m from the drop point. You can still end the trip here, and you will be asked why.",
+    "destinationChange": {
+      "title": "Your rider wants to change the destination",
+      "body": "Accept to take her to the new drop at the new fare, or decline to continue as booked.",
+      "declineIsFine": "Declining is fine and never counts against you. The trip then continues to {{drop}} at the same fare.",
+      "accept": "Accept",
+      "decline": "Decline",
+      "acceptedTitle": "Destination changed",
+      "acceptedBody": "Now going to {{drop}}. Fare ₹{{fare}} (was ₹{{was}}).",
+      "declinedTitle": "You declined the new destination",
+      "declinedBody": "Continue to {{drop}}. The fare stays ₹{{fare}}.",
+      "answerError": "We couldn't send your answer. Try again."
+    }
   },
   "earnings": {
     "group": {

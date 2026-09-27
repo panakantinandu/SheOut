@@ -29,6 +29,8 @@ import type {
   PickupCodeResponse,
   EmergencyContact,
   FareQuote,
+  DestinationChange,
+  DestinationChangeState,
   GeoAddress,
   HeldPromotion,
   NotificationView,
@@ -671,6 +673,19 @@ export const bookingApi = {
   /** She has got off short of the drop pin and ends the trip herself, at the quoted fare. IN_PROGRESS only. */
   endHere(bookingId: string): Promise<BookingSummary> {
     return request(`/api/v1/bookings/${bookingId}/end-here`, { method: 'POST' });
+  },
+
+  /**
+   * Asks her partner to take her somewhere else. expectedFare is the fare she
+   * was shown (from quote(), pickup to the new drop); the server refuses with
+   * DESTINATION_FARE_CHANGED rather than send a number she never saw.
+   */
+  requestDestinationChange(bookingId: string, drop: GeoAddress, expectedFare: number): Promise<DestinationChange> {
+    return request(`/api/v1/bookings/${bookingId}/destination-change`, { method: 'POST', body: { drop, expectedFare } });
+  },
+
+  getDestinationChange(bookingId: string): Promise<DestinationChangeState> {
+    return request(`/api/v1/bookings/${bookingId}/destination-change`);
   },
 
   cancel(bookingId: string, reason: CancellationReason, note?: string): Promise<BookingSummary> {

@@ -387,7 +387,10 @@
     "ACTIVE_BOOKING_EXISTS": "You already have a trip in progress. Finish or cancel it before booking another.",
     "CUSTOMER_PHONE_REQUIRED": "Add and verify your phone number before booking a trip.",
     "PROMO_NOT_FOUND": "That code is not valid, or the offer has ended.",
-    "PROMO_ALREADY_REDEEMED": "You have already added this code."
+    "PROMO_ALREADY_REDEEMED": "You have already added this code.",
+    "DESTINATION_CHANGE_LIMIT_REACHED": "You have already changed your destination once on this trip. You can end the trip here instead.",
+    "DESTINATION_CHANGE_PENDING": "Your partner hasn't answered your last request yet.",
+    "DESTINATION_UNCHANGED": "That is where you are already going. Choose a different place."
   },
   "picker": {
     "noAddress": "No address found at that point. Move the pin somewhere closer to a road or landmark.",
@@ -727,5 +730,26 @@
     "apply": "Apply",
     "codeAdded": "Code added. It will be applied to your next trip.",
     "codeError": "Could not add that code"
+  },
+  "changeDestination": {
+    "button": "Change destination",
+    "askAgain": "Ask again to change destination",
+    "pickTitle": "Where to instead?",
+    "confirmTitle": "Change your destination?",
+    "pricing": "Working out the new fare...",
+    "partnerDecides": "Your partner has 2 minutes to accept. Until she does, your trip continues to {{drop}}. You can change your destination once per trip.",
+    "promoStill": "Your promotion still takes ₹{{discount}} off, so you would pay ₹{{pay}}.",
+    "send": "Send to partner",
+    "sending": "Sending...",
+    "waitingTitle": "Waiting for your partner",
+    "waitingBody": "She has {{seconds}} s to answer. Until she accepts, you are still going to {{drop}}.",
+    "acceptedTitle": "Destination changed",
+    "acceptedBody": "You are now going to {{drop}}. Your fare is ₹{{fare}} (was ₹{{was}}).",
+    "declinedTitle": "Your partner couldn't take the new destination",
+    "expiredTitle": "Your partner didn't answer in time",
+    "continuesBody": "Your trip continues to {{drop}}. The fare is unchanged at ₹{{fare}}.",
+    "fareChanged": "The fare for this destination has just changed. Check the new fare before sending.",
+    "quoteError": "We couldn't price that destination. Try again.",
+    "sendError": "We couldn't send your request. Try again."
   }
 }

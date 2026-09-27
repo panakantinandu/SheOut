@@ -13,6 +13,11 @@ import java.util.UUID;
  * quotedRouted is false when the quote itself was the straight-line
  * fallback estimate rather than a real road route, which makes the
  * comparison weaker; the console says so.
+ * <p>
+ * destinationChangedAt is set when the rider changed the drop mid-trip and
+ * her partner agreed. The quoted distance is then the agreed route's - pickup
+ * to the new drop - which is what the check measured against, and
+ * originalQuotedDistanceKm is what the trip was first booked at.
  */
 public record RouteReviewItem(
         UUID bookingId,
@@ -34,6 +39,8 @@ public record RouteReviewItem(
         Instant completedAt,
         Instant flaggedAt,
         Instant reviewedAt,
-        String reviewNote
+        String reviewNote,
+        Instant destinationChangedAt,
+        BigDecimal originalQuotedDistanceKm
 ) {
 }

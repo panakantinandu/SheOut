@@ -606,7 +606,8 @@ public class BookingService implements BookingApi {
                 b.getCompletedBy(), b.getCompletionDistanceFromDropM(),
                 b.getDropDeviationReason(), b.getDropDeviationNote(),
                 b.getStartedAt(), b.getCompletedAt(), b.getRouteFlaggedAt(),
-                b.getRouteReviewedAt(), b.getRouteReviewNote());
+                b.getRouteReviewedAt(), b.getRouteReviewNote(),
+                b.getDestinationChangedAt(), b.getOriginalQuotedDistanceKm());
     }
 
 

@@ -360,6 +360,19 @@
       "closeEyes": "మీ కళ్లు మూసుకోండి"
     }
   },
+  "destinationChange": {
+    "currentDrop": "ఇప్పుడు వెళ్తున్నది",
+    "newDrop": "కొత్త డ్రాప్",
+    "fare": "ఛార్జీ",
+    "distance": "దూరం",
+    "km": "{{km}} కి.మీ.",
+    "sameFare": "ఛార్జీ మారదు.",
+    "riderMore": "మీరు {{amount}} ఎక్కువ చెల్లిస్తారు.",
+    "riderLess": "మీరు {{amount}} తక్కువ చెల్లిస్తారు.",
+    "partnerMore": "ఛార్జీ {{amount}} పెరుగుతుంది.",
+    "partnerLess": "తక్కువ దూరం కాబట్టి ఛార్జీ {{amount}} తగ్గుతుంది.",
+    "pricedFrom": "పికప్ నుండి కొత్త డ్రాప్ వరకు, ప్రతి ట్రిప్‌కు లెక్కించే విధంగానే ఛార్జీ."
+  },
   "dropOff": {
     "CUSTOMER_REQUESTED_DIFFERENT_DROP": "కస్టమర్ వేరే డ్రాప్ పాయింట్ అడిగారు",
     "ROAD_CLOSED_OR_BLOCKED": "రోడ్డు మూసివేయబడింది/అడ్డుగా ఉంది",

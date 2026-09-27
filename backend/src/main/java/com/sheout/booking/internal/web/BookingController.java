@@ -19,6 +19,7 @@ import com.sheout.booking.GeoAddress;
 import com.sheout.booking.PaymentHold;
 import com.sheout.booking.RequestBookingCommand;
 import com.sheout.booking.internal.BookingService;
+import com.sheout.booking.internal.DestinationChangeService;
 import com.sheout.sharedkernel.Result;
 import com.sheout.sharedkernel.ratelimit.RateLimiter;
 import com.sheout.sharedkernel.web.ApiException;
@@ -68,10 +69,13 @@ public class BookingController {
     private final RouteProvider routeProvider;
     private final RateLimiter rateLimiter;
     private final int pickupAttemptLimit;
+    private final DestinationChangeService destinationChanges;
 
     public BookingController(BookingService bookingService, ServiceArea serviceArea, RouteProvider routeProvider,
                              RateLimiter rateLimiter,
-                             @Value("${sheout.rate-limit.pickup-code-per-driver:10}") int pickupAttemptLimit) {
+                             @Value("${sheout.rate-limit.pickup-code-per-driver:10}") int pickupAttemptLimit,
+                             DestinationChangeService destinationChanges) {
+        this.destinationChanges = destinationChanges;
         this.bookingService = bookingService;
         this.serviceArea = serviceArea;
         this.routeProvider = routeProvider;
@@ -413,6 +417,72 @@ public class BookingController {
                 bookingId, caller.accountId(), request.reason(), request.note()));
     }
 
+    /**
+     * The rider asks to be taken somewhere else, mid-trip. Nothing changes
+     * until her partner accepts - see DestinationChangeService.
+     * <p>
+     * expectedFare is the fare the app showed her, from the ordinary quote
+     * endpoint (pickup to the new drop). Sent so that she is never committed
+     * to a number she did not see: if the trip now prices differently the
+     * request is refused with DESTINATION_FARE_CHANGED and the app quotes again.
+     */
+    @PostMapping("/api/v1/bookings/{bookingId}/destination-change")
+    public ResponseEntity<DestinationChangeService.DestinationChangeView> requestDestinationChange(
+            @PathVariable UUID bookingId, @Valid @RequestBody DestinationChangeRequest request) {
+        CurrentAccount caller = requireRole(AccountRole.CUSTOMER);
+        // The once-per-trip limit is the real bound; this stops a loop of
+        // requests left to run out, each of which asks the router for a route.
+        rateLimiter.tryConsume("destination-change:" + caller.accountId(), 10, Duration.ofHours(1))
+                .orThrow("Too many requests. Please wait a moment.");
+        var result = destinationChanges.request(bookingId, caller.accountId(), request.drop().toGeoAddress(),
+                request.expectedFare());
+        if (result.isFailure()) {
+            throw toApiException(result.error());
+        }
+        return ResponseEntity.status(HttpStatus.CREATED).body(result.value());
+    }
+
+    /** The latest request on this trip, for either participant, and whether the rider may ask now. */
+    @GetMapping("/api/v1/bookings/{bookingId}/destination-change")
+    public ResponseEntity<DestinationChangeService.DestinationChangeState> destinationChange(@PathVariable UUID bookingId) {
+        CurrentAccount caller = requireAuthenticated();
+        BookingSummary booking = bookingService.findById(bookingId)
+                .orElseThrow(() -> ApiException.notFound("No such booking"));
+        requireParticipant(caller, booking);
+        var state = destinationChanges.state(bookingId)
+                .orElseThrow(() -> ApiException.notFound("No such booking"));
+        // Only the rider can ask; the partner's screen never offers it.
+        boolean isRider = caller.accountId().equals(booking.customerId());
+        return ResponseEntity.ok(isRider ? state : new DestinationChangeService.DestinationChangeState(state.change(), false));
+    }
+
+    @PostMapping("/api/v1/bookings/{bookingId}/destination-change/accept")
+    public ResponseEntity<DestinationChangeService.DestinationChangeView> acceptDestinationChange(@PathVariable UUID bookingId) {
+        return answerDestinationChange(bookingId, true);
+    }
+
+    @PostMapping("/api/v1/bookings/{bookingId}/destination-change/decline")
+    public ResponseEntity<DestinationChangeService.DestinationChangeView> declineDestinationChange(@PathVariable UUID bookingId) {
+        return answerDestinationChange(bookingId, false);
+    }
+
+    private ResponseEntity<DestinationChangeService.DestinationChangeView> answerDestinationChange(UUID bookingId, boolean accept) {
+        CurrentAccount caller = requireRole(AccountRole.DRIVER);
+        requireAssignedDriver(caller, bookingId);
+        var result = destinationChanges.answer(bookingId, caller.accountId(), accept);
+        if (result.isFailure()) {
+            throw toApiException(result.error());
+        }
+        return ResponseEntity.ok(result.value());
+    }
+
+    /** Where she wants to go instead, and the fare she was shown for it. */
+    public record DestinationChangeRequest(
+            @Valid @NotNull GeoAddressRequest drop,
+            @DecimalMin("0") BigDecimal expectedFare
+    ) {
+    }
+
     private ResponseEntity<BookingSummary> respond(Result<BookingSummary, BookingError> result) {
         if (result.isFailure()) {
             throw toApiException(result.error());
@@ -532,6 +602,23 @@ public class BookingController {
             case ACTIVE_BOOKING_EXISTS -> new ApiException(
                     HttpStatus.CONFLICT, "ACTIVE_BOOKING_EXISTS",
                     "You already have a trip in progress. Finish or cancel it before booking another.");
+            // Codes, because each one leads the rider's screen somewhere
+            // different: re-quote, wait, or stop offering the button.
+            case DESTINATION_CHANGE_LIMIT_REACHED -> new ApiException(
+                    HttpStatus.CONFLICT, "DESTINATION_CHANGE_LIMIT_REACHED",
+                    "You have already changed your destination once on this trip. You can end the trip here instead.");
+            case DESTINATION_CHANGE_PENDING -> new ApiException(
+                    HttpStatus.CONFLICT, "DESTINATION_CHANGE_PENDING",
+                    "Your partner hasn't answered your last request yet.");
+            case DESTINATION_UNCHANGED -> new ApiException(
+                    HttpStatus.BAD_REQUEST, "DESTINATION_UNCHANGED",
+                    "That is where you are already going. Choose a different place.");
+            case DESTINATION_FARE_CHANGED -> new ApiException(
+                    HttpStatus.CONFLICT, "DESTINATION_FARE_CHANGED",
+                    "The fare for this destination has changed. Check the new fare before sending.");
+            case DESTINATION_CHANGE_NOT_PENDING -> new ApiException(
+                    HttpStatus.CONFLICT, "DESTINATION_CHANGE_NOT_PENDING",
+                    "This request is no longer waiting for an answer.");
         };
     }
 

@@ -360,6 +360,19 @@
       "closeEyes": "अपनी आँखें बंद करें"
     }
   },
+  "destinationChange": {
+    "currentDrop": "अभी यहाँ जा रहे हैं",
+    "newDrop": "नया ड्रॉप",
+    "fare": "किराया",
+    "distance": "दूरी",
+    "km": "{{km}} कि.मी.",
+    "sameFare": "किराया वही रहेगा।",
+    "riderMore": "आपको {{amount}} ज़्यादा देने होंगे।",
+    "riderLess": "आपको {{amount}} कम देने होंगे।",
+    "partnerMore": "किराया {{amount}} बढ़ जाएगा।",
+    "partnerLess": "छोटी ट्रिप के लिए किराया {{amount}} कम हो जाएगा।",
+    "pricedFrom": "पिकअप से नए ड्रॉप तक का किराया, उसी तरह जैसे हर ट्रिप का लगता है।"
+  },
   "dropOff": {
     "CUSTOMER_REQUESTED_DIFFERENT_DROP": "ग्राहक ने अलग ड्रॉप पॉइंट माँगा",
     "ROAD_CLOSED_OR_BLOCKED": "सड़क बंद/अवरुद्ध",

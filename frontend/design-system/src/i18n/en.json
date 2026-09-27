@@ -360,6 +360,19 @@
       "closeEyes": "Close your eyes"
     }
   },
+  "destinationChange": {
+    "currentDrop": "Going to now",
+    "newDrop": "New drop",
+    "fare": "Fare",
+    "distance": "Distance",
+    "km": "{{km}} km",
+    "sameFare": "The fare stays the same.",
+    "riderMore": "You would pay {{amount}} more.",
+    "riderLess": "You would pay {{amount}} less.",
+    "partnerMore": "The fare goes up by {{amount}}.",
+    "partnerLess": "The fare goes down by {{amount}}, for a shorter trip.",
+    "pricedFrom": "Priced from the pickup to the new drop, the same way every trip is priced."
+  },
   "dropOff": {
     "CUSTOMER_REQUESTED_DIFFERENT_DROP": "Customer requested different drop point",
     "ROAD_CLOSED_OR_BLOCKED": "Road closed/blocked",

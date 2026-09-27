@@ -47,6 +47,7 @@ type Category = 'booking' | 'payment' | 'safety' | 'support' | 'account' | 'news
 const CATEGORY_OF: Record<string, Category> = {
   BOOKING_REQUESTED: 'booking', BOOKING_ACCEPTED: 'booking', DRIVER_ARRIVING: 'booking', BOOKING_COMPLETED: 'booking',
   BOOKING_CANCELLED: 'booking', NO_DRIVERS_AVAILABLE: 'booking', DRIVER_OFFER: 'booking',
+  DESTINATION_CHANGE_REQUESTED: 'booking', DESTINATION_CHANGED: 'booking', DESTINATION_CHANGE_DECLINED: 'booking',
   PAYMENT_RECEIPT: 'payment', PAYOUT_PAID: 'payment', INCENTIVE_EARNED: 'payment',
   SOS_ALERT: 'safety', SOS_OPERATOR_ALERT: 'safety',
   SUPPORT_REPLY: 'support',

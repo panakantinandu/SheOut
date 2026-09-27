@@ -149,8 +149,44 @@ public class BookingEntity extends BaseEntity {
     @Column(length = 120)
     private String promotionName;
 
+    /**
+     * When the drop was changed mid-trip by agreement, and the distance the
+     * trip was first quoted on - see V37 and DestinationChangeService. Both
+     * null on a trip that went where it was booked to.
+     */
+    private Instant destinationChangedAt;
+    @Column(precision = 8, scale = 2)
+    private BigDecimal originalQuotedDistanceKm;
+
     protected BookingEntity() {
         // JPA
+    }
+
+    /**
+     * Her partner has agreed to take her somewhere else. The new drop, the
+     * fare quoted for it and the distance that fare was priced on replace the
+     * old ones together, so everything that reads them afterwards - the
+     * drop-off geofence, the fare charged at the end, the route check - works
+     * from the trip as it now is. The first quoted distance is kept once.
+     */
+    void changeDestination(GeoAddressEmbeddable newDrop, BigDecimal newFare, BigDecimal newDistanceKm,
+                           boolean routed, Instant at) {
+        if (originalQuotedDistanceKm == null) {
+            originalQuotedDistanceKm = quotedDistanceKm;
+        }
+        this.drop = newDrop;
+        this.fareEstimate = newFare;
+        this.quotedDistanceKm = newDistanceKm;
+        this.quotedDistanceRouted = routed;
+        this.destinationChangedAt = at;
+    }
+
+    public Instant getDestinationChangedAt() {
+        return destinationChangedAt;
+    }
+
+    public BigDecimal getOriginalQuotedDistanceKm() {
+        return originalQuotedDistanceKm;
     }
 
     public void applyPromotion(BigDecimal discount, String promotionName) {

@@ -1826,7 +1826,9 @@ const VIEWS = {
         <div class="subtle">${time(t.completedAt)} · ₹${esc(String(t.fare ?? '—'))}</div>`;
       if (key === 'partner') return `<span class="strong">${esc(r.partnerName || 'Name not set')}</span><div class="subtle num">${esc(r.partnerPhone || '')}</div>`;
       if (key === 'rider') return `<span class="strong">${esc(r.riderName || 'Name not set')}</span><div class="subtle num">${esc(r.riderPhone || '')}</div>`;
-      if (key === 'quoted') return `<span class="num strong">${esc(String(t.quotedDistanceKm))} km</span>${t.quotedRouted ? '' : '<div class="subtle">estimate - the router was unavailable when quoted</div>'}`;
+      if (key === 'quoted') return `<span class="num strong">${esc(String(t.quotedDistanceKm))} km</span>${t.quotedRouted ? '' : '<div class="subtle">estimate - the router was unavailable when quoted</div>'}${t.destinationChangedAt
+        ? `<div><span class="badge b-grey">Destination changed</span></div><div class="subtle">Rider asked and partner agreed at ${time(t.destinationChangedAt)}. This is the agreed route; first quoted ${esc(String(t.originalQuotedDistanceKm ?? '—'))} km.</div>`
+        : ''}`;
       if (key === 'driven') return `<span class="num strong">${esc(String(t.actualDistanceKm))} km</span>
         <div><span class="badge b-amber">${routeShortfall(t)}% shorter</span></div>
         <div class="subtle">from ${esc(String(t.routePoints))} location reports</div>`;

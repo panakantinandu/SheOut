@@ -29,6 +29,7 @@ import type { BookingSummary, PaymentHold, TripRoute } from '../api/types';
 import { CollectPaymentCard } from '../components/CollectPaymentCard';
 import { readPositionOnce, useShareLocation } from '../lib/LocationBroadcastContext';
 import { PartnerSos } from '../components/PartnerSos';
+import { DestinationChangePrompt } from '../components/DestinationChangePrompt';
 import { useTranslation } from '@sheout/design-system';
 
 const POLL_INTERVAL_MS = 4000;
@@ -264,12 +265,20 @@ export function Trip() {
   );
 
   // Re-route on a phase change, and drop the old line immediately so a route
-  // to the pickup is never left on screen after the trip has started.
+  // to the pickup is never left on screen after the trip has started. The
+  // same when the drop itself moves - her rider changed destination and she
+  // agreed - so the line to the old drop goes at once.
   useEffect(() => {
     setRoute(null);
     setRouteError(false);
     routedFrom.current = null;
-  }, [phase, bookingId]);
+  }, [phase, bookingId, booking?.drop.lat, booking?.drop.lng]);
+
+  /** After she answers a change of destination: the new drop and fare now, not at the next poll. */
+  function refreshBooking() {
+    if (!bookingId) return;
+    bookingApi.getById(bookingId).then(setBooking).catch(() => undefined);
+  }
 
   useEffect(() => {
     if (!myPosition || !booking) return;
@@ -464,6 +473,10 @@ export function Trip() {
           {booking.status === 'COMPLETED' && bookingId && (
             <CollectPaymentCard bookingId={bookingId} onPaid={() => setPaid(true)} />
           )}
+
+          {/* Her rider asking to go somewhere else - a dialog while it
+              waits, then a card saying what was agreed. */}
+          <DestinationChangePrompt booking={booking} onAnswered={refreshBooking} />
 
           {/* Where she is going NEXT, on its own and stated first. The
               two-address list below is the whole trip; this is the job in

@@ -71,5 +71,20 @@ public enum BookingError {
      * partners, and six at once from one account was six partners each
      * driving to a pickup for a trip that could only ever be one.
      */
-    ACTIVE_BOOKING_EXISTS
+    ACTIVE_BOOKING_EXISTS,
+
+    /** She has already had her change of destination answered on this trip. See DestinationChangeService. */
+    DESTINATION_CHANGE_LIMIT_REACHED,
+
+    /** A change is already waiting for her partner's answer. One question at a time. */
+    DESTINATION_CHANGE_PENDING,
+
+    /** The new drop is where the trip is already going. */
+    DESTINATION_UNCHANGED,
+
+    /** The fare she was shown is not what the trip now prices at; she is shown the new one before anything is sent. */
+    DESTINATION_FARE_CHANGED,
+
+    /** Answering a change that is no longer waiting - it ran out of time, or the trip has ended. */
+    DESTINATION_CHANGE_NOT_PENDING
 }

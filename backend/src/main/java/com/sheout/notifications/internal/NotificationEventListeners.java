@@ -7,6 +7,9 @@ import com.sheout.booking.BookingCancelled;
 import com.sheout.booking.BookingCompleted;
 import com.sheout.booking.BookingRequested;
 import com.sheout.booking.BookingSummary;
+import com.sheout.booking.DestinationChangeDeclined;
+import com.sheout.booking.DestinationChangeRequested;
+import com.sheout.booking.DestinationChanged;
 import com.sheout.dispatch.DispatchExhausted;
 import com.sheout.dispatch.DriverArriving;
 import com.sheout.dispatch.DriverOffered;
@@ -141,6 +144,42 @@ class NotificationEventListeners {
         dispatcher.deliver(event.customerId(), NotificationType.BOOKING_COMPLETED, localized(event.customerId(), "bookingCompleted",
                 language -> Map.of("fare", rupees(event.finalFare())),
                 "/tracking/" + event.bookingId(), "booking-" + event.bookingId(), OutboundMessage.Urgency.NORMAL));
+    }
+
+    /**
+     * Her rider wants to go somewhere else. ALERT, like an offer: she has two
+     * minutes to answer and is probably riding. No address - a lock screen is
+     * read by whoever is holding the phone; the trip screen shows where.
+     */
+    @Async(NotificationDeliveryConfig.EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void onDestinationChangeRequested(DestinationChangeRequested event) {
+        long minutes = Math.max(1, (Duration.between(event.occurredAt(), event.expiresAt()).toSeconds() + 59) / 60);
+        dispatcher.deliver(event.driverId(), NotificationType.DESTINATION_CHANGE_REQUESTED, localized(event.driverId(),
+                "destinationChangeRequested",
+                language -> Map.of("fare", rupees(event.newFare()), "was", rupees(event.oldFare()),
+                        "minutes", String.valueOf(minutes)),
+                "/trip/" + event.bookingId(), "destination-" + event.bookingId(), OutboundMessage.Urgency.ALERT));
+    }
+
+    /** Both are told, so each has it in writing: the new fare is what the trip now costs. */
+    @Async(NotificationDeliveryConfig.EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void onDestinationChanged(DestinationChanged event) {
+        dispatcher.deliver(event.customerId(), NotificationType.DESTINATION_CHANGED, localized(event.customerId(),
+                "destinationChangedRider", language -> Map.of("fare", rupees(event.newFare())),
+                "/tracking/" + event.bookingId(), "destination-" + event.bookingId(), OutboundMessage.Urgency.NORMAL));
+        dispatcher.deliver(event.driverId(), NotificationType.DESTINATION_CHANGED, localized(event.driverId(),
+                "destinationChangedPartner", language -> Map.of("fare", rupees(event.newFare())),
+                "/trip/" + event.bookingId(), "destination-" + event.bookingId(), OutboundMessage.Urgency.NORMAL));
+    }
+
+    @Async(NotificationDeliveryConfig.EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void onDestinationChangeDeclined(DestinationChangeDeclined event) {
+        dispatcher.deliver(event.customerId(), NotificationType.DESTINATION_CHANGE_DECLINED, localized(event.customerId(),
+                "destinationChangeDeclined", language -> Map.of("fare", rupees(event.fare())),
+                "/tracking/" + event.bookingId(), "destination-" + event.bookingId(), OutboundMessage.Urgency.NORMAL));
     }
 
     /**

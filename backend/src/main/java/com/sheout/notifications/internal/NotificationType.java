@@ -34,5 +34,11 @@ public enum NotificationType {
     PAYOUT_PAID,
     /** A campaign bonus reached her wallet - see campaigns' DriverIncentiveAwarded. */
     INCENTIVE_EARNED,
-    PAYMENT_RECEIPT
+    PAYMENT_RECEIPT,
+    /** To the partner: her rider has asked, mid-trip, to go somewhere else - see booking's DestinationChangeRequested. */
+    DESTINATION_CHANGE_REQUESTED,
+    /** To both: the partner agreed and the trip now goes to the new drop. */
+    DESTINATION_CHANGED,
+    /** To the rider: her partner said no; the trip goes on as booked. */
+    DESTINATION_CHANGE_DECLINED
 }
