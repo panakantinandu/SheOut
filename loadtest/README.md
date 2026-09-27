@@ -156,3 +156,10 @@ cannot exceed roughly 1.35 GB (~70% of the container) whatever the load, and
 the same load used 0.4 of half a CPU against Standard's full one. No separate
 2 GB load test is needed; production's own Metrics under real traffic will
 give the real figure.
+
+Run 5, staging on Standard (1 CPU, 2 GB - set by hand in the dashboard),
+redeployed just before, 27 Sep, load 06:12:59-06:28:59 UTC, `--no-db`:
+44,723 requests, 0 errors, p50/p95/p99 246/389/694 ms, create booking p95
+1,927 ms, nearby partners p95 2,251 ms, first-minute p95 1,133 ms, minutes
+2-16 at 303-404 ms. Metrics (read by the operator): memory limit 2 GB, peak
+about 500 MB (~25%); CPU peak about 0.4 of 1. Production runs this tier.
