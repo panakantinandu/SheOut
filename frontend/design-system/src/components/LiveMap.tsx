@@ -198,7 +198,7 @@ function LoadedMap({ markers, route, className, autoFit = true, onPick, center, 
           />
         )}
         <Markers markers={markers} draggable={Boolean(onPick)} onPick={onPick} />
-        <CameraControl markers={markers} autoFit={autoFit} center={center} zoom={zoom} />
+        <CameraControl markers={markers} route={route} autoFit={autoFit} center={center} zoom={zoom} />
       </GoogleMap>
     </div>
   );
@@ -214,12 +214,16 @@ function LoadedMap({ markers, route, className, autoFit = true, onPick, center, 
  * every gesture. 'nearby' markers are left out of the fit - they come and go
  * every few seconds, and the view should hold on the pickup, not on them.
  */
-function CameraControl({ markers, autoFit, center, zoom }: { markers: MapMarker[]; autoFit: boolean; center?: RoutePoint; zoom?: number }) {
+function CameraControl({ markers, route, autoFit, center, zoom }: { markers: MapMarker[]; route?: RoutePoint[]; autoFit: boolean; center?: RoutePoint; zoom?: number }) {
   const map = useMap();
   const [userMoved, setUserMoved] = useState(false);
   const [fitNonce, setFitNonce] = useState(0);
   const fitPoints = markers.filter((m) => m.kind !== 'nearby');
-  const signature = fitPoints.map((m) => `${m.lat.toFixed(5)},${m.lng.toFixed(5)}`).join('|');
+  // The whole road, not only its ends: a route that bends round a lake runs
+  // well outside the box its two pins make, and was drawn off the map.
+  const routePoints = route && route.length >= 2 ? route : [];
+  const signature = fitPoints.map((m) => `${m.lat.toFixed(5)},${m.lng.toFixed(5)}`).join('|')
+    + (routePoints.length ? `|route:${routePoints.length}:${routePoints[0].lat.toFixed(5)},${routePoints[routePoints.length - 1].lng.toFixed(5)}` : '');
 
   useEffect(() => {
     if (!map) return;
@@ -229,13 +233,14 @@ function CameraControl({ markers, autoFit, center, zoom }: { markers: MapMarker[
 
   useEffect(() => {
     if (!map || !autoFit || userMoved || fitPoints.length === 0) return;
-    if (fitPoints.length === 1) {
+    if (fitPoints.length === 1 && routePoints.length === 0) {
       map.panTo(fitPoints[0]);
       if ((map.getZoom() ?? 0) < 14) map.setZoom(15);
       return;
     }
     const bounds = new google.maps.LatLngBounds();
     fitPoints.forEach((p) => bounds.extend(p));
+    routePoints.forEach((p) => bounds.extend(p));
     map.fitBounds(bounds, 48);
     // fitBounds has no maxZoom; two points a few metres apart would
     // otherwise zoom to street-furniture level.
