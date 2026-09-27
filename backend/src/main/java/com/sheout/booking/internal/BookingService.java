@@ -178,6 +178,29 @@ public class BookingService implements BookingApi {
         return serviceArea.covers(pickup.lat(), pickup.lng()) && serviceArea.covers(drop.lat(), drop.lng());
     }
 
+    /**
+     * Everything requestBooking does except publishing BookingRequested - its
+     * checks, the quote and its route, the promotion lookup and the insert -
+     * for a made-up customer. Only for BookingWarmUp, which runs it in a
+     * transaction it rolls back: without the event nothing reaches dispatch,
+     * and without the commit nothing is kept.
+     */
+    BookingSummary warmUpRequestPath(UUID customerId, BookingCategory category, GeoAddress pickup, GeoAddress drop) {
+        withinServiceArea(pickup, drop);
+        hasPhoneNumber(customerId);
+        isCustomerVerified(customerId);
+        findPaymentHoldForCustomer(customerId);
+        bookingRepository.existsByCustomerIdAndTypeAndStatusIn(customerId, category.expectedType(), LIVE_STATUSES);
+        FareQuote quote = fareCalculator.quote(category, pickup, drop);
+        campaigns.previewDiscount(customerId, quote.amount());
+        BookingEntity booking = new BookingEntity(category.expectedType(), category, customerId,
+                GeoAddressEmbeddable.from(pickup), GeoAddressEmbeddable.from(drop), quote.amount());
+        booking.recordQuotedDistance(
+                BigDecimal.valueOf(quote.distanceKm()).setScale(2, java.math.RoundingMode.HALF_UP), quote.routed());
+        bookingRepository.saveAndFlush(booking);
+        return toSummary(booking);
+    }
+
     @Override
     @Transactional
     public Result<BookingSummary, BookingError> requestBooking(RequestBookingCommand command) {

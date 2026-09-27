@@ -441,3 +441,8 @@ management:
   endpoint:
     health:
       show-details: when-authorized
+      # /actuator/health/readiness, the path Render's health check reads: it
+      # stays 503 until the warm-up has run (see platform.WarmUpRunner), so
+      # Render does not send traffic to a cold instance.
+      probes:
+        enabled: true

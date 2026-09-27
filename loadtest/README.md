@@ -93,3 +93,32 @@ is slow: deploy outside busy hours.
 
 Not measured here: Redis (staging's is internal-only) and the server's CPU
 and memory, which are in the service's Metrics tab on Render.
+
+## Cold start, 2026-09-27
+
+Why a burst right after a deploy was slow, and what fixed it. Local backend
+pinned to one CPU core (Render Starter has half of one), restarted cold, then
+straight into the same load: 100 riders booking in the first minute, 40
+partners. Each row is one cold start.
+
+| JVM | startup | 1st-minute p95 | booking p95 | nearby p95 | quote p95 |
+|---|---|---|---|---|---|
+| as deployed before: default heap (128 MB), default compilers | 37 s | 2,722 ms | 7,613 | 7,946 | 4,598 |
+| heap 300 MB | 27 s | 1,610 ms | 4,435 | 2,703 | 1,419 |
+| heap 300 MB + warm-up, 3 rounds | 18 s | 1,592 ms | 6,183 | 2,502 | 2,057 |
+| heap 300 MB + warm-up, 40 rounds (11 s) | 16 s | 1,968 ms | 7,326 | 5,875 | 2,446 |
+| **heap 300 MB + first-tier compiler only (C1)** | 15 s | **373 ms** | **301** | **142** | **220** |
+| same server again, warm (default compilers) | - | 514 ms | 109 | 83 | 123 |
+| same server again, warm (C1 only) | - | 275 ms | 468 | 215 | 269 |
+
+The cold cost is the optimising compiler: until code has run thousands of
+times it is interpreted, and compiling it competes with the requests for
+the one CPU. A warm-up of synthetic requests cannot pay that off - it cannot
+run the real signed-in paths or dispatch without side effects - so it stays
+small and is there for one-off costs (pools, first queries, first router
+call), behind the readiness check. Stopping at the first-tier compiler
+removes the spike, at the cost of slower warm peak on heavy calls, and uses
+~90 MB less memory (peak working set 400 MB against ~490 MB).
+
+Class-data sharing (the archive built in the Dockerfile) then takes startup
+from 13-14 s to 9.5 s on one core.
