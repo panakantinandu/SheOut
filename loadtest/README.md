@@ -122,3 +122,18 @@ removes the spike, at the cost of slower warm peak on heavy calls, and uses
 
 Class-data sharing (the archive built in the Dockerfile) then takes startup
 from 13-14 s to 9.5 s on one core.
+
+Confirmed on staging (Render Starter, half a CPU), 27 Sep 03:22-03:40 UTC,
+straight after deploying 4da0946 - the same 16-minute run as "run 1: cold"
+above:
+
+| | run 1: cold, before | run 3: cold, heap + C1 + CDS + warm-up |
+|---|---|---|
+| errors | 1 of 43,269 | 0 of 44,557 |
+| create booking p95 / p99 | 12,725 / 24,716 ms | 2,100 / 3,502 ms |
+| nearby partners p95 | 22,869 ms | 3,497 ms |
+| p95, minute 1 / minute 2 | 5,444 / 5,667 ms | 1,685 / 566 ms |
+| all requests p95 | 881 ms | 481 ms (warm run 2: 407 ms) |
+| p95, minutes 3-16 | 369-474 ms | 397-569 ms |
+
+Every figure includes the ~255 ms round trip from Kansas City.

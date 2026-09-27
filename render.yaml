@@ -268,9 +268,9 @@ services:
     runtime: docker
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
-    # The same instance as production, so a load test here says what
-    # production can take.
-    plan: starter
+    # Free between load tests. Bump to starter (production's instance) before
+    # running loadtest/ here, so the result says what production can take.
+    plan: free
     region: singapore
     # Readiness, not liveness: it stays 503 until the instance has warmed up
     # (platform.WarmUpRunner), and Render sends traffic only once it is 200.
