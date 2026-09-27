@@ -34,6 +34,9 @@ const PSQL = arg('psql', 'C:/Program Files/PostgreSQL/18/bin/psql.exe');
 // A remote staging database: its external connection URL. Without it, psql
 // connects to a local database as sheout/sheout.
 const DB_URL = arg('db-url', process.env.LOAD_DB_URL ?? '');
+// No database access at all: reuse accounts an earlier run seeded, and clear
+// its leftovers through the API instead.
+const NO_DB = process.argv.includes('--no-db');
 // Redis is sampled for its command rate when reachable; a remote staging
 // Redis is usually internal-only, so --no-redis skips it.
 const USE_REDIS = !process.argv.includes('--no-redis');
@@ -138,6 +141,10 @@ async function setup() {
   const riders = [], partners = [];
   for (let i = 0; i < RIDERS; i++) riders.push({ i, phone: riderPhone(i), ...(await signIn(riderPhone(i), 'CUSTOMER')) });
   for (let i = 0; i < PARTNERS; i++) partners.push({ i, phone: partnerPhone(i), ...(await signIn(partnerPhone(i), 'DRIVER')) });
+  if (NO_DB) {
+    await clearLeftoversThroughApi(riders, partners);
+    return { riders, partners };
+  }
   const rIds = riders.map((r) => `'${r.id}'`).join(','), pIds = partners.map((p) => `'${p.id}'`).join(',');
   // Staging seed: verified, profiled, funded, and no leftovers from a previous run.
   sql(`update bookings set status='CANCELLED', cancelled_at=now() where status in ('REQUESTED','MATCHED','ACCEPTED','IN_PROGRESS') and (customer_id in (${rIds}) or driver_id in (${pIds}))`);
@@ -151,6 +158,42 @@ async function setup() {
   // bookings in the last hour would otherwise count against this one.
   if (USE_REDIS) for (const k of redis('--scan', '--pattern', 'rl:booking-create:*').split(/\r?\n/).filter(Boolean)) redis('DEL', k);
   return { riders, partners };
+}
+
+/**
+ * --no-db: the accounts were seeded by an earlier run (verified, profiled,
+ * funded), so only that run's unfinished trips are cleared - the way the apps
+ * would: partners finish trips under way, riders pay what they owe and
+ * cancel what has not started. Not measured.
+ */
+async function clearLeftoversThroughApi(riders, partners) {
+  const LIVE = ['REQUESTED', 'MATCHED', 'ACCEPTED'];
+  const list = async (who) => {
+    const r = await call('setup', 'GET', '/api/v1/bookings/me', who.token);
+    return Array.isArray(r.body) ? r.body : (r.body?.items ?? []);
+  };
+  let finished = 0, paid = 0, cancelled = 0;
+  for (const p of partners) {
+    for (const b of (await list(p)).filter((x) => x.status === 'IN_PROGRESS')) {
+      await call('setup', 'POST', '/api/v1/dispatch/location', p.token, { lat: b.drop.lat, lng: b.drop.lng });
+      let c = await call('setup', 'POST', `/api/v1/bookings/${b.id}/complete`, p.token);
+      if (c.status === 409) c = await call('setup', 'POST', `/api/v1/bookings/${b.id}/complete`, p.token, { reason: 'CUSTOMER_REQUESTED_DIFFERENT_DROP' });
+      if (c.status === 200) finished++;
+    }
+    await call('setup', 'POST', '/api/v1/users/driver/me/status', p.token, { status: 'OFFLINE' });
+  }
+  for (const r of riders) {
+    for (const b of await list(r)) {
+      if (b.status === 'COMPLETED' && !b.paymentSettledAt) {
+        const pay = await call('setup', 'POST', `/api/v1/payments/bookings/${b.id}/wallet`, r.token);
+        if (pay.status === 200) paid++;
+      } else if (LIVE.includes(b.status)) {
+        const c = await call('setup', 'POST', `/api/v1/bookings/${b.id}/cancel`, r.token, { reason: 'CHANGE_OF_PLANS' });
+        if (c.status === 200) cancelled++;
+      }
+    }
+  }
+  console.log(`setup (no database): finished ${finished} trips under way, paid ${paid}, cancelled ${cancelled}`);
 }
 
 // ---------------------------------------------------------------- partner

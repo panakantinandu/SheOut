@@ -48,7 +48,9 @@ with staging's external database URL from the Render dashboard:
       --code 123456 --rider-prefix +9199999970 --partner-prefix +9199999960 \
       --db-url "$LOAD_DB_URL" --no-redis --minutes 15 --riders 100 --partners 40 --out results/
 
-Staging's Redis is internal-only, so `--no-redis` skips its sampling, and
+Staging's Redis is internal-only, so `--no-redis` skips its sampling. Without
+the database URL, `--no-db` reuses accounts an earlier run seeded and clears
+that run's unfinished trips through the API instead. In both cases
 server memory and CPU come from the service's Metrics tab rather than this
 script. The report measures the network round trip before the run; every
 latency includes it.
@@ -137,3 +139,9 @@ above:
 | p95, minutes 3-16 | 369-474 ms | 397-569 ms |
 
 Every figure includes the ~255 ms round trip from Kansas City.
+
+Run 4, staging redeployed just before (cold), 27 Sep, load 05:36:28-05:52:28
+UTC, `--no-db` (accounts from earlier runs; their leftovers cleared through
+the API): 44,885 requests, 0 errors, p95 415 ms overall, create booking p95
+1,812 ms, nearby partners p95 2,094 ms, first-minute p95 1,020 ms, minutes
+2-16 at 305-501 ms. Peak memory for the window: see the service's Metrics.
