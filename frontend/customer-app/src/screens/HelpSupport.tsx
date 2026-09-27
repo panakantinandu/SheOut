@@ -19,7 +19,7 @@ import { contentApi, supportApi } from '../api/client';
 import type { SupportTicketCategory, SupportTicketStatus } from '../api/types';
 import { useTranslation } from '@sheout/design-system';
 
-const SUPPORT_EMAIL = 'support@sheout.app';
+const SUPPORT_EMAIL = 'support@sheoutride.com';
 
 /**
  * Help & Support: raise an issue, follow the ones already raised, and the
