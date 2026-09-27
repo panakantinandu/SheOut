@@ -199,7 +199,8 @@
     "filteredEmpty": "Your payments are still here. Try a wider date range, a different status, or clear the filters.",
     "emptyTitle": "No payments yet",
     "emptyMessage": "Payments appear here once a trip is completed.",
-    "tripFare": "Trip fare"
+    "tripFare": "Trip fare",
+    "listingFee": "SheOut Seller listing fee"
   },
   "legal": {
     "privacy": "Privacy Policy",
@@ -283,37 +284,12 @@
     "version": "SheOut version {{version}}",
     "languageSaved": "Language changed",
     "languageSavedLocally": "Language changed on this phone. It will be saved to your account next time.",
-    "profile": "My profile"
+    "profile": "My profile",
+    "sell": "Sell on SheOut"
   },
   "seller": {
     "title": "SheOut Seller",
-    "comingSoon": "Coming soon",
-    "headline": "Become a SheOut Seller",
-    "subhead": "Sell what you make or offer from home, to women across the city, delivered by women.",
-    "howItWorks": "How it will work",
-    "steps": {
-      "profile": {
-        "title": "Create Profile",
-        "body": "Set up your shop with your name, photo and what you offer."
-      },
-      "products": {
-        "title": "Add Products",
-        "body": "List products or services with photos and prices."
-      },
-      "orders": {
-        "title": "Receive Orders",
-        "body": "Customers order in the SheOut app and you get notified."
-      },
-      "paid": {
-        "title": "Get Paid",
-        "body": "Payments go straight to your SheOut wallet."
-      },
-      "delivers": {
-        "title": "SheOut Delivers",
-        "body": "Our women partners pick up and deliver to your customers."
-      }
-    },
-    "categoriesTitle": "What you could sell",
+    "categoriesTitle": "Browse by category",
     "categories": {
       "fashion": "Fashion & Saree",
       "beauty": "Beauty Services",
@@ -322,24 +298,170 @@
       "gifts": "Gifts",
       "ornaments": "Ornaments"
     },
-    "notifyMe": "Notify me when this launches",
-    "notifying": "Saving...",
-    "notifyNote": "We only record that you are interested. No shop is created and nothing is shared.",
-    "notifyError": "Could not save that. Please try again.",
-    "joinedTitle": "You're on the list",
-    "joinedBody": "We'll tell you first when SheOut Seller launches.",
-    "onTheList": "You're on the list. We'll tell you first.",
-    "notifyShort": "Notify me",
-    "categoriesSub": "Six ways women already earn from home, soon with SheOut customers and delivery.",
-    "categoryHints": {
-      "fashion": "Sarees, kurtis and more",
-      "beauty": "Salon care at her home",
-      "tailoring": "Stitching and alterations",
-      "mehandi": "Bridal and festive designs",
-      "gifts": "Hampers and handmade gifts",
-      "ornaments": "Jewellery and accessories"
+    "legal": {
+      "applicationNotice": "SheOut is a discovery platform - you handle your own sales, payments, and delivery directly with customers. SheOut charges a flat listing fee only and is not party to your transactions.",
+      "productNotice": "This sale happens directly with the seller. SheOut is not involved in payment or delivery for this listing."
     },
-    "closingTitle": "Be the first to open your shop"
+    "directory": {
+      "headline": "Shop from women near you",
+      "subhead": "Sarees, beauty, tailoring, mehandi, gifts and ornaments from women who sell from home. Contact a seller directly.",
+      "sellOnSheOut": "Sell on SheOut",
+      "manageShop": "Manage your shop",
+      "searchPlaceholder": "Search products or shops",
+      "category": "Category",
+      "anyCategory": "All categories",
+      "loading": "Loading shops",
+      "emptyTitle": "No shops yet",
+      "empty": "Sellers are joining now. Check back soon - or be one of the first.",
+      "noMatchTitle": "Nothing matches",
+      "noMatch": "Try another word, or clear the category.",
+      "notInvolved": "Sales happen directly between you and the seller. SheOut is not involved in payment or delivery."
+    },
+    "product": {
+      "loading": "Loading product",
+      "loadError": "Could not load this product. Please try again.",
+      "goneTitle": "No longer available",
+      "gone": "This product is not in SheOut Seller any more.",
+      "backToDirectory": "Back to SheOut Seller",
+      "photos_one": "{{count}} photo",
+      "photos_other": "{{count}} photos",
+      "priceNote": "Price set by the seller. Confirm it with her before you buy.",
+      "contactWhatsapp": "Contact Seller on WhatsApp",
+      "contactCall": "Call the Seller",
+      "whatsappMessage": "Hi, I saw \"{{title}}\" on SheOut Seller.",
+      "moreFrom": "More from {{name}}"
+    },
+    "apply": {
+      "title": "Sell on SheOut",
+      "subtitle": "Reach women across the city with what you make or offer from home.",
+      "steps": {
+        "one": "Set up your shop and add your products with photos.",
+        "two": "Send it for review. A person at SheOut checks it - free.",
+        "three": "Once approved, pay the one-time listing fee and your shop goes live."
+      },
+      "understood": "I understand that I handle my own sales, payments and delivery, and that SheOut is not part of them.",
+      "submit": "Start my shop"
+    },
+    "form": {
+      "businessName": "Shop name",
+      "businessNamePlaceholder": "e.g. Lakshmi's Sarees",
+      "category": "What you sell",
+      "categoryPlaceholder": "Choose a category",
+      "contactPhone": "Phone number for customers",
+      "whatsapp": "WhatsApp number (optional)",
+      "whatsappPlaceholder": "Leave empty if customers should call",
+      "whatsappHelp": "Customers contact you on WhatsApp if you give a number, otherwise by phone call.",
+      "sameAsPhone": "Same as phone number",
+      "phoneInvalid": "Enter a 10-digit Indian mobile number.",
+      "required": "This is needed.",
+      "saving": "Saving..."
+    },
+    "shop": {
+      "title": "My SheOut shop",
+      "loading": "Loading your shop",
+      "loadError": "Could not load your shop. Please try again.",
+      "actionError": "That didn't work. Please try again.",
+      "applied": "Your shop is started. Add your products next.",
+      "detailsTitle": "Shop details",
+      "edit": "Edit",
+      "save": "Save",
+      "saved": "Shop details saved",
+      "callOn": "Customers call {{number}}",
+      "whatsappOn": "WhatsApp {{number}}",
+      "noWhatsapp": "No WhatsApp number - customers will call",
+      "productsTitle": "Products",
+      "photoUsage": "{{used}} of {{max}} photos used",
+      "noProducts": "No products yet. Add what you sell, with a photo of each.",
+      "productPhotos_one": "{{count}} photo",
+      "productPhotos_other": "{{count}} photos",
+      "hidden": "Hidden",
+      "addProduct": "Add a product",
+      "submitted": "Sent for review"
+    },
+    "status": {
+      "reasonLabel": "Reason:",
+      "DRAFT": {
+        "title": "Your shop is a draft",
+        "badge": "Draft",
+        "body": "Add your products, then send your shop for review. Only you can see it for now."
+      },
+      "SUBMITTED_FOR_REVIEW": {
+        "title": "Waiting for review",
+        "badge": "In review",
+        "body": "A person at SheOut is checking your shop. You'll be told as soon as it's decided. Nothing is charged for this."
+      },
+      "APPROVED_AWAITING_PAYMENT": {
+        "title": "Approved! One step left",
+        "badge": "Approved",
+        "body": "Pay the one-time listing fee of {{amount}} and your shop goes live in SheOut Seller."
+      },
+      "ACTIVE": {
+        "title": "Your shop is live",
+        "badge": "Live",
+        "body": "Customers can find your products and contact you directly. You can keep adding and changing products.",
+        "view": "See SheOut Seller"
+      },
+      "REJECTED": {
+        "title": "Your shop needs changes",
+        "badge": "Changes needed",
+        "body": "Make the changes below, then send it for review again. Nothing has been charged."
+      },
+      "SUSPENDED": {
+        "title": "Your shop is paused",
+        "badge": "Paused",
+        "body": "It is hidden from customers for now.",
+        "contact": "Contact SheOut support"
+      }
+    },
+    "submit": {
+      "title": "Ready to send for review?",
+      "verified": "Your ID is verified",
+      "product": "At least one product with a photo",
+      "verifyNow": "Verify now",
+      "send": "Send for review",
+      "resend": "Send for review again",
+      "free": "Review is free. You pay the {{amount}} listing fee only after your shop is approved."
+    },
+    "fee": {
+      "pay": "Pay {{amount}} listing fee",
+      "opening": "Opening payment...",
+      "oneTime": "One-time fee. SheOut takes nothing from your sales.",
+      "checkoutDescription": "SheOut Seller listing fee",
+      "failed": "The payment did not go through: {{reason}}",
+      "error": "The payment could not be completed. Please try again."
+    },
+    "editor": {
+      "newTitle": "Add a product",
+      "editTitle": "Edit product",
+      "productTitle": "Product or service name",
+      "productTitlePlaceholder": "e.g. Kanjivaram silk saree",
+      "description": "Description",
+      "descriptionPlaceholder": "What it is, sizes or colours, how long it takes, where you deliver...",
+      "price": "Price (₹)",
+      "priceInvalid": "Enter a price in rupees.",
+      "priceHelp": "Shown to customers as your price. Nothing is paid in the app.",
+      "active": "Show this product to customers",
+      "activeHelp": "Untick to hide it without deleting it.",
+      "saveAndAddPhotos": "Save and add photos",
+      "save": "Save changes",
+      "added": "Product added. Now add its photos.",
+      "saved": "Product saved",
+      "saveError": "Could not save this product. Please try again.",
+      "photosTitle": "Photos",
+      "photoCount": "{{used}} of {{max}}",
+      "addPhoto": "Add photos",
+      "removePhoto": "Remove photo",
+      "photoError": "Could not save that photo. Please try again.",
+      "productFull": "This product has the most photos it can have.",
+      "shopFull": "Your shop has used all {{max}} photos. Remove one to add another.",
+      "shopPhotoCount": "{{used}} of {{max}} photos used across your shop.",
+      "delete": "Delete product",
+      "deleteTitle": "Delete this product?",
+      "deleteMessage": "It and its photos are removed for good.",
+      "deleted": "Product deleted",
+      "locked": "Your shop can't be changed right now.",
+      "notFound": "This product was not found."
+    }
   },
   "refer": {
     "headline": "Invite a friend to SheOut",
@@ -397,7 +519,17 @@
     "REFERRAL_CODE_INVALID": "That referral code isn't valid. Check it with the friend who sent it, or leave the field empty.",
     "REFERRAL_OWN_CODE": "You can't use your own referral code.",
     "REFERRAL_ALREADY_APPLIED": "You have already joined with a referral code.",
-    "REFERRAL_NOT_ELIGIBLE": "Referral codes are for new accounts, entered while signing up."
+    "REFERRAL_NOT_ELIGIBLE": "Referral codes are for new accounts, entered while signing up.",
+    "INVALID_PHONE": "Enter a 10-digit Indian mobile number.",
+    "NOT_VERIFIED": "Verify your ID first. Every SheOut Seller is a verified SheOut rider.",
+    "NOTHING_TO_REVIEW": "Add at least one product with a photo before sending your shop for review.",
+    "NOT_EDITABLE": "Your shop can't be changed while it is being reviewed, awaiting payment or paused.",
+    "PRODUCT_LIMIT_REACHED": "You have reached the most products a shop can list.",
+    "PRODUCT_IMAGE_LIMIT_REACHED": "This product already has the most photos it can have.",
+    "SELLER_IMAGE_LIMIT_REACHED": "Your shop has used all its photos. Remove one to add another.",
+    "UNSUPPORTED_PHOTO_TYPE": "That file is not a photo. Choose a JPEG, PNG or WebP photo.",
+    "PHOTO_TOO_LARGE": "That photo is too large. Choose one under 10 MB.",
+    "ALREADY_PAID": "Your listing fee is already paid."
   },
   "picker": {
     "noAddress": "No address found at that point. Move the pin somewhere closer to a road or landmark.",

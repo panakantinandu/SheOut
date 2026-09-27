@@ -4,7 +4,10 @@ import com.sheout.booking.BookingApi;
 import com.sheout.booking.BookingError;
 import com.sheout.booking.BookingStatus;
 import com.sheout.booking.BookingSummary;
+import com.sheout.payments.ListingFeeCheckout;
+import com.sheout.payments.ListingFeePaid;
 import com.sheout.payments.PaymentApi;
+import com.sheout.payments.PaymentPurpose;
 import com.sheout.payments.internal.wallet.RiderWalletService;
 import com.sheout.payments.PaymentCaptured;
 import com.sheout.payments.internal.gateway.GatewayPayment;
@@ -96,6 +99,14 @@ public class PaymentService implements PaymentApi {
         payment.setFailureReason(null);
         if (razorpayPaymentId != null) {
             payment.setRazorpayPaymentId(razorpayPaymentId);
+        }
+        if (payment.getPurpose() == PaymentPurpose.SELLER_LISTING_FEE) {
+            // SheOut's own fee: nobody's share to settle, and nothing that
+            // listens for a trip's capture should hear about it.
+            paymentRepository.save(payment);
+            eventPublisher.publish(new ListingFeePaid(payment.getId(), payment.getPayerAccountId(), payment.getSellerId(),
+                    payment.getAmount(), method, payment.getCapturedAt()));
+            return toSummary(payment);
         }
         // The rider paid the full fare; this records what of it is the
         // partner's, and at what rate. Both numbers stay on the row rather
@@ -373,8 +384,9 @@ public class PaymentService implements PaymentApi {
     }
 
     /**
-     * A page of the caller's payments. bookingIds is their ownership scope,
-     * resolved from the token by the controller.
+     * A page of the caller's payments. bookingIds and payerAccountId are
+     * their ownership scope - her trips, and what she paid that is no trip's
+     * (a listing fee) - both resolved from the token by the controller.
      *
      * This replaces what the customer app was doing: fetching every booking
      * and then one payment request per booking, discarding the ones with no
@@ -383,23 +395,102 @@ public class PaymentService implements PaymentApi {
      */
     public Page<PaymentSummary> pageForBookings(
             Collection<UUID> bookingIds,
+            UUID payerAccountId,
             PaymentStatus status,
             Instant from,
             Instant to,
             BigDecimal minAmount,
             BigDecimal maxAmount,
             Pageable pageable) {
-        if (bookingIds.isEmpty()) {
-            // An empty IN clause is not valid SQL, and a customer with no
-            // bookings has no payments - answer that directly.
+        if (bookingIds.isEmpty() && payerAccountId == null) {
+            // Nothing is hers: answer that directly rather than query.
             return Page.empty(pageable);
         }
         Pageable sorted = org.springframework.data.domain.PageRequest.of(
                 pageable.getPageNumber(), pageable.getPageSize(),
                 org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt"));
         return paymentRepository
-                .findAll(PaymentSpecs.matching(bookingIds, status, from, to, minAmount, maxAmount), sorted)
+                .findAll(PaymentSpecs.matching(bookingIds, payerAccountId, status, from, to, minAmount, maxAmount), sorted)
                 .map(this::toSummary);
+    }
+
+    // ------------------------------------------------------------ listing fees
+
+    /**
+     * The seller's listing fee order. The row is made once per seller; the
+     * Razorpay order is made with no transaction open (it can take seconds),
+     * then written back under the row lock, the same shape as
+     * prepareCheckout for a trip.
+     */
+    @Override
+    public Result<ListingFeeCheckout, PaymentError> startListingFeeCheckout(UUID payerAccountId, UUID sellerId, BigDecimal amount) {
+        if (amount == null || amount.signum() <= 0) {
+            return Result.failure(PaymentError.INVALID_AMOUNT);
+        }
+        PaymentEntity payment = transactions.execute(status -> paymentRepository.findLockedBySellerId(sellerId)
+                .orElseGet(() -> paymentRepository.save(PaymentEntity.listingFee(payerAccountId, sellerId, amount))));
+        if (!payerAccountId.equals(payment.getPayerAccountId())) {
+            return Result.failure(PaymentError.PAYMENT_NOT_FOUND);
+        }
+        if (settled(payment)) {
+            return Result.failure(PaymentError.ALREADY_CAPTURED);
+        }
+        String orderId = payment.getRazorpayOrderId();
+        if (orderId == null) {
+            // The payment row's own id is the receipt: a listing fee has no booking.
+            Result<GatewayOrder, PaymentError> created = paymentGateway.createOrder(payment.getId(), payment.getAmount());
+            if (created.isFailure()) {
+                return Result.failure(created.error());
+            }
+            orderId = created.value().orderId();
+            String newOrderId = orderId;
+            transactions.executeWithoutResult(status -> paymentRepository.findLockedBySellerId(sellerId).ifPresent(p -> {
+                p.setRazorpayOrderId(newOrderId);
+                paymentRepository.save(p);
+            }));
+        }
+        if (payment.getStatus() == PaymentStatus.FAILED) {
+            // A declined card is not the end of it: she tries again on the same order.
+            transactions.executeWithoutResult(status -> paymentRepository.findLockedBySellerId(sellerId).ifPresent(p -> {
+                p.setStatus(PaymentStatus.PENDING);
+                p.setFailureReason(null);
+                paymentRepository.save(p);
+            }));
+        }
+        long paise = payment.getAmount().multiply(BigDecimal.valueOf(100)).setScale(0, java.math.RoundingMode.HALF_UP).longValueExact();
+        return Result.success(new ListingFeeCheckout(payment.getId(), paymentGateway.publicKeyId(), orderId, paise, "INR"));
+    }
+
+    @Override
+    public Result<PaymentSummary, PaymentError> confirmListingFeeCheckout(UUID payerAccountId, UUID sellerId, String orderId,
+                                                                           String razorpayPaymentId, String signature) {
+        Optional<PaymentEntity> found = paymentRepository.findBySellerId(sellerId)
+                .filter(p -> payerAccountId.equals(p.getPayerAccountId()))
+                .filter(p -> orderId != null && orderId.equals(p.getRazorpayOrderId()));
+        if (found.isEmpty()) {
+            return Result.failure(PaymentError.PAYMENT_NOT_FOUND);
+        }
+        if (!paymentGateway.verifyCheckoutSignature(orderId, razorpayPaymentId, signature)) {
+            log.warn("Checkout signature did not verify for seller {}'s listing fee", sellerId);
+            return Result.failure(PaymentError.SIGNATURE_INVALID);
+        }
+        Result<GatewayPayment, PaymentError> confirmed =
+                paymentGateway.confirmCapture(razorpayPaymentId, orderId, found.get().getAmount());
+        if (confirmed.isFailure()) {
+            return Result.failure(confirmed.error());
+        }
+        return Result.success(transactions.execute(status -> {
+            PaymentEntity payment = paymentRepository.findLockedBySellerId(sellerId).orElseThrow();
+            return settled(payment)
+                    ? toSummary(payment)
+                    : markCaptured(payment, confirmed.value().method(), confirmed.value().paymentId());
+        }));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<PaymentSummary> listingFeeFor(UUID sellerId) {
+        return paymentRepository.findBySellerId(sellerId).map(this::toSummary);
     }
 
     private PaymentSummary toSummary(PaymentEntity payment) {
@@ -417,7 +508,9 @@ public class PaymentService implements PaymentApi {
                 payment.getCreatedAt(),
                 payment.getUpdatedAt(),
                 payment.getCapturedAt(),
-                payment.getFareAmount()
+                payment.getFareAmount(),
+                payment.getPurpose(),
+                payment.getSellerId()
         );
     }
 }

@@ -162,12 +162,14 @@ export function PaymentMethods() {
         {list.items.map((payment) => (
           <Card key={payment.id} className="flex items-center justify-between">
             <div className="min-w-0 flex-1">
-              {/* Before capture the method is a placeholder, not a choice she made. */}
+              {/* What it was for first - a trip, or her SheOut Seller listing fee. */}
               <p className="truncate font-medium text-text-primary">
-                {payment.status === 'CAPTURED' || payment.status === 'REFUNDED'
-                  ? paymentMethodLabel(payment.method)
-                  : t('payments.tripFare')}
+                {payment.purpose === 'SELLER_LISTING_FEE' ? t('payments.listingFee') : t('payments.tripFare')}
               </p>
+              {/* Before capture the method is a placeholder, not a choice she made. */}
+              {(payment.status === 'CAPTURED' || payment.status === 'REFUNDED') && (
+                <p className="truncate text-xs text-text-secondary">{paymentMethodLabel(payment.method)}</p>
+              )}
               <p className="text-xs text-text-secondary">{new Date(payment.createdAt).toLocaleString()}</p>
             </div>
             <div className="flex shrink-0 items-center gap-3">

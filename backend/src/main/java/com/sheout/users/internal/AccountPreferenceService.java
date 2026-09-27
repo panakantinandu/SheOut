@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -62,6 +63,12 @@ public class AccountPreferenceService implements FeatureWaitlistApi, AccountLang
     @Override
     public long countInterested(WaitlistFeature feature) {
         return waitlist.countByFeature(feature);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<UUID> interestedAccountIds(WaitlistFeature feature) {
+        return waitlist.accountIdsByFeature(feature);
     }
 
     /** Called when the account is deleted - neither record is worth keeping. */

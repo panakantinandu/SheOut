@@ -1,4 +1,4 @@
-import { FileText, Gift, Info, Languages, LifeBuoy, Lock, LogOut, Moon, Star, UserRound } from 'lucide-react';
+import { FileText, Gift, Info, Languages, LifeBuoy, Lock, LogOut, Moon, Star, Store, UserRound } from 'lucide-react';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -123,6 +123,7 @@ export function AppDrawerProvider({ children }: { children: ReactNode }) {
                 },
               },
               { key: 'refer', label: t('drawer.refer'), icon: <Gift />, onClick: () => go('/refer') },
+              { key: 'sell', label: t('drawer.sell'), icon: <Store />, onClick: () => go('/seller/manage') },
               {
                 key: 'rate',
                 label: t('drawer.rate'),

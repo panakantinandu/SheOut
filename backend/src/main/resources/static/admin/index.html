@@ -430,6 +430,7 @@
   .kv { display: grid; grid-template-columns: 132px 1fr; gap: 7px 14px; font-size: 13px; }
   .kv dt { color: var(--muted); }
   .kv dd { margin: 0; font-weight: 550; }
+  .pre-wrap { white-space: pre-wrap; }
 
   .check {
     border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-top: 12px;
@@ -719,6 +720,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 12l2 2 4-4"/><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
         Verification Queue <span class="count" id="cQueue">–</span>
       </button>
+      <button data-tab="sellers" aria-current="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9l1.5-5h15L21 9"/><path d="M3 9h18v2a3 3 0 01-6 0 3 3 0 01-6 0 3 3 0 01-6 0z"/><path d="M5 13v7h14v-7"/><path d="M10 20v-4h4v4"/></svg>
+        Sellers <span class="count" id="cSellers">–</span>
+      </button>
       <button data-tab="sos" aria-current="false">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L14.7 3.9a2 2 0 00-3.4 0z"/></svg>
         SOS Alerts <span class="count" id="cSos">–</span>
@@ -874,6 +879,9 @@ const STATUS_TEXT = {
   CAPTURED: 'Paid', FAILED: 'Failed', REFUNDED: 'Refunded', RESOLVED: 'Resolved',
   // Support tickets. IN_PROGRESS and RESOLVED already read correctly above.
   OPEN: 'Open', CLOSED: 'Closed',
+  // SheOut Seller shops. REJECTED already reads correctly above.
+  DRAFT: 'Draft', SUBMITTED_FOR_REVIEW: 'Awaiting review', APPROVED_AWAITING_PAYMENT: 'Approved - fee due',
+  ACTIVE: 'Live', SUSPENDED: 'Suspended',
 };
 const STATUS_TONE = {
   UNDER_REVIEW: 'amber', PENDING: 'amber', REQUESTED: 'amber', MATCHED: 'amber',
@@ -883,7 +891,23 @@ const STATUS_TONE = {
   // Amber, not red: this is the platform falling short, not misconduct.
   NO_DRIVERS_AVAILABLE: 'amber',
   OPEN: 'amber', CLOSED: 'grey',
+  DRAFT: 'grey', SUBMITTED_FOR_REVIEW: 'amber', APPROVED_AWAITING_PAYMENT: 'amber', ACTIVE: 'green', SUSPENDED: 'red',
 };
+const SELLER_CATEGORY_TEXT = {
+  FASHION_SAREE: 'Fashion & Saree', BEAUTY_SERVICES: 'Beauty Services', TAILORING: 'Tailoring',
+  MEHANDI: 'Mehandi', GIFTS: 'Gifts', ORNAMENTS: 'Ornaments',
+};
+/**
+ * A listing fee in its own words. A payment's PENDING is "Not yet
+ * submitted" in the verification vocabulary above, which is wrong for money:
+ * an order exists, she has not finished paying.
+ */
+function feeBadge(fee) {
+  if (!fee || !fee.status) return '<span class="badge b-grey">Not started</span>';
+  if (fee.status === 'CAPTURED') return '<span class="badge b-green">Paid</span>';
+  if (fee.status === 'FAILED') return '<span class="badge b-red">Failed</span>';
+  return '<span class="badge b-amber">Started, not paid</span>';
+}
 const TICKET_CATEGORY_TEXT = {
   SAFETY_CONCERN: 'Safety concern', PAYMENT_DISPUTE: 'Payment dispute',
   DRIVER_OR_CUSTOMER_BEHAVIOR: 'Behaviour', CANCELLATION_DISPUTE: 'Cancellation dispute',
@@ -1183,6 +1207,8 @@ const PAGE_SIZE = 25;
  * date range that means something in one table means nothing in the other.
  */
 const filterState = {};
+// Sellers opens on the review queue - the list somebody is waiting on.
+filterState.sellers = { page: 0, status: 'SUBMITTED_FOR_REVIEW' };
 
 function stateFor(name) {
   if (!filterState[name]) filterState[name] = { page: 0 };
@@ -1323,6 +1349,56 @@ const VIEWS = {
       return '—';
     },
     onRowClick: r => openDriver(r),
+  },
+
+  /**
+   * SheOut Seller shops, in the same shape as the verification queue: it
+   * opens on what is waiting for a person, and a row opens everything
+   * needed to decide - every product and photo - with the decision itself.
+   * Reviewing is free for her; approving is what asks her for the fee.
+   * Suspending a live shop takes it out of the directory at once.
+   */
+  sellers: {
+    title: 'Sellers',
+    desc: 'SheOut Seller shops. Review a submitted shop - every product and photo - and approve it or send it back with a reason. Approving asks her for the one-time listing fee; she appears in the directory once it is paid. A live shop can be suspended at once for complaints or misuse. SheOut is not party to any sale.',
+    cardTitle: 'Shops',
+    hint: 'Select a row to review the shop and decide',
+    empty: { icon: ICON_EMPTY_QUEUE, title: 'No shops here', text: 'Shops sent for review appear here. Set the status to Any to see every shop.' },
+    emptyFiltered: { icon: ICON_EMPTY_SEARCH, title: 'No shops match', text: 'Clear the search, or set the status to Any status.' },
+    paged: true,
+    filters: [
+      { key: 'q', kind: 'text', label: 'Search', placeholder: 'Shop name or contact number…', wide: true },
+      { key: 'status', kind: 'select', label: 'Status', any: 'Any status', options: () =>
+          ['SUBMITTED_FOR_REVIEW', 'APPROVED_AWAITING_PAYMENT', 'ACTIVE', 'SUSPENDED', 'REJECTED', 'DRAFT']
+            .map(value => ({ value, label: STATUS_TEXT[value] })) },
+    ],
+    columns: [
+      { key: 'shop', label: 'Shop', sort: r => (r.seller.businessName || '').toLowerCase() },
+      { key: 'category', label: 'Category', sort: r => r.seller.category || '' },
+      { key: 'owner', label: 'Account', sort: r => r.ownerPhone || '' },
+      { key: 'status', label: 'Status', sort: r => r.seller.status || '' },
+      { key: 'content', label: 'Products', sort: r => -(r.seller.productCount || 0) },
+      { key: 'fee', label: 'Listing fee', sort: r => (r.seller.listingFee && r.seller.listingFee.status) || '' },
+      { key: 'waiting', label: 'Submitted', sort: r => -new Date(r.seller.submittedAt || 0).getTime() },
+    ],
+    load: (state) => api(`/admin/sellers${filterQuery(state, { pageSize: PAGE_SIZE })}`),
+    cell: (r, key) => {
+      const s = r.seller;
+      if (key === 'shop') return `<span class="strong">${esc(s.businessName)}</span>${s.editedLiveAt ? '<div class="subtle">Changed since approval</div>' : ''}`;
+      if (key === 'category') return esc(SELLER_CATEGORY_TEXT[s.category] || humanize(s.category));
+      if (key === 'owner') return `<span class="num">${esc(r.ownerPhone || '—')}</span>${r.ownerBlocked ? ' <span class="badge b-blocked">Blocked</span>' : ''}`;
+      if (key === 'status') return badge(s.status);
+      if (key === 'content') return `${s.productCount} <span class="subtle">· ${s.imageCount} photos</span>`;
+      if (key === 'fee') return feeBadge(s.listingFee) + `<div class="subtle">${rupees(s.listingFee && s.listingFee.amount)}</div>`;
+      if (key === 'waiting') {
+        if (!s.submittedAt) return '<span class="subtle">Not submitted</span>';
+        if (s.status !== 'SUBMITTED_FOR_REVIEW') return `<span class="subtle">${time(s.submittedAt)}</span>`;
+        const w = waited(s.submittedAt);
+        return `<span class="wait ${w.cls}">${w.text}</span>`;
+      }
+      return '—';
+    },
+    onRowClick: r => openSeller(r),
   },
 
   sos: {
@@ -2081,6 +2157,119 @@ function renderLiveSelfie(root, live) {
   renderDocument(framesBox.querySelector('#framesDoc'), live.livenessFramesUrl, 'Frames taken during the liveness prompts');
 }
 
+/**
+ * A shop, whole: who she is, how customers reach her, where her fee
+ * stands, and every product with every photo - then the decision. What a
+ * reviewer is checking is that each listing is what it says, priced, and
+ * something SheOut is willing to show; SheOut takes no part in the sale.
+ */
+async function openSeller(r) {
+  openModal(`<div class="modal-head"><h3>${esc(r.seller.businessName)}</h3><p>Loading the shop…</p></div>
+    <div class="modal-body"><div class="skel doc-skel" aria-label="Loading"></div></div>`, { wide: true });
+  let detail;
+  try {
+    detail = await api(`/admin/sellers/${r.seller.id}`);
+  } catch (err) {
+    if (err.message === 'unauthorized') return;
+    closeModal();
+    toast('bad', 'Could not open that shop', err.message);
+    return;
+  }
+  const s = detail.row.seller;
+  const fee = s.listingFee || {};
+  const whatsapp = s.whatsappNumber ? `+91 ${esc(s.whatsappNumber)}` : '<span class="subtle">None - customers are offered a call</span>';
+  const products = detail.products.map(p => `
+    <div class="check">
+      <div class="top"><h4>${esc(p.title)}</h4>${p.active ? '' : '<span class="badge b-grey">Hidden by her</span>'}<span class="num strong">${rupees(p.displayPrice)}</span></div>
+      <p class="pre-wrap">${esc(p.description)}</p>
+      ${p.images.length
+        ? `<div class="docs">${p.images.map(i => `<div class="doc">${i.url ? `<a href="${escValue(i.url)}" target="_blank" rel="noopener"><img src="${escValue(i.url)}" alt="${escValue(p.title)}" loading="lazy"></a>` : '<div class="fallback">Photo not viewable here</div>'}</div>`).join('')}</div>`
+        : '<p class="subtle">No photos.</p>'}
+    </div>`).join('');
+  const actions = s.status === 'SUBMITTED_FOR_REVIEW'
+    ? `<button class="btn btn-reject" data-seller="reject" type="button">Send back with a reason</button>
+       <button class="btn btn-approve" data-seller="approve" type="button">Approve</button>`
+    : s.status === 'ACTIVE'
+      ? '<button class="btn btn-reject" data-seller="suspend" type="button">Suspend shop</button>'
+      : s.status === 'SUSPENDED' && fee.status === 'CAPTURED'
+        ? '<button class="btn btn-approve" data-seller="reinstate" type="button">Reinstate</button>'
+        : '';
+  openModal(`
+    <div class="modal-head">
+      <h3>${esc(s.businessName)} ${badge(s.status)}</h3>
+      <p>${esc(SELLER_CATEGORY_TEXT[s.category] || humanize(s.category))} &middot; ${s.productCount} products &middot; ${s.imageCount} photos</p>
+    </div>
+    <div class="modal-body">
+      <dl class="kv">
+        <dt>Account</dt><dd><span class="num">${esc(detail.row.ownerPhone || '—')}</span>${detail.row.ownerBlocked ? ' <span class="badge b-blocked">Blocked</span>' : ''}</dd>
+        <dt>Contact number</dt><dd class="num">+91 ${esc(s.contactPhone)}</dd>
+        <dt>WhatsApp</dt><dd>${whatsapp}</dd>
+        <dt>Submitted</dt><dd>${s.submittedAt ? time(s.submittedAt) : '<span class="subtle">Not yet</span>'}</dd>
+        <dt>Listing fee</dt><dd>${feeBadge(fee)} ${rupees(fee.amount)}${fee.paidAt ? ` <span class="subtle">paid ${esc(time(fee.paidAt))}${fee.method ? ` by ${esc(payMethodText(fee.method))}` : ''}</span>` : ''}</dd>
+        ${s.activatedAt ? `<dt>Live since</dt><dd>${time(s.activatedAt)}</dd>` : ''}
+        ${s.editedLiveAt ? `<dt>Changed since approval</dt><dd>${time(s.editedLiveAt)} <span class="subtle">- read the products below again</span></dd>` : ''}
+        ${s.rejectionReason && s.status === 'REJECTED' ? `<dt>Sent back because</dt><dd>“${esc(s.rejectionReason)}”</dd>` : ''}
+        ${s.suspensionReason ? `<dt>Suspended because</dt><dd>“${esc(s.suspensionReason)}”</dd>` : ''}
+      </dl>
+      <label>Products - check each is what it says, priced, and fit to show</label>
+      ${products || '<p class="subtle">No products.</p>'}
+    </div>
+    <div class="modal-foot"><button class="btn" data-cancel type="button">Close</button>${actions}</div>
+  `, { wide: true });
+
+  const root = $('modalRoot');
+  root.querySelector('[data-cancel]').addEventListener('click', closeModal);
+  root.querySelectorAll('[data-seller]').forEach(b => b.addEventListener('click', () => decideSeller(s, b.dataset.seller)));
+}
+
+async function decideSeller(s, action) {
+  const name = s.businessName;
+  const ask = {
+    approve: {
+      title: `Approve ${name}?`,
+      message: `She is asked to pay the one-time listing fee of ${rupees(s.listingFee && s.listingFee.amount)}, and goes into the directory once it is paid. Approve only if every product is what it says and fit to show.`,
+      confirmLabel: 'Approve', tone: 'approve',
+    },
+    reject: {
+      title: `Send ${name} back?`,
+      message: 'She can change her shop and send it again. Nothing has been charged.',
+      confirmLabel: 'Send back', tone: 'reject', withReason: true, reasonRequired: true,
+      reasonLabel: 'What should she change? (required - she is shown this)',
+      reasonPlaceholder: 'e.g. The second saree photo is blurred, and the price for the blouse is missing',
+      reasonMaxLength: 500,
+    },
+    suspend: {
+      title: `Suspend ${name}?`,
+      message: 'Her shop leaves the directory at once and she cannot change it. Her listing fee is not refunded by this. You can reinstate her later.',
+      confirmLabel: 'Suspend shop', tone: 'reject', withReason: true, reasonRequired: true,
+      reasonLabel: 'Why? (required - she is shown this, and it is kept for audit)',
+      reasonPlaceholder: 'e.g. Three customers reported items not as pictured',
+      reasonMaxLength: 500,
+    },
+    reinstate: {
+      title: `Reinstate ${name}?`,
+      message: 'Her shop goes back into the directory now. She has already paid.',
+      confirmLabel: 'Reinstate', tone: 'approve',
+    },
+  }[action];
+  const ok = await confirmAction(ask);
+  if (!ok) return;
+  try {
+    await api(`/admin/sellers/${s.id}/${action}`, {
+      method: 'POST',
+      body: JSON.stringify(ask.withReason ? { reason: ok.reason } : {}),
+    });
+    toast('ok', { approve: 'Shop approved', reject: 'Shop sent back', suspend: 'Shop suspended', reinstate: 'Shop reinstated' }[action],
+      { approve: 'She has been asked to pay the listing fee.', reject: 'She has been told what to change.',
+        suspend: 'It is out of the directory.', reinstate: 'It is back in the directory.' }[action]);
+    closeModal();
+    render();
+  } catch (err) {
+    if (err.message === 'unauthorized') return;
+    toast('bad', 'Could not do that', err.message);
+  }
+}
+
 function openDriver(r) {
   const w = waited(submittedAt(r));
   openModal(`
@@ -2501,7 +2690,7 @@ function compareContentKeys(a, b) {
  * Painted once when the section opens, not on every render: filtering or
  * paging the history re-renders, and must not wipe a message half-written.
  */
-const AUDIENCE_TEXT = { ALL_CUSTOMERS: 'All riders', ALL_DRIVERS: 'All partners', BOTH: 'Everyone' };
+const AUDIENCE_TEXT = { ALL_CUSTOMERS: 'All riders', ALL_DRIVERS: 'All partners', BOTH: 'Everyone', SELLER_WAITLIST: 'SheOut Seller waitlist ("Notify me")' };
 
 function paintCompose(host) {
   host.innerHTML = `
@@ -2534,13 +2723,21 @@ function paintCompose(host) {
     }
     const audience = $('annAudience').value;
     const sendSms = $('annSms').checked;
-    const who = { ALL_CUSTOMERS: 'all riders', ALL_DRIVERS: 'all partners', BOTH: 'everyone' }[audience];
+    let who = { ALL_CUSTOMERS: 'all riders', ALL_DRIVERS: 'all partners', BOTH: 'everyone' }[audience];
+    if (audience === 'SELLER_WAITLIST') {
+      // Named with its size, so nobody sends to "the waitlist" thinking it is a handful.
+      const counts = await api('/admin/waitlist').catch(() => []);
+      const n = ((counts || []).find(c => c.feature === 'SELLER') || {}).interested;
+      who = n === undefined ? 'the SheOut Seller waitlist' : `the ${n} ${n === 1 ? 'person' : 'people'} on the SheOut Seller waitlist`;
+    }
     // Confirmed like every other consequential action here: this reaches
     // every phone at once and cannot be taken back. It was the browser's own
     // confirm() box, the one place in the console that did not match.
     const ok = await confirmAction({
       title: `Send "${title}" to ${who}?`,
-      message: `It goes out now by push and email${sendSms ? ', and by SMS - charged per message' : ''}, and cannot be taken back.`,
+      message: audience === 'SELLER_WAITLIST'
+        ? 'Each of them gets it in their app inbox and by push, or by email where push does not reach them. It cannot be taken back.'
+        : `It goes out now by push and email${sendSms ? ', and by SMS - charged per message' : ''}, and cannot be taken back.`,
       confirmLabel: 'Send announcement',
       tone: sendSms ? 'reject' : 'primary',
     });
@@ -2548,7 +2745,9 @@ function paintCompose(host) {
     $('annSend').disabled = true;
     try {
       const result = await api('/admin/announcements', { method: 'POST', body: JSON.stringify({ title, body, audience, sendSms }) });
-      toast('ok', 'Announcement sent', `Push ${result.pushAccepted > 0 ? 'sent' : 'not sent'} · ${result.emailsSent} emails`);
+      toast('ok', 'Announcement sent', result.audience === 'SELLER_WAITLIST'
+        ? `Delivered to ${result.pushAccepted} ${result.pushAccepted === 1 ? 'person' : 'people'} on the waitlist`
+        : `Push ${result.pushAccepted > 0 ? 'sent' : 'not sent'} · ${result.emailsSent} emails`);
       $('annTitle').value = '';
       $('annBody').value = '';
       $('annSms').checked = false;
@@ -2571,6 +2770,7 @@ function paintCompose(host) {
 function audienceBadge(audience) {
   if (audience === 'ALL_CUSTOMERS') return '<span class="badge b-role-customer">All riders</span>';
   if (audience === 'ALL_DRIVERS') return '<span class="badge b-role-driver">All partners</span>';
+  if (audience === 'SELLER_WAITLIST') return '<span class="badge b-amber">Seller waitlist</span>';
   return '<span class="badge b-grey">Everyone</span>';
 }
 
@@ -2909,6 +3109,8 @@ async function loadOverview() {
     q('/admin/trust/review-queue'),
     q('/admin/campaigns'),
   ]);
+  // The Sellers badge only - it is not a tile on the overview.
+  q('/admin/sellers/awaiting-count').then(n => { if (n !== null) $('cSellers').textContent = n; });
   return { queue, sos, support, payouts, bookingsToday, completedToday, noPartnerToday, routes, trust, campaigns };
 }
 
@@ -3221,6 +3423,7 @@ async function render(opts = {}) {
     if (counts[tab]) $(counts[tab]).textContent = paged ? paged.totalItems : rows.length;
     // Only the waiting list sets the Payouts badge; paid history is not work to do.
     if (tab === 'payouts' && state.status !== 'PAID') $('cPayouts').textContent = paged.totalItems;
+    if (tab === 'sellers' && state.status === 'SUBMITTED_FOR_REVIEW' && !state.q) $('cSellers').textContent = paged.totalItems;
   } catch (err) {
     if (err.message === 'unauthorized' || isStale()) return;
     paintPager(null);

@@ -20,6 +20,7 @@ record DeliveryPolicy(boolean push, boolean emailFallback, boolean smsFallback, 
     static final DeliveryPolicy INBOX_ONLY = new DeliveryPolicy(false, false, false, false);
     static final DeliveryPolicy PUSH_ONLY = new DeliveryPolicy(true, false, false, false);
     static final DeliveryPolicy PUSH_THEN_SMS = new DeliveryPolicy(true, false, true, false);
+    static final DeliveryPolicy PUSH_THEN_EMAIL = new DeliveryPolicy(true, true, false, false);
     static final DeliveryPolicy PUSH_THEN_EMAIL_THEN_SMS = new DeliveryPolicy(true, true, true, false);
     static final DeliveryPolicy EMAIL = new DeliveryPolicy(false, false, false, true);
     /** Both, every time - for the few things somebody must not miss. */
@@ -35,6 +36,9 @@ record DeliveryPolicy(boolean push, boolean emailFallback, boolean smsFallback, 
             case INCENTIVE_EARNED -> PUSH_ONLY;
             // Good news too, and nothing she must act on: not worth a text either.
             case REFERRAL_JOINED, REFERRAL_REWARDED -> PUSH_ONLY;
+            // A decision about her shop, or a launch she asked to hear
+            // about: worth an email if push did not reach her, not a paid text.
+            case SELLER_STATUS, ANNOUNCEMENT -> PUSH_THEN_EMAIL;
             // Mid-trip, both of them in the app, and a question that is
             // stale in two minutes: a text arriving later would only confuse.
             case DESTINATION_CHANGE_REQUESTED, DESTINATION_CHANGED, DESTINATION_CHANGE_DECLINED -> PUSH_ONLY;

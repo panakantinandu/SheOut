@@ -21,13 +21,13 @@ export function AppShell({ children }: { children: ReactNode }) {
     { key: 'bookings', label: t('nav.bookings'), icon: <Calendar />, path: '/bookings' },
     { key: 'sos', label: t('nav.sos'), icon: <Siren />, path: '/sos', raised: true },
     { key: 'wallet', label: t('nav.wallet'), icon: <Wallet />, path: '/wallet' },
-    // SheOut Seller is a tab, not a drawer item, so the marketplace to come
-    // is one tap away. It took Profile's slot rather than adding a sixth: six
-    // tabs around the raised SOS leave each under 52 px on a 360 px phone and
+    // SheOut Seller is a tab, not a drawer item, so the directory is one tap
+    // away. It took Profile's slot rather than adding a sixth: six tabs
+    // around the raised SOS leave each under 52 px on a 360 px phone and
     // truncate the Hindi and Telugu labels. Profile - account settings,
     // visited rarely - is at the top of the drawer, and her photo there
     // opens it.
-    { key: 'seller', label: t('nav.seller'), icon: <Store />, path: '/seller', badge: t('nav.soon') },
+    { key: 'seller', label: t('nav.seller'), icon: <Store />, path: '/seller' },
   ];
 
   return (
@@ -42,7 +42,6 @@ export function AppShell({ children }: { children: ReactNode }) {
           items={items.map((item) => ({
             key: item.key,
             label: item.label,
-            badge: item.badge,
             icon: item.icon,
             raised: item.raised,
             active: location.pathname === item.path,

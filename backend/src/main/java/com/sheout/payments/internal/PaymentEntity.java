@@ -1,6 +1,7 @@
 package com.sheout.payments.internal;
 
 import com.sheout.payments.PaymentMethod;
+import com.sheout.payments.PaymentPurpose;
 import com.sheout.payments.PaymentStatus;
 import com.sheout.sharedkernel.BaseEntity;
 import jakarta.persistence.Column;
@@ -26,8 +27,22 @@ import java.util.UUID;
 @Table(name = "payments")
 public class PaymentEntity extends BaseEntity {
 
-    @Column(nullable = false, unique = true)
+    /** The trip this pays for. Null for a seller's listing fee, which is no trip's. */
+    @Column(unique = true)
     private UUID bookingId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 30)
+    private PaymentPurpose purpose = PaymentPurpose.RIDE_FARE;
+
+    /**
+     * Who pays a listing fee, and the seller profile it is for. Both null for
+     * a trip fare, whose payer is the rider on its booking.
+     */
+    private UUID payerAccountId;
+
+    @Column(unique = true)
+    private UUID sellerId;
 
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal amount;
@@ -74,6 +89,28 @@ public class PaymentEntity extends BaseEntity {
         this.amount = amount;
         this.method = method;
         this.status = status;
+    }
+
+    /** A seller's listing fee: no booking, nobody to settle a share with. */
+    public static PaymentEntity listingFee(UUID payerAccountId, UUID sellerId, BigDecimal amount) {
+        PaymentEntity payment = new PaymentEntity(null, amount, PaymentMethod.UPI, PaymentStatus.PENDING);
+        payment.purpose = PaymentPurpose.SELLER_LISTING_FEE;
+        payment.payerAccountId = payerAccountId;
+        payment.sellerId = sellerId;
+        payment.fareAmount = amount;
+        return payment;
+    }
+
+    public PaymentPurpose getPurpose() {
+        return purpose;
+    }
+
+    public UUID getPayerAccountId() {
+        return payerAccountId;
+    }
+
+    public UUID getSellerId() {
+        return sellerId;
     }
 
     public UUID getBookingId() {

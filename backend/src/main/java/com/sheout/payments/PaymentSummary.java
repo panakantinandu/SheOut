@@ -40,6 +40,10 @@ public record PaymentSummary(
          * part of it: amount is what the rider was charged, this is what the
          * partner's share and the platform fee were worked out from.
          */
-        BigDecimal fareAmount
+        BigDecimal fareAmount,
+        /** A trip fare or a seller's listing fee - see PaymentPurpose. bookingId is null for a listing fee. */
+        PaymentPurpose purpose,
+        /** The seller profile a listing fee is for; null for a trip fare. */
+        UUID sellerId
 ) {
 }

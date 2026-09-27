@@ -38,6 +38,12 @@ import type {
   PagedResult,
   CheckoutDetails,
   CheckoutResult,
+  ListingCard,
+  ProductDetail,
+  ProductInput,
+  SellerCategory,
+  SellerDetailsInput,
+  SellerShop,
   PaymentHold,
   RiderWallet,
   RiderWalletEntry,
@@ -891,8 +897,77 @@ export const referralsApi = {
     return request('/api/v1/referrals/me', { headers: installHeader() });
   },
 
-  /** A new account enters a friend's code while signing up. 204 on success. */
+  /** A new account enters a friend's code while signing up. Says who invited her, for the congratulations. */
   apply(code: string): Promise<ReferralWelcomeDetails> {
     return request('/api/v1/referrals/apply', { method: 'POST', body: { code }, headers: installHeader() });
+  },
+};
+
+/**
+ * SheOut Seller: the directory every rider can browse, and her own shop.
+ * SheOut charges a seller one listing fee and is not part of any sale, so
+ * there is nothing here to buy - only to find and contact.
+ */
+export const marketplaceApi = {
+  listings(params: { category?: SellerCategory; q?: string; page?: number; pageSize?: number }): Promise<PagedResult<ListingCard>> {
+    return request(`/api/v1/marketplace/listings${buildQuery(params)}`);
+  },
+
+  product(productId: string): Promise<ProductDetail> {
+    return request(`/api/v1/marketplace/products/${productId}`);
+  },
+
+  /** Her shop, or null when she has not applied. */
+  async myShop(): Promise<SellerShop | null> {
+    try {
+      return await request<SellerShop>('/api/v1/marketplace/seller/me');
+    } catch (err) {
+      if (err instanceof ApiError && err.body?.error === 'NOT_A_SELLER') return null;
+      throw err;
+    }
+  },
+
+  apply(details: SellerDetailsInput): Promise<SellerShop> {
+    return request('/api/v1/marketplace/seller/me', { method: 'POST', body: details });
+  },
+
+  updateShop(details: SellerDetailsInput): Promise<SellerShop> {
+    return request('/api/v1/marketplace/seller/me', { method: 'PUT', body: details });
+  },
+
+  submit(): Promise<SellerShop> {
+    return request('/api/v1/marketplace/seller/me/submit', { method: 'POST' });
+  },
+
+  addProduct(product: ProductInput): Promise<SellerShop> {
+    return request('/api/v1/marketplace/seller/me/products', { method: 'POST', body: product });
+  },
+
+  updateProduct(productId: string, product: ProductInput): Promise<SellerShop> {
+    return request(`/api/v1/marketplace/seller/me/products/${productId}`, { method: 'PUT', body: product });
+  },
+
+  deleteProduct(productId: string): Promise<SellerShop> {
+    return request(`/api/v1/marketplace/seller/me/products/${productId}`, { method: 'DELETE' });
+  },
+
+  addPhoto(productId: string, file: File): Promise<SellerShop> {
+    const form = new FormData();
+    form.append('file', file);
+    return request(`/api/v1/marketplace/seller/me/products/${productId}/images`, { method: 'POST', body: form });
+  },
+
+  deletePhoto(productId: string, imageId: string): Promise<SellerShop> {
+    return request(`/api/v1/marketplace/seller/me/products/${productId}/images/${imageId}`, { method: 'DELETE' });
+  },
+
+  /** The Razorpay order for her listing fee, once she is approved. */
+  startListingFee(): Promise<CheckoutDetails> {
+    return request('/api/v1/marketplace/seller/me/listing-fee/checkout', { method: 'POST' });
+  },
+
+  /** Verified with Razorpay by the server before her shop goes live. */
+  confirmListingFee(result: CheckoutResult): Promise<SellerShop> {
+    return request('/api/v1/marketplace/seller/me/listing-fee/confirm', { method: 'POST', body: result });
   },
 };

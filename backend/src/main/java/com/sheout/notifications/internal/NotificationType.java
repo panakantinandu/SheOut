@@ -44,5 +44,9 @@ public enum NotificationType {
     /** To the one who shared her code: a friend has signed up with it - see campaigns' ReferralJoined. */
     REFERRAL_JOINED,
     /** To a rider: a referral paid out ride credit to her - see campaigns' ReferralCompleted. */
-    REFERRAL_REWARDED
+    REFERRAL_REWARDED,
+    /** To a seller: her shop was approved, rejected, went live or was suspended - see marketplace's SellerStatusChanged. */
+    SELLER_STATUS,
+    /** An operator's announcement delivered to each account one by one (the SheOut Seller waitlist), not by topic. */
+    ANNOUNCEMENT
 }

@@ -364,6 +364,19 @@ sheout:
     web-config-json: ${FIREBASE_WEB_CONFIG_JSON:}
     vapid-key: ${FIREBASE_VAPID_KEY:}
 
+  # SheOut Seller - see the marketplace module. SheOut charges one flat
+  # listing fee and takes no part in any sale.
+  marketplace:
+    # Rupees, charged once, after a person has approved her shop. Changing it
+    # affects sellers approved from then on; one already approved pays what
+    # she was quoted.
+    listing-fee: ${SELLER_LISTING_FEE:299}
+    # Photo caps. 40 across a whole shop is 5 products with 8 photos each,
+    # or 20 with 2 - see the note in MarketplaceLimits.
+    max-images-per-seller: ${SELLER_MAX_IMAGES_PER_SELLER:40}
+    max-images-per-product: ${SELLER_MAX_IMAGES_PER_PRODUCT:8}
+    max-products: ${SELLER_MAX_PRODUCTS:100}
+
   notifications:
     sms:
       twilio:

@@ -1,195 +1,165 @@
-import { BellRing, IndianRupee, PackagePlus, Store, UserRound } from 'lucide-react';
-import { useEffect, useState, type ReactNode } from 'react';
+import { ImageOff, Store } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Button,
   Card,
   IconCircle,
-  ServiceArt,
-  SuccessCheck,
+  ListEmptyState,
+  ListFilterBar,
+  LoadMore,
+  SelectField,
+  SkeletonList,
   TopHeader,
-  showToast,
+  usePagedList,
   useTranslation,
 } from '@sheout/design-system';
-import { ApiError, preferencesApi } from '../api/client';
+import { marketplaceApi } from '../api/client';
+import type { ListingCard, SellerCategory, SellerShop } from '../api/types';
 import { useAppDrawer } from '../components/AppDrawer';
-import fashionArt from '../assets/seller/fashion-saree.webp';
-import beautyArt from '../assets/seller/beauty.webp';
-import tailoringArt from '../assets/seller/tailoring.webp';
-import mehandiArt from '../assets/seller/mehandi.webp';
-import giftsArt from '../assets/seller/gifts.webp';
-import ornamentsArt from '../assets/seller/ornaments.webp';
+import { SELLER_CATEGORIES, categoryKey, priceText } from '../lib/seller';
 
 /**
- * The six categories, each with its own illustration and a tint from the
- * colour depth scale (tokens.js) behind it. Order is the order a woman
- * browsing would expect: what to wear first, then what to have done, then
- * what to give.
- */
-const CATEGORIES = [
-  { key: 'fashion', art: fashionArt, tint: 'bg-primary-light' },
-  { key: 'beauty', art: beautyArt, tint: 'bg-accent-orange-tint' },
-  { key: 'tailoring', art: tailoringArt, tint: 'bg-accent-green-tint' },
-  { key: 'mehandi', art: mehandiArt, tint: 'bg-accent-orange-tint' },
-  { key: 'gifts', art: giftsArt, tint: 'bg-primary-light' },
-  { key: 'ornaments', art: ornamentsArt, tint: 'bg-accent-blue-tint' },
-] as const;
-
-const STEPS: { key: string; icon: ReactNode }[] = [
-  { key: 'profile', icon: <UserRound /> },
-  { key: 'products', icon: <PackagePlus /> },
-  { key: 'orders', icon: <BellRing /> },
-  { key: 'paid', icon: <IndianRupee /> },
-  { key: 'delivers', icon: <ServiceArt kind="ride" size="sm" /> },
-];
-
-/**
- * SheOut Seller - a bottom-bar tab for a marketplace that is not built yet.
+ * SheOut Seller: a directory of women selling from home.
  * <p>
- * Static on purpose: nothing about selling exists. The one thing that works
- * is "Notify me", which records that this account is interested (account
- * and time, nothing else), so there is real evidence of demand before any of
- * it is built. Tapping it twice is still one sign-up. The page is designed
- * as the flagship it is meant to become - the categories are SheOut's own
- * artwork, and the waitlist is offered in the hero, where the interest is.
+ * Browse by the six categories or search, open a product, and contact the
+ * seller on WhatsApp or by phone. That is all it is: SheOut charges sellers
+ * a listing fee and takes no part in any sale, so there is no cart and no
+ * checkout here, and the screen says so rather than letting anyone expect
+ * one.
  */
 export function Seller() {
   const { t } = useTranslation();
   const drawer = useAppDrawer();
-  const [joinedAt, setJoinedAt] = useState<string | null>(null);
-  const [checking, setChecking] = useState(true);
-  const [busy, setBusy] = useState(false);
+  const navigate = useNavigate();
+  const [category, setCategory] = useState<SellerCategory | ''>('');
+  const [query, setQuery] = useState('');
+  const [shop, setShop] = useState<SellerShop | null | undefined>(undefined);
 
   useEffect(() => {
-    preferencesApi
-      .waitlistStatus('seller')
-      .then((s) => setJoinedAt(s.joined ? s.joinedAt : null))
-      .catch(() => undefined)
-      .finally(() => setChecking(false));
+    marketplaceApi.myShop().then(setShop).catch(() => setShop(null));
   }, []);
 
-  async function notifyMe() {
-    setBusy(true);
-    try {
-      const status = await preferencesApi.joinWaitlist('seller');
-      setJoinedAt(status.joinedAt);
-    } catch (err) {
-      showToast(err instanceof ApiError ? err.message : t('seller.notifyError'));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  const notifyButton = (inverse: boolean) =>
-    joinedAt ? (
-      <p className={`flex items-center gap-2 text-sm font-semibold ${inverse ? 'text-white' : 'text-accent-green-strong'}`} data-testid="seller-joined-inline">
-        <BellRing className="h-4 w-4" aria-hidden="true" />
-        {t('seller.onTheList')}
-      </p>
-    ) : (
-      <Button
-        size="md"
-        variant={inverse ? 'secondary' : 'primary'}
-        icon={<BellRing className="h-4 w-4" />}
-        disabled={busy || checking}
-        onClick={notifyMe}
-        className={inverse ? 'border-transparent text-primary' : undefined}
-        data-testid={inverse ? 'seller-notify-hero' : 'seller-notify'}
-      >
-        {busy ? t('seller.notifying') : t('seller.notifyShort')}
-      </Button>
-    );
+  const fetchPage = useCallback(
+    (page: number) => marketplaceApi.listings({ page, pageSize: 20, category: category || undefined, q: query.trim() || undefined }),
+    [category, query]
+  );
+  const list = usePagedList(fetchPage, [category, query], { debounceMs: 350 });
+  const activeFilters = (category ? 1 : 0) + (query.trim() ? 1 : 0);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <TopHeader variant="plain" title={t('seller.title')} onMenuClick={drawer.open} />
 
-      {/* The hero: what it is, that it is coming, and the one thing to do. */}
-      <Card variant="primary" className="relative overflow-hidden p-6" data-testid="seller-hero">
+      <Card variant="primary" className="relative overflow-hidden p-5" data-testid="seller-hero">
         <span className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-white/10" aria-hidden="true" />
-        <span className="pointer-events-none absolute -bottom-20 right-10 h-40 w-40 rounded-full bg-accent-orange/20" aria-hidden="true" />
-        <div className="relative flex items-center gap-2">
+        <div className="relative flex items-start gap-3">
           <IconCircle size="sm" icon={<Store />} className="bg-white/15 text-white" />
-          <span className="rounded-full bg-accent-orange px-3 py-1 text-caption uppercase tracking-widest text-text-primary">
-            {t('seller.comingSoon')}
-          </span>
+          <div className="min-w-0 flex-1">
+            <h1 className="font-heading text-title">{t('seller.directory.headline')}</h1>
+            <p className="mt-1 text-sm opacity-90">{t('seller.directory.subhead')}</p>
+          </div>
         </div>
-        <div className="relative mt-4 max-w-[62%]">
-          <h1 className="font-heading text-display">{t('seller.headline')}</h1>
-          <p className="mt-2 text-body opacity-90">{t('seller.subhead')}</p>
+        <div className="relative mt-4">
+          <Button
+            size="md"
+            variant="secondary"
+            className="border-transparent text-primary"
+            onClick={() => navigate('/seller/manage')}
+            data-testid="sell-on-sheout"
+          >
+            {shop ? t('seller.directory.manageShop') : t('seller.directory.sellOnSheOut')}
+          </Button>
         </div>
-        <div className="pointer-events-none absolute right-2 top-20 h-40 w-36" aria-hidden="true">
-          <img src={mehandiArt} alt="" className="absolute right-0 top-0 h-24 w-24 rotate-6 drop-shadow-xl" />
-          <img src={fashionArt} alt="" className="absolute left-0 top-10 h-24 w-24 -rotate-6 drop-shadow-xl" />
-          <img src={ornamentsArt} alt="" className="absolute bottom-0 right-4 h-20 w-20 rotate-3 drop-shadow-xl" />
-        </div>
-        <div className="relative mt-6">{notifyButton(true)}</div>
       </Card>
 
-      <section className="space-y-4">
-        <div>
-          <h2 className="font-heading text-section text-text-primary">{t('seller.categoriesTitle')}</h2>
-          <p className="text-caption text-text-secondary">{t('seller.categoriesSub')}</p>
-        </div>
-        <div className="grid grid-cols-2 gap-4" data-testid="seller-categories">
-          {CATEGORIES.map((category) => (
-            <Card key={category.key} className="overflow-hidden p-0" data-testid={`seller-category-${category.key}`}>
-              <div className={`flex h-32 items-center justify-center ${category.tint}`}>
-                <img
-                  src={category.art}
-                  alt=""
-                  aria-hidden="true"
-                  loading="lazy"
-                  className="h-28 w-28 object-contain drop-shadow-md"
-                />
-              </div>
-              <div className="space-y-1 p-4">
-                <p className="font-heading text-card-title text-text-primary">{t(`seller.categories.${category.key}`)}</p>
-                <p className="text-caption text-text-secondary">{t(`seller.categoryHints.${category.key}`)}</p>
-              </div>
-            </Card>
-          ))}
-        </div>
-      </section>
-
-      <section className="space-y-4">
-        <h2 className="font-heading text-section text-text-primary">{t('seller.howItWorks')}</h2>
-        <Card className="p-0">
-          <ol>
-            {STEPS.map((step, index) => (
-              <li key={step.key} className="relative flex gap-4 px-5 py-4">
-                {/* The line joining the steps, so five rows read as one journey. */}
-                {index < STEPS.length - 1 && (
-                  <span className="absolute bottom-0 left-[2.75rem] top-16 w-px bg-primary-light" aria-hidden="true" />
-                )}
-                <span className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary-light text-primary [&_svg]:h-5 [&_svg]:w-5">
-                  {step.icon}
-                  <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-micro leading-none text-text-inverse shadow-lift">
-                    {index + 1}
-                  </span>
-                </span>
-                <div className="min-w-0 flex-1 pt-1">
-                  <p className="font-heading text-card-title text-text-primary">{t(`seller.steps.${step.key}.title`)}</p>
-                  <p className="mt-1 text-caption text-text-secondary">{t(`seller.steps.${step.key}.body`)}</p>
+      <section className="space-y-3">
+        <h2 className="font-heading text-section text-text-primary">{t('seller.categoriesTitle')}</h2>
+        <div className="grid grid-cols-3 gap-3" data-testid="seller-categories">
+          {SELLER_CATEGORIES.map((c) => {
+            const selected = category === c.value;
+            return (
+              <button
+                key={c.value}
+                type="button"
+                aria-pressed={selected}
+                onClick={() => setCategory(selected ? '' : c.value)}
+                className={`overflow-hidden rounded-card border text-left transition-shadow ${selected ? 'border-primary shadow-lift ring-2 ring-primary' : 'border-border bg-surface'}`}
+                data-testid={`seller-category-${c.key}`}
+              >
+                <div className={`flex h-20 items-center justify-center ${c.tint}`}>
+                  <img src={c.art} alt="" aria-hidden="true" loading="lazy" className="h-16 w-16 object-contain drop-shadow-md" />
                 </div>
-              </li>
-            ))}
-          </ol>
-        </Card>
+                <p className="px-2 py-2 text-center text-caption font-semibold text-text-primary">{t(`seller.categories.${c.key}`)}</p>
+              </button>
+            );
+          })}
+        </div>
       </section>
 
-      {joinedAt ? (
-        <Card tone="success" className="flex flex-col items-center gap-2 py-8 text-center" data-testid="seller-joined">
-          <SuccessCheck size={56} label={t('seller.joinedTitle')} />
-          <p className="font-heading text-card-title text-text-primary">{t('seller.joinedTitle')}</p>
-          <p className="text-body text-text-secondary">{t('seller.joinedBody')}</p>
-        </Card>
-      ) : (
-        <Card className="space-y-4 text-center">
-          <p className="font-heading text-section text-text-primary">{t('seller.closingTitle')}</p>
-          <div className="flex justify-center">{notifyButton(false)}</div>
-          <p className="text-caption text-text-secondary">{t('seller.notifyNote')}</p>
-        </Card>
+      <ListFilterBar
+        search={{ value: query, placeholder: t('seller.directory.searchPlaceholder'), onChange: setQuery }}
+        activeCount={activeFilters}
+        onClearAll={() => {
+          setCategory('');
+          setQuery('');
+        }}
+      >
+        <SelectField
+          label={t('seller.directory.category')}
+          placeholder={t('seller.directory.anyCategory')}
+          value={category}
+          onChange={(e) => setCategory(e.target.value as SellerCategory | '')}
+          options={SELLER_CATEGORIES.map((c) => ({ value: c.value, label: t(`seller.categories.${c.key}`) }))}
+        />
+      </ListFilterBar>
+
+      {list.loading && <SkeletonList rows={4} label={t('seller.directory.loading')} />}
+      {!list.loading && list.error && <p className="text-sm text-danger">{list.error}</p>}
+      {!list.loading && !list.error && list.items.length === 0 && (
+        activeFilters > 0 ? (
+          <ListEmptyState icon={<Store />} title={t('seller.directory.noMatchTitle')} message={t('seller.directory.noMatch')} />
+        ) : (
+          <ListEmptyState icon={<Store />} title={t('seller.directory.emptyTitle')} message={t('seller.directory.empty')} />
+        )
       )}
+
+      <div className="grid grid-cols-2 gap-3" data-testid="seller-listings">
+        {list.items.map((item) => (
+          <ListingTile key={item.productId} item={item} onOpen={() => navigate(`/seller/products/${item.productId}`)} />
+        ))}
+      </div>
+
+      <LoadMore shown={list.items.length} total={list.total} hasMore={list.hasMore} loading={list.loadingMore} onLoadMore={list.loadMore} />
+
+      <p className="pb-2 text-center text-caption text-text-secondary">{t('seller.directory.notInvolved')}</p>
     </div>
+  );
+}
+
+export function ListingTile({ item, onOpen }: { item: ListingCard; onOpen: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="overflow-hidden rounded-card border border-border bg-surface text-left shadow-card"
+      data-testid="listing-tile"
+    >
+      <div className="flex aspect-square items-center justify-center bg-primary-light">
+        {item.imageUrl ? (
+          <img src={item.imageUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
+        ) : (
+          <ImageOff className="h-8 w-8 text-text-secondary" aria-hidden="true" />
+        )}
+      </div>
+      <div className="space-y-0.5 p-3">
+        <p className="line-clamp-2 text-sm font-semibold text-text-primary">{item.title}</p>
+        <p className="font-heading text-card-title text-primary">{priceText(item.displayPrice)}</p>
+        <p className="truncate text-caption text-text-secondary">
+          {item.businessName} · {t(`seller.categories.${categoryKey(item.category)}`)}
+        </p>
+      </div>
+    </button>
   );
 }

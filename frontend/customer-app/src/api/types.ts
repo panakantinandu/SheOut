@@ -259,9 +259,14 @@ export interface CheckoutResult {
   razorpaySignature: string;
 }
 
+/** What a payment is for. A listing fee has no booking; its sellerId says whose shop it is. */
+export type PaymentPurpose = 'RIDE_FARE' | 'SELLER_LISTING_FEE';
+
 export interface PaymentSummary {
   id: string;
-  bookingId: string;
+  bookingId: string | null;
+  purpose: PaymentPurpose;
+  sellerId: string | null;
   amount: number;
   /**
    * How it was paid, recorded at capture. Before capture it is a placeholder
@@ -284,6 +289,91 @@ export interface PaymentSummary {
   createdAt: string;
   updatedAt: string;
   capturedAt: string | null;
+}
+
+// ---------------------------------------------------------------- SheOut Seller
+
+export type SellerCategory = 'FASHION_SAREE' | 'BEAUTY_SERVICES' | 'TAILORING' | 'MEHANDI' | 'GIFTS' | 'ORNAMENTS';
+
+export type SellerStatus = 'DRAFT' | 'SUBMITTED_FOR_REVIEW' | 'APPROVED_AWAITING_PAYMENT' | 'ACTIVE' | 'REJECTED' | 'SUSPENDED';
+
+/** One product in the directory list. */
+export interface ListingCard {
+  productId: string;
+  title: string;
+  displayPrice: number;
+  imageUrl: string | null;
+  sellerId: string;
+  businessName: string;
+  category: SellerCategory;
+}
+
+/** A product as a customer sees it - with the seller's contact numbers, which are the point of the directory. */
+export interface ProductDetail {
+  productId: string;
+  title: string;
+  description: string;
+  displayPrice: number;
+  imageUrls: string[];
+  sellerId: string;
+  businessName: string;
+  category: SellerCategory;
+  contactPhone: string;
+  whatsappNumber: string | null;
+  moreFromSeller: ListingCard[];
+}
+
+export interface SellerProduct {
+  id: string;
+  title: string;
+  description: string;
+  displayPrice: number;
+  active: boolean;
+  images: { id: string; url: string | null }[];
+}
+
+export interface ListingFee {
+  amount: number;
+  status: PaymentStatus | null;
+  method: PaymentMethod | null;
+  paidAt: string | null;
+}
+
+/** Her own shop. canEdit/canSubmit and the limits are the server's, so the app never offers what it would refuse. */
+export interface SellerShop {
+  id: string;
+  businessName: string;
+  category: SellerCategory;
+  contactPhone: string;
+  whatsappNumber: string | null;
+  status: SellerStatus;
+  rejectionReason: string | null;
+  suspensionReason: string | null;
+  submittedAt: string | null;
+  activatedAt: string | null;
+  listingFee: ListingFee;
+  products: SellerProduct[];
+  imagesUsed: number;
+  maxImagesPerSeller: number;
+  maxImagesPerProduct: number;
+  maxProducts: number;
+  canEdit: boolean;
+  canSubmit: boolean;
+  accountVerified: boolean;
+}
+
+export interface SellerDetailsInput {
+  businessName: string;
+  category: SellerCategory;
+  contactPhone: string;
+  whatsappNumber?: string;
+}
+
+export interface ProductInput {
+  title: string;
+  description: string;
+  displayPrice: number;
+  active: boolean;
 }
 
 /**

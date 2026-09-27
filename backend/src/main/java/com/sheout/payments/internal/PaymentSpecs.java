@@ -24,6 +24,7 @@ final class PaymentSpecs {
 
     static Specification<PaymentEntity> matching(
             Collection<UUID> bookingIds,
+            UUID payerAccountId,
             PaymentStatus status,
             Instant from,
             Instant to,
@@ -32,8 +33,12 @@ final class PaymentSpecs {
         return (root, criteria, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
             // Ownership scope: resolved from the caller's token, never from
-            // a request parameter.
-            predicates.add(root.get("bookingId").in(bookingIds));
+            // a request parameter. Her trips' fares, and anything she paid
+            // herself that is no trip's - a listing fee.
+            List<Predicate> mine = new ArrayList<>();
+            if (!bookingIds.isEmpty()) mine.add(root.get("bookingId").in(bookingIds));
+            if (payerAccountId != null) mine.add(cb.equal(root.get("payerAccountId"), payerAccountId));
+            predicates.add(mine.isEmpty() ? cb.disjunction() : cb.or(mine.toArray(new Predicate[0])));
             if (status != null) predicates.add(cb.equal(root.get("status"), status));
             if (from != null) predicates.add(cb.greaterThanOrEqualTo(root.get("createdAt"), from));
             if (to != null) predicates.add(cb.lessThanOrEqualTo(root.get("createdAt"), to));

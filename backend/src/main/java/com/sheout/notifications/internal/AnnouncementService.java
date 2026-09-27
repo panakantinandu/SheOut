@@ -10,6 +10,8 @@ import com.sheout.notifications.internal.channel.FcmPushChannel;
 import com.sheout.sharedkernel.Result;
 import com.sheout.users.CustomerProfileApi;
 import com.sheout.users.DriverProfileApi;
+import com.sheout.users.FeatureWaitlistApi;
+import com.sheout.users.WaitlistFeature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -62,6 +64,7 @@ class AnnouncementService implements AnnouncementApi {
     private final CustomerProfileApi customerProfiles;
     private final DriverProfileApi driverProfiles;
     private final AuthApi auth;
+    private final FeatureWaitlistApi waitlist;
     private final long emailBatchPauseMs;
     private final int emailMaxRecipients;
 
@@ -71,6 +74,7 @@ class AnnouncementService implements AnnouncementApi {
                         CustomerProfileApi customerProfiles,
                         DriverProfileApi driverProfiles,
                         AuthApi auth,
+                        FeatureWaitlistApi waitlist,
                         // A free Gmail account will not take a thousand mails
                         // in a minute; SendGrid's free tier is 100 a day. Both
                         // are a pause between batches, not a code change.
@@ -82,6 +86,7 @@ class AnnouncementService implements AnnouncementApi {
         this.customerProfiles = customerProfiles;
         this.driverProfiles = driverProfiles;
         this.auth = auth;
+        this.waitlist = waitlist;
         this.emailBatchPauseMs = emailBatchPauseMs;
         this.emailMaxRecipients = emailMaxRecipients;
     }
@@ -93,6 +98,10 @@ class AnnouncementService implements AnnouncementApi {
         List<String> notes = new ArrayList<>();
 
         OutboundMessage message = OutboundMessage.of(title, body, "/notifications");
+
+        if (audience == AnnouncementAudience.SELLER_WAITLIST) {
+            return toWaitlist(record, message, WaitlistFeature.SELLER, "/seller");
+        }
 
         // 1. Push: one call per audience.
         int accepted = 0;
@@ -143,6 +152,35 @@ class AnnouncementService implements AnnouncementApi {
                 .stream()
                 .map(AnnouncementEntity::toSummary)
                 .toList();
+    }
+
+    /**
+     * A waitlist is a list of people, not a topic every phone is subscribed
+     * to, so each is told on her own: in her inbox, by push to her phones,
+     * and by email if no push got through - the ordinary per-account path.
+     * The counts record accounts reached, not phones.
+     */
+    private Announcement toWaitlist(AnnouncementEntity record, OutboundMessage message, WaitlistFeature feature, String link) {
+        OutboundMessage linked = OutboundMessage.of(message.title(), message.body(), link);
+        List<UUID> accounts = waitlist.interestedAccountIds(feature);
+        int reached = 0;
+        int failed = 0;
+        for (UUID accountId : accounts) {
+            try {
+                dispatcher.deliver(accountId, NotificationType.ANNOUNCEMENT, linked);
+                reached++;
+            } catch (RuntimeException e) {
+                failed++;
+                log.warn("Waitlist announcement to {} failed: {}", accountId, e.getMessage());
+            }
+        }
+        record.recordPush(reached, failed);
+        record.recordEmail(0, 0);
+        record.note("Delivered one by one to " + reached + " of " + accounts.size()
+                + " accounts on the " + feature + " waitlist (inbox and push, email where push did not reach)");
+        announcements.save(record);
+        log.info("Waitlist announcement '{}' to {}: {} of {} accounts", message.title(), feature, reached, accounts.size());
+        return record.toSummary();
     }
 
     private Counts emailEveryone(AccountRole role, OutboundMessage message) {
@@ -222,6 +260,7 @@ class AnnouncementService implements AnnouncementApi {
             case ALL_CUSTOMERS -> List.of(AccountRole.CUSTOMER);
             case ALL_DRIVERS -> List.of(AccountRole.DRIVER);
             case BOTH -> List.of(AccountRole.CUSTOMER, AccountRole.DRIVER);
+            case SELLER_WAITLIST -> List.of();
         };
     }
 

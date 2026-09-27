@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -14,6 +15,9 @@ interface FeatureWaitlistRepository extends JpaRepository<FeatureWaitlistEntity,
     Optional<FeatureWaitlistEntity> findByAccountIdAndFeature(UUID accountId, WaitlistFeature feature);
 
     long countByFeature(WaitlistFeature feature);
+
+    @Query("select w.accountId from FeatureWaitlistEntity w where w.feature = :feature order by w.createdAt")
+    List<UUID> accountIdsByFeature(@Param("feature") WaitlistFeature feature);
 
     void deleteByAccountId(UUID accountId);
 

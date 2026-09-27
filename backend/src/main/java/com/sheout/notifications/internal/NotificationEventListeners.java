@@ -24,6 +24,7 @@ import com.sheout.payouts.PayoutMarkedPaid;
 import com.sheout.campaigns.DriverIncentiveAwarded;
 import com.sheout.campaigns.ReferralCompleted;
 import com.sheout.campaigns.ReferralJoined;
+import com.sheout.marketplace.SellerStatusChanged;
 import com.sheout.support.SupportReplyPosted;
 import com.sheout.users.AppLanguage;
 import com.sheout.users.DriverProfileApi;
@@ -331,6 +332,30 @@ class NotificationEventListeners {
             dispatcher.deliver(event.refereeAccountId(), NotificationType.REFERRAL_REWARDED, localized(event.refereeAccountId(),
                     "referralRewardedReferee", language -> Map.of("amount", rupees(event.refereeReward())), "/refer"));
         }
+    }
+
+    /**
+     * A decision about her shop. The reason for a rejection or suspension is
+     * never in the notification - it can be about her products or a
+     * complaint, which is not for a lock screen; the app shows it.
+     */
+    @Async(NotificationDeliveryConfig.EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void onSellerStatusChanged(SellerStatusChanged event) {
+        String key = switch (event.status()) {
+            case APPROVED_AWAITING_PAYMENT -> "sellerApproved";
+            case REJECTED -> "sellerRejected";
+            case ACTIVE -> "sellerLive";
+            case SUSPENDED -> "sellerSuspended";
+            default -> null;
+        };
+        if (key == null) {
+            return;
+        }
+        UUID to = event.accountId();
+        dispatcher.deliver(to, NotificationType.SELLER_STATUS, localized(to, key,
+                language -> event.listingFeeAmount() == null ? Map.of() : Map.of("amount", rupees(event.listingFeeAmount())),
+                "/seller/manage", "seller-" + event.sellerId(), OutboundMessage.Urgency.NORMAL));
     }
 
     /** The receipt: emailed if she has an address, and kept in her inbox either way. */

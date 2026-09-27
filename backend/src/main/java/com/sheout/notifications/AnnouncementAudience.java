@@ -4,5 +4,7 @@ package com.sheout.notifications;
 public enum AnnouncementAudience {
     ALL_CUSTOMERS,
     ALL_DRIVERS,
-    BOTH
+    BOTH,
+    /** Everyone who tapped "Notify me" on the SheOut Seller coming-soon screen. */
+    SELLER_WAITLIST
 }

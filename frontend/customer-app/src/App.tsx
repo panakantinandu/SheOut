@@ -30,6 +30,9 @@ import { CompleteProfile } from './screens/CompleteProfile'
 import { AddPhone } from './screens/AddPhone'
 import { Wallet } from './screens/Wallet'
 import { Seller } from './screens/Seller'
+import { SellerProduct } from './screens/SellerProduct'
+import { SellerShop } from './screens/SellerShop'
+import { SellerProductEditor } from './screens/SellerProductEditor'
 import { Refer } from './screens/Refer'
 import { AppDrawerProvider } from './components/AppDrawer'
 
@@ -95,6 +98,9 @@ function App() {
       <Route path="/chat/:bookingId" element={protectedOnly(<Chat />)} />
 
       <Route path="/seller" element={shell(<Seller />)} />
+      <Route path="/seller/products/:productId" element={protectedOnly(<SellerProduct />)} />
+      <Route path="/seller/manage" element={protectedOnly(<SellerShop />)} />
+      <Route path="/seller/manage/products/:productId" element={protectedOnly(<SellerProductEditor />)} />
       <Route path="/refer" element={protectedOnly(<Refer />)} />
 
       <Route path="*" element={<Navigate to="/" replace />} />

@@ -92,6 +92,7 @@ public class PaymentController {
                 PageResponse.normalizePage(page), PageResponse.normalizePageSize(pageSize));
         Page<PaymentSummary> result = paymentService.pageForBookings(
                 bookingApi.bookingIdsForCustomer(caller.accountId()),
+                caller.accountId(),
                 status, from, to, minAmount, maxAmount, pageable);
         return ResponseEntity.ok(PageResponse.from(result, summary -> summary));
     }
