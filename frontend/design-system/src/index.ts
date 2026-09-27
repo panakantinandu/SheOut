@@ -23,3 +23,4 @@ export * from './tokens';
 // copy of the file in public/.
 export { default as brandIllustration } from './assets/sheout-illustration.webp';
 export * from './lib/useOtpSender';
+export * from './lib/useRouteLine';

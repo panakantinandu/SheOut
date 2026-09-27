@@ -454,22 +454,22 @@ export function Home() {
           The money counts up when it first lands; the counts beside it do
           too, so the row settles together rather than one figure moving. */}
       <Card className="flex items-stretch p-0">
-        <div className="flex flex-1 flex-col items-center gap-2 p-3 text-center">
+        <div className="flex flex-1 flex-col items-center gap-2 px-3 py-4 text-center">
           <IconCircle size="sm" tone="soft" color="primary" icon={<IndianRupee />} />
-          <AmountText amount={todayEarnings} size="sm" animate />
-          <p className="text-xs text-text-secondary">{t('home.earnedToday')}</p>
+          <AmountText amount={todayEarnings} size="lg" animate />
+          <p className="text-caption text-text-secondary">{t('home.earnedToday')}</p>
         </div>
         <div className="w-px self-stretch bg-border" aria-hidden="true" />
-        <div className="flex flex-1 flex-col items-center gap-2 p-3 text-center">
+        <div className="flex flex-1 flex-col items-center gap-2 px-3 py-4 text-center">
           <IconCircle size="sm" tone="soft" color="green" icon={<CheckCircle2 />} />
-          <p className="font-heading text-card-title tabular-nums text-text-primary">{ridesShown}</p>
-          <p className="text-xs text-text-secondary">{t('home.ridesToday')}</p>
+          <p className="font-heading text-title tabular-nums text-text-primary">{ridesShown}</p>
+          <p className="text-caption text-text-secondary">{t('home.ridesToday')}</p>
         </div>
         <div className="w-px self-stretch bg-border" aria-hidden="true" />
-        <div className="flex flex-1 flex-col items-center gap-2 p-3 text-center">
+        <div className="flex flex-1 flex-col items-center gap-2 px-3 py-4 text-center">
           <IconCircle size="sm" tone="soft" color="orange" icon={<ClipboardList />} />
-          <p className="font-heading text-card-title tabular-nums text-text-primary">{activeTripsShown}</p>
-          <p className="text-xs text-text-secondary">{t('home.activeTrips')}</p>
+          <p className="font-heading text-title tabular-nums text-text-primary">{activeTripsShown}</p>
+          <p className="text-caption text-text-secondary">{t('home.activeTrips')}</p>
         </div>
       </Card>
 
@@ -503,6 +503,7 @@ export function Home() {
           <Button
             variant={isOnline ? 'danger' : 'success'}
             size="md"
+            className="shrink-0 whitespace-nowrap"
             icon={<Power className="h-4 w-4" />}
             disabled={togglingOnline}
             onClick={handleToggleOnline}

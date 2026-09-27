@@ -9,36 +9,41 @@
  * <ul>
  *   <li>points of interest and transit are hidden, parks stay as soft green
  *       shapes (they are how people orient themselves);</li>
- *   <li>land is a very pale lavender, roads white with a light purple edge
- *       for the big ones, so the brand purple route reads as "your way"
- *       rather than as one more road;</li>
- *   <li>road shields and parcel lines are gone, road and area names stay,
- *       in a muted grey.</li>
+ *   <li>land is a neutral light grey and roads white with a faint edge, so
+ *       the brand purple route and pins are the only colour on the map and
+ *       read as "your way" rather than as one more road;</li>
+ *   <li>road shields, parcel lines and the names of small lanes are gone;
+ *       main road and area names stay, in a soft grey.</li>
  * </ul>
  * Applied as a JSON style. If VITE_GOOGLE_MAPS_MAP_ID is set, the map uses
  * that Cloud Console style instead (Google ignores JSON styles on a map with
  * a Map ID), so the look can later be managed without a code change.
  */
 export const SHEOUT_MAP_STYLE: google.maps.MapTypeStyle[] = [
-  { elementType: 'geometry', stylers: [{ color: '#f6f3fa' }] },
+  // Neutral light grey land, not lavender: the brand purple route and pins
+  // are the only purple on the map, so they are what the eye lands on.
+  { elementType: 'geometry', stylers: [{ color: '#f3f3f5' }] },
   { elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
-  { elementType: 'labels.text.fill', stylers: [{ color: '#6f6883' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#8f8c99' }] },
   { elementType: 'labels.text.stroke', stylers: [{ color: '#ffffff' }, { weight: 3 }] },
 
   { featureType: 'poi', stylers: [{ visibility: 'off' }] },
-  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ visibility: 'on' }, { color: '#e2efdf' }] },
+  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ visibility: 'on' }, { color: '#e5ece3' }] },
+  { featureType: 'poi.park', elementType: 'labels', stylers: [{ visibility: 'off' }] },
   { featureType: 'transit', stylers: [{ visibility: 'off' }] },
   { featureType: 'administrative.land_parcel', stylers: [{ visibility: 'off' }] },
+  { featureType: 'administrative.neighborhood', elementType: 'labels.text.fill', stylers: [{ color: '#a4a1ad' }] },
   { featureType: 'administrative', elementType: 'geometry', stylers: [{ visibility: 'off' }] },
 
   { featureType: 'road', elementType: 'geometry.fill', stylers: [{ color: '#ffffff' }] },
-  { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#ebe6f2' }] },
-  { featureType: 'road.highway', elementType: 'geometry.fill', stylers: [{ color: '#efe8fa' }] },
-  { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#d9cdee' }] },
-  { featureType: 'road.local', elementType: 'labels.text.fill', stylers: [{ color: '#9a94ab' }] },
+  { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#e6e5eb' }] },
+  { featureType: 'road.highway', elementType: 'geometry.fill', stylers: [{ color: '#fbfaf7' }] },
+  { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#dedce4' }] },
+  { featureType: 'road.arterial', elementType: 'labels.text.fill', stylers: [{ color: '#9d9aa6' }] },
+  { featureType: 'road.local', elementType: 'labels', stylers: [{ visibility: 'off' }] },
 
-  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#d5e3f1' }] },
-  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#8aa2bd' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#dfe6ec' }] },
+  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#a3b0bd' }] },
 ];
 
 /**

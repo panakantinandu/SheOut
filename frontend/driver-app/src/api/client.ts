@@ -424,6 +424,13 @@ export const preferencesApi = {
   },
 };
 
+/** The road between two points, from SheOut's own router - for the map's route line. */
+export const routesApi = {
+  preview(from: { lat: number; lng: number }, to: { lat: number; lng: number }): Promise<{ points: { lat: number; lng: number }[]; distanceKm: number | null; durationMinutes: number | null }> {
+    return request(`/api/v1/routes/preview?fromLat=${from.lat}&fromLng=${from.lng}&toLat=${to.lat}&toLng=${to.lng}`);
+  },
+};
+
 export const bookingApi = {
   /**
    * The ended trip still waiting for the rider's payment that is keeping new

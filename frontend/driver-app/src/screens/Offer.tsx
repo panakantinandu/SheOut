@@ -1,9 +1,9 @@
 import { Navigation } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { AmountText, Button, Card, CountdownRing, LiveMap, SkeletonCard, TopHeader } from '@sheout/design-system';
+import { AmountText, Button, Card, CountdownRing, LiveMap, SkeletonCard, TopHeader, useRouteLine } from '@sheout/design-system';
 import type { MapMarker } from '@sheout/design-system';
-import { ApiError, bookingApi, dispatchApi } from '../api/client';
+import { ApiError, bookingApi, dispatchApi, routesApi } from '../api/client';
 import { apiErrorText } from '../lib/apiErrors';
 import type { OfferSummary } from '../api/types';
 import { useShareLocation } from '../lib/LocationBroadcastContext';
@@ -157,6 +157,8 @@ export function Offer() {
   // Where the job actually is. A fare and two place names are not enough to
   // judge an offer in fifteen seconds - every real driver app shows the
   // pickup on a map, and the mockup's New Request tile does too.
+  // The trip she is being offered, pickup to drop, as a road.
+  const route = useRouteLine(routesApi.preview, offer?.pickup, offer?.drop);
   const markers: MapMarker[] = [];
   if (offer?.pickup) markers.push({ key: 'pickup', lat: offer.pickup.lat, lng: offer.pickup.lng, label: t('trip.pickup'), kind: 'pickup' });
   if (offer?.drop) markers.push({ key: 'drop', lat: offer.drop.lat, lng: offer.drop.lng, label: t('trip.drop'), kind: 'drop' });
@@ -170,7 +172,7 @@ export function Offer() {
 
       {offer && !unavailable && (
         <>
-          {markers.length > 0 && <LiveMap markers={markers} className="h-52" />}
+          {markers.length > 0 && <LiveMap markers={markers} route={route} className="h-52" />}
 
           {/* The clock, as a ring that empties. This is the tensest moment
               in the whole app - a fare, two place names, fifteen seconds -

@@ -1,10 +1,10 @@
 import { MapPin } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Button, Card, IconCircle, TextField, LiveMap, TopHeader, ServiceArt } from '@sheout/design-system';
+import { Button, Card, IconCircle, TextField, LiveMap, TopHeader, ServiceArt, useRouteLine } from '@sheout/design-system';
 import type { MapMarker } from '@sheout/design-system';
 import { UnpaidTripBanner } from '../components/UnpaidTripBanner';
-import { ApiError, bookingApi } from '../api/client';
+import { ApiError, bookingApi, routesApi } from '../api/client';
 import { FareEstimateCard } from '../components/FareEstimateCard';
 import { LocationPicker } from '../components/LocationPicker';
 import type { PickerMode } from '../components/LocationPicker';
@@ -149,6 +149,8 @@ export function DeliveryBooking() {
   // Her own Home and Work, offered first in the picker.
   const savedPlaces = useSavedPlaces();
   const nearby = useNearbyDrivers(pickup, config.category, t('booking.nearbyPartner'));
+  // The road from pickup to drop, drawn as soon as both are set.
+  const route = useRouteLine(routesApi.preview, pickup, drop);
   const markers: MapMarker[] = [...nearby];
   if (pickup) markers.push({ key: 'pickup', lat: pickup.lat, lng: pickup.lng, label: t('booking.pickup'), kind: 'pickup' });
   if (drop) markers.push({ key: 'drop', lat: drop.lat, lng: drop.lng, label: t('booking.drop'), kind: 'drop' });
@@ -164,7 +166,7 @@ export function DeliveryBooking() {
           one is picked. It is a preview of the two endpoints, not a routed
           line - nothing here computes a road route. */}
       <div className="space-y-1">
-        <LiveMap markers={markers} />
+        <LiveMap markers={markers} route={route} />
         <p className="text-xs text-text-secondary">
           {drop ? t('booking.mapBoth') : t('booking.mapPickDrop')}
         </p>

@@ -1,29 +1,9 @@
 import { CheckCircle2, Headphones, MessageCircle, Navigation, Radio, SearchX, ShieldAlert, Star, Wallet as WalletIcon, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import {
-  AggregateRatingText,
-  AmountText,
-  Avatar,
-  Button,
-  CancelReasonDialog,
-  ConfirmDialog,
-  Card,
-  CUSTOMER_CANCELLATION_REASONS,
-  IconCircle,
-  LiveMap,
-  OpenInMapsButton,
-  PickupCodeCard,
-  SafetyText,
-  SkeletonCard,
-  StatusBadge,
-  SuccessCheck,
-  TopHeader,
-  bookingStatusLabel,
-  vehicleLabel,
-} from '@sheout/design-system';
+import { AggregateRatingText, AmountText, Avatar, Button, CancelReasonDialog, ConfirmDialog, Card, CUSTOMER_CANCELLATION_REASONS, IconCircle, LiveMap, OpenInMapsButton, PickupCodeCard, SafetyText, SkeletonCard, StatusBadge, SuccessCheck, TopHeader, bookingStatusLabel, vehicleLabel, useRouteLine } from '@sheout/design-system';
 import type { CancellationReason as SharedCancellationReason, MapMarker } from '@sheout/design-system';
-import { ApiError, bookingApi, chatApi, dispatchApi } from '../api/client';
+import { ApiError, bookingApi, chatApi, dispatchApi, routesApi } from '../api/client';
 import type { AssignedDriver, BookingStatus, BookingSummary, DriverLocation } from '../api/types';
 import { RatingPrompt } from '../components/RatingPrompt';
 import { TripPaymentCard } from '../components/TripPaymentCard';
@@ -515,6 +495,8 @@ export function Tracking() {
   const hasDriver = Boolean(booking?.driverId)
     && !isFinished
     && DRIVER_DETAILS_STATUSES.includes(booking?.status as BookingStatus);
+  // The trip's road, pickup to drop, under her partner's position.
+  const route = useRouteLine(routesApi.preview, booking?.pickup, booking?.drop);
   const markers: MapMarker[] = [];
   if (booking) {
     markers.push({ key: 'pickup', lat: booking.pickup.lat, lng: booking.pickup.lng, label: t('booking.pickup'), kind: 'pickup' });
@@ -750,7 +732,7 @@ export function Tracking() {
       )}
 
       <div className="space-y-1">
-        <LiveMap markers={markers} />
+        <LiveMap markers={markers} route={route} />
         <p className="text-xs text-text-secondary">
           {isFinished
             ? t('tracking.mapFinished')

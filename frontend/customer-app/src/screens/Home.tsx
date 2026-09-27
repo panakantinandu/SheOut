@@ -15,8 +15,8 @@ import { useTranslation } from '@sheout/design-system';
  * is one entry, not another copy of the tile.
  */
 const SERVICES = [
-  { key: 'ride', labelKey: 'home.serviceRide', to: '/book/ride', bg: 'bg-primary', image: bikeTaxiArt, alt: 'Bike Taxi' },
-  { key: 'parcel', labelKey: 'home.serviceParcel', to: '/book/parcel', bg: 'bg-accent-orange', image: parcelArt, alt: 'Parcel Delivery' },
+  { key: 'ride', labelKey: 'home.serviceRide', to: '/book/ride', image: bikeTaxiArt, alt: 'Bike Taxi' },
+  { key: 'parcel', labelKey: 'home.serviceParcel', to: '/book/parcel', image: parcelArt, alt: 'Parcel Delivery' },
 ];
 
 /**
@@ -115,10 +115,17 @@ export function Home() {
               onClick={() => navigate(service.to)}
               className="flex min-w-0 flex-col items-center gap-2 text-center"
             >
-              <span
-                className={`flex aspect-square w-[92%] items-center justify-center overflow-hidden rounded-card p-1 text-text-inverse ${service.bg}`}
-              >
-                <img src={service.image} alt={service.alt} className="h-full w-full rounded-[inherit] object-contain" />
+              {/* The artwork is itself the tile - a rounded 3D square with a
+                  transparent surround. It used to sit on a second, flat
+                  coloured card, which showed as a box around a box. Its
+                  shadow follows the art's own shape (a drop-shadow, not a
+                  box-shadow), so it floats like the other tiles. */}
+              <span className="flex aspect-square w-[92%] items-center justify-center transition-transform duration-100 motion-safe:active:scale-95">
+                <img
+                  src={service.image}
+                  alt={service.alt}
+                  className="h-full w-full scale-[1.12] object-contain drop-shadow-[0_10px_16px_rgba(74,26,158,0.22)]"
+                />
               </span>
               <span className="flex w-[92%] items-center justify-between gap-1 text-left">
                 <span className="text-xs font-semibold leading-tight text-text-primary">{t(service.labelKey)}</span>

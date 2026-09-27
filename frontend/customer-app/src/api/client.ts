@@ -594,6 +594,13 @@ export const promotionsApi = {
   },
 };
 
+/** The road between two points, from SheOut's own router - for the map's route line. */
+export const routesApi = {
+  preview(from: { lat: number; lng: number }, to: { lat: number; lng: number }): Promise<{ points: { lat: number; lng: number }[]; distanceKm: number | null; durationMinutes: number | null }> {
+    return request(`/api/v1/routes/preview?fromLat=${from.lat}&fromLng=${from.lng}&toLat=${to.lat}&toLng=${to.lng}`);
+  },
+};
+
 export const bookingApi = {
   /**
    * Her oldest ended-and-unpaid trip, or null. While one exists she cannot
