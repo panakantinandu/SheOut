@@ -1,8 +1,9 @@
-import { Copy, Gift, MessageCircle, Share2, UserPlus, Wallet } from 'lucide-react';
+import { Copy, Gift, MessageCircle, PartyPopper, Share2, UserPlus, Wallet } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from './Button';
 import { Card } from './Card';
 import { IconCircle } from './IconCircle';
+import { Overlay } from './Overlay';
 import brandIllustration from '../assets/sheout-illustration.webp';
 import { showToast } from '../lib/toast';
 import type { ReferralSummary } from '../lib/referral';
@@ -149,5 +150,80 @@ export function ReferralCodeField({ value, onChange }: { value: string; onChange
       />
       <p className="mt-1 text-xs text-text-secondary">{t('refer.fieldHelp')}</p>
     </div>
+  );
+}
+
+/** What the server says once her friend's code is accepted - see referralsApi.apply. */
+export interface ReferralWelcomeDetails {
+  /** The friend who invited her, first name only; null when that friend has not given one. */
+  referrerFirstName: string | null;
+  /** What her first paid trip brings; null while the welcome reward is paused, so nothing is promised. */
+  reward: number | null;
+  /** Partners are paid into their wallet; riders get ride credit. */
+  cashReward: boolean;
+}
+
+// Where each piece of confetti starts, how far it drifts, and when it falls.
+// Fixed rather than random, so the burst looks the same every time and in
+// every screenshot.
+const CONFETTI = Array.from({ length: 22 }, (_, i) => ({
+  left: `${(i * 37 + 7) % 100}%`,
+  drift: `${((i * 53) % 90) - 45}px`,
+  delay: `${(i % 7) * 90}ms`,
+  colour: ['bg-primary', 'bg-accent-orange', 'bg-accent-green', 'bg-accent-blue', 'bg-primary-mid'][i % 5],
+  shape: i % 3 === 0 ? 'h-2 w-2 rounded-full' : 'h-3 w-1.5 rounded-sm',
+}));
+
+/**
+ * The congratulations a new rider or partner sees the moment she has signed
+ * up with a friend's code.
+ * <p>
+ * The one place in the app that celebrates on purpose. SuccessCheck explains
+ * why the end of a trip does not; this is different - it only ever follows
+ * something good, she chose to act on a friend's invite, and it says plainly
+ * what that has earned and when. The reward comes with her first paid trip,
+ * not now, and the copy says so rather than letting her think it is already
+ * in her balance.
+ */
+export function ReferralWelcome({ details, onContinue }: { details: ReferralWelcomeDetails | null; onContinue: () => void }) {
+  const { t } = useTranslation('ds');
+  const who = details?.cashReward ? 'partner' : 'rider';
+  const name = details?.referrerFirstName ?? null;
+  return (
+    <Overlay open={details != null} label={t('refer.welcome.title')} onDismiss={onContinue} className="px-4">
+      <div
+        className="relative w-full overflow-hidden rounded-card bg-surface px-6 pb-6 pt-8 text-center shadow-xl motion-safe:animate-pop-in"
+        data-testid="referral-welcome"
+      >
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-full motion-reduce:hidden" aria-hidden="true">
+          {CONFETTI.map((c, i) => (
+            <span
+              key={i}
+              className={`absolute top-0 ${c.shape} ${c.colour} animate-confetti-fall`}
+              style={{ left: c.left, animationDelay: c.delay, ['--confetti-drift' as string]: c.drift }}
+            />
+          ))}
+        </div>
+        <div className="relative">
+          <span className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-primary-light text-primary motion-safe:animate-nav-pop">
+            <PartyPopper className="h-10 w-10" aria-hidden="true" />
+          </span>
+          <p className="mt-5 text-sm font-semibold uppercase tracking-[0.18em] text-primary">{t('refer.welcome.kicker')}</p>
+          <h2 className="mt-1 font-heading text-title text-text-primary">{t('refer.welcome.title')}</h2>
+          <p className="mt-3 text-text-secondary">
+            {name ? t('refer.welcome.invitedBy', { name }) : t('refer.welcome.invitedByFriend')}
+          </p>
+          {details?.reward != null && (
+            <div className="mt-5 rounded-input bg-primary-light px-4 py-4" data-testid="referral-welcome-reward">
+              <p className="font-heading text-3xl text-primary">{rupees(details.reward)}</p>
+              <p className="mt-1 text-sm font-medium text-text-primary">{t(`refer.welcome.${who}Reward`)}</p>
+            </div>
+          )}
+          <Button className="mt-6 w-full" size="lg" onClick={onContinue} data-testid="referral-welcome-continue">
+            {t('refer.welcome.continue')}
+          </Button>
+        </div>
+      </div>
+    </Overlay>
   );
 }

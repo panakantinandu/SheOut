@@ -10,9 +10,16 @@ import com.sheout.booking.BookingParticipants;
 import com.sheout.booking.BookingStatus;
 import com.sheout.campaigns.IncentiveType;
 import com.sheout.campaigns.PromotionType;
+import com.sheout.campaigns.ReferralCompleted;
+import com.sheout.campaigns.ReferralJoined;
 import com.sheout.payments.PaymentCaptured;
 import com.sheout.payments.PaymentMethod;
 import com.sheout.sharedkernel.Result;
+import com.sheout.sharedkernel.event.DomainEventPublisher;
+import com.sheout.users.CustomerProfileApi;
+import com.sheout.users.CustomerProfileSummary;
+import com.sheout.users.DriverProfileApi;
+import com.sheout.users.DriverProfileSummary;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
@@ -90,6 +97,9 @@ public class ReferralService {
     private final IncentiveService incentives;
     private final AuthApi authApi;
     private final ObjectProvider<BookingApi> bookingApi;
+    private final ObjectProvider<CustomerProfileApi> riderProfiles;
+    private final ObjectProvider<DriverProfileApi> partnerProfiles;
+    private final DomainEventPublisher events;
     private final int maxRewardedPerReferrer;
     private final Duration applyWindow;
     private final String riderLinkBase;
@@ -99,6 +109,9 @@ public class ReferralService {
     public ReferralService(ReferralCodeRepository codes, ReferralRepository referrals, ReferralDeviceRepository devices,
                            PromotionService promotions, IncentiveService incentives, AuthApi authApi,
                            ObjectProvider<BookingApi> bookingApi,
+                           ObjectProvider<CustomerProfileApi> riderProfiles,
+                           ObjectProvider<DriverProfileApi> partnerProfiles,
+                           DomainEventPublisher events,
                            @Value("${sheout.campaigns.referral.max-rewarded-per-referrer:10}") int maxRewardedPerReferrer,
                            // How long after signing up a new account may still enter a code.
                            @Value("${sheout.campaigns.referral.apply-within-days:7}") int applyWithinDays,
@@ -111,6 +124,9 @@ public class ReferralService {
         this.incentives = incentives;
         this.authApi = authApi;
         this.bookingApi = bookingApi;
+        this.riderProfiles = riderProfiles;
+        this.partnerProfiles = partnerProfiles;
+        this.events = events;
         this.maxRewardedPerReferrer = maxRewardedPerReferrer;
         this.applyWindow = Duration.ofDays(applyWithinDays);
         this.riderLinkBase = riderLinkBase;
@@ -194,12 +210,8 @@ public class ReferralService {
                 .map(r -> r.getReferrerReward() == null ? BigDecimal.ZERO : r.getReferrerReward())
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         boolean partner = role == AccountRole.DRIVER;
-        BigDecimal referrerAmount = partner
-                ? incentives.referralAmount(IncentiveType.REFERRAL_REWARD).orElse(null)
-                : promotions.referralCreditAmount(PromotionType.REFERRAL_REWARD).orElse(null);
-        BigDecimal refereeAmount = partner
-                ? incentives.referralAmount(IncentiveType.REFERRAL_WELCOME).orElse(null)
-                : promotions.referralCreditAmount(PromotionType.REFERRAL_WELCOME).orElse(null);
+        BigDecimal referrerAmount = runningAmount(partner, IncentiveType.REFERRAL_REWARD, PromotionType.REFERRAL_REWARD);
+        BigDecimal refereeAmount = runningAmount(partner, IncentiveType.REFERRAL_WELCOME, PromotionType.REFERRAL_WELCOME);
         JoinedWith joined = referrals.findByRefereeAccountId(accountId)
                 .map(r -> new JoinedWith(r.getStatus(), r.getRefereeReward()))
                 .orElse(null);
@@ -214,35 +226,69 @@ public class ReferralService {
     public enum ApplyOutcome { APPLIED, INVALID_CODE, OWN_CODE, ALREADY_APPLIED, NOT_ELIGIBLE }
 
     /**
+     * What the app needs to congratulate her once her code is accepted: who
+     * invited her (a first name, or null while that friend has not set one)
+     * and what she will get on her first paid trip (null while the welcome
+     * side is paused or out of budget, so nothing unpaid is promised).
+     * The details are filled only for APPLIED.
+     */
+    public record ApplyResult(ApplyOutcome outcome, String referrerFirstName, BigDecimal reward, boolean cashReward) {
+        static ApplyResult refused(ApplyOutcome outcome) {
+            return new ApplyResult(outcome, null, null, false);
+        }
+    }
+
+    /**
      * A new account enters a friend's code. Unknown codes, codes from the
      * other app and codes of blocked accounts all read the same, so the
      * endpoint says nothing about which codes exist.
      */
     @Transactional
-    public ApplyOutcome apply(UUID refereeId, AccountRole role, String rawCode, String installId) {
+    public ApplyResult apply(UUID refereeId, AccountRole role, String rawCode, String installId) {
         Instant now = Instant.now();
         noteInstall(refereeId, installId, now);
         if (referrals.findByRefereeAccountId(refereeId).isPresent()) {
-            return ApplyOutcome.ALREADY_APPLIED;
+            return ApplyResult.refused(ApplyOutcome.ALREADY_APPLIED);
         }
         String code = rawCode == null ? "" : rawCode.trim().toUpperCase(Locale.ROOT);
         Optional<ReferralCodeEntity> found = codes.findByCode(code).filter(c -> c.getRole() == role);
         if (found.isEmpty()) {
-            return ApplyOutcome.INVALID_CODE;
+            return ApplyResult.refused(ApplyOutcome.INVALID_CODE);
         }
         UUID referrerId = found.get().getAccountId();
         if (authApi.findAccount(referrerId).map(AccountSummary::blocked).orElse(true)) {
-            return ApplyOutcome.INVALID_CODE;
+            return ApplyResult.refused(ApplyOutcome.INVALID_CODE);
         }
         if (sameOwner(referrerId, refereeId)) {
-            return ApplyOutcome.OWN_CODE;
+            return ApplyResult.refused(ApplyOutcome.OWN_CODE);
         }
         if (!newEnough(refereeId, now)) {
-            return ApplyOutcome.NOT_ELIGIBLE;
+            return ApplyResult.refused(ApplyOutcome.NOT_ELIGIBLE);
         }
-        referrals.save(new ReferralEntity(referrerId, refereeId, role, code));
+        ReferralEntity saved = referrals.save(new ReferralEntity(referrerId, refereeId, role, code));
         log.info("Referral recorded: {} {} joined with {}'s code", role, refereeId, referrerId);
-        return ApplyOutcome.APPLIED;
+        boolean partner = role == AccountRole.DRIVER;
+        BigDecimal referrerReward = referrals.countRewardedFor(referrerId) >= maxRewardedPerReferrer
+                ? null
+                : runningAmount(partner, IncentiveType.REFERRAL_REWARD, PromotionType.REFERRAL_REWARD);
+        events.publish(new ReferralJoined(saved.getId(), referrerId, refereeId, role, referrerReward));
+        BigDecimal reward = runningAmount(partner, IncentiveType.REFERRAL_WELCOME, PromotionType.REFERRAL_WELCOME);
+        return new ApplyResult(ApplyOutcome.APPLIED, firstName(referrerId, partner), reward, partner);
+    }
+
+    /** What that side's campaign gives now; null while it is paused, ended or out of budget. */
+    private BigDecimal runningAmount(boolean partner, IncentiveType incentive, PromotionType promotion) {
+        return partner
+                ? incentives.referralAmount(incentive).orElse(null)
+                : promotions.referralCreditAmount(promotion).orElse(null);
+    }
+
+    /** Just the first word of the name she gave - enough to say who sent the invite, and no more. */
+    private String firstName(UUID accountId, boolean partner) {
+        Optional<String> name = partner
+                ? Optional.ofNullable(partnerProfiles.getIfAvailable()).flatMap(p -> p.findByAccountId(accountId)).map(DriverProfileSummary::name)
+                : Optional.ofNullable(riderProfiles.getIfAvailable()).flatMap(p -> p.findByAccountId(accountId)).map(CustomerProfileSummary::name);
+        return name.map(String::trim).filter(n -> !n.isEmpty()).map(n -> n.split("\\s+")[0]).orElse(null);
     }
 
     private boolean sameOwner(UUID a, UUID b) {
@@ -331,6 +377,7 @@ public class ReferralService {
 
         referral.complete(bookingId, referrerReward, refereeReward, notes.isEmpty() ? null : String.join("; ", notes), now);
         referrals.save(referral);
+        events.publish(new ReferralCompleted(referralId, referrer, referee, referral.getRole(), referrerReward, refereeReward));
         log.info("Referral {} completed on trip {}: referrer {} got {}, referee {} got {}",
                 referralId, bookingId, referrer, referrerReward, referee, refereeReward);
     }

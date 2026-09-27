@@ -164,6 +164,14 @@ export default {
           from: { opacity: '0' },
           to: { opacity: '1' },
         },
+        // Confetti over the referral welcome - the one moment in the app that
+        // is a celebration by design (see ReferralWelcome). Each piece falls
+        // and turns once, then is gone; under reduced motion it never shows.
+        'confetti-fall': {
+          '0%': { transform: 'translate3d(0, -24px, 0) rotate(0deg)', opacity: '0' },
+          '10%': { opacity: '1' },
+          '100%': { transform: 'translate3d(var(--confetti-drift, 0px), 320px, 0) rotate(540deg)', opacity: '0' },
+        },
         // A sheet rising from the bottom edge of the screen.
         'sheet-up': {
           from: { transform: 'translateY(12%)', opacity: '0' },
@@ -184,6 +192,7 @@ export default {
         'nav-pop': 'nav-pop 320ms cubic-bezier(0.34, 1.56, 0.64, 1) both',
         'fade-in': 'fade-in 160ms ease-out both',
         'sheet-up': 'sheet-up 260ms cubic-bezier(0.22, 1, 0.36, 1) both',
+        'confetti-fall': 'confetti-fall 2.2s cubic-bezier(0.25, 0.6, 0.45, 1) both',
       },
     },
   },

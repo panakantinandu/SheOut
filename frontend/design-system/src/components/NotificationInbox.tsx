@@ -49,6 +49,7 @@ const CATEGORY_OF: Record<string, Category> = {
   BOOKING_CANCELLED: 'booking', NO_DRIVERS_AVAILABLE: 'booking', DRIVER_OFFER: 'booking',
   DESTINATION_CHANGE_REQUESTED: 'booking', DESTINATION_CHANGED: 'booking', DESTINATION_CHANGE_DECLINED: 'booking',
   PAYMENT_RECEIPT: 'payment', PAYOUT_PAID: 'payment', INCENTIVE_EARNED: 'payment',
+  REFERRAL_JOINED: 'payment', REFERRAL_REWARDED: 'payment',
   SOS_ALERT: 'safety', SOS_OPERATOR_ALERT: 'safety',
   SUPPORT_REPLY: 'support',
   ACCOUNT_VERIFIED: 'account', ACCOUNT_VERIFICATION_REJECTED: 'account', VERIFICATION_SUBMITTED: 'account',

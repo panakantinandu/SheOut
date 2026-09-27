@@ -22,6 +22,8 @@ import com.sheout.payments.PaymentCaptured;
 import com.sheout.payments.PaymentMethod;
 import com.sheout.payouts.PayoutMarkedPaid;
 import com.sheout.campaigns.DriverIncentiveAwarded;
+import com.sheout.campaigns.ReferralCompleted;
+import com.sheout.campaigns.ReferralJoined;
 import com.sheout.support.SupportReplyPosted;
 import com.sheout.users.AppLanguage;
 import com.sheout.users.DriverProfileApi;
@@ -284,6 +286,51 @@ class NotificationEventListeners {
         dispatcher.deliver(event.driverId(), NotificationType.INCENTIVE_EARNED, localized(event.driverId(), "incentive",
                 language -> Map.of("amount", rupees(event.amount()), "name", event.incentiveName()),
                 "/earnings"));
+    }
+
+    /**
+     * A friend signed up with her code. No name: the friend has not given one
+     * yet when she enters the code, and a lock screen is not the place for it.
+     * The amount is said only when it would really be paid.
+     */
+    @Async(NotificationDeliveryConfig.EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void onReferralJoined(ReferralJoined event) {
+        boolean partner = event.role() == AccountRole.DRIVER;
+        UUID to = event.referrerAccountId();
+        String key = partner ? "referralJoinedPartner" : "referralJoined";
+        if (event.referrerReward() == null) {
+            // Same heading, but a thank-you in place of an amount she would not get.
+            NotificationCopy.Localized heading = copy.render(to, key, none());
+            NotificationCopy.Localized thanks = copy.render(to, "referralJoinedPlain", none());
+            dispatcher.deliver(to, NotificationType.REFERRAL_JOINED, new OutboundMessage(heading.title(), thanks.body(), "/refer",
+                    "referral-" + event.referralId(), OutboundMessage.Urgency.NORMAL,
+                    "SheOut: " + heading.englishTitle() + ". " + thanks.englishBody()));
+            return;
+        }
+        dispatcher.deliver(to, NotificationType.REFERRAL_JOINED, localized(to, key,
+                language -> Map.of("amount", rupees(event.referrerReward())),
+                "/refer", "referral-" + event.referralId(), OutboundMessage.Urgency.NORMAL));
+    }
+
+    /**
+     * Ride credit from a referral, to each rider who got some. Partners are
+     * told by onIncentiveAwarded, since theirs is an ordinary wallet bonus.
+     */
+    @Async(NotificationDeliveryConfig.EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void onReferralCompleted(ReferralCompleted event) {
+        if (event.role() != AccountRole.CUSTOMER) {
+            return;
+        }
+        if (event.referrerReward() != null && event.referrerReward().signum() > 0) {
+            dispatcher.deliver(event.referrerAccountId(), NotificationType.REFERRAL_REWARDED, localized(event.referrerAccountId(),
+                    "referralRewardedReferrer", language -> Map.of("amount", rupees(event.referrerReward())), "/refer"));
+        }
+        if (event.refereeReward() != null && event.refereeReward().signum() > 0) {
+            dispatcher.deliver(event.refereeAccountId(), NotificationType.REFERRAL_REWARDED, localized(event.refereeAccountId(),
+                    "referralRewardedReferee", language -> Map.of("amount", rupees(event.refereeReward())), "/refer"));
+        }
     }
 
     /** The receipt: emailed if she has an address, and kept in her inbox either way. */

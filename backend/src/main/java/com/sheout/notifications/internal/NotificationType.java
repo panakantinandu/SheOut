@@ -40,5 +40,9 @@ public enum NotificationType {
     /** To both: the partner agreed and the trip now goes to the new drop. */
     DESTINATION_CHANGED,
     /** To the rider: her partner said no; the trip goes on as booked. */
-    DESTINATION_CHANGE_DECLINED
+    DESTINATION_CHANGE_DECLINED,
+    /** To the one who shared her code: a friend has signed up with it - see campaigns' ReferralJoined. */
+    REFERRAL_JOINED,
+    /** To a rider: a referral paid out ride credit to her - see campaigns' ReferralCompleted. */
+    REFERRAL_REWARDED
 }

@@ -9,9 +9,15 @@ import com.sheout.booking.BookingStatus;
 import com.sheout.booking.BookingSummary;
 import com.sheout.campaigns.IncentiveType;
 import com.sheout.campaigns.PromotionType;
+import com.sheout.campaigns.ReferralCompleted;
+import com.sheout.campaigns.ReferralJoined;
 import com.sheout.payments.PaymentCaptured;
 import com.sheout.payments.PaymentMethod;
 import com.sheout.sharedkernel.Result;
+import com.sheout.sharedkernel.event.DomainEventPublisher;
+import com.sheout.users.CustomerProfileApi;
+import com.sheout.users.CustomerProfileSummary;
+import com.sheout.users.DriverProfileApi;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.ObjectProvider;
@@ -29,6 +35,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -44,6 +51,8 @@ class ReferralServiceTest {
     private final IncentiveService incentives = mock(IncentiveService.class);
     private final AuthApi auth = mock(AuthApi.class);
     private final BookingApi bookings = mock(BookingApi.class);
+    private final CustomerProfileApi riderProfiles = mock(CustomerProfileApi.class);
+    private final DomainEventPublisher events = mock(DomainEventPublisher.class);
     private final List<ReferralEntity> rows = new ArrayList<>();
     private final Map<UUID, List<BookingSummary>> trips = new HashMap<>();
 
@@ -56,7 +65,10 @@ class ReferralServiceTest {
     void setUp() {
         ObjectProvider<BookingApi> provider = mock(ObjectProvider.class);
         when(provider.getObject()).thenReturn(bookings);
-        service = new ReferralService(codes, referrals, devices, promotions, incentives, auth, provider,
+        ObjectProvider<CustomerProfileApi> riders = mock(ObjectProvider.class);
+        when(riders.getIfAvailable()).thenReturn(riderProfiles);
+        ObjectProvider<DriverProfileApi> partners = mock(ObjectProvider.class);
+        service = new ReferralService(codes, referrals, devices, promotions, incentives, auth, provider, riders, partners, events,
                 10, 7, "https://app.sheoutride.com/", "https://partner.sheoutride.com/");
 
         when(codes.findByCode("ALICE234")).thenReturn(Optional.of(new ReferralCodeEntity(alice, AccountRole.CUSTOMER, "ALICE234")));
@@ -94,13 +106,55 @@ class ReferralServiceTest {
 
     @Test
     void aNewRiderJoiningWithACodeIsPendingAndNothingIsGivenYet() {
-        assertThat(service.apply(bea, AccountRole.CUSTOMER, " alice234 ", "install-bea-0001"))
+        assertThat(service.apply(bea, AccountRole.CUSTOMER, " alice234 ", "install-bea-0001").outcome())
                 .isEqualTo(ReferralService.ApplyOutcome.APPLIED);
         assertThat(rows).singleElement().satisfies(r -> {
             assertThat(r.getStatus()).isEqualTo(ReferralEntity.Status.PENDING);
             assertThat(r.getReferrerAccountId()).isEqualTo(alice);
         });
         verify(promotions, never()).grantReferralCredit(any(), any(), any());
+    }
+
+    @Test
+    void joiningSaysWhoInvitedHerAndWhatSheWillGetAndTellsTheReferrer() {
+        CustomerProfileSummary aliceProfile = mock(CustomerProfileSummary.class);
+        when(aliceProfile.name()).thenReturn("  Alice Rao ");
+        when(riderProfiles.findByAccountId(alice)).thenReturn(Optional.of(aliceProfile));
+        when(promotions.referralCreditAmount(PromotionType.REFERRAL_WELCOME)).thenReturn(Optional.of(new BigDecimal("50")));
+        when(promotions.referralCreditAmount(PromotionType.REFERRAL_REWARD)).thenReturn(Optional.of(new BigDecimal("40")));
+
+        ReferralService.ApplyResult result = service.apply(bea, AccountRole.CUSTOMER, "ALICE234", null);
+
+        assertThat(result.referrerFirstName()).isEqualTo("Alice");
+        assertThat(result.reward()).isEqualByComparingTo("50");
+        assertThat(result.cashReward()).isFalse();
+        verify(events).publish(argThat(ev -> ev instanceof ReferralJoined e
+                && e.referrerAccountId().equals(alice) && e.refereeAccountId().equals(bea)
+                        && e.referrerReward().compareTo(new BigDecimal("40")) == 0));
+    }
+
+    @Test
+    void aPausedWelcomeCampaignPromisesNothingAndAMissingNameIsNull() {
+        when(promotions.referralCreditAmount(any())).thenReturn(Optional.empty());
+
+        ReferralService.ApplyResult result = service.apply(bea, AccountRole.CUSTOMER, "ALICE234", null);
+
+        assertThat(result.outcome()).isEqualTo(ReferralService.ApplyOutcome.APPLIED);
+        assertThat(result.referrerFirstName()).isNull();
+        assertThat(result.reward()).isNull();
+        verify(events).publish(argThat(ev -> ev instanceof ReferralJoined e && e.referrerReward() == null));
+    }
+
+    @Test
+    void completingAReferralAnnouncesWhatEachSideGot() {
+        service.apply(bea, AccountRole.CUSTOMER, "ALICE234", null);
+
+        paid(UUID.randomUUID(), bea, UUID.randomUUID(), PaymentMethod.CASH, "72.00");
+
+        verify(events).publish(argThat(ev -> ev instanceof ReferralCompleted e
+                && e.referrerAccountId().equals(alice) && e.refereeAccountId().equals(bea)
+                        && e.referrerReward().compareTo(new BigDecimal("50")) == 0
+                        && e.refereeReward().compareTo(new BigDecimal("50")) == 0));
     }
 
     @Test
@@ -153,17 +207,17 @@ class ReferralServiceTest {
     void anAccountCannotUseItsOwnCode() {
         account(alice, Instant.now());
         when(auth.samePerson(alice, alice)).thenReturn(true);
-        assertThat(service.apply(alice, AccountRole.CUSTOMER, "ALICE234", null)).isEqualTo(ReferralService.ApplyOutcome.OWN_CODE);
+        assertThat(service.apply(alice, AccountRole.CUSTOMER, "ALICE234", null).outcome()).isEqualTo(ReferralService.ApplyOutcome.OWN_CODE);
     }
 
     @Test
     void aSecondAccountOnTheSamePhoneNumberOrInstallIsTheSamePerson() {
         when(auth.samePerson(alice, bea)).thenReturn(true);
-        assertThat(service.apply(bea, AccountRole.CUSTOMER, "ALICE234", null)).isEqualTo(ReferralService.ApplyOutcome.OWN_CODE);
+        assertThat(service.apply(bea, AccountRole.CUSTOMER, "ALICE234", null).outcome()).isEqualTo(ReferralService.ApplyOutcome.OWN_CODE);
 
         when(auth.samePerson(alice, bea)).thenReturn(false);
         when(devices.shareAnInstall(alice, bea)).thenReturn(true);
-        assertThat(service.apply(bea, AccountRole.CUSTOMER, "ALICE234", "install-shared-01")).isEqualTo(ReferralService.ApplyOutcome.OWN_CODE);
+        assertThat(service.apply(bea, AccountRole.CUSTOMER, "ALICE234", "install-shared-01").outcome()).isEqualTo(ReferralService.ApplyOutcome.OWN_CODE);
         assertThat(rows).isEmpty();
     }
 
@@ -181,26 +235,26 @@ class ReferralServiceTest {
     @Test
     void onlyNewAccountsThatHaveNeverFinishedATripCanJoinWithACode() {
         account(bea, Instant.now().minus(Duration.ofDays(30)));
-        assertThat(service.apply(bea, AccountRole.CUSTOMER, "ALICE234", null)).isEqualTo(ReferralService.ApplyOutcome.NOT_ELIGIBLE);
+        assertThat(service.apply(bea, AccountRole.CUSTOMER, "ALICE234", null).outcome()).isEqualTo(ReferralService.ApplyOutcome.NOT_ELIGIBLE);
 
         account(bea, Instant.now().minus(Duration.ofHours(1)));
         BookingSummary finished = mock(BookingSummary.class);
         when(finished.status()).thenReturn(BookingStatus.COMPLETED);
         trips.put(bea, List.of(finished));
-        assertThat(service.apply(bea, AccountRole.CUSTOMER, "ALICE234", null)).isEqualTo(ReferralService.ApplyOutcome.NOT_ELIGIBLE);
+        assertThat(service.apply(bea, AccountRole.CUSTOMER, "ALICE234", null).outcome()).isEqualTo(ReferralService.ApplyOutcome.NOT_ELIGIBLE);
     }
 
     @Test
     void aRiderCodeDoesNotBringInAPartnerAndUnknownCodesReadTheSame() {
-        assertThat(service.apply(bea, AccountRole.DRIVER, "ALICE234", null)).isEqualTo(ReferralService.ApplyOutcome.INVALID_CODE);
+        assertThat(service.apply(bea, AccountRole.DRIVER, "ALICE234", null).outcome()).isEqualTo(ReferralService.ApplyOutcome.INVALID_CODE);
         when(codes.findByCode(anyString())).thenReturn(Optional.empty());
-        assertThat(service.apply(bea, AccountRole.CUSTOMER, "NOPE2345", null)).isEqualTo(ReferralService.ApplyOutcome.INVALID_CODE);
+        assertThat(service.apply(bea, AccountRole.CUSTOMER, "NOPE2345", null).outcome()).isEqualTo(ReferralService.ApplyOutcome.INVALID_CODE);
     }
 
     @Test
     void oneCodePerNewAccount() {
         service.apply(bea, AccountRole.CUSTOMER, "ALICE234", null);
-        assertThat(service.apply(bea, AccountRole.CUSTOMER, "ALICE234", null)).isEqualTo(ReferralService.ApplyOutcome.ALREADY_APPLIED);
+        assertThat(service.apply(bea, AccountRole.CUSTOMER, "ALICE234", null).outcome()).isEqualTo(ReferralService.ApplyOutcome.ALREADY_APPLIED);
     }
 
     @Test
@@ -210,7 +264,7 @@ class ReferralServiceTest {
         when(codes.findByCode("PRIYA234")).thenReturn(Optional.of(new ReferralCodeEntity(priya, AccountRole.DRIVER, "PRIYA234")));
         account(priya, Instant.now().minus(Duration.ofDays(90)));
         account(meera, Instant.now());
-        assertThat(service.apply(meera, AccountRole.DRIVER, "PRIYA234", null)).isEqualTo(ReferralService.ApplyOutcome.APPLIED);
+        assertThat(service.apply(meera, AccountRole.DRIVER, "PRIYA234", null).outcome()).isEqualTo(ReferralService.ApplyOutcome.APPLIED);
         UUID trip = UUID.randomUUID();
 
         // Whatever the rider paid with: the partner drove it and was paid.

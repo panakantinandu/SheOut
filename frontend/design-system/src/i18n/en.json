@@ -424,6 +424,15 @@
       "step1": "Share your code or link with a woman who could drive with SheOut.",
       "step2": "She signs up as a partner with your code, is verified, and completes a paid trip.",
       "step3": "You both get money in your SheOut wallet, paid out with your earnings. You are rewarded for up to {{max}} partners."
+    },
+    "welcome": {
+      "kicker": "Congratulations",
+      "title": "You're in!",
+      "invitedBy": "You joined SheOut with {{name}}'s invite.",
+      "invitedByFriend": "You joined SheOut with a friend's invite.",
+      "riderReward": "ride credit for you after your first paid ride - and your friend gets a reward too.",
+      "partnerReward": "in your wallet after your first paid trip - and your friend gets a reward too.",
+      "continue": "Let's go"
     }
   }
 }

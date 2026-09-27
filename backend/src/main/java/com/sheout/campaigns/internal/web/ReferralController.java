@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.math.BigDecimal;
 import java.time.Duration;
 
 /**
@@ -51,13 +52,14 @@ public class ReferralController {
      * the same answer, so codes cannot be discovered here.
      */
     @PostMapping("/api/v1/referrals/apply")
-    public ResponseEntity<Void> apply(@Valid @RequestBody ApplyRequest request,
+    public ResponseEntity<ApplyResponse> apply(@Valid @RequestBody ApplyRequest request,
                                       @RequestHeader(name = "X-Install-Id", required = false) String installId) {
         CurrentAccount caller = requireRiderOrPartner();
         rateLimiter.tryConsume("referral-apply:" + caller.accountId(), 10, Duration.ofHours(1))
                 .orThrow("Too many codes tried. Please wait a while and try again.");
-        return switch (referrals.apply(caller.accountId(), caller.role(), request.code(), installId)) {
-            case APPLIED -> ResponseEntity.noContent().build();
+        ReferralService.ApplyResult result = referrals.apply(caller.accountId(), caller.role(), request.code(), installId);
+        return switch (result.outcome()) {
+            case APPLIED -> ResponseEntity.ok(new ApplyResponse(result.referrerFirstName(), result.reward(), result.cashReward()));
             case INVALID_CODE -> throw new ApiException(HttpStatus.NOT_FOUND, "REFERRAL_CODE_INVALID",
                     "That referral code isn't valid. Check it with the friend who sent it.");
             case OWN_CODE -> throw new ApiException(HttpStatus.CONFLICT, "REFERRAL_OWN_CODE",
@@ -70,6 +72,10 @@ public class ReferralController {
     }
 
     public record ApplyRequest(@NotBlank @Size(max = 20) String code) {
+    }
+
+    /** What her welcome screen says: who invited her and what her first paid trip brings. */
+    public record ApplyResponse(String referrerFirstName, BigDecimal reward, boolean cashReward) {
     }
 
     private static CurrentAccount requireRiderOrPartner() {

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { BrandHeader, ProfileCompletionForm, ConsentCheckbox, ReferralCodeField, clearPendingReferralCode, pendingReferralCode } from '@sheout/design-system';
+import { BrandHeader, ProfileCompletionForm, ConsentCheckbox, ReferralCodeField, ReferralWelcome, clearPendingReferralCode, pendingReferralCode, type ReferralWelcomeDetails } from '@sheout/design-system';
 import { apiErrorText } from '../lib/apiErrors';
 import { ApiError, authApi, referralsApi, usersApi } from '../api/client';
 import type { DriverProfileSummary, VehicleType } from '../api/types';
@@ -31,6 +31,14 @@ export function CompleteProfile() {
   /** A friend's code, from her invite link or typed in. Offered only while the server says she can still use one. */
   const [referralCode, setReferralCode] = useState(pendingReferralCode());
   const [canUseReferral, setCanUseReferral] = useState(false);
+  /**
+   * Set once her code is accepted. Kept across a failed save, so pressing
+   * Continue again does not send the code a second time - which the server
+   * would refuse as already used, leaving her stuck on this screen.
+   */
+  const [joined, setJoined] = useState<ReferralWelcomeDetails | null>(null);
+  /** The congratulations, shown once everything is saved. */
+  const [celebrate, setCelebrate] = useState<ReferralWelcomeDetails | null>(null);
   useEffect(() => {
     referralsApi.mine().then((s) => setCanUseReferral(s.canApplyCode)).catch(() => setCanUseReferral(false));
   }, []);
@@ -83,9 +91,11 @@ export function CompleteProfile() {
           onSubmit={async (values) => {
             // The friend's code first: a wrong code is hers to fix before
             // anything is saved, and an empty field is simply skipped.
-            if (canUseReferral && referralCode.trim()) {
+            let welcome = joined;
+            if (!welcome && canUseReferral && referralCode.trim()) {
               try {
-                await referralsApi.apply(referralCode.trim());
+                welcome = await referralsApi.apply(referralCode.trim());
+                setJoined(welcome);
                 clearPendingReferralCode();
               } catch (err) {
                 throw new Error(apiErrorText(err, 'refer.applyError'));
@@ -104,7 +114,8 @@ export function CompleteProfile() {
               throw new Error(err instanceof ApiError ? err.message : t('profile.saveError'));
             }
             if (accountId) markProfileComplete(accountId);
-            navigate('/home', { replace: true });
+            if (welcome) setCelebrate(welcome);
+            else navigate('/home', { replace: true });
           }}
         >
           <VehicleFields
@@ -122,6 +133,7 @@ export function CompleteProfile() {
           />
         </ProfileCompletionForm>
       )}
+      <ReferralWelcome details={celebrate} onContinue={() => navigate('/home', { replace: true })} />
     </div>
   );
 }

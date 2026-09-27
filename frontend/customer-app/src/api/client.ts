@@ -1,5 +1,5 @@
 import type { LiveSelfieResult, PushApi, SelfieChallenge } from '@sheout/design-system';
-import { installId, type ReferralSummary } from '@sheout/design-system';
+import { installId, type ReferralSummary, type ReferralWelcomeDetails } from '@sheout/design-system';
 import type {
   ApiErrorResponse,
   AccountSession,
@@ -892,7 +892,7 @@ export const referralsApi = {
   },
 
   /** A new account enters a friend's code while signing up. 204 on success. */
-  apply(code: string): Promise<void> {
+  apply(code: string): Promise<ReferralWelcomeDetails> {
     return request('/api/v1/referrals/apply', { method: 'POST', body: { code }, headers: installHeader() });
   },
 };
