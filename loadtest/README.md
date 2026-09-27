@@ -145,3 +145,14 @@ UTC, `--no-db` (accounts from earlier runs; their leftovers cleared through
 the API): 44,885 requests, 0 errors, p95 415 ms overall, create booking p95
 1,812 ms, nearby partners p95 2,094 ms, first-minute p95 1,020 ms, minutes
 2-16 at 305-501 ms. Peak memory for the window: see the service's Metrics.
+Metrics for that window (read by the operator): memory limit 512 MB and CPU
+limit 0.5 - staging was on Starter at the time, not Standard - memory flat
+around 400 MB with no restart, CPU peak about 0.4.
+
+Memory headroom, closed: this workload needs ~400 MB in all on a 512 MB
+instance, where the heap is capped at ~307 MB (60%) and everything else takes
+~100 MB. On production's Standard (2 GB) the heap cap is ~1.2 GB, so the JVM
+cannot exceed roughly 1.35 GB (~70% of the container) whatever the load, and
+the same load used 0.4 of half a CPU against Standard's full one. No separate
+2 GB load test is needed; production's own Metrics under real traffic will
+give the real figure.
