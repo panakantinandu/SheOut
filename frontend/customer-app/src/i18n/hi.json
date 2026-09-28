@@ -15,7 +15,8 @@
     "estimated": "अनुमानित किराया",
     "calculating": "गणना हो रही है...",
     "approxKm": "लगभग {{km}} किमी",
-    "estimateError": "किराए का अनुमान नहीं लगाया जा सका"
+    "estimateError": "किराए का अनुमान नहीं लगाया जा सका",
+    "tripFare": "किराया"
   },
   "location": {
     "pickOnMap": "मैप पर {{what}} चुनें"

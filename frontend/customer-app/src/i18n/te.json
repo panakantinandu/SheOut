@@ -15,7 +15,8 @@
     "estimated": "అంచనా ఛార్జీ",
     "calculating": "లెక్కిస్తోంది...",
     "approxKm": "సుమారు {{km}} కి.మీ.",
-    "estimateError": "ఛార్జీని అంచనా వేయలేకపోయాం"
+    "estimateError": "ఛార్జీని అంచనా వేయలేకపోయాం",
+    "tripFare": "ఛార్జీ"
   },
   "location": {
     "pickOnMap": "మ్యాప్‌లో {{what}} ఎంచుకోండి"

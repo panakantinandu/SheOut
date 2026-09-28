@@ -15,7 +15,8 @@
     "estimated": "Estimated Fare",
     "calculating": "Calculating...",
     "approxKm": "approx. {{km}} km",
-    "estimateError": "Could not estimate the fare"
+    "estimateError": "Could not estimate the fare",
+    "tripFare": "Fare"
   },
   "location": {
     "pickOnMap": "Pick {{what}} on the map"

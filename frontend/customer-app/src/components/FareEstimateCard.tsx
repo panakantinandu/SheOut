@@ -41,7 +41,7 @@ export function FareEstimateCard({ state, kind = 'ride' }: { state: FareQuoteSta
       <div className="flex items-center gap-3">
         <ServiceArt kind={quote ? serviceArtFor(quote.category) : kind} size="md" />
         <div className="flex-1">
-          <p className="text-sm text-text-secondary">{t('fare.estimated')}</p>
+          <p className="text-sm text-text-secondary">{t('fare.tripFare')}</p>
           {loading && !quote ? (
             <p className="font-heading text-card-title text-text-secondary">{t('fare.calculating')}</p>
           ) : (
