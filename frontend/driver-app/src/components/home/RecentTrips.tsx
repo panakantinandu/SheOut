@@ -17,7 +17,9 @@ import type { BookingSummary } from '../../api/types';
 function tone(b: BookingSummary): StatusTone {
   if (isAwaitingPayment(b)) return 'warning';
   if (b.status === 'COMPLETED') return 'success';
-  if (b.status === 'CANCELLED') return 'danger';
+  // Neutral, not red: red is kept for SOS and destructive actions, and a
+  // cancelled trip is neither.
+  if (b.status === 'CANCELLED') return 'neutral';
   return 'primary';
 }
 

@@ -7,10 +7,12 @@ export interface StatusBadgeProps extends HTMLAttributes<HTMLSpanElement> {
   tone?: StatusTone;
 }
 
+// Text in the strong shade, as the tokens intend for anything on a tint: the
+// base green on its own wash was 2.7:1 in the light theme.
 const toneClasses: Record<StatusTone, string> = {
-  success: 'bg-accent-green/15 text-accent-green',
-  warning: 'bg-accent-orange/15 text-accent-orange',
-  danger: 'bg-danger/15 text-danger',
+  success: 'bg-accent-green/15 text-accent-green-strong',
+  warning: 'bg-accent-orange/15 text-accent-orange-strong',
+  danger: 'bg-danger/15 text-accent-red-strong',
   neutral: 'bg-border text-text-secondary',
   primary: 'bg-primary-light text-primary',
 };
