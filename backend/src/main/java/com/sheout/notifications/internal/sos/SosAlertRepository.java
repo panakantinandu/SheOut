@@ -13,6 +13,9 @@ public interface SosAlertRepository extends JpaRepository<SosAlertEntity, UUID> 
 
     List<SosAlertEntity> findByBookingIdOrderByCreatedAtDesc(UUID bookingId);
 
+    /** The alert her phone already sent under this id - a retry, or the offline queue sending again. */
+    java.util.Optional<SosAlertEntity> findByClientAlertId(UUID clientAlertId);
+
     /** Whether any of her alerts since {@code since} actually reached at least one contact. */
     boolean existsByCustomerAccountIdAndContactsNotifiedGreaterThanAndCreatedAtAfter(
             UUID customerAccountId, int contactsNotified, Instant since);

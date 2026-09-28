@@ -36,12 +36,104 @@
     "shareLocation": "Share Location",
     "callContact": "Call Contact",
     "noContactsYet": "You have no emergency contacts yet. Add at least one.",
-    "alertsGoTo": "SOS alerts go to {{names}}."
+    "alertsGoTo": "SOS alerts go to {{names}}.",
+    "queued": "No connection right now. Your SOS is saved on this phone and will go to SheOut by itself the moment you have a connection - you don't need to press it again. Text your contacts from your phone below, or call {{number}}.",
+    "smsOpened": "Your SMS app was opened with your emergency contacts and your location filled in. Press Send in your SMS app.",
+    "waitingToSend": "An SOS is saved on this phone and will be sent to SheOut as soon as there is a connection."
   },
   "pickupCode": {
     "haveReady": "Watch her approach on the map. Have your code ready to read out.",
     "title": "Your pickup code",
     "instruction": "Read this out to your partner before you get in. She cannot start the trip without it.",
     "aria": "Your pickup code is {{digits}}"
+  },
+  "discreet": {
+    "countdownTitle": "Sending SOS",
+    "countdownBody": "Your emergency contacts and SheOut will be alerted. Tap Cancel if this was a mistake.",
+    "cancel": "Cancel",
+    "sendNow": "Send SOS now",
+    "permissionChip": "Tap to keep discreet SOS on for this trip",
+    "unsupported": "This phone's browser does not share motion readings, so discreet SOS cannot work here. Use the SOS button, or your phone's own back-tap shortcut below.",
+    "isOn": "Discreet SOS is on - it listens during your trips.",
+    "turnOn": "Turn on discreet SOS",
+    "turnOff": "Turn off discreet SOS",
+    "denied": "Motion access was not allowed, so discreet SOS stays off. On iPhone, allow Motion & Orientation access for this site in Safari settings, then try again.",
+    "onboardingTitle": "SOS without the button",
+    "onboardingBody": "During a trip, shake your phone firmly or knock twice on its back to start SOS. A 3-second countdown lets you cancel a mistake."
+  },
+  "safetyCenter": {
+    "openFromSos": "Safety Center: how SOS and safety work",
+    "introTitle": "How SheOut keeps you safe",
+    "intro": "Plain answers about what SheOut checks, what it shares, and exactly what happens when you ask for help.",
+    "sos": {
+      "title": "What SOS does, step by step",
+      "step1": "Open SOS - the red button in the bottom bar - and press the SOS circle.",
+      "step2": "Your location goes to SheOut. SheOut texts every emergency contact you have saved, with your location, and SheOut's operations team is alerted at the same moment.",
+      "step3": "You see how many of your contacts were reached. If a text could not reach someone, you can send it from your own phone in one tap.",
+      "step4": "Call {{number}} from the same screen if you need police, an ambulance or fire services.",
+      "contacts": "Your emergency contacts are only ever messaged when you raise an SOS. Add them in Profile > Emergency contacts, and tell them you have.",
+      "open": "Open SOS"
+    },
+    "discreet": {
+      "title": "Discreet SOS - without pressing the button",
+      "how": "With discreet SOS on, during a trip with SheOut open: shake your phone firmly several times in a row, or knock twice sharply on the back of it.",
+      "countdown": "A 3-second countdown appears with a large Cancel button, so an accidental shake alerts nobody. If you do nothing, the SOS is sent exactly as if you had pressed the button. Doing the gesture again sends it at once.",
+      "limit": "SheOut can only feel these gestures while it is open on your screen. For when the phone is locked or another app is open, set up your phone's own shortcut:",
+      "shortcutTitle": "Phone shortcut (works with SheOut closed)",
+      "ios1": "iPhone: in the Shortcuts app, make a shortcut that opens the link below (Add Action > Open URLs).",
+      "ios2": "Then go to Settings > Accessibility > Touch > Back Tap > Double Tap, and choose that shortcut.",
+      "ios3": "Double-tapping the back of your iPhone then opens SheOut's SOS countdown.",
+      "android": "Android: some phones have a similar quick-tap gesture (for example Settings > System > Gestures > Quick Tap on Pixel phones) that can open this link. Not every phone has one."
+    },
+    "noData": {
+      "title": "If data is slow or there is no signal",
+      "slow": "If SheOut has not confirmed your SOS within about 4 seconds, your SMS app opens with your emergency contacts and your location filled in, while the app keeps trying SheOut. Press Send - an app cannot send a text for you.",
+      "none": "With no signal at all, your SOS is saved on your phone and sent to SheOut automatically the moment a connection returns. You do not need to press SOS again.",
+      "send": "A text can sometimes get through when data cannot, so send the SMS too. Emergency calls often connect when nothing else does."
+    },
+    "vs112": {
+      "title": "SheOut SOS or {{number}}?",
+      "call": "Call {{number}} when you are in danger right now, someone is hurt, or you need police, an ambulance or fire services. {{number}} is the emergency service - SheOut is not.",
+      "sos": "Use SheOut SOS to alert your emergency contacts and SheOut's team with your location - for example when you cannot talk, or alongside a call.",
+      "both": "You can do both: the SOS screen has a Call {{number}} button."
+    },
+    "verification": {
+      "title": "Who is verified, and how",
+      "riders": "Every rider sends an ID document (with the Aadhaar number masked) and takes a live selfie in the app, following on-screen prompts. She cannot book until she is approved.",
+      "partners": "Every partner does the same, and also sends her vehicle's registration certificate, which must match her profile. SheOut's team also records a police verification for every partner. She cannot receive trips until both checks pass.",
+      "people": "Every check is made by a person on SheOut's team - no software approves anyone automatically, and nothing matches faces by itself.",
+      "pickupCode": "Before you get in, read your pickup code out to your partner. Only the partner assigned to your trip can start it with that code."
+    },
+    "sharing": {
+      "title": "What sharing your trip sends, and to whom",
+      "what": "Share trip, on your trip screen, opens your phone's share sheet with a message: your partner's name and registration, where you are going, and a map link to where your partner is at that moment.",
+      "snapshot": "It is a snapshot, not a live-updating link - share again for a newer position. SheOut publishes no public trip page.",
+      "who": "It goes only to the people you choose to send it to. Your partner sees your name, pickup and drop for the trip; phone numbers are never shared between you."
+    },
+    "whatIf": {
+      "title": "What to do if...",
+      "uncomfortable": {
+        "q": "You feel uncomfortable, but it is not an emergency",
+        "a": "Share your trip with someone you trust, and message your partner in the app. You can ask her to stop at a safe, busy place and get out there. Afterwards, raise an issue in Help & Support - a person reads every one."
+      },
+      "cantReach": {
+        "q": "You cannot safely reach your phone",
+        "a": "With discreet SOS on, shake your phone firmly or knock twice on its back - the countdown sends SOS unless you cancel. Your phone's back-tap shortcut works even with SheOut closed."
+      },
+      "noSignal": {
+        "q": "You have no signal",
+        "a": "Press SOS anyway. Your SMS app opens with your contacts and location, and SheOut gets the alert automatically once you have a connection. Try calling {{number}} - emergency calls often connect when data does not."
+      },
+      "mismatch": {
+        "q": "The trip does not match what was booked",
+        "a": "If the person, vehicle or registration does not match the app, do not get in and do not read out your pickup code. Cancel the trip and raise an issue. If the route looks wrong during the trip or you feel unsafe, use SOS or call {{number}}."
+      }
+    }
+  },
+  "assistant": {
+    "emergencyTitle": "If you are in danger, use SOS now",
+    "emergencyBody": "This chat can't help in an emergency. SOS alerts your emergency contacts and SheOut's team with your location. Call {{number}} for police, an ambulance or fire services.",
+    "call": "Call {{number}}",
+    "imSafe": "I'm safe - go back to the chat"
   }
 }

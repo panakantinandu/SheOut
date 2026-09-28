@@ -1,3 +1,4 @@
+import type { AssistantReply, AssistantTurn } from '@sheout/design-system';
 import type { LiveSelfieResult, PushApi, SelfieChallenge } from '@sheout/design-system';
 import { installId, type ReferralSummary, type ReferralWelcomeDetails } from '@sheout/design-system';
 import type {
@@ -388,7 +389,21 @@ export const notificationsApi = {
     return request('/api/v1/notifications/me/read-all', { method: 'POST' });
   },
 
-  triggerSos(input: { lat: number; lng: number; bookingId?: string }): Promise<SosResponse> {
+  /**
+   * The delivery fields are optional and only describe how this press went
+   * out - see lib/sosDelivery. clientAlertId makes a repeat of the same
+   * press harmless: SheOut never texts her contacts twice for it.
+   */
+  triggerSos(input: {
+    lat: number;
+    lng: number;
+    bookingId?: string;
+    triggerSource?: 'BUTTON' | 'SHAKE' | 'BACK_TAP' | 'SHORTCUT';
+    deliveryChannel?: 'DATA' | 'DELAYED_QUEUE';
+    triggeredAt?: string;
+    clientAlertId?: string;
+    smsFallbackOpened?: boolean;
+  }): Promise<SosResponse> {
     return request('/api/v1/notifications/sos', { method: 'POST', body: input });
   },
 };
@@ -782,6 +797,17 @@ export const privacyApi = {
 export const contentApi = {
   getSection(prefix: string): Promise<Record<string, string>> {
     return request(`/api/v1/content${buildQuery({ prefix })}`, { auth: false });
+  },
+};
+
+/**
+ * SheOut Help. The conversation lives in the app; the server keeps none of
+ * it. The reply says what kind it is - an answer, a hand-off to a person, or
+ * an emergency (the SOS panel) - see HelpAssistantChat.
+ */
+export const assistantApi = {
+  ask(messages: AssistantTurn[], language: string): Promise<AssistantReply> {
+    return request('/api/v1/assistant/messages', { method: 'POST', body: { messages, language } });
   },
 };
 

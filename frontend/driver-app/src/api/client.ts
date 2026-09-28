@@ -1,3 +1,4 @@
+import type { AssistantReply, AssistantTurn } from '@sheout/design-system';
 import type { LiveSelfieResult, PushApi, SelfieChallenge } from '@sheout/design-system';
 import { installId, type ReferralSummary, type ReferralWelcomeDetails } from '@sheout/design-system';
 import type {
@@ -623,6 +624,17 @@ export const privacyApi = {
 export const contentApi = {
   getSection(prefix: string): Promise<Record<string, string>> {
     return request(`/api/v1/content${buildQuery({ prefix })}`, { auth: false });
+  },
+};
+
+/**
+ * SheOut Help. The conversation lives in the app; the server keeps none of
+ * it. The reply says what kind it is - an answer, a hand-off to a person, or
+ * an emergency (the SOS panel) - see HelpAssistantChat.
+ */
+export const assistantApi = {
+  ask(messages: AssistantTurn[], language: string): Promise<AssistantReply> {
+    return request('/api/v1/assistant/messages', { method: 'POST', body: { messages, language } });
   },
 };
 

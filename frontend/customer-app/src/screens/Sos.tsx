@@ -1,10 +1,12 @@
-import { Bell, CheckCircle2, ChevronRight, MapPin, MessageSquareText, Phone, Share2, Users } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { Bell, CheckCircle2, ChevronRight, CloudOff, MapPin, MessageSquareText, Phone, Share2, ShieldCheck, Users } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button, Card, IconCircle, ListRow, SafetyText, TopHeader, i18next, useSafetyString } from '@sheout/design-system';
-import { ApiError, notificationsApi, usersApi } from '../api/client';
+import { usersApi } from '../api/client';
 import type { EmergencyContact, SosResponse } from '../api/types';
 import { localEmergencyNumber, mapsLink, openSmsComposer, shareViaDevice } from '../lib/emergency';
+import { cacheContacts, cachePosition, cachedContacts, cachedPosition, pendingSos, sendSos, type TriggerSource } from '../lib/sosDelivery';
+import { useDiscreetSos } from '../components/DiscreetSosGuard';
 import { useTranslation } from '@sheout/design-system';
 
 const SAFETY_FEATURES = ['liveLocation', 'support', 'verifiedPartners', 'emergencyContacts'] as const;
@@ -27,13 +29,23 @@ interface Position {
 
 function getCurrentPosition(): Promise<Position> {
   return new Promise((resolve, reject) => {
+    // Her last known position, if a fresh fix cannot be had in time: an SOS
+    // with a position from a few minutes ago beats no SOS at all.
+    const fallback = (message: string) => {
+      const last = cachedPosition();
+      if (last) resolve({ lat: last.lat, lng: last.lng });
+      else reject(new Error(message));
+    };
     if (!navigator.geolocation) {
-      reject(new Error(i18next.t('sos.noGeolocation', { ns: 'safety' })));
+      fallback(i18next.t('sos.noGeolocation', { ns: 'safety' }));
       return;
     }
     navigator.geolocation.getCurrentPosition(
-      (p) => resolve({ lat: p.coords.latitude, lng: p.coords.longitude }),
-      () => reject(new Error(i18next.t('sos.locationDenied', { ns: 'safety' }))),
+      (p) => {
+        cachePosition(p.coords.latitude, p.coords.longitude);
+        resolve({ lat: p.coords.latitude, lng: p.coords.longitude });
+      },
+      () => fallback(i18next.t('sos.locationDenied', { ns: 'safety' })),
       // A slightly stale fix now beats a perfect one in ten seconds.
       { timeout: 8000, maximumAge: 30000, enableHighAccuracy: true }
     );
@@ -82,8 +94,14 @@ export function Sos() {
   const { i18n } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
-  const bookingId = (location.state as { bookingId?: string } | null)?.bookingId;
+  const routeState = location.state as { bookingId?: string; autoSend?: { source: TriggerSource } } | null;
+  const bookingId = routeState?.bookingId;
   const emergency = useMemo(localEmergencyNumber, []);
+  const discreet = useDiscreetSos();
+  /** How the last press went out when the connection was bad - see lib/sosDelivery. */
+  const [queued, setQueued] = useState(false);
+  const [smsOpened, setSmsOpened] = useState(false);
+  const [waitingInQueue, setWaitingInQueue] = useState(() => pendingSos().length > 0);
 
   const [sending, setSending] = useState(false);
   const [sharing, setSharing] = useState(false);
@@ -99,22 +117,55 @@ export function Sos() {
   // Fetched up front so the fallbacks work the instant they are needed,
   // including if the connection drops right after the alert.
   useEffect(() => {
-    usersApi.getMyEmergencyContacts().then(setContacts).catch(() => setContacts([]));
+    // From the phone first, so the fallbacks are ready even with no connection.
+    const cached = cachedContacts();
+    if (cached.numbers.length > 0) {
+      setContacts(cached.numbers.map((n, i) => ({ id: `cached-${i}`, name: cached.names[i] ?? '', phoneNumber: n, relationship: '' }) as EmergencyContact));
+      setMyName(cached.myName);
+    }
+    usersApi
+      .getMyEmergencyContacts()
+      .then((list) => {
+        setContacts(list);
+        cacheContacts({ names: list.map((c) => c.name), numbers: list.map((c) => c.phoneNumber), myName: cachedContacts().myName });
+      })
+      .catch(() => setContacts((c) => c ?? []));
     usersApi
       .getMyProfile()
       .then((p) => setMyName(p.name?.split(' ')[0] || undefined))
       .catch(() => undefined);
+    const tick = window.setInterval(() => setWaitingInQueue(pendingSos().length > 0), 3000);
+    return () => window.clearInterval(tick);
   }, []);
+
+  // Sent straight away after a discreet gesture's countdown ran out; the
+  // countdown first when the phone's own shortcut opened this screen.
+  // Per navigation, not per mount: the countdown started from this very
+  // screen (the shortcut) comes back to it with autoSend, without remounting.
+  const handledNavigation = useRef<string | null>(null);
+  useEffect(() => {
+    if (handledNavigation.current === location.key) return;
+    handledNavigation.current = location.key;
+    if (routeState?.autoSend) {
+      navigate('/sos', { replace: true, state: { bookingId } });
+      void handleSendSos(routeState.autoSend.source);
+    } else if (new URLSearchParams(location.search).get('trigger') === 'shortcut') {
+      navigate('/sos', { replace: true });
+      discreet.startCountdown('SHORTCUT');
+    }
+  }, [location.key]);
 
   const contactNumbers = (contacts ?? []).map((c) => c.phoneNumber);
   const someoneUnreached = result !== null && result.contactsTotal > 0 && result.contactsNotified < result.contactsTotal
     && result.reason !== 'CONTACTS_RECENTLY_ALERTED';
 
-  async function handleSendSos() {
+  async function handleSendSos(source: TriggerSource = 'BUTTON') {
     setSending(true);
     setError(null);
     setNotice(null);
     setResult(null);
+    setQueued(false);
+    setSmsOpened(false);
     let position: Position;
     try {
       position = await getCurrentPosition();
@@ -124,15 +175,23 @@ export function Sos() {
       setError(`${err instanceof Error ? err.message : s('sos.noLocation')}\n${s('sos.ifInDanger', { number: emergency.number })}`);
       return;
     }
-    try {
-      setResult(await notificationsApi.triggerSos({ ...position, bookingId }));
-    } catch (err) {
-      // The alert did not reach SheOut at all. Her phone can still text.
-      setError(
-        err instanceof ApiError
-          ? err.message
-          : s('sos.cannotReachSheout', { number: emergency.number })
-      );
+    // Data, the SMS fallback and the offline queue, at once - see lib/sosDelivery.
+    const delivery = await sendSos(
+      { ...position, bookingId, triggerSource: source },
+      alertMessage(myName ?? cachedContacts().myName, position, i18n.language),
+      () => setSmsOpened(true)
+    );
+    setSmsOpened(delivery.smsOpened);
+    if (delivery.kind === 'delivered') {
+      setResult(delivery.response);
+    } else {
+      if (delivery.kind === 'queued') {
+        setQueued(true);
+        setWaitingInQueue(true);
+      } else {
+        setError(delivery.message);
+      }
+      // Not confirmed by SheOut: her phone's own routes, now.
       setResult({
         alertId: '',
         contactsTotal: contacts?.length ?? 0,
@@ -142,9 +201,8 @@ export function Sos() {
         success: false,
         reason: (contacts?.length ?? 0) === 0 ? 'NO_EMERGENCY_CONTACTS' : 'ALL_SENDS_FAILED',
       });
-    } finally {
-      setSending(false);
     }
+    setSending(false);
   }
 
   async function handleShareLocation() {
@@ -197,6 +255,9 @@ export function Sos() {
   }
 
   function resultMessage(response: SosResponse): { tone: 'success' | 'danger'; text: string } {
+    if (queued) {
+      return { tone: 'danger', text: s('sos.queued', { number: emergency.number }) };
+    }
     if (response.reason === 'NO_EMERGENCY_CONTACTS') {
       return {
         tone: 'danger',
@@ -238,7 +299,7 @@ export function Sos() {
       <div className="flex flex-col items-center gap-3 text-center">
         <button
           type="button"
-          onClick={handleSendSos}
+          onClick={() => void handleSendSos('BUTTON')}
           disabled={sending}
           aria-label={sending ? t('sos.sendingAria') : t('sos.sendAria')}
           className="relative flex h-44 w-44 items-center justify-center rounded-full transition-transform active:scale-95 disabled:opacity-70"
@@ -266,6 +327,17 @@ export function Sos() {
         )}
         {error && <p className="whitespace-pre-line text-sm font-medium text-danger">{error}</p>}
         {notice && <p className="text-sm font-medium text-success">{notice}</p>}
+        {smsOpened && (
+          <p className="text-sm font-medium text-text-primary" data-testid="sos-sms-opened">
+            <SafetyText k="sos.smsOpened" />
+          </p>
+        )}
+        {waitingInQueue && !queued && (
+          <p className="flex items-center gap-2 text-sm font-medium text-text-secondary" data-testid="sos-waiting">
+            <CloudOff className="h-4 w-4 shrink-0" aria-hidden="true" />
+            <SafetyText k="sos.waitingToSend" />
+          </p>
+        )}
       </div>
 
       {/* The fallback that does not depend on SheOut's SMS provider. Shown
@@ -334,6 +406,16 @@ export function Sos() {
           ))}
         </div>
       </div>
+
+      <Button
+        fullWidth
+        variant="secondary"
+        icon={<ShieldCheck className="h-4 w-4" />}
+        onClick={() => navigate('/safety')}
+        data-testid="sos-safety-center"
+      >
+        <SafetyText k="safetyCenter.openFromSos" englishClassName="font-normal" />
+      </Button>
 
       <div>
         {/* Managing who an SOS reaches is the one safety setting a customer

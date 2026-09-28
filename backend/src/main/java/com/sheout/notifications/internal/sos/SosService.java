@@ -10,6 +10,8 @@ import com.sheout.notifications.internal.NotificationType;
 import com.sheout.notifications.internal.SendFailure;
 import com.sheout.notifications.internal.channel.OutboundMessage;
 import com.sheout.notifications.SosAlertSummary;
+import com.sheout.notifications.SosDeliveryChannel;
+import com.sheout.notifications.SosTriggerSource;
 import com.sheout.notifications.SosApi;
 import com.sheout.notifications.SosError;
 import com.sheout.notifications.SosStatus;
@@ -94,7 +96,41 @@ public class SosService implements SosApi {
         this.emergencyContactsApi = emergencyContactsApi;
     }
 
+    /**
+     * How this press was raised and how it arrived - see SosTriggerSource and
+     * SosDeliveryChannel. clientAlertId is the phone's own id for the press.
+     */
+    public record Delivery(SosTriggerSource triggerSource, SosDeliveryChannel channel, Instant triggeredAt,
+                           UUID clientAlertId, boolean smsFallbackOpened) {
+
+        public static Delivery button() {
+            return new Delivery(SosTriggerSource.BUTTON, SosDeliveryChannel.DATA, null, null, false);
+        }
+    }
+
     public SosOutcome trigger(UUID customerAccountId, double lat, double lng, UUID bookingId) {
+        return trigger(customerAccountId, lat, lng, bookingId, Delivery.button());
+    }
+
+    public SosOutcome trigger(UUID customerAccountId, double lat, double lng, UUID bookingId, Delivery delivery) {
+        // The same press arriving again - a retry after a lost response, or
+        // the offline queue sending what data already delivered - is the
+        // same alert. Nobody is texted twice; only a later "the SMS fallback
+        // was opened" is added to it.
+        if (delivery.clientAlertId() != null) {
+            Optional<SosAlertEntity> earlier = sosAlertRepository.findByClientAlertId(delivery.clientAlertId())
+                    .filter(a -> a.getCustomerAccountId().equals(customerAccountId));
+            if (earlier.isPresent()) {
+                SosAlertEntity alert = earlier.get();
+                if (delivery.smsFallbackOpened() && !alert.isSmsFallbackOpened()) {
+                    alert.markSmsFallbackOpened();
+                    sosAlertRepository.save(alert);
+                }
+                log.info("SOS alert {} sent again by the phone (client id {}) - not re-texted", alert.getId(), delivery.clientAlertId());
+                return new SosOutcome(alert.getId(), alert.getContactsNotified() + alert.getContactsFailed(),
+                        alert.getContactsNotified(), List.of(), alert.getContactsNotified() > 0);
+            }
+        }
         String customerName = customerProfileApi.findByAccountId(customerAccountId)
                 .map(profile -> profile.name())
                 .filter(name -> name != null && !name.isBlank())
@@ -104,7 +140,14 @@ public class SosService implements SosApi {
         // Persisted immediately, before any contact fan-out attempt, so the
         // trigger itself is recorded (and visible via GET /active) even if
         // every send below fails, or even if there are zero contacts to try.
-        SosAlertEntity alert = sosAlertRepository.save(new SosAlertEntity(customerAccountId, bookingId, lat, lng));
+        SosAlertEntity fresh = new SosAlertEntity(customerAccountId, bookingId, lat, lng);
+        fresh.recordDelivery(delivery.triggerSource(), delivery.channel(), delivery.triggeredAt(), delivery.clientAlertId(),
+                delivery.smsFallbackOpened());
+        SosAlertEntity alert = sosAlertRepository.save(fresh);
+        if (delivery.channel() == SosDeliveryChannel.DELAYED_QUEUE || delivery.triggerSource() != SosTriggerSource.BUTTON) {
+            log.warn("SOS alert {} raised by {} arrived by {} (raised on the phone at {}, SMS fallback opened: {})",
+                    alert.getId(), delivery.triggerSource(), delivery.channel(), delivery.triggeredAt(), delivery.smsFallbackOpened());
+        }
 
         // Operators hear about every press, before any throttling decision
         // below - a throttle on re-texting contacts is not a throttle on
@@ -214,7 +257,11 @@ public class SosService implements SosApi {
                 alert.getContactsFailed(),
                 alert.getCreatedAt(),
                 alert.getResolvedAt(),
-                alert.getResolvedBy()
+                alert.getResolvedBy(),
+                alert.getTriggerSource(),
+                alert.getDeliveryChannel(),
+                alert.isSmsFallbackOpened(),
+                alert.getTriggeredAt()
         );
     }
 

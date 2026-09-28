@@ -1,8 +1,9 @@
-import { BadgeCheck, Bike, MapPin, ShieldAlert, Siren, Wallet } from 'lucide-react';
+import { BadgeCheck, Bike, MapPin, ShieldAlert, Siren, Vibrate, Wallet } from 'lucide-react';
 import { useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, IconCircle, brandIllustration, useTranslation, ServiceArt } from '@sheout/design-system';
+import { Button, IconCircle, brandIllustration, useSafetyString, useTranslation, ServiceArt } from '@sheout/design-system';
 import { usersApi } from '../api/client';
+import { DiscreetSosToggle } from '../components/DiscreetSosToggle';
 
 interface Slide {
   key: string;
@@ -12,6 +13,8 @@ interface Slide {
   title: string;
   body: string;
   points?: { icon: ReactNode; label: string }[];
+  /** Something to do on this slide itself - turning discreet SOS on. */
+  action?: ReactNode;
 }
 
 /**
@@ -32,6 +35,8 @@ interface Slide {
  */
 export function Onboarding() {
   const { t } = useTranslation();
+  // Safety copy: an unreviewed translation carries the English with it - see SafetyText.
+  const s = useSafetyString();
   const navigate = useNavigate();
   const trackRef = useRef<HTMLDivElement>(null);
   const [index, setIndex] = useState(0);
@@ -58,6 +63,16 @@ export function Onboarding() {
         { icon: <ShieldAlert />, label: t('onboarding.safety.contacts') },
         { icon: <Siren />, label: t('onboarding.safety.sos') },
       ],
+    },
+    {
+      // Asked here, calmly, where she can read what it is - an iPhone only
+      // allows motion sensors after a tap, and that must never first come up
+      // in an emergency.
+      key: 'discreet',
+      icon: <Vibrate />,
+      title: s('discreet.onboardingTitle'),
+      body: s('discreet.onboardingBody'),
+      action: <DiscreetSosToggle compact />,
     },
     {
       key: 'booking',
@@ -121,7 +136,8 @@ export function Onboarding() {
             </div>
             {slide.art ?? <IconCircle tone="soft" size="md" icon={slide.icon} />}
             <h1 className="font-heading text-title text-text-primary">{slide.title}</h1>
-            <p className="max-w-xs text-sm leading-relaxed text-text-secondary">{slide.body}</p>
+            <p className="max-w-xs whitespace-pre-line text-sm leading-relaxed text-text-secondary">{slide.body}</p>
+            {slide.action && <div className="w-full max-w-xs">{slide.action}</div>}
             {slide.points && (
               <div className="flex flex-wrap items-center justify-center gap-2">
                 {slide.points.map((point) => (

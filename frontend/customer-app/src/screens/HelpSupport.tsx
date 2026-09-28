@@ -1,4 +1,4 @@
-import { LifeBuoy, Mail, Phone, Plus, Siren, Scale } from 'lucide-react';
+import { Bot, LifeBuoy, Mail, Phone, Plus, Siren, Scale } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -102,6 +102,10 @@ export function HelpSupport() {
             <p className="text-sm text-text-secondary">{fromContent(intro, 'help.customer.intro.subtitle', 'help.introSubtitle')}</p>
           </div>
         </div>
+        {/* Answers from SheOut's own help content, now; hands anything else to the same ticket below. */}
+        <Button fullWidth size="md" variant="secondary" icon={<Bot className="h-4 w-4" />} onClick={() => navigate('/help/assistant')} data-testid="open-help-assistant">
+          {t('help.askAssistant')}
+        </Button>
         <Button fullWidth size="md" icon={<Plus className="h-4 w-4" />} onClick={() => navigate('/help/new')}>
           {t('help.raiseIssue')}
         </Button>

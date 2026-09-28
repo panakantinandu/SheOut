@@ -1,4 +1,4 @@
-import { FileText, Gift, Info, Languages, LifeBuoy, Lock, LogOut, Moon, Star, Store, UserRound } from 'lucide-react';
+import { FileText, Gift, Info, Languages, LifeBuoy, Lock, LogOut, Moon, ShieldCheck, Star, Store, UserRound } from 'lucide-react';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -122,6 +122,7 @@ export function AppDrawerProvider({ children }: { children: ReactNode }) {
                   setPickingTheme(true);
                 },
               },
+              { key: 'safety', label: t('drawer.safety'), icon: <ShieldCheck />, onClick: () => go('/safety') },
               { key: 'refer', label: t('drawer.refer'), icon: <Gift />, onClick: () => go('/refer') },
               { key: 'sell', label: t('drawer.sell'), icon: <Store />, onClick: () => go('/seller/manage') },
               {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Button, RaiseIssueForm, SafetyText, TopHeader, bookingCategoryLabel, showToast } from '@sheout/design-system';
 import type { RaiseIssueValues, SelectOption } from '@sheout/design-system';
 import { ApiError, bookingApi, supportApi } from '../api/client';
@@ -16,6 +16,8 @@ import { useTranslation } from '@sheout/design-system';
 export function RaiseIssue() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  /** A question SheOut Help handed to a person - she reads and edits it before sending. */
+  const prefill = (useLocation().state as { prefill?: { category?: RaiseIssueValues['category']; subject?: string; description?: string } } | null)?.prefill;
   const [bookingOptions, setBookingOptions] = useState<SelectOption[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -68,6 +70,7 @@ export function RaiseIssue() {
         submitting={submitting}
         error={error}
         onSubmit={submit}
+        initial={prefill}
         safetyNotice={
           <div className="space-y-2">
             <p className="font-semibold">

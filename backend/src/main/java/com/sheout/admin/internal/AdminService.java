@@ -154,7 +154,11 @@ public class AdminService {
                 alert.contactsNotified(),
                 alert.contactsFailed(),
                 alert.createdAt(),
-                isBlocked(alert.customerAccountId())
+                isBlocked(alert.customerAccountId()),
+                alert.triggerSource(),
+                alert.deliveryChannel(),
+                alert.smsFallbackOpened(),
+                alert.triggeredAt()
         );
     }
 

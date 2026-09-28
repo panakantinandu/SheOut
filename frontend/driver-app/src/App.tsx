@@ -5,6 +5,7 @@ import { PageShell } from './layout/PageShell'
 import { Bookings } from './screens/Bookings'
 import { Earnings } from './screens/Earnings'
 import { HelpSupport } from './screens/HelpSupport'
+import { HelpAssistant } from './screens/HelpAssistant'
 import { Refer } from './screens/Refer'
 import { RaiseIssue } from './screens/RaiseIssue'
 import { SupportTicket } from './screens/SupportTicket'
@@ -71,6 +72,7 @@ function App() {
       <Route path="/help" element={protectedOnly(<HelpSupport />)} />
       <Route path="/refer" element={protectedOnly(<Refer />)} />
       <Route path="/help/new" element={protectedOnly(<RaiseIssue />)} />
+      <Route path="/help/assistant" element={protectedOnly(<HelpAssistant />)} />
       <Route path="/help/tickets/:ticketId" element={protectedOnly(<SupportTicket />)} />
       <Route path="/verification" element={protectedOnly(<Verification />)} />
       <Route path="/payouts" element={protectedOnly(<Payouts />)} />

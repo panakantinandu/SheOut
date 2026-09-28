@@ -1,5 +1,7 @@
 package com.sheout.admin.internal;
 
+import com.sheout.notifications.SosDeliveryChannel;
+import com.sheout.notifications.SosTriggerSource;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -18,6 +20,11 @@ public record SosAlertRow(
         int contactsFailed,
         Instant createdAt,
         /** An alert from a blocked account still needs answering - the badge is context, not a filter. */
-        boolean customerBlocked
+        boolean customerBlocked,
+        /** The delivery evidence beside the contacts reached - see SosTriggerSource / SosDeliveryChannel. */
+        SosTriggerSource triggerSource,
+        SosDeliveryChannel deliveryChannel,
+        boolean smsFallbackOpened,
+        Instant triggeredAt
 ) {
 }

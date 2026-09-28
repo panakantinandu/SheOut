@@ -115,7 +115,10 @@
     "emailUs": "Email us",
     "grievance": "Grievance Officer",
     "grievancePending": "Contact details are being set up",
-    "faqHeading": "Common questions"
+    "faqHeading": "Common questions",
+    "assistantTitle": "SheOut Help",
+    "askAssistant": "Ask SheOut Help",
+    "fromAssistant": "(Started from a conversation with SheOut Help.)"
   },
   "addresses": {
     "loadError": "Could not load addresses",
@@ -285,7 +288,8 @@
     "languageSaved": "Language changed",
     "languageSavedLocally": "Language changed on this phone. It will be saved to your account next time.",
     "profile": "My profile",
-    "sell": "Sell on SheOut"
+    "sell": "Sell on SheOut",
+    "safety": "Safety Center"
   },
   "seller": {
     "title": "SheOut Seller",
@@ -898,5 +902,11 @@
     "fareChanged": "The fare for this destination has just changed. Check the new fare before sending.",
     "quoteError": "We couldn't price that destination. Try again.",
     "sendError": "We couldn't send your request. Try again."
+  },
+  "safetyCenter": {
+    "title": "Safety Center",
+    "pendingReview": "These safety pages are machine-translated and waiting for review by a native speaker. The English is shown under each line until then.",
+    "linkCopied": "Link copied",
+    "askHelp": "Ask SheOut Help a question"
   }
 }

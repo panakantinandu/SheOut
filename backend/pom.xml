@@ -22,6 +22,7 @@
         <jjwt.version>0.13.0</jjwt.version>
         <awssdk.version>2.54.13</awssdk.version>
         <razorpay.version>1.4.10</razorpay.version>
+        <anthropic.version>2.34.0</anthropic.version>
     </properties>
 
     <dependencyManagement>
@@ -137,6 +138,12 @@
         </dependency>
 
         <!-- UPI payment capture + webhook signature verification for the payments module -->
+        <!-- The help assistant (assistant module): Claude, via the official SDK. -->
+        <dependency>
+            <groupId>com.anthropic</groupId>
+            <artifactId>anthropic-java</artifactId>
+            <version>${anthropic.version}</version>
+        </dependency>
         <dependency>
             <groupId>com.razorpay</groupId>
             <artifactId>razorpay-java</artifactId>

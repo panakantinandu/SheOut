@@ -35,6 +35,9 @@ import { SellerShop } from './screens/SellerShop'
 import { SellerProductEditor } from './screens/SellerProductEditor'
 import { Refer } from './screens/Refer'
 import { AppDrawerProvider } from './components/AppDrawer'
+import { DiscreetSosGuard } from './components/DiscreetSosGuard'
+import { SafetyCenter } from './screens/SafetyCenter'
+import { HelpAssistant } from './screens/HelpAssistant'
 
 // Screens with the bottom tab bar (Home/Bookings/Wallet/Profile/SOS) get
 // wrapped in AppShell; booking-flow and tracking screens push on top with
@@ -63,6 +66,7 @@ function publicPage(element: JSX.Element) {
 function App() {
   return (
     <AppDrawerProvider>
+    <DiscreetSosGuard>
     <Routes>
       <Route path="/" element={<Splash />} />
       <Route path="/login" element={<Login />} />
@@ -103,8 +107,12 @@ function App() {
       <Route path="/seller/manage/products/:productId" element={protectedOnly(<SellerProductEditor />)} />
       <Route path="/refer" element={protectedOnly(<Refer />)} />
 
+      <Route path="/safety" element={protectedOnly(<SafetyCenter />)} />
+      <Route path="/help/assistant" element={protectedOnly(<HelpAssistant />)} />
+
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </DiscreetSosGuard>
     </AppDrawerProvider>
   )
 }

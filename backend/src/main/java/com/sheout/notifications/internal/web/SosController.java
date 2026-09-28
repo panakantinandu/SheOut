@@ -4,6 +4,8 @@ import com.sheout.auth.AccountRole;
 import com.sheout.auth.CurrentAccount;
 import com.sheout.auth.CurrentAccountContext;
 import com.sheout.notifications.SosAlertSummary;
+import com.sheout.notifications.SosDeliveryChannel;
+import com.sheout.notifications.SosTriggerSource;
 import com.sheout.notifications.internal.sos.SosService;
 import com.sheout.sharedkernel.web.ApiException;
 import jakarta.validation.Valid;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -56,7 +59,17 @@ public class SosController {
         // way; a partner has no emergency contacts on file yet, so hers is
         // answered by the operator on duty.
         CurrentAccount caller = requireRiderOrPartner();
-        SosService.SosOutcome outcome = sosService.trigger(caller.accountId(), request.lat(), request.lng(), request.bookingId());
+        // When she raised it on the phone. Taken from the phone only when it
+        // is plausible - not in the future, not more than a day old - and
+        // only to show the delay; the alert's own time is the server's.
+        Instant raisedAt = request.triggeredAt();
+        Instant now = Instant.now();
+        if (raisedAt != null && (raisedAt.isAfter(now.plusSeconds(60)) || raisedAt.isBefore(now.minus(Duration.ofDays(1))))) {
+            raisedAt = null;
+        }
+        SosService.SosOutcome outcome = sosService.trigger(caller.accountId(), request.lat(), request.lng(), request.bookingId(),
+                new SosService.Delivery(request.triggerSource(), request.deliveryChannel(), raisedAt, request.clientAlertId(),
+                        Boolean.TRUE.equals(request.smsFallbackOpened())));
         return ResponseEntity.ok(SosResponse.from(outcome));
     }
 
@@ -87,7 +100,13 @@ public class SosController {
     public record SosRequest(
             @NotNull @DecimalMin("-90") @DecimalMax("90") Double lat,
             @NotNull @DecimalMin("-180") @DecimalMax("180") Double lng,
-            UUID bookingId
+            UUID bookingId,
+            /** All optional, so an app from before these existed still works exactly as it did. */
+            SosTriggerSource triggerSource,
+            SosDeliveryChannel deliveryChannel,
+            Instant triggeredAt,
+            UUID clientAlertId,
+            Boolean smsFallbackOpened
     ) {
     }
 

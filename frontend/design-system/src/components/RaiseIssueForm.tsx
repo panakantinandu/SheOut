@@ -31,6 +31,8 @@ export interface RaiseIssueFormProps {
   submitting?: boolean;
   error?: string | null;
   onSubmit: (values: RaiseIssueValues) => void;
+  /** Filled in already - from SheOut Help handing a question to a person. She can change any of it. */
+  initial?: Partial<Pick<RaiseIssueValues, 'category' | 'subject' | 'description'>>;
 }
 
 /**
@@ -51,11 +53,12 @@ export function RaiseIssueForm({
   submitting = false,
   error = null,
   onSubmit,
+  initial,
 }: RaiseIssueFormProps) {
   const { t } = useTranslation('ds');
-  const [category, setCategory] = useState<SupportTicketCategory | ''>('');
-  const [subject, setSubject] = useState('');
-  const [description, setDescription] = useState('');
+  const [category, setCategory] = useState<SupportTicketCategory | ''>(initial?.category ?? '');
+  const [subject, setSubject] = useState(initial?.subject ?? '');
+  const [description, setDescription] = useState(initial?.description ?? '');
   const [bookingId, setBookingId] = useState('');
   const [touched, setTouched] = useState(false);
 

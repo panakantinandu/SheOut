@@ -45,7 +45,10 @@
     "callSupport": "ड्राइवर सपोर्ट को कॉल करें",
     "verificationStatus": "सत्यापन की स्थिति",
     "verificationStatusSub": "देखें कि अभी क्या बाकी है",
-    "faqHeading": "आम सवाल"
+    "faqHeading": "आम सवाल",
+    "assistantTitle": "SheOut हेल्प",
+    "askAssistant": "SheOut हेल्प से पूछें",
+    "fromAssistant": "(SheOut हेल्प से बातचीत से शुरू हुआ।)"
   },
   "completeProfile": {
     "title": "अपनी प्रोफ़ाइल पूरी करें",

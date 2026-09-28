@@ -1,6 +1,8 @@
 package com.sheout.notifications.internal.sos;
 
+import com.sheout.notifications.SosDeliveryChannel;
 import com.sheout.notifications.SosStatus;
+import com.sheout.notifications.SosTriggerSource;
 import com.sheout.sharedkernel.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -45,6 +47,23 @@ public class SosAlertEntity extends BaseEntity {
     @Column(name = "resolved_by")
     private UUID resolvedBy;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "trigger_source", nullable = false, length = 20)
+    private SosTriggerSource triggerSource = SosTriggerSource.BUTTON;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "delivery_channel", nullable = false, length = 20)
+    private SosDeliveryChannel deliveryChannel = SosDeliveryChannel.DATA;
+
+    @Column(name = "sms_fallback_opened", nullable = false)
+    private boolean smsFallbackOpened;
+
+    @Column(name = "triggered_at")
+    private Instant triggeredAt;
+
+    @Column(name = "client_alert_id", unique = true)
+    private UUID clientAlertId;
+
     protected SosAlertEntity() {
         // JPA
     }
@@ -58,6 +77,27 @@ public class SosAlertEntity extends BaseEntity {
         this.contactsNotified = 0;
         this.contactsFailed = 0;
     }
+
+    /** How it was raised and how it arrived - set once, when the alert is first recorded. */
+    public void recordDelivery(SosTriggerSource triggerSource, SosDeliveryChannel deliveryChannel, Instant triggeredAt,
+                               UUID clientAlertId, boolean smsFallbackOpened) {
+        this.triggerSource = triggerSource == null ? SosTriggerSource.BUTTON : triggerSource;
+        this.deliveryChannel = deliveryChannel == null ? SosDeliveryChannel.DATA : deliveryChannel;
+        this.triggeredAt = triggeredAt;
+        this.clientAlertId = clientAlertId;
+        this.smsFallbackOpened = smsFallbackOpened;
+    }
+
+    /** Her phone reports, after the fact, that it opened the SMS fallback. Never unset. */
+    public void markSmsFallbackOpened() {
+        this.smsFallbackOpened = true;
+    }
+
+    public SosTriggerSource getTriggerSource() { return triggerSource; }
+    public SosDeliveryChannel getDeliveryChannel() { return deliveryChannel; }
+    public boolean isSmsFallbackOpened() { return smsFallbackOpened; }
+    public Instant getTriggeredAt() { return triggeredAt; }
+    public UUID getClientAlertId() { return clientAlertId; }
 
     public UUID getCustomerAccountId() {
         return customerAccountId;

@@ -11,6 +11,7 @@ import { PromoFareLines } from '../components/PromoFareLines';
 import { ChangeDestination } from '../components/ChangeDestination';
 import { apiErrorText } from '../lib/apiErrors';
 import { mapsLink, shareViaDevice } from '../lib/emergency';
+import { activeTripId, markActiveTrip } from '../lib/discreetSos';
 import { useTranslation } from '@sheout/design-system';
 
 /** A conservative city speed for a two-wheeler, for the "about N min" line. */
@@ -177,6 +178,15 @@ export function Tracking() {
 
   /** The search ran and found nobody. Not a cancellation, and not still running. */
   const noDrivers = booking?.status === 'NO_DRIVERS_AVAILABLE';
+
+  // Discreet SOS listens only while a trip is under way: from the moment a
+  // partner is on her way until the trip is over.
+  const tripUnderway = booking?.status === 'MATCHED' || booking?.status === 'ACCEPTED' || booking?.status === 'IN_PROGRESS';
+  useEffect(() => {
+    if (!booking) return;
+    if (tripUnderway) markActiveTrip(booking.id);
+    else if (activeTripId() === booking.id) markActiveTrip(null);
+  }, [booking?.id, tripUnderway]);
 
   /**
    * The client's own giving-up point, and a fallback only.

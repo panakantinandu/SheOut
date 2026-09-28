@@ -56,3 +56,4 @@ export * from './ConsentCheckbox';
 export * from './ServiceArt';
 export * from './DestinationChangeCompare';
 export * from './ReferAFriend';
+export * from './HelpAssistantChat';

@@ -45,7 +45,10 @@
     "callSupport": "Call driver support",
     "verificationStatus": "Verification status",
     "verificationStatusSub": "See what is still outstanding",
-    "faqHeading": "Common questions"
+    "faqHeading": "Common questions",
+    "assistantTitle": "SheOut Help",
+    "askAssistant": "Ask SheOut Help",
+    "fromAssistant": "(Started from a conversation with SheOut Help.)"
   },
   "completeProfile": {
     "title": "Complete your profile",
