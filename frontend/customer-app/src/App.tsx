@@ -58,6 +58,14 @@ function protectedOnly(element: JSX.Element) {
   )
 }
 
+/**
+ * The map is the screen: no PageShell, whose page transition leaves a
+ * transform behind that would pin a position:fixed layout to it.
+ */
+function fullScreen(element: JSX.Element) {
+  return <ProtectedRoute>{element}</ProtectedRoute>
+}
+
 /** Readable without an account - the legal documents are linked from sign-in. */
 function publicPage(element: JSX.Element) {
   return <PageShell>{element}</PageShell>
@@ -96,8 +104,8 @@ function App() {
       <Route path="/help/tickets/:ticketId" element={protectedOnly(<SupportTicket />)} />
       <Route path="/about" element={protectedOnly(<About />)} />
 
-      <Route path="/book/ride" element={protectedOnly(<RideBooking />)} />
-      <Route path="/book/:kind" element={protectedOnly(<DeliveryBooking />)} />
+      <Route path="/book/ride" element={fullScreen(<RideBooking />)} />
+      <Route path="/book/:kind" element={fullScreen(<DeliveryBooking />)} />
       <Route path="/tracking/:bookingId" element={protectedOnly(<Tracking />)} />
       <Route path="/chat/:bookingId" element={protectedOnly(<Chat />)} />
 

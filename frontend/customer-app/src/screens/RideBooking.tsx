@@ -1,14 +1,14 @@
-import { MapPin } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Card, IconCircle, LiveMap, TopHeader, ServiceArt, useRouteLine } from '@sheout/design-system';
+import { Button, ServiceArt, useRouteLine } from '@sheout/design-system';
 import type { MapMarker } from '@sheout/design-system';
 import { UnpaidTripBanner } from '../components/UnpaidTripBanner';
 import { ApiError, bookingApi, routesApi } from '../api/client';
+import { BookingMapLayout } from '../components/BookingMapLayout';
 import { FareEstimateCard } from '../components/FareEstimateCard';
 import { LocationPicker } from '../components/LocationPicker';
 import type { PickerMode } from '../components/LocationPicker';
-import { LocationRow } from '../components/LocationRow';
+import { QuoteSummary } from '../components/QuoteSummary';
 import { ServiceAreaNotice } from '../components/ServiceAreaNotice';
 import { currentPosition, describePoint, isInServiceArea } from '../lib/geocode';
 import { apiErrorText } from '../lib/apiErrors';
@@ -118,67 +118,51 @@ export function RideBooking() {
   if (drop) markers.push({ key: 'drop', lat: drop.lat, lng: drop.lng, label: t('booking.drop'), kind: 'drop' });
 
   return (
-    <div className="space-y-6">
-      <TopHeader variant="back" title={t('home.serviceRide')} onBack={() => navigate(-1)} />
-
-      <UnpaidTripBanner refreshKey={unpaidCheck} />
-
-      {/* Real map, same shared component the tracking screen uses. Shows the
-          points actually chosen: pickup once geolocation resolves, drop once
-          one is picked. It is a preview of the two endpoints, not a routed
-          line - nothing here computes a road route. */}
-      <div className="space-y-1">
-        <LiveMap markers={markers} route={route} />
-        <p className="text-xs text-text-secondary">
-          {drop ? t('booking.mapBoth') : t('booking.mapPickDrop')}
-        </p>
-        {nearby.length > 0 && (
-          <p className="flex items-center gap-2 text-xs font-medium text-primary" data-testid="nearby-count">
-            <ServiceArt kind="ride" size="xs" />
-            {t('booking.nearbyCount', { count: nearby.length })}
-          </p>
-        )}
-      </div>
-
-      <Card className="space-y-1 divide-y divide-border p-0">
-        <LocationRow
-          icon={<IconCircle icon={<MapPin />} size="sm" />}
-          label={t('booking.pickupLocation')}
-          sublabel={pickup?.label ?? (pickupError ? t('booking.tapToChoosePickup') : t('booking.findingLocation'))}
-          onSearch={() => openPicker('pickup', 'search')}
-          onMap={() => openPicker('pickup', 'map')}
-        />
-        <LocationRow
-          icon={<IconCircle color="orange" icon={<MapPin />} size="sm" />}
-          label={t('booking.dropLocation')}
-          sublabel={drop?.label ?? t('booking.selectDestination')}
-          onSearch={() => openPicker('drop', 'search')}
-          onMap={() => openPicker('drop', 'map')}
-        />
-      </Card>
-
-
-      {pickupError && !pickup && <p className="text-xs text-text-secondary">{pickupError}</p>}
-      {error && <p className="text-sm text-danger">{error}</p>}
-      {liveTripId && (
-        <Button variant="secondary" fullWidth onClick={() => navigate(`/tracking/${liveTripId}`)} data-testid="view-live-trip">
-          {t('booking.viewLiveTrip')}
-        </Button>
-      )}
-
-      {needsVerification && (
-        <Button variant="secondary" fullWidth onClick={() => navigate('/verification')} data-testid="verify-now">
-          {t('booking.verifyNow')}
-        </Button>
-      )}
-
-      <ServiceAreaNotice pickup={pickup} drop={drop} />
-
-      {servableTrip && <FareEstimateCard state={fare} />}
-
-      <Button fullWidth disabled={!pickup || !drop || !servableTrip || submitting} onClick={handleBookNow}>
-        {submitting ? t('booking.booking') : t('booking.bookNow')}
-      </Button>
+    <>
+      <BookingMapLayout
+        title={t('home.serviceRide')}
+        onBack={() => navigate(-1)}
+        pickup={pickup}
+        drop={drop}
+        pickupPlaceholder={pickupError ? t('booking.tapToChoosePickup') : t('booking.findingLocation')}
+        onEdit={openPicker}
+        markers={markers}
+        route={route}
+        summary={
+          <>
+            <UnpaidTripBanner refreshKey={unpaidCheck} />
+            <QuoteSummary state={servableTrip ? fare : { quote: null, loading: false, error: null }} kind="ride" serviceName={t('home.serviceRide')} pickup={pickup} drop={drop} />
+            <ServiceAreaNotice pickup={pickup} drop={drop} />
+            {pickupError && !pickup && <p className="text-xs text-text-secondary">{pickupError}</p>}
+            {error && <p className="text-sm text-danger">{error}</p>}
+            {liveTripId && (
+              <Button variant="secondary" fullWidth onClick={() => navigate(`/tracking/${liveTripId}`)} data-testid="view-live-trip">
+                {t('booking.viewLiveTrip')}
+              </Button>
+            )}
+            {needsVerification && (
+              <Button variant="secondary" fullWidth onClick={() => navigate('/verification')} data-testid="verify-now">
+                {t('booking.verifyNow')}
+              </Button>
+            )}
+            <Button fullWidth disabled={!pickup || !drop || !servableTrip || submitting} onClick={handleBookNow} data-testid="book-now">
+              {submitting ? t('booking.booking') : t('booking.bookNow')}
+            </Button>
+          </>
+        }
+        more={
+          <>
+            {servableTrip && <FareEstimateCard state={fare} />}
+            <p className="text-xs text-text-secondary">{t('booking.fixedPriceNote')}</p>
+            {nearby.length > 0 && (
+              <p className="flex items-center gap-2 text-xs font-medium text-primary" data-testid="nearby-count">
+                <ServiceArt kind="ride" size="xs" />
+                {t('booking.nearbyCount', { count: nearby.length })}
+              </p>
+            )}
+          </>
+        }
+      />
 
       <LocationPicker
         open={picking !== null}
@@ -192,6 +176,6 @@ export function RideBooking() {
         onSelect={(address) => (picking === 'pickup' ? setPickup(address) : setDrop(address))}
         onClose={() => setPicking(null)}
       />
-    </div>
+    </>
   );
 }

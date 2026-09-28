@@ -51,7 +51,7 @@ import java.util.stream.Collectors;
  * never touches booking's or users' persistence directly.
  */
 @Service
-public class DispatchService {
+public class DispatchService implements com.sheout.dispatch.NearbyPartnerApi {
 
     private static final Logger log = LoggerFactory.getLogger(DispatchService.class);
 
@@ -203,6 +203,26 @@ public class DispatchService {
                 .toList());
         java.util.Collections.shuffle(shown);
         return shown;
+    }
+
+    /**
+     * For a quote's pickup ETA - see NearbyPartnerApi. Closest first, so the
+     * first one who passes the gate is the nearest who could come.
+     */
+    @Override
+    public Optional<NearbyPartner> nearestAvailable(double lat, double lng, BookingCategory category) {
+        Instant freshSince = Instant.now().minus(PREVIEW_FRESH_FOR);
+        for (CandidateDriver candidate : locationStore.findNearby(lat, lng, PREVIEW_RADIUS_KM, PREVIEW_MAX_SHOWN * 2)) {
+            if (!isEligible(candidate.driverId(), category)) {
+                continue;
+            }
+            Optional<DriverLocation> location = locationStore.findLocation(candidate.driverId())
+                    .filter(l -> l.recordedAt().isAfter(freshSince));
+            if (location.isPresent()) {
+                return Optional.of(new NearbyPartner(location.get().lat(), location.get().lng(), candidate.distanceKm()));
+            }
+        }
+        return Optional.empty();
     }
 
     /** Last reported position for a driver, or empty if they have never reported one. */

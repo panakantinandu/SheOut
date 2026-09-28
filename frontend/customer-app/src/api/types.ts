@@ -429,6 +429,10 @@ export interface FareQuote {
   /** fareEstimate less promoDiscount. */
   youPay: number;
   promotionName: string | null;
+  /** Minutes until the nearest available partner could reach the pickup; null when nobody could come now. */
+  pickupEtaMinutes: number | null;
+  /** When she would arrive (ISO): now + pickup ETA + the trip's duration; null with no ETA. */
+  dropBy: string | null;
 }
 
 /**

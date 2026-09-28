@@ -1,14 +1,14 @@
-import { MapPin } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Button, Card, IconCircle, TextField, LiveMap, TopHeader, ServiceArt, useRouteLine } from '@sheout/design-system';
+import { Button, TextField, ServiceArt, useRouteLine } from '@sheout/design-system';
 import type { MapMarker } from '@sheout/design-system';
 import { UnpaidTripBanner } from '../components/UnpaidTripBanner';
 import { ApiError, bookingApi, routesApi } from '../api/client';
+import { BookingMapLayout } from '../components/BookingMapLayout';
 import { FareEstimateCard } from '../components/FareEstimateCard';
 import { LocationPicker } from '../components/LocationPicker';
 import type { PickerMode } from '../components/LocationPicker';
-import { LocationRow } from '../components/LocationRow';
+import { QuoteSummary } from '../components/QuoteSummary';
 import { ServiceAreaNotice } from '../components/ServiceAreaNotice';
 import { currentPosition, describePoint, isInServiceArea } from '../lib/geocode';
 import { apiErrorText } from '../lib/apiErrors';
@@ -156,123 +156,112 @@ export function DeliveryBooking() {
   if (drop) markers.push({ key: 'drop', lat: drop.lat, lng: drop.lng, label: t('booking.drop'), kind: 'drop' });
 
   return (
-    <div className="space-y-6">
-      <TopHeader variant="back" title={t(`delivery.${config.key}.title`)} onBack={() => navigate(-1)} />
-
-      <UnpaidTripBanner refreshKey={unpaidCheck} />
-
-      {/* Real map, same shared component the tracking screen uses. Shows the
-          points actually chosen: pickup once geolocation resolves, drop once
-          one is picked. It is a preview of the two endpoints, not a routed
-          line - nothing here computes a road route. */}
-      <div className="space-y-1">
-        <LiveMap markers={markers} route={route} />
-        <p className="text-xs text-text-secondary">
-          {drop ? t('booking.mapBoth') : t('booking.mapPickDrop')}
-        </p>
-        {nearby.length > 0 && (
-          <p className="flex items-center gap-2 text-xs font-medium text-primary" data-testid="nearby-count">
-            <ServiceArt kind="ride" size="xs" />
-            {t('booking.nearbyCount', { count: nearby.length })}
-          </p>
-        )}
-      </div>
-
-      <Card className="divide-y divide-border p-0">
-        <LocationRow
-          icon={<IconCircle icon={<MapPin />} size="sm" />}
-          label={t('booking.pickupLocation')}
-          sublabel={pickup?.label ?? (pickupError ? t('booking.tapToChoosePickup') : t('booking.findingLocation'))}
-          onSearch={() => openPicker('pickup', 'search')}
-          onMap={() => openPicker('pickup', 'map')}
-        />
-        <LocationRow
-          icon={<IconCircle color="orange" icon={<MapPin />} size="sm" />}
-          label={t('booking.dropLocation')}
-          sublabel={drop?.label ?? t('booking.selectDestination')}
-          onSearch={() => openPicker('drop', 'search')}
-          onMap={() => openPicker('drop', 'map')}
-        />
-      </Card>
-
-
-      {/* Local-only, matching the mockup's layout - not sent to the backend, see file-level comment. */}
-      {isLunchbox && (
-        <>
-          <div>
-            <span className="mb-2 block text-sm font-medium text-text-primary">{t('delivery.mealType')}</span>
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant={mealType === 'VEG' ? 'success' : 'secondary'}
-                size="md"
-                fullWidth
-                onClick={() => setMealType('VEG')}
-              >
-                {t('delivery.veg')}
+    <>
+      <BookingMapLayout
+        title={t(`delivery.${config.key}.title`)}
+        onBack={() => navigate(-1)}
+        pickup={pickup}
+        drop={drop}
+        pickupPlaceholder={pickupError ? t('booking.tapToChoosePickup') : t('booking.findingLocation')}
+        onEdit={openPicker}
+        markers={markers}
+        route={route}
+        summary={
+          <>
+            <UnpaidTripBanner refreshKey={unpaidCheck} />
+            <QuoteSummary
+              state={servableTrip ? fare : { quote: null, loading: false, error: null }}
+              kind="parcel"
+              serviceName={t(`delivery.${config.key}.title`)}
+              pickup={pickup}
+              drop={drop}
+            />
+            <ServiceAreaNotice pickup={pickup} drop={drop} />
+            <TextField
+              label={t(`delivery.${config.key}.details`)}
+              placeholder={isLunchbox ? t('delivery.lunchbox.detailsPlaceholder') : t('delivery.parcel.detailsPlaceholder')}
+              value={details}
+              onChange={(e) => setDetails(e.target.value)}
+            />
+            {pickupError && !pickup && <p className="text-xs text-text-secondary">{pickupError}</p>}
+            {error && <p className="text-sm text-danger">{error}</p>}
+            {liveTripId && (
+              <Button variant="secondary" fullWidth onClick={() => navigate(`/tracking/${liveTripId}`)} data-testid="view-live-trip">
+                {t('booking.viewLiveTrip')}
               </Button>
-              <Button
-                type="button"
-                variant={mealType === 'NON_VEG' ? 'primary' : 'secondary'}
-                size="md"
-                fullWidth
-                onClick={() => setMealType('NON_VEG')}
-              >
-                {t('delivery.nonVeg')}
+            )}
+            {needsVerification && (
+              <Button variant="secondary" fullWidth onClick={() => navigate('/verification')} data-testid="verify-now">
+                {t('booking.verifyNow')}
               </Button>
-            </div>
-          </div>
+            )}
+            <Button fullWidth disabled={!pickup || !drop || !servableTrip || submitting} onClick={handleContinue} data-testid="book-now">
+              {submitting ? t('booking.booking') : t(`delivery.${config.key}.cta`)}
+            </Button>
+          </>
+        }
+        more={
+          <>
+            {servableTrip && <FareEstimateCard state={fare} kind="parcel" />}
+            <p className="text-xs text-text-secondary">{t('booking.fixedPriceNote')}</p>
+            {nearby.length > 0 && (
+              <p className="flex items-center gap-2 text-xs font-medium text-primary" data-testid="nearby-count">
+                <ServiceArt kind="ride" size="xs" />
+                {t('booking.nearbyCount', { count: nearby.length })}
+              </p>
+            )}
 
-          <div>
-            <span className="mb-2 block text-sm font-medium text-text-primary">{t('delivery.choosePlan')}</span>
-            <div className="flex gap-2">
-              {PLANS.map((p) => (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => setPlan(p)}
-                  className={
-                    plan === p
-                      ? 'flex-1 rounded-full bg-primary py-2 text-sm font-semibold text-text-inverse'
-                      : 'flex-1 rounded-full border border-border py-2 text-sm font-medium text-text-secondary'
-                  }
-                >
-                  {t(`delivery.plan.${p}`)}
-                </button>
-              ))}
-            </div>
-          </div>
-        </>
-      )}
+            {/* Local-only, matching the mockup's layout - not sent to the backend, see file-level comment. */}
+            {isLunchbox && (
+              <>
+                <div>
+                  <span className="mb-2 block text-sm font-medium text-text-primary">{t('delivery.mealType')}</span>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant={mealType === 'VEG' ? 'success' : 'secondary'}
+                      size="md"
+                      fullWidth
+                      onClick={() => setMealType('VEG')}
+                    >
+                      {t('delivery.veg')}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={mealType === 'NON_VEG' ? 'primary' : 'secondary'}
+                      size="md"
+                      fullWidth
+                      onClick={() => setMealType('NON_VEG')}
+                    >
+                      {t('delivery.nonVeg')}
+                    </Button>
+                  </div>
+                </div>
 
-      <TextField
-        label={t(`delivery.${config.key}.details`)}
-        placeholder={isLunchbox ? t('delivery.lunchbox.detailsPlaceholder') : t('delivery.parcel.detailsPlaceholder')}
-        value={details}
-        onChange={(e) => setDetails(e.target.value)}
+                <div>
+                  <span className="mb-2 block text-sm font-medium text-text-primary">{t('delivery.choosePlan')}</span>
+                  <div className="flex gap-2">
+                    {PLANS.map((p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setPlan(p)}
+                        className={
+                          plan === p
+                            ? 'flex-1 rounded-full bg-primary py-2 text-sm font-semibold text-text-inverse'
+                            : 'flex-1 rounded-full border border-border py-2 text-sm font-medium text-text-secondary'
+                        }
+                      >
+                        {t(`delivery.plan.${p}`)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </>
+        }
       />
-
-      {pickupError && !pickup && <p className="text-xs text-text-secondary">{pickupError}</p>}
-      {error && <p className="text-sm text-danger">{error}</p>}
-      {liveTripId && (
-        <Button variant="secondary" fullWidth onClick={() => navigate(`/tracking/${liveTripId}`)} data-testid="view-live-trip">
-          {t('booking.viewLiveTrip')}
-        </Button>
-      )}
-
-      {needsVerification && (
-        <Button variant="secondary" fullWidth onClick={() => navigate('/verification')} data-testid="verify-now">
-          {t('booking.verifyNow')}
-        </Button>
-      )}
-
-      <ServiceAreaNotice pickup={pickup} drop={drop} />
-
-      {servableTrip && <FareEstimateCard state={fare} kind="parcel" />}
-
-      <Button fullWidth disabled={!pickup || !drop || !servableTrip || submitting} onClick={handleContinue}>
-        {submitting ? t('booking.booking') : t(`delivery.${config.key}.cta`)}
-      </Button>
 
       <LocationPicker
         open={picking !== null}
@@ -286,6 +275,6 @@ export function DeliveryBooking() {
         onSelect={(address) => (picking === 'pickup' ? setPickup(address) : setDrop(address))}
         onClose={() => setPicking(null)}
       />
-    </div>
+    </>
   );
 }

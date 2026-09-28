@@ -71,6 +71,15 @@ export interface LiveMapProps {
   center?: { lat: number; lng: number };
   /** Zoom for `center`. Ignored once markers exist and autoFit is on. */
   zoom?: number;
+  /**
+   * Fill the parent instead of being a 16rem card - for a screen whose main
+   * surface is the map. The parent sets the size; Google's logo and Terms
+   * stay along this element's own bottom edge, so whatever sits below the
+   * map must sit below this element, never over it.
+   */
+  fill?: boolean;
+  /** Space kept clear when fitting the view, in pixels - e.g. under chips floating over the top of the map. */
+  fitPadding?: { top: number; right: number; bottom: number; left: number };
 }
 
 const API_KEY: string = import.meta.env.VITE_GOOGLE_MAPS_API_KEY ?? '';
@@ -139,7 +148,7 @@ const MIN_MOVE_FOR_BEARING_METRES = 8;
  * says everything important in text beside it.
  */
 export function LiveMap(props: LiveMapProps) {
-  const heightClass = cn('h-64 w-full overflow-hidden rounded-card', props.className);
+  const heightClass = cn(props.fill ? 'h-full w-full overflow-hidden' : 'h-64 w-full overflow-hidden rounded-card', props.className);
   if (!API_KEY) return <MapUnavailable className={heightClass} />;
   return (
     <APIProvider apiKey={API_KEY}>
@@ -148,7 +157,7 @@ export function LiveMap(props: LiveMapProps) {
   );
 }
 
-function LoadedMap({ markers, route, className, autoFit = true, onPick, center, zoom }: LiveMapProps & { className: string }) {
+function LoadedMap({ markers, route, className, autoFit = true, onPick, center, zoom, fitPadding }: LiveMapProps & { className: string }) {
   const status = useApiLoadingStatus();
   const authFailed = useMapsAuthFailed();
   const [, , theme] = useTheme();
@@ -206,7 +215,7 @@ function LoadedMap({ markers, route, className, autoFit = true, onPick, center, 
           />
         )}
         <Markers markers={markers} draggable={Boolean(onPick)} onPick={onPick} />
-        <CameraControl markers={markers} route={route} autoFit={autoFit} center={center} zoom={zoom} />
+        <CameraControl markers={markers} route={route} autoFit={autoFit} center={center} zoom={zoom} fitPadding={fitPadding} />
         {theme === 'dark' && <AttributionScrim />}
       </GoogleMap>
     </div>
@@ -267,7 +276,7 @@ function AttributionScrim() {
   return null;
 }
 
-function CameraControl({ markers, route, autoFit, center, zoom }: { markers: MapMarker[]; route?: RoutePoint[]; autoFit: boolean; center?: RoutePoint; zoom?: number }) {
+function CameraControl({ markers, route, autoFit, center, zoom, fitPadding }: { markers: MapMarker[]; route?: RoutePoint[]; autoFit: boolean; center?: RoutePoint; zoom?: number; fitPadding?: LiveMapProps['fitPadding'] }) {
   const map = useMap();
   const [userMoved, setUserMoved] = useState(false);
   const [fitNonce, setFitNonce] = useState(0);
@@ -294,7 +303,7 @@ function CameraControl({ markers, route, autoFit, center, zoom }: { markers: Map
     const bounds = new google.maps.LatLngBounds();
     fitPoints.forEach((p) => bounds.extend(p));
     routePoints.forEach((p) => bounds.extend(p));
-    map.fitBounds(bounds, 48);
+    map.fitBounds(bounds, fitPadding ?? 48);
     // fitBounds has no maxZoom; two points a few metres apart would
     // otherwise zoom to street-furniture level.
     const once = google.maps.event.addListenerOnce(map, 'idle', () => {

@@ -20,6 +20,7 @@ import com.sheout.booking.PaymentHold;
 import com.sheout.booking.RequestBookingCommand;
 import com.sheout.booking.internal.BookingService;
 import com.sheout.booking.internal.DestinationChangeService;
+import com.sheout.booking.internal.QuoteTimes;
 import com.sheout.sharedkernel.Result;
 import com.sheout.sharedkernel.ratelimit.RateLimiter;
 import com.sheout.sharedkernel.web.ApiException;
@@ -70,12 +71,14 @@ public class BookingController {
     private final RateLimiter rateLimiter;
     private final int pickupAttemptLimit;
     private final DestinationChangeService destinationChanges;
+    private final QuoteTimes quoteTimes;
 
     public BookingController(BookingService bookingService, ServiceArea serviceArea, RouteProvider routeProvider,
                              RateLimiter rateLimiter,
                              @Value("${sheout.rate-limit.pickup-code-per-driver:10}") int pickupAttemptLimit,
-                             DestinationChangeService destinationChanges) {
+                             DestinationChangeService destinationChanges, QuoteTimes quoteTimes) {
         this.destinationChanges = destinationChanges;
+        this.quoteTimes = quoteTimes;
         this.bookingService = bookingService;
         this.serviceArea = serviceArea;
         this.routeProvider = routeProvider;
@@ -145,6 +148,10 @@ public class BookingController {
             throw toApiException(result.error());
         }
         FareQuote quote = result.value();
+        // How soon a partner could come, and when she would arrive - estimates
+        // beside a fixed price, see QuoteTimes.
+        QuoteTimes.Times times = quoteTimes.estimate(request.category(), request.pickup().toGeoAddress(),
+                quote.durationMinutes(), java.time.Instant.now());
         // The real fare and, beside it, what she would pay after her best
         // promotion - both, so a discount is never a bare number with no
         // context. Previewed only; nothing is held until she books.
@@ -165,7 +172,9 @@ public class BookingController {
                 request.category(),
                 promo.discount(),
                 quote.amount().subtract(promo.discount()).max(BigDecimal.ZERO),
-                promo.promotionName()));
+                promo.promotionName(),
+                times.pickupEtaMinutes(),
+                times.dropBy()));
     }
 
     /**
@@ -741,7 +750,14 @@ public class BookingController {
             BigDecimal promoDiscount,
             /** What she would pay: fareEstimate less promoDiscount. */
             BigDecimal youPay,
-            String promotionName
+            String promotionName,
+            /**
+             * Minutes until the nearest available partner could reach the
+             * pickup, by road; null when nobody could come right now.
+             */
+            Integer pickupEtaMinutes,
+            /** When she would arrive: now + pickup ETA + the trip's duration; null with no ETA. */
+            java.time.Instant dropBy
     ) {
     }
 }
