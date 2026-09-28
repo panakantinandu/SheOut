@@ -515,7 +515,9 @@
     "chooseDropForFare": "Choose a drop to see the price",
     "checkingQuote": "Checking price and time…",
     "fixedPrice": "Fixed price",
-    "fixedPriceNote": "The price you see is the price you pay - it does not change with traffic or waiting. Times are estimates."
+    "fixedPriceNote": "The price you see is the price you pay - it does not change with traffic or waiting. Times are estimates.",
+    "tripKmMin": "{{km}} km · about {{minutes}} min ride",
+    "tripKmDropBy": "{{km}} km · Drop by {{time}}"
   },
   "apiError": {
     "UNPAID_TRIP": "Your last trip is still unpaid. Pay for it from your wallet or online, then book again.",
