@@ -366,7 +366,15 @@
       "declinedTitle": "You declined the new destination",
       "declinedBody": "Continue to {{drop}}. The fare stays ₹{{fare}}.",
       "answerError": "We couldn't send your answer. Try again."
-    }
+    },
+    "back": "Back",
+    "arrivedTitle": "You're at the pickup",
+    "stepPickup": "Step 1 of 2 · Pickup",
+    "stepDrop": "Step 2 of 2 · Drop",
+    "etaShort": "{{minutes}} min · {{km}} km",
+    "kmShort": "{{km}} km",
+    "noNumbersShort": "Message her in the app",
+    "reconnecting": "Weak connection - showing the last update. Retrying…"
   },
   "earnings": {
     "group": {

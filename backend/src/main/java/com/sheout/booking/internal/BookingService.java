@@ -90,7 +90,7 @@ public class BookingService implements BookingApi {
                            DriverLocationApi locationStore,
                            @Value("${sheout.booking.completion.drop-off-radius-metres:150}") double dropoffRadiusMetres,
                            @Value("${sheout.booking.completion.driver-location-max-age-seconds:30}") long driverLocationMaxAgeSeconds,
-                           @Value("${sheout.dispatch.arriving-radius-metres:300}") double pickupRadiusMetres,
+                           @Value("${sheout.booking.completion.pickup-radius-metres:150}") double pickupRadiusMetres,
                            TripRouteChecker routeChecker,
                            CampaignsApi campaigns) {
         this(bookingRepository, verificationApi, fareCalculator, eventPublisher, authApi, serviceArea,

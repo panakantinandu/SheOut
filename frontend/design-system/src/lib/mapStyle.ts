@@ -1,49 +1,57 @@
 /**
- * SheOut's map look: quiet enough that the app's own markers and route are
- * what the eye lands on.
+ * SheOut's map look, by day: a real, colourful city map - green parks, blue
+ * water, warm main roads, readable street and area names - with the clutter
+ * taken out.
  * <p>
- * Google's default style is built for finding businesses - every café, ATM
- * and bus stop gets an icon and a label. On a screen whose only job is "where
- * is my pickup, where is my partner", that is noise competing with the three
- * things that matter. So:
+ * An earlier version greyed everything out so the purple route would be the
+ * only colour. On a phone in daylight that read as a blank, lifeless box and
+ * made the map harder to use: a partner finds a pickup by the lake, the park
+ * or the main road next to it, and those need to look like a lake, a park
+ * and a main road. So:
  * <ul>
- *   <li>points of interest and transit are hidden, parks stay as soft green
- *       shapes (they are how people orient themselves);</li>
- *   <li>land is a neutral light grey and roads white with a faint edge, so
- *       the brand purple route and pins are the only colour on the map and
- *       read as "your way" rather than as one more road;</li>
- *   <li>road shields, parcel lines and the names of small lanes are gone;
- *       main road and area names stay, in a soft grey.</li>
+ *   <li>shops, restaurants, ATMs and bus stops are hidden - they are the noise
+ *       that competes with the pins; landmarks, hospitals, parks and places of
+ *       worship stay, because people give directions by them;</li>
+ *   <li>parks are a clear green and water a clear blue, main roads a warm
+ *       yellow with an amber edge, other roads white on a warm off-white land;</li>
+ *   <li>street names stay on, in a dark grey that reads in sunlight.</li>
  * </ul>
+ * The route is drawn in brand purple on a white casing (see LiveMap), which
+ * stands out against all of these.
+ * <p>
  * Applied as a JSON style. If VITE_GOOGLE_MAPS_MAP_ID is set, the map uses
  * that Cloud Console style instead (Google ignores JSON styles on a map with
  * a Map ID), so the look can later be managed without a code change.
  */
 export const SHEOUT_MAP_STYLE: google.maps.MapTypeStyle[] = [
-  // Neutral light grey land, not lavender: the brand purple route and pins
-  // are the only purple on the map, so they are what the eye lands on.
-  { elementType: 'geometry', stylers: [{ color: '#f3f3f5' }] },
-  { elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
-  { elementType: 'labels.text.fill', stylers: [{ color: '#8f8c99' }] },
+  { featureType: 'landscape.man_made', elementType: 'geometry', stylers: [{ color: '#f6f4ef' }] },
+  { featureType: 'landscape.natural', elementType: 'geometry', stylers: [{ color: '#eef3e4' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#4f535a' }] },
   { elementType: 'labels.text.stroke', stylers: [{ color: '#ffffff' }, { weight: 3 }] },
 
-  { featureType: 'poi', stylers: [{ visibility: 'off' }] },
-  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ visibility: 'on' }, { color: '#e5ece3' }] },
-  { featureType: 'poi.park', elementType: 'labels', stylers: [{ visibility: 'off' }] },
-  { featureType: 'transit', stylers: [{ visibility: 'off' }] },
+  // The noise: businesses and bus stops. Landmarks, hospitals and parks stay.
+  { featureType: 'poi.business', stylers: [{ visibility: 'off' }] },
+  { featureType: 'transit.station.bus', stylers: [{ visibility: 'off' }] },
+  { featureType: 'poi', elementType: 'labels.text.fill', stylers: [{ color: '#6b6f76' }] },
+  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#c5e8b7' }] },
+  { featureType: 'poi.park', elementType: 'labels.text.fill', stylers: [{ color: '#3f7f35' }] },
   { featureType: 'administrative.land_parcel', stylers: [{ visibility: 'off' }] },
-  { featureType: 'administrative.neighborhood', elementType: 'labels.text.fill', stylers: [{ color: '#a4a1ad' }] },
-  { featureType: 'administrative', elementType: 'geometry', stylers: [{ visibility: 'off' }] },
+  { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#2f3237' }] },
+  { featureType: 'administrative.neighborhood', elementType: 'labels.text.fill', stylers: [{ color: '#5f636a' }] },
 
   { featureType: 'road', elementType: 'geometry.fill', stylers: [{ color: '#ffffff' }] },
-  { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#e6e5eb' }] },
-  { featureType: 'road.highway', elementType: 'geometry.fill', stylers: [{ color: '#fbfaf7' }] },
-  { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#dedce4' }] },
-  { featureType: 'road.arterial', elementType: 'labels.text.fill', stylers: [{ color: '#9d9aa6' }] },
-  { featureType: 'road.local', elementType: 'labels', stylers: [{ visibility: 'off' }] },
+  { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#dcdad4' }] },
+  { featureType: 'road.highway', elementType: 'geometry.fill', stylers: [{ color: '#fde7a3' }] },
+  { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#efc56a' }] },
+  { featureType: 'road.arterial', elementType: 'geometry.fill', stylers: [{ color: '#fffdf6' }] },
+  { featureType: 'road.arterial', elementType: 'geometry.stroke', stylers: [{ color: '#e6dcc2' }] },
+  { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#5a5e65' }] },
+  { featureType: 'road.highway', elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
 
-  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#dfe6ec' }] },
-  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#a3b0bd' }] },
+  { featureType: 'transit.line', elementType: 'geometry', stylers: [{ color: '#c9c4d6' }] },
+
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#a7d3f5' }] },
+  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#2f6fa8' }] },
 ];
 
 /**

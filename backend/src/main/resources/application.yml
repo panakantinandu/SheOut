@@ -96,6 +96,11 @@ sheout:
       # Straight-line GPS geofence used by the server before a driver can
       # mark an IN_PROGRESS trip complete.
       drop-off-radius-metres: ${TRIP_COMPLETION_RADIUS_METRES:100}
+      # How close she must be to the pickup before the code box opens and the
+      # code is accepted. Tighter than dispatch's 300 m "arriving" notice:
+      # that one warns the rider she is nearly there; this one says she IS
+      # there, and at 300 m the box opened a street or two away.
+      pickup-radius-metres: ${PICKUP_ARRIVAL_RADIUS_METRES:150}
       # Location reports older than this are not trusted for completion.
       driver-location-max-age-seconds: ${TRIP_COMPLETION_LOCATION_MAX_AGE_SECONDS:30}
     service-area:

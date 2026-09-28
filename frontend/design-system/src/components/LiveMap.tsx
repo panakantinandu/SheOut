@@ -200,14 +200,14 @@ function LoadedMap({ markers, route, className, autoFit = true, onPick, center, 
         {route && route.length >= 2 && (
           // A white casing under the line keeps it crisp where it crosses
           // roads and labels, the way ride-hailing maps draw theirs.
-          <Polyline path={route} strokeColor="#ffffff" strokeOpacity={0.95} strokeWeight={9} zIndex={0} clickable={false} />
+          <Polyline path={route} strokeColor="#ffffff" strokeOpacity={0.95} strokeWeight={10} zIndex={0} clickable={false} />
         )}
         {route && route.length >= 2 && (
           <Polyline
             path={route}
             strokeColor={colors.primary}
             strokeOpacity={0.95}
-            strokeWeight={5}
+            strokeWeight={6}
             // Under the markers: the line is context, the pin it ends at is
             // the thing being looked for.
             zIndex={1}

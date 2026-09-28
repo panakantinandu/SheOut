@@ -1,4 +1,4 @@
-import { CheckCircle2, MapPin, MessageCircle, Navigation } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, ChevronDown, MapPin, MessageCircle, Navigation } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
@@ -105,6 +105,13 @@ export function Trip() {
   const navigate = useNavigate();
   const [booking, setBooking] = useState<BookingSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /**
+   * The last poll failed. Kept apart from `error` and cleared by the next
+   * poll that works: a single dropped request on a weak signal used to leave
+   * "Could not load trip" on screen for the rest of the trip, above a trip
+   * that had loaded perfectly well.
+   */
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [askingWhy, setAskingWhy] = useState(false);
   /** Ending away from the drop: the reason picker is open. */
@@ -222,12 +229,13 @@ export function Trip() {
         const result = await bookingApi.getById(bookingId!);
         if (cancelled) return;
         setBooking(result);
+        setLoadError(null);
         // A record, not a live trip: nothing on it will change again.
         if (result.status === 'CANCELLED' || (result.status === 'COMPLETED' && result.paymentSettledAt)) {
           clearInterval(interval);
         }
       } catch (err) {
-        if (!cancelled) setError(apiErrorText(err, 'trip.loadError'));
+        if (!cancelled) setLoadError(apiErrorText(err, 'trip.loadError'));
       }
     }
 
@@ -448,6 +456,228 @@ export function Trip() {
     return t('trip.workingOutRoute');
   }
 
+  // THE LIVE TRIP: one job at a time. The map is big, because on a bike it
+  // is the thing she glances at; under it is a single card saying what to do
+  // now - go to the pickup, take the code, go to the drop - with only the
+  // controls for that step. The code box is not shown on the way to the
+  // pickup, the End button not before the rider is on board, and the whole
+  // trip's addresses and fare fold away under "Trip details". Cancel and
+  // Support stay reachable but quiet, at the bottom, where a stray thumb
+  // does not find them.
+  if (booking && navigable && destination) {
+    const minutes = route?.durationMinutes == null ? null : Math.max(1, Math.round(route.durationMinutes));
+    const arrived = phase === 'PICKUP' && pickupArrived;
+    const title = phase === 'DROP' ? t('trip.goToDrop') : arrived ? t('trip.arrivedTitle') : t('trip.goToPickup');
+    return (
+      <div className="space-y-4" data-testid="trip-live">
+        {/* The map. Back and SOS float on its top edge; its bottom edge,
+            where Google's logo and terms sit, is left clear. */}
+        <div className="relative -mx-screen -mt-6 h-[46vh] min-h-[280px] overflow-hidden shadow-lift" data-testid="trip-map">
+          <LiveMap markers={markers} route={route?.points} fill />
+          <div className="pointer-events-none absolute inset-x-3 top-3 z-10 flex items-start justify-between">
+            <button
+              type="button"
+              onClick={goBack}
+              aria-label={t('trip.back')}
+              className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full bg-surface text-text-primary shadow-float"
+            >
+              <ArrowLeft className="h-5 w-5" aria-hidden="true" />
+            </button>
+            <div className="pointer-events-auto">
+              <PartnerSos bookingId={bookingId} position={myPosition} />
+            </div>
+          </div>
+        </div>
+
+        {loadError && (
+          <p className="text-center text-xs text-text-secondary" data-testid="trip-reconnecting">{t('trip.reconnecting')}</p>
+        )}
+
+        {/* Her rider asking to go somewhere else. */}
+        <DestinationChangePrompt booking={booking} onAnswered={refreshBooking} />
+
+        {/* What to do now. */}
+        <Card className="space-y-4" data-testid="trip-step">
+          <div className="flex items-center justify-between gap-2">
+            <StatusBadge tone="primary">{phase === 'PICKUP' ? t('trip.stepPickup') : t('trip.stepDrop')}</StatusBadge>
+            {!arrived && (
+              <span className="text-sm font-semibold text-accent-green-strong" data-testid="trip-eta">
+                {minutes != null && route?.distanceKm != null
+                  ? t('trip.etaShort', { minutes, km: route.distanceKm })
+                  : route?.distanceKm != null
+                    ? t('trip.kmShort', { km: route.distanceKm })
+                    : ''}
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-start gap-3">
+            <span
+              className={`mt-1.5 h-3 w-3 shrink-0 rounded-full ring-4 ${phase === 'PICKUP' ? 'bg-primary ring-primary/15' : 'bg-accent-orange ring-accent-orange/20'}`}
+              aria-hidden="true"
+            />
+            <div className="min-w-0 flex-1">
+              <p className="font-heading text-card-title text-text-primary">{title}</p>
+              <p className="mt-1 line-clamp-2 text-sm text-text-secondary">{destination.label}</p>
+              {!arrived && !route && <p className="mt-1 text-xs text-text-secondary">{mapCaption()}</p>}
+              {routeError && <p className="mt-1 text-xs text-text-secondary">{t('trip.routeError')}</p>}
+            </div>
+          </div>
+
+          {/* Who she is collecting, with the one way to reach her. */}
+          <div className="flex items-center gap-3 border-t border-border pt-3" data-testid="trip-rider">
+            <Avatar url={rider?.photoUrl} name={rider?.firstName ?? undefined} size="md" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-semibold text-text-primary">{rider?.firstName || t('trip.yourRider')}</p>
+              <p className="truncate text-xs text-text-secondary">
+                {rider ? (
+                  <AggregateRatingText averageStars={rider.averageStars} totalRatings={rider.totalRatings} emptyLabel={t('trip.newRider')} />
+                ) : t('trip.noNumbersShort')}
+              </p>
+            </div>
+            <button
+              type="button"
+              aria-label={t('trip.messageRider')}
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-background text-primary"
+              onClick={() => navigate(`/chat/${bookingId}`)}
+            >
+              <MessageCircle className="h-5 w-5" aria-hidden="true" />
+            </button>
+          </div>
+
+          {/* The step's one action. */}
+          {phase === 'PICKUP' && !arrived && (
+            <div className="space-y-2">
+              <OpenInMapsButton lat={destination.lat} lng={destination.lng} label={destination.label} variant="primary">
+                {t('trip.navigateToPickup')}
+              </OpenInMapsButton>
+              <p className="text-center text-xs text-text-secondary" data-testid="pickup-not-yet">{t('trip.notAtPickupYet')}</p>
+            </div>
+          )}
+
+          {arrived && (
+            <div className="space-y-3" data-testid="pickup-code-step">
+              <p className="flex items-start gap-2 text-sm text-text-primary">
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+                <span>{codeLocked ? <SafetyText k="pickupCode.locked" /> : <SafetyText k="pickupCode.askForCode" />}</span>
+              </p>
+              {!codeLocked && (
+                <>
+                  <PickupCodeField
+                    value={pickupCode}
+                    onChange={(v) => {
+                      setPickupCode(v);
+                      setCodeError(null);
+                    }}
+                    error={codeError ?? undefined}
+                    disabled={busy}
+                    onSubmit={handleConfirmPickup}
+                  />
+                  <Button fullWidth disabled={busy || pickupCode.length !== PICKUP_CODE_LENGTH} onClick={handleConfirmPickup}>
+                    {busy ? t('trip.checking') : t('trip.confirmAndStart')}
+                  </Button>
+                </>
+              )}
+              {codeLocked && codeError && <p className="text-sm text-danger">{codeError}</p>}
+            </div>
+          )}
+
+          {phase === 'DROP' && (
+            <div className="space-y-2">
+              {!myPosition && <p className="text-center text-xs text-text-secondary">{t('trip.locationNeededToEnd')}</p>}
+              {myPosition && !atDropOff && (
+                <p className="text-center text-xs text-text-secondary" data-testid="away-from-drop">
+                  {t('trip.awayFromDrop', { metres: Math.round(metresBetween(myPosition, booking.drop) / 10) * 10 })}
+                </p>
+              )}
+              {atDropOff ? (
+                <Button fullWidth variant="success" disabled={busy} onClick={() => handleComplete()} data-testid="end-trip">
+                  {busy ? t('trip.ending') : t('trip.endTrip')}
+                </Button>
+              ) : (
+                <>
+                  <OpenInMapsButton lat={destination.lat} lng={destination.lng} label={destination.label} variant="primary">
+                    {t('trip.navigateToDrop')}
+                  </OpenInMapsButton>
+                  <Button fullWidth variant="secondary" size="md" disabled={busy} onClick={() => handleComplete()} data-testid="end-trip">
+                    {busy ? t('trip.ending') : t('trip.endTrip')}
+                  </Button>
+                </>
+              )}
+            </div>
+          )}
+
+          {error && <p className="text-sm text-danger">{error}</p>}
+        </Card>
+
+        {/* The whole trip, folded away until she wants it. */}
+        <Card className="p-0">
+          <details className="group" data-testid="trip-details">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 [&::-webkit-details-marker]:hidden">
+              <span className="font-heading text-card-title text-text-primary">
+                {booking.type === 'RIDE' ? t('trip.ride') : t('trip.delivery')}
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="font-heading text-card-title text-text-primary">₹{booking.finalFare ?? booking.fareEstimate}</span>
+                <ChevronDown className="h-5 w-5 text-text-secondary transition-transform group-open:rotate-180" aria-hidden="true" />
+              </span>
+            </summary>
+            <div className="space-y-2 border-t border-border px-4 py-3 text-sm">
+              <div className="flex items-start gap-2">
+                <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-primary" aria-hidden="true" />
+                <span className="text-text-primary"><span className="sr-only">{t('trip.pickup')}: </span>{booking.pickup.label}</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-accent-orange" aria-hidden="true" />
+                <span className="text-text-primary"><span className="sr-only">{t('trip.drop')}: </span>{booking.drop.label}</span>
+              </div>
+              <p className="pt-1 text-xs text-text-secondary">{t('trip.noNumbers')}</p>
+            </div>
+          </details>
+        </Card>
+
+        {/* Quiet, but always there. */}
+        <div className="flex items-center gap-3">
+          {booking.status === 'ACCEPTED' && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => { setCancelError(null); setAskingWhy(true); }}
+              className="h-11 flex-1 rounded-full border border-border bg-surface text-sm font-semibold text-danger"
+              data-testid="cancel-trip"
+            >
+              {t('trip.cancelTrip')}
+            </button>
+          )}
+          <ContactSupportButton phoneNumber={supportPhoneNumber} className="flex-1" />
+        </div>
+
+        <CancelReasonDialog<DropOffReason>
+          open={askingDropReason}
+          title={ds('dropOff.title')}
+          message={ds('dropOff.message')}
+          options={DROP_OFF_REASONS}
+          busy={busy}
+          error={dropReasonError}
+          keepLabel={ds('dropOff.keep')}
+          confirmLabel={ds('dropOff.confirm')}
+          busyLabel={ds('dropOff.ending')}
+          confirmVariant="primary"
+          onConfirm={(reason, note) => handleComplete(reason, note)}
+          onCancel={() => setAskingDropReason(false)}
+        />
+        <CancelReasonDialog
+          open={askingWhy}
+          options={DRIVER_CANCELLATION_REASONS}
+          busy={busy}
+          error={cancelError}
+          onConfirm={handleCancel}
+          onCancel={() => setAskingWhy(false)}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <TopHeader variant="back" title={finished ? t('trip.detailsTitle') : t('trip.title')} onBack={goBack} />
@@ -464,8 +694,8 @@ export function Trip() {
         <p className="text-xs text-text-secondary">{mapCaption()}</p>
       </div>
 
-      {error && <p className="text-sm text-danger">{error}</p>}
-      {!booking && !error && <SkeletonCard lines={4} label={t('trip.loading')} />}
+      {(error ?? loadError) && <p className="text-sm text-danger">{error ?? loadError}</p>}
+      {!booking && !error && !loadError && <SkeletonCard lines={4} label={t('trip.loading')} />}
 
       {booking && (
         <>
