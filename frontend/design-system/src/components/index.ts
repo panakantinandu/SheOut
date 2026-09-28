@@ -57,3 +57,6 @@ export * from './ServiceArt';
 export * from './DestinationChangeCompare';
 export * from './ReferAFriend';
 export * from './HelpAssistantChat';
+export * from './AssistantAvatar';
+export * from './ThinkingIndicator';
+export * from './AssistantEntryCard';

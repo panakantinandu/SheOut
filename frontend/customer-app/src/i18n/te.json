@@ -37,7 +37,9 @@
     "sos": "SOS",
     "liveTrack": "లైవ్ ట్రాక్",
     "wallet": "వాలెట్",
-    "history": "చరిత్ర"
+    "history": "చరిత్ర",
+    "askCardTitle": "SheOut‌ను అడగండి",
+    "askCardBody": "రైడ్‌లు, చెల్లింపులు లేదా ధృవీకరణ గురించి ప్రశ్నలా? {{name}}‌ను అడగండి."
   },
   "about": {
     "title": "SheOut గురించి",
@@ -118,8 +120,10 @@
     "grievancePending": "సంప్రదింపు వివరాలు సిద్ధం అవుతున్నాయి",
     "faqHeading": "సాధారణ ప్రశ్నలు",
     "assistantTitle": "SheOut హెల్ప్",
-    "askAssistant": "SheOut హెల్ప్‌ను అడగండి",
-    "fromAssistant": "(SheOut హెల్ప్‌తో సంభాషణ నుండి ప్రారంభమైంది.)"
+    "askAssistant": "{{name}}‌ను అడగండి",
+    "fromAssistant": "({{name}}‌తో సంభాషణ నుండి ప్రారంభమైంది. SheOut టీమ్‌లోని ఒక వ్యక్తి దీన్ని చూస్తారు.)",
+    "askAssistantBody": "రైడ్‌లు, చెల్లింపులు, ధృవీకరణ గురించి త్వరిత సమాధానాలు. సహాయం చేయలేనప్పుడు ఒక వ్యక్తి చూస్తారు.",
+    "conversationHeading": "సంభాషణ:"
   },
   "addresses": {
     "loadError": "చిరునామాలు లోడ్ చేయలేకపోయాం",

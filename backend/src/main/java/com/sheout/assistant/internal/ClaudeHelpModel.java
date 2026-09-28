@@ -24,16 +24,22 @@ import java.util.Optional;
 /**
  * The help assistant's model: Claude, through the official Java SDK.
  * <p>
- * One request per message, structured output (HelpModel.Decision), low
- * effort - these are short factual answers from a fixed text, not reasoning
- * problems. The large static part of the system prompt is marked for prompt
- * caching, so after the first question it is read from cache at a tenth of
- * the input price. The model is a setting (ASSISTANT_MODEL); a cheaper model
- * is the main cost lever and is SheOut's choice to make.
+ * One request per message, structured output (HelpModel.Decision), capped
+ * at ASSISTANT_MAX_TOKENS (300): these are short factual answers from a
+ * fixed text, not reasoning problems. Claude Haiku 4.5 by default.
  * <p>
- * Server-side refusal fallbacks are on (the "default" routing), so a
- * request the model declines can be retried by another model instead of
- * ending the answer; a refusal that still comes back is handed to a person.
+ * The static part of the system prompt is marked for prompt caching. Haiku
+ * 4.5 only caches a prefix of 4,096 tokens or more, and SheOut's help content
+ * is shorter than that today, so on Haiku the marker is usually a no-op; on
+ * a model with a lower minimum it saves most of the input cost.
+ * <p>
+ * Effort and server-side refusal fallbacks are sent only to models that take
+ * them (Opus and Sonnet); Haiku 4.5 does not, and would reject the request.
+ * A refusal that comes back is handed to a person.
+ * <p>
+ * Nothing the user wrote is logged. The one place it could reach a log is
+ * an API error message that echoes the request, so those are logged with
+ * phone numbers masked (PhoneMasking).
  */
 @Component
 class ClaudeHelpModel implements HelpModel {
@@ -42,10 +48,13 @@ class ClaudeHelpModel implements HelpModel {
 
     private final AnthropicClient client;
     private final String model;
+    private final long maxTokens;
 
     ClaudeHelpModel(@Value("${sheout.assistant.anthropic-api-key:}") String apiKey,
-                    @Value("${sheout.assistant.model:claude-opus-5}") String model) {
+                    @Value("${sheout.assistant.model:claude-haiku-4-5-20251001}") String model,
+                    @Value("${sheout.assistant.max-tokens:300}") long maxTokens) {
         this.model = model;
+        this.maxTokens = maxTokens;
         this.client = apiKey == null || apiKey.isBlank()
                 ? null
                 : AnthropicOkHttpClient.builder()
@@ -67,9 +76,9 @@ class ClaudeHelpModel implements HelpModel {
         if (client == null) {
             return Optional.empty();
         }
-        StructuredMessageCreateParams.Builder<Decision> params = MessageCreateParams.builder()
+        MessageCreateParams.Builder base = MessageCreateParams.builder()
                 .model(model)
-                .maxTokens(4000L)
+                .maxTokens(maxTokens)
                 .systemOfBetaTextBlockParams(List.of(
                         // Stable across every request for this app: cached.
                         BetaTextBlockParam.builder()
@@ -77,10 +86,16 @@ class ClaudeHelpModel implements HelpModel {
                                 .cacheControl(BetaCacheControlEphemeral.builder().build())
                                 .build(),
                         // Varies by user; after the cache breakpoint.
-                        BetaTextBlockParam.builder().text(languageInstruction).build()))
-                .addBeta("server-side-fallback-2026-07-01")
-                .putAdditionalBodyProperty("fallbacks", JsonValue.from("default"))
-                .outputConfig(Decision.class, BetaOutputConfig.Effort.LOW);
+                        BetaTextBlockParam.builder().text(languageInstruction).build()));
+        StructuredMessageCreateParams.Builder<Decision> params;
+        if (supportsEffortAndFallbacks(model)) {
+            params = base
+                    .addBeta("server-side-fallback-2026-07-01")
+                    .putAdditionalBodyProperty("fallbacks", JsonValue.from("default"))
+                    .outputConfig(Decision.class, BetaOutputConfig.Effort.LOW);
+        } else {
+            params = base.outputConfig(Decision.class);
+        }
         for (Turn turn : turns) {
             if (turn.fromUser()) {
                 params.addUserMessage(turn.text());
@@ -106,15 +121,21 @@ class ClaudeHelpModel implements HelpModel {
             }
             return Optional.of(new Result(decision.orElse(null), spent));
         } catch (RateLimitException e) {
-            log.warn("Help assistant: Anthropic rate limit - {}", e.getMessage());
+            log.warn("Help assistant: Anthropic rate limit - {}", PhoneMasking.mask(e.getMessage()));
             return Optional.empty();
         } catch (AnthropicServiceException e) {
-            log.error("Help assistant: Anthropic API error {} - {}", e.statusCode(), e.getMessage());
+            log.error("Help assistant: Anthropic API error {} - {}", e.statusCode(), PhoneMasking.mask(e.getMessage()));
             return Optional.empty();
         } catch (RuntimeException e) {
-            // Includes a structured answer that did not parse. Never let it reach the user as a 500.
-            log.error("Help assistant: request failed", e);
+            // Includes a structured answer that did not parse, or one cut off at max tokens.
+            // Never let it reach the user as a 500. The class only: its message can quote the reply.
+            log.error("Help assistant: request failed ({}: {})", e.getClass().getSimpleName(), PhoneMasking.mask(e.getMessage()));
             return Optional.empty();
         }
+    }
+
+    /** Effort and server-side fallbacks: Opus and Sonnet take them; Haiku 4.5 rejects the request. */
+    static boolean supportsEffortAndFallbacks(String model) {
+        return model != null && !model.startsWith("claude-haiku");
     }
 }

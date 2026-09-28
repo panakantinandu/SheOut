@@ -177,3 +177,20 @@ Same rule as above: shown with the English beneath until signed off. The Safety 
 ### SheOut Help: distress words (not UI text, but safety-critical)
 
 The help assistant sends anyone whose message contains these straight to SOS, before any AI is asked. The Hindi and Telugu terms (romanised and in script) are a first draft - a native speaker should add the everyday ways people actually say "help", "I am scared", "someone is following me". Kept in two places that must match: `backend/.../assistant/internal/EmergencyDetector.java` and `frontend/design-system/src/lib/distress.ts`.
+
+## Added 2026-09-28: SheOut Assistant privacy note (NOT REVIEWED)
+
+Shown under the assistant's message box in both apps (rider and partner
+`*.safety.json`). Rendered with `SafetyText`, so Telugu and Hindi show the
+English beneath until signed off.
+
+| Key | English | Telugu | Hindi | Reviewed |
+|---|---|---|---|---|
+| `assistant.privacyNote` | Never share OTPs, passwords or ID numbers here. | ఇక్కడ OTPలు, పాస్‌వర్డ్‌లు లేదా ID నంబర్లు ఎప్పుడూ పంచుకోకండి. | यहाँ कभी OTP, पासवर्ड या ID नंबर साझा न करें। | ☐ te ☐ hi |
+
+The assistant's distress message (`assistant.emergencyTitle`, `assistant.emergencyBody`,
+`assistant.call`, `assistant.imSafe`) is listed above and is still unreviewed. So are
+the Hindi and Telugu distress words that send a message straight to SOS without
+asking the model: `backend/.../assistant/internal/EmergencyDetector.java` and
+`frontend/design-system/src/lib/distress.ts`. A native speaker should add common
+ways of saying "help", "I'm scared" and "someone is following me" that are missing.

@@ -14,8 +14,7 @@ import {
   useAppLanguage,
   useTheme,
   useTranslation,
-  vehicleLabel,
-} from '@sheout/design-system';
+  vehicleLabel, ASSISTANT_NAME, AssistantAvatar } from '@sheout/design-system';
 import { preferencesApi, usersApi } from '../api/client';
 import type { DriverProfileSummary } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
@@ -121,6 +120,7 @@ export function AppDrawerProvider({ children }: { children: ReactNode }) {
             title: t('drawer.helpAndInfo'),
             items: [
               { key: 'refer', label: t('refer.title'), icon: <Gift />, onClick: () => go('/refer') },
+              { key: 'assistant', label: t('help.askAssistant', { name: ASSISTANT_NAME }), icon: <AssistantAvatar size={22} staticOnly />, onClick: () => go('/help/assistant') },
               { key: 'support', label: t('drawer.support'), icon: <LifeBuoy />, onClick: () => go('/help') },
               { key: 'about', label: t('about.title'), icon: <Info />, onClick: () => go('/about') },
               { key: 'privacy', label: t('legal.privacy'), icon: <Lock />, onClick: () => go('/privacy') },

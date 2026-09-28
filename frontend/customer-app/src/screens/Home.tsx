@@ -1,7 +1,7 @@
 import { ArrowRight, Clock, MapPinned, ShieldAlert, Wallet as WalletIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { brandIllustration, Card, IconCircle, ListRow, PushPromptCard, TopHeader, contentText, useContentSection, useAppLanguage, usePushNotifications, useUnreadNotifications, bikeTaxiArt, parcelArt, womenArt } from '@sheout/design-system';
+import { ASSISTANT_NAME, AssistantEntryCard, brandIllustration, Card, IconCircle, ListRow, PushPromptCard, TopHeader, contentText, useContentSection, useAppLanguage, usePushNotifications, useUnreadNotifications, bikeTaxiArt, parcelArt, womenArt } from '@sheout/design-system';
 import { OutOfAreaBanner } from '../components/OutOfAreaBanner';
 import { UnpaidTripBanner } from '../components/UnpaidTripBanner';
 import { useAppDrawer } from '../components/AppDrawer';
@@ -149,6 +149,16 @@ export function Home() {
           />
         </div>
       </Card>
+
+      {/* The way into the assistant: a card, not a floating button - the
+          bottom bar below is where SOS is. The one place its avatar plays. */}
+      <AssistantEntryCard
+        title={t('home.askCardTitle')}
+        body={t('home.askCardBody', { name: ASSISTANT_NAME })}
+        onOpen={() => navigate('/help/assistant')}
+        interactive
+        testId="home-ask-sheout"
+      />
 
       <div>
         {/* Four tiles, four destinations. Live Track and History used to

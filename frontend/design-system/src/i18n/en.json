@@ -436,15 +436,18 @@
     }
   },
   "assistant": {
-    "intro": "Hi, I'm SheOut Help. I answer questions about SheOut from SheOut's own help content, and I can make mistakes. If I can't help, I'll pass you to a person on the SheOut team. If you are in danger, use SOS - don't wait for a chat.",
+    "intro": "Hi, I'm {{name}}. I answer questions about SheOut from SheOut's own help content, and I can make mistakes. If I can't help, I'll pass you to a person on the SheOut team. If you are in danger, use SOS. Don't wait for a chat.",
     "placeholder": "Ask about SheOut...",
     "send": "Send",
-    "thinking": "SheOut Help is writing...",
+    "thinking": "{{name}} is writing...",
     "error": "Your message could not be sent. Check your connection and try again.",
     "handOff": "I can't answer that reliably, so a person on the SheOut team should look at it.",
-    "limitReached": "You've reached today's limit for SheOut Help. A person on the SheOut team can still help through a support ticket.",
-    "unavailable": "SheOut Help isn't available right now. A person on the SheOut team can help through a support ticket.",
+    "limitReached": "{{name}} is resting for today. A person on the SheOut team can still help you through a support ticket.",
+    "unavailable": "{{name}} isn't available right now. A person on the SheOut team can help through a support ticket.",
     "ticketExplain": "This becomes a support ticket that a person on SheOut's team reads and replies to in the app. It isn't instant, but it is a real person. You can check and change it before sending.",
-    "ticketButton": "Send to SheOut's team"
+    "ticketButton": "Send to SheOut's team",
+    "status": "Answers from SheOut's help content",
+    "asleepStatus": "Resting until tomorrow. Support tickets are open.",
+    "you": "Me"
   }
 }

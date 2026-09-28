@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { HelpAssistantChat, TopHeader, useAppLanguage, useTranslation } from '@sheout/design-system';
+import { ASSISTANT_NAME, HelpAssistantChat, assistantTicketDescription, TopHeader, useAppLanguage, useTranslation } from '@sheout/design-system';
 import { assistantApi } from '../api/client';
 import { PartnerSos } from '../components/PartnerSos';
 
@@ -15,18 +15,24 @@ export function HelpAssistant() {
 
   return (
     <div className="space-y-4">
-      <TopHeader variant="back" title={t('help.assistantTitle')} onBack={() => navigate(-1)} />
+      <TopHeader variant="back" title={ASSISTANT_NAME} onBack={() => navigate(-1)} />
       <HelpAssistantChat
         ask={(messages) => assistantApi.ask(messages, language)}
         emergencyNumber="112"
         sosAction={<PartnerSos />}
-        onRaiseTicket={(draft) =>
+        stillAvatar
+        onRaiseTicket={(draft, conversation) =>
           navigate('/help/new', {
             state: {
               prefill: {
                 category: draft.category,
                 subject: draft.subject,
-                description: `${draft.summary}\n\n${t('help.fromAssistant')}`,
+                description: assistantTicketDescription(
+                  draft.summary,
+                  conversation,
+                  t('help.conversationHeading'),
+                  t('help.fromAssistant', { name: ASSISTANT_NAME })
+                ),
               },
             },
           })

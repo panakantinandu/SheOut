@@ -134,6 +134,7 @@
     "emergencyTitle": "If you are in danger, use SOS now",
     "emergencyBody": "This chat can't help in an emergency. SOS alerts your emergency contacts and SheOut's team with your location. Call {{number}} for police, an ambulance or fire services.",
     "call": "Call {{number}}",
-    "imSafe": "I'm safe - go back to the chat"
+    "imSafe": "I'm safe - go back to the chat",
+    "privacyNote": "Never share OTPs, passwords or ID numbers here."
   }
 }

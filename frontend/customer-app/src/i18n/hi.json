@@ -37,7 +37,9 @@
     "sos": "SOS",
     "liveTrack": "लाइव ट्रैक",
     "wallet": "वॉलेट",
-    "history": "इतिहास"
+    "history": "इतिहास",
+    "askCardTitle": "SheOut से पूछें",
+    "askCardBody": "राइड, भुगतान या सत्यापन के बारे में सवाल? {{name}} से पूछें।"
   },
   "about": {
     "title": "SheOut के बारे में",
@@ -118,8 +120,10 @@
     "grievancePending": "संपर्क विवरण तैयार किए जा रहे हैं",
     "faqHeading": "आम सवाल",
     "assistantTitle": "SheOut हेल्प",
-    "askAssistant": "SheOut हेल्प से पूछें",
-    "fromAssistant": "(SheOut हेल्प से बातचीत से शुरू हुआ।)"
+    "askAssistant": "{{name}} से पूछें",
+    "fromAssistant": "({{name}} से बातचीत से शुरू हुआ। SheOut टीम का एक व्यक्ति इसे देखेगा।)",
+    "askAssistantBody": "राइड, भुगतान और सत्यापन के बारे में जल्दी जवाब। जहाँ यह मदद न कर सके, वहाँ एक व्यक्ति मदद करेगा।",
+    "conversationHeading": "बातचीत:"
   },
   "addresses": {
     "loadError": "पते लोड नहीं हो सके",

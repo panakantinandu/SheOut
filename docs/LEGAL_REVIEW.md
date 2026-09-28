@@ -36,3 +36,38 @@ Open questions for the review:
 - Whether showing a seller's phone/WhatsApp number to every signed-in rider
   needs explicit consent wording in the application beyond the form
   labels.
+
+## SheOut Assistant (help chat): Privacy Policy must name Anthropic
+
+**Needs a change before the assistant is switched on for real users.** The
+Privacy Policy's third-party list (`frontend/design-system/src/legal/content.ts`,
+the paragraph beginning "These are the only third parties involved") says the
+list is complete. It does not mention that assistant messages are sent to
+Anthropic, so the list is wrong for anyone who uses the chat.
+
+Proposed addition to that list, for legal review:
+
+> Anthropic, only if you use the SheOut Assistant help chat. Receives the
+> messages you type in that chat (the last few of the conversation) and our
+> help content, and sends back an answer. It does not receive your name, phone
+> number or account details from us. SheOut does not keep the conversation
+> unless you choose to turn it into a support ticket, in which case the
+> ticket (with the conversation) is kept like any other ticket.
+
+Facts behind the wording, for the reviewer:
+
+- Messages go from SheOut's server to Anthropic's API; the key is never in the
+  apps. Only the last 6 messages are sent.
+- The chat asks people not to share OTPs, passwords or ID numbers (under the
+  message box). A message that sounds like an emergency is **not** sent to
+  Anthropic: the app shows SOS and 112 instead.
+- SheOut stores no transcript: only per-account daily counts (messages,
+  tokens, hand-offs, emergencies) for the usage caps and the cost view.
+- A transcript is stored only when she sends a support ticket from the chat,
+  pre-filled with the conversation, which she can edit before sending.
+- Anthropic's own retention of API inputs is set by SheOut's commercial terms
+  with Anthropic; the reviewer should confirm those before finalising the
+  wording.
+
+When the wording is approved, change the string and bump `LEGAL_VERSION`, so
+everyone is asked to accept the new version (see `content.ts`).

@@ -47,8 +47,10 @@
     "verificationStatusSub": "देखें कि अभी क्या बाकी है",
     "faqHeading": "आम सवाल",
     "assistantTitle": "SheOut हेल्प",
-    "askAssistant": "SheOut हेल्प से पूछें",
-    "fromAssistant": "(SheOut हेल्प से बातचीत से शुरू हुआ।)"
+    "askAssistant": "{{name}} से पूछें",
+    "fromAssistant": "({{name}} से बातचीत से शुरू हुआ। SheOut टीम का एक व्यक्ति इसे देखेगा।)",
+    "askAssistantBody": "राइड, भुगतान और सत्यापन के बारे में जल्दी जवाब। जहाँ यह मदद न कर सके, वहाँ एक व्यक्ति मदद करेगा।",
+    "conversationHeading": "बातचीत:"
   },
   "completeProfile": {
     "title": "अपनी प्रोफ़ाइल पूरी करें",
@@ -266,7 +268,9 @@
     "activeTrip": "चालू ट्रिप: {{status}}",
     "you": "आप",
     "positionNote": "आपका डिवाइस हलचल बताते ही आपकी लोकेशन अपडेट होती है।",
-    "recentTrips": "हाल की ट्रिप"
+    "recentTrips": "हाल की ट्रिप",
+    "askCardTitle": "SheOut से पूछें",
+    "askCardBody": "राइड, भुगतान या सत्यापन के बारे में सवाल? {{name}} से पूछें।"
   },
   "apiError": {
     "OUTSIDE_SERVICE_AREA": "SheOut अभी सिर्फ़ हैदराबाद और उसके आसपास चलता है। सेवा क्षेत्र के अंदर आने पर ऑनलाइन हों।",

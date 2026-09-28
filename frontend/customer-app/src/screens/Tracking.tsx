@@ -1,7 +1,7 @@
 import { CheckCircle2, Headphones, MessageCircle, Navigation, Radio, SearchX, ShieldAlert, Star, Wallet as WalletIcon, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { AggregateRatingText, AmountText, Avatar, Button, CancelReasonDialog, ConfirmDialog, Card, CUSTOMER_CANCELLATION_REASONS, IconCircle, LiveMap, OpenInMapsButton, PickupCodeCard, SafetyText, SkeletonCard, StatusBadge, SuccessCheck, TopHeader, bookingStatusLabel, vehicleLabel, useRouteLine } from '@sheout/design-system';
+import { AggregateRatingText, AmountText, Avatar, Button, CancelReasonDialog, ConfirmDialog, Card, CUSTOMER_CANCELLATION_REASONS, IconCircle, LiveMap, OpenInMapsButton, PickupCodeCard, SafetyText, SkeletonCard, StatusBadge, SuccessCheck, ThinkingIndicator, TopHeader, bookingStatusLabel, vehicleLabel, useRouteLine } from '@sheout/design-system';
 import type { CancellationReason as SharedCancellationReason, MapMarker } from '@sheout/design-system';
 import { ApiError, bookingApi, chatApi, dispatchApi, routesApi } from '../api/client';
 import type { AssignedDriver, BookingStatus, BookingSummary, DriverLocation } from '../api/types';
@@ -623,7 +623,13 @@ export function Tracking() {
           </div>
         </Card>
       ) : !hasDriver ? (
-        <Card className="text-center">
+        <Card className="text-center" data-testid="searching-card">
+          {/* Something is happening, and it is looking. Gone the moment the
+              search ends: a search that found nobody gets the calm card
+              above, with no motion at all. */}
+          <div className="mb-3 flex justify-center">
+            <ThinkingIndicator mode="searching" size={64} label={t('tracking.header.finding')} />
+          </div>
           {/* Copy that moves with the clock. A static line for ninety
               seconds reads as a frozen app, and a rider who thinks the app
               has hung closes it and books something else - so this is about

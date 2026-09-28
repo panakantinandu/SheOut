@@ -6,6 +6,9 @@ import com.sheout.auth.CurrentAccount;
 import com.sheout.auth.CurrentAccountContext;
 import com.sheout.sharedkernel.ratelimit.RateLimiter;
 import com.sheout.sharedkernel.web.ApiException;
+import com.sheout.sharedkernel.web.ClientAddressResolver;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.factory.annotation.Value;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -31,19 +34,30 @@ import java.util.List;
 @RequestMapping("/api/v1/assistant")
 public class AssistantController {
 
-    private static final int MAX_TURNS = 12;
+    /** The model sees the last six messages: enough for a follow-up, and the cost of a long chat stays flat. */
+    private static final int MAX_TURNS = 6;
     private static final int MAX_TOTAL_CHARS = 8000;
 
     private final AssistantService assistant;
     private final RateLimiter rateLimiter;
+    private final ClientAddressResolver clientAddress;
+    private final int perIpHourlyLimit;
 
-    public AssistantController(AssistantService assistant, RateLimiter rateLimiter) {
+    public AssistantController(AssistantService assistant, RateLimiter rateLimiter, ClientAddressResolver clientAddress,
+                               @Value("${sheout.assistant.per-ip-hourly-limit:60}") int perIpHourlyLimit) {
         this.assistant = assistant;
         this.rateLimiter = rateLimiter;
+        this.clientAddress = clientAddress;
+        this.perIpHourlyLimit = perIpHourlyLimit;
     }
 
     @PostMapping("/messages")
-    public ResponseEntity<AssistantService.Reply> ask(@Valid @RequestBody AskRequest request) {
+    public ResponseEntity<AssistantService.Reply> ask(@Valid @RequestBody AskRequest request, HttpServletRequest http) {
+        // Per address, before anything else: one address signing up account
+        // after account to get round the per-account cap still hits this.
+        // (The assistant is signed-in only; there is no logged-out use.)
+        rateLimiter.tryConsume("assistant-ip:" + clientAddress.resolve(http), perIpHourlyLimit, Duration.ofHours(1))
+                .orThrow("Too many messages from this network. Please try again later, or raise a support ticket.");
         CurrentAccount caller = CurrentAccountContext.get()
                 .orElseThrow(() -> ApiException.unauthorized("Authentication required"));
         if (caller.role() != AccountRole.CUSTOMER && caller.role() != AccountRole.DRIVER) {

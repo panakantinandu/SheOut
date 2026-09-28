@@ -12,8 +12,7 @@ import {
   contentText,
   useAppLanguage,
   faqItemsFromContent,
-  useContentSection,
-} from '@sheout/design-system';
+  useContentSection, ASSISTANT_NAME, AssistantEntryCard } from '@sheout/design-system';
 import type { FaqItem, SupportTicketFilters } from '@sheout/design-system';
 import { contentApi, supportApi } from '../api/client';
 import type { SupportTicketCategory, SupportTicketStatus } from '../api/types';
@@ -94,6 +93,14 @@ export function HelpSupport() {
     <div className="space-y-6">
       <TopHeader variant="back" title={t('help.title')} onBack={() => navigate(-1)} />
 
+      {/* Answers from SheOut's own help content, now; hands anything else to the same ticket below. */}
+      <AssistantEntryCard
+        title={t('help.askAssistant', { name: ASSISTANT_NAME })}
+        body={t('help.askAssistantBody')}
+        onOpen={() => navigate('/help/assistant')}
+        testId="open-help-assistant"
+      />
+
       <Card className="space-y-3">
         <div className="flex items-center gap-3">
           <IconCircle size="lg" tone="soft" icon={<LifeBuoy />} />
@@ -102,10 +109,6 @@ export function HelpSupport() {
             <p className="text-sm text-text-secondary">{fromContent(intro, 'help.customer.intro.subtitle', 'help.introSubtitle')}</p>
           </div>
         </div>
-        {/* Answers from SheOut's own help content, now; hands anything else to the same ticket below. */}
-        <Button fullWidth size="md" variant="secondary" icon={<Bot className="h-4 w-4" />} onClick={() => navigate('/help/assistant')} data-testid="open-help-assistant">
-          {t('help.askAssistant')}
-        </Button>
         <Button fullWidth size="md" icon={<Plus className="h-4 w-4" />} onClick={() => navigate('/help/new')}>
           {t('help.raiseIssue')}
         </Button>

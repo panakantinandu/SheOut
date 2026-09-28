@@ -47,8 +47,10 @@
     "verificationStatusSub": "See what is still outstanding",
     "faqHeading": "Common questions",
     "assistantTitle": "SheOut Help",
-    "askAssistant": "Ask SheOut Help",
-    "fromAssistant": "(Started from a conversation with SheOut Help.)"
+    "askAssistant": "Ask {{name}}",
+    "fromAssistant": "(Started from a conversation with {{name}}. A person on the SheOut team will review this.)",
+    "askAssistantBody": "Quick answers about rides, payments and verification. A person steps in when it can't help.",
+    "conversationHeading": "The conversation:"
   },
   "completeProfile": {
     "title": "Complete your profile",
@@ -266,7 +268,9 @@
     "activeTrip": "Active trip: {{status}}",
     "you": "You",
     "positionNote": "Your position updates as your device reports movement.",
-    "recentTrips": "Recent trips"
+    "recentTrips": "Recent trips",
+    "askCardTitle": "Ask SheOut",
+    "askCardBody": "Questions about rides, payments or verification? Ask {{name}}."
   },
   "apiError": {
     "OUTSIDE_SERVICE_AREA": "SheOut only operates in and around Hyderabad right now. Go online once you are inside the service area.",

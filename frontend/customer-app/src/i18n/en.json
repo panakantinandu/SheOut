@@ -37,7 +37,9 @@
     "sos": "SOS",
     "liveTrack": "Live Track",
     "wallet": "Wallet",
-    "history": "History"
+    "history": "History",
+    "askCardTitle": "Ask SheOut",
+    "askCardBody": "Questions about rides, payments or verification? Ask {{name}}."
   },
   "about": {
     "title": "About SheOut",
@@ -118,8 +120,10 @@
     "grievancePending": "Contact details are being set up",
     "faqHeading": "Common questions",
     "assistantTitle": "SheOut Help",
-    "askAssistant": "Ask SheOut Help",
-    "fromAssistant": "(Started from a conversation with SheOut Help.)"
+    "askAssistant": "Ask {{name}}",
+    "fromAssistant": "(Started from a conversation with {{name}}. A person on the SheOut team will review this.)",
+    "askAssistantBody": "Quick answers about rides, payments and verification. A person steps in when it can't help.",
+    "conversationHeading": "The conversation:"
   },
   "addresses": {
     "loadError": "Could not load addresses",

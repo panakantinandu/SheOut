@@ -374,16 +374,23 @@ sheout:
   # emergency check (SOS and 112) works either way.
   assistant:
     anthropic-api-key: ${ANTHROPIC_API_KEY:}
-    # The main cost lever. Claude Opus 5 by default; a cheaper model is a
-    # product decision (and set the prices below to match it).
-    model: ${ASSISTANT_MODEL:claude-opus-5}
+    # The main cost lever: Claude Haiku 4.5, the fastest and cheapest model,
+    # for short factual answers from a fixed text. Changing it means setting
+    # the prices below to match.
+    model: ${ASSISTANT_MODEL:claude-haiku-4-5-20251001}
+    # Longest reply, in tokens: a few sentences. A reply cut off here fails
+    # to parse and becomes a hand-off to a person, never half an answer.
+    max-tokens: ${ASSISTANT_MAX_TOKENS:300}
     daily-limit-per-account: ${ASSISTANT_DAILY_LIMIT:30}
+    # Messages from one IP address in an hour, across every account on it.
+    per-ip-hourly-limit: ${ASSISTANT_PER_IP_HOURLY_LIMIT:60}
     global-daily-limit: ${ASSISTANT_GLOBAL_DAILY_LIMIT:3000}
+    # US dollars per million tokens, for the console's cost estimate: Haiku 4.5's.
     price:
-      input-per-mtok: ${ASSISTANT_PRICE_INPUT:5}
-      output-per-mtok: ${ASSISTANT_PRICE_OUTPUT:25}
-      cache-read-per-mtok: ${ASSISTANT_PRICE_CACHE_READ:0.5}
-      cache-write-per-mtok: ${ASSISTANT_PRICE_CACHE_WRITE:6.25}
+      input-per-mtok: ${ASSISTANT_PRICE_INPUT:1}
+      output-per-mtok: ${ASSISTANT_PRICE_OUTPUT:5}
+      cache-read-per-mtok: ${ASSISTANT_PRICE_CACHE_READ:0.1}
+      cache-write-per-mtok: ${ASSISTANT_PRICE_CACHE_WRITE:1.25}
 
   # SheOut Seller - see the marketplace module. SheOut charges one flat
   # listing fee and takes no part in any sale.

@@ -46,15 +46,15 @@ public class AssistantService implements AssistantAdminApi {
     private final BigDecimal cacheWritePrice;
 
     AssistantService(EmergencyDetector emergencies, KnowledgeBase knowledge, HelpModel model, AssistantUsageRepository usage,
-                     @Value("${sheout.assistant.model:claude-opus-5}") String modelName,
+                     @Value("${sheout.assistant.model:claude-haiku-4-5-20251001}") String modelName,
                      // Far above what someone with a real question sends in a day; low enough that nobody can run up a bill.
                      @Value("${sheout.assistant.daily-limit-per-account:30}") int dailyLimit,
                      @Value("${sheout.assistant.global-daily-limit:3000}") int globalDailyLimit,
-                     // US dollars per million tokens, for the console's estimate. Defaults are Claude Opus 5's.
-                     @Value("${sheout.assistant.price.input-per-mtok:5}") BigDecimal inputPrice,
-                     @Value("${sheout.assistant.price.output-per-mtok:25}") BigDecimal outputPrice,
-                     @Value("${sheout.assistant.price.cache-read-per-mtok:0.5}") BigDecimal cacheReadPrice,
-                     @Value("${sheout.assistant.price.cache-write-per-mtok:6.25}") BigDecimal cacheWritePrice) {
+                     // US dollars per million tokens, for the console's estimate. Defaults are Claude Haiku 4.5's.
+                     @Value("${sheout.assistant.price.input-per-mtok:1}") BigDecimal inputPrice,
+                     @Value("${sheout.assistant.price.output-per-mtok:5}") BigDecimal outputPrice,
+                     @Value("${sheout.assistant.price.cache-read-per-mtok:0.1}") BigDecimal cacheReadPrice,
+                     @Value("${sheout.assistant.price.cache-write-per-mtok:1.25}") BigDecimal cacheWritePrice) {
         this.emergencies = emergencies;
         this.knowledge = knowledge;
         this.model = model;
