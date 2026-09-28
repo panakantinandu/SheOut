@@ -314,7 +314,63 @@
     "positionNote": "Your position updates as your device reports movement.",
     "recentTrips": "Recent trips",
     "askCardTitle": "Ask SheOut",
-    "askCardBody": "Questions about rides, payments or verification? Ask {{name}}."
+    "askCardBody": "Questions about rides, payments or verification? Ask {{name}}.",
+    "menu": "Menu",
+    "hi": "Hi, {{name}}",
+    "hiNoName": "Hi there",
+    "hero": {
+      "offline": {
+        "title": "You're offline",
+        "body": "Go online to start receiving requests"
+      },
+      "live": {
+        "title": "You're online",
+        "body": "Looking for ride requests nearby"
+      },
+      "connecting": {
+        "title": "Going online",
+        "body": "Finding your location. This takes a few seconds."
+      },
+      "noLocation": {
+        "title": "You're online, but riders can't see you",
+        "body": "Turn on location to receive requests",
+        "action": "Turn on location"
+      },
+      "reconnecting": {
+        "title": "Reconnecting",
+        "body": "Requests resume once your location is back."
+      }
+    },
+    "review": "Review",
+    "openEarnings": "Today's earnings. Open Earnings.",
+    "seeAll": "See all",
+    "noTripsTitle": "No trips yet",
+    "noTripsBody": "Go online to get your first request.",
+    "loadingTrips": "Loading your trips",
+    "locationHelp": {
+      "title": "Turn on location",
+      "intro": "SheOut needs your location to send you nearby requests. It is shared only while you are online or on a trip.",
+      "askAgain": "Ask for location again",
+      "close": "Close",
+      "android": {
+        "step1": "Open your phone's Settings.",
+        "step2": "Turn on Location.",
+        "step3": "Allow location for the browser or app you use for SheOut Partner.",
+        "step4": "Come back here. This screen updates by itself."
+      },
+      "ios": {
+        "step1": "Open the Settings app.",
+        "step2": "Turn on Location Services.",
+        "step3": "Allow location for Safari, or the browser you use for SheOut Partner.",
+        "step4": "Come back here. This screen updates by itself."
+      },
+      "other": {
+        "step1": "Open your device's settings.",
+        "step2": "Turn on location.",
+        "step3": "Allow location for this browser and for SheOut Partner.",
+        "step4": "Come back here. This screen updates by itself."
+      }
+    }
   },
   "apiError": {
     "OUTSIDE_SERVICE_AREA": "SheOut only operates in and around Hyderabad right now. Go online once you are inside the service area.",

@@ -17,7 +17,8 @@ const variantClasses: Record<ButtonVariant, string> = {
   primary: 'bg-primary text-text-inverse shadow-float hover:bg-primary-dark active:bg-primary-dark',
   secondary: 'bg-surface text-text-primary border border-border shadow-lift hover:bg-background',
   danger: 'bg-danger text-text-inverse shadow-lift hover:brightness-95',
-  success: 'bg-accent-green text-text-inverse shadow-lift hover:brightness-95',
+  // The strong shade, not the base: a white label on the base green is 2.7:1.
+  success: 'bg-accent-green-strong text-text-inverse shadow-lift hover:brightness-95',
 };
 
 const sizeClasses: Record<ButtonSize, string> = {

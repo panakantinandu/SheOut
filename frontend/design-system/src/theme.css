@@ -20,11 +20,11 @@
   --c-primary-light: 237 229 250;
   --c-accent-orange: 252 163 37;
   --c-accent-orange-tint: 255 242 222;
-  --c-accent-orange-strong: 161 92 0;
+  --c-accent-orange-strong: 143 81 0;
   --c-accent-green: 26 182 90;
   --c-accent-green-tint: 226 246 234;
-  --c-accent-green-strong: 11 122 58;
-  --c-accent-red: 250 42 54;
+  --c-accent-green-strong: 10 112 52;
+  --c-accent-red: 214 19 31;
   --c-accent-red-tint: 255 229 231;
   --c-accent-red-strong: 176 18 28;
   --c-accent-blue: 47 111 235;
@@ -34,7 +34,7 @@
   --c-surface: 255 255 255;
   --c-border: 232 227 241;
   --c-text-primary: 36 26 51;
-  --c-text-secondary: 124 118 144;
+  --c-text-secondary: 103 97 124;
   --c-text-inverse: 255 255 255;
   --c-brand-orange: 249 103 23;
   --elev-lift: 0 1px 2px rgba(36, 26, 51, 0.05), 0 4px 14px rgba(36, 26, 51, 0.06);

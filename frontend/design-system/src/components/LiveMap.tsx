@@ -88,6 +88,14 @@ export interface LiveMapProps {
    * (VITE_GOOGLE_MAPS_MAP_ID) - and her marker's pointer shows her direction.
    */
   follow?: RoutePoint | null;
+  /**
+   * False for a glance-only map (the partner Home card): no pan, no zoom, no
+   * recentre button. The page scrolls through it instead of the map eating
+   * the gesture. Defaults to true.
+   */
+  interactive?: boolean;
+  /** Called once each time Google creates a map for this component - what Google bills as a map load. */
+  onMapLoad?: () => void;
 }
 
 const API_KEY: string = import.meta.env.VITE_GOOGLE_MAPS_API_KEY ?? '';
@@ -165,7 +173,7 @@ export function LiveMap(props: LiveMapProps) {
   );
 }
 
-function LoadedMap({ markers, route, className, autoFit = true, onPick, center, zoom, fitPadding, follow }: LiveMapProps & { className: string }) {
+function LoadedMap({ markers, route, className, autoFit = true, onPick, center, zoom, fitPadding, follow, interactive = true, onMapLoad }: LiveMapProps & { className: string }) {
   const status = useApiLoadingStatus();
   const authFailed = useMapsAuthFailed();
   const [, , theme] = useTheme();
@@ -198,7 +206,7 @@ function LoadedMap({ markers, route, className, autoFit = true, onPick, center, 
         scaleControl={false}
         clickableIcons={false}
         keyboardShortcuts={false}
-        gestureHandling="greedy"
+        gestureHandling={interactive ? 'greedy' : 'none'}
         // Map loads are what Google bills for. Reusing the instance between
         // screens makes going back and forth one load, not one per visit.
         reuseMaps
@@ -223,10 +231,11 @@ function LoadedMap({ markers, route, className, autoFit = true, onPick, center, 
           />
         )}
         <Markers markers={markers} draggable={Boolean(onPick)} onPick={onPick} />
+        {onMapLoad && <MapLoadReporter onLoad={onMapLoad} />}
         {follow ? (
           <FollowCamera follow={follow} />
         ) : (
-          <CameraControl markers={markers} route={route} autoFit={autoFit} center={center} zoom={zoom} fitPadding={fitPadding} />
+          <CameraControl markers={markers} route={route} autoFit={autoFit} center={center} zoom={zoom} fitPadding={fitPadding} showRecentre={interactive} />
         )}
         {theme === 'dark' && <AttributionScrim />}
       </GoogleMap>
@@ -288,7 +297,7 @@ function AttributionScrim() {
   return null;
 }
 
-function CameraControl({ markers, route, autoFit, center, zoom, fitPadding }: { markers: MapMarker[]; route?: RoutePoint[]; autoFit: boolean; center?: RoutePoint; zoom?: number; fitPadding?: LiveMapProps['fitPadding'] }) {
+function CameraControl({ markers, route, autoFit, center, zoom, fitPadding, showRecentre = true }: { markers: MapMarker[]; route?: RoutePoint[]; autoFit: boolean; center?: RoutePoint; zoom?: number; fitPadding?: LiveMapProps['fitPadding']; showRecentre?: boolean }) {
   const map = useMap();
   const [userMoved, setUserMoved] = useState(false);
   const [fitNonce, setFitNonce] = useState(0);
@@ -335,7 +344,7 @@ function CameraControl({ markers, route, autoFit, center, zoom, fitPadding }: { 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, center?.lat, center?.lng, zoom]);
 
-  if (!autoFit || !userMoved || fitPoints.length === 0) return null;
+  if (!showRecentre || !autoFit || !userMoved || fitPoints.length === 0) return null;
   return (
     <RecentreButton
       onClick={() => {
@@ -344,6 +353,25 @@ function CameraControl({ markers, route, autoFit, center, zoom, fitPadding }: { 
       }}
     />
   );
+}
+
+/**
+ * Map instances already reported. reuseMaps hands a screen the same Google
+ * map again when it comes back, and Google bills a load only when a map is
+ * created, so a returning map is not counted twice.
+ */
+const reportedMaps = new WeakSet<google.maps.Map>();
+
+/** Reports each map instance Google creates (a billed map load), once per instance. */
+function MapLoadReporter({ onLoad }: { onLoad: () => void }) {
+  const map = useMap();
+  useEffect(() => {
+    if (map && !reportedMaps.has(map)) {
+      reportedMaps.add(map);
+      onLoad();
+    }
+  }, [map, onLoad]);
+  return null;
 }
 
 /** Street zoom for navigation: the next turn and the road names around it readable at a glance. */

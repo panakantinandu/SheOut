@@ -28,11 +28,17 @@ export const colors = {
   primaryLight: '#EDE5FA',
   accentOrange: '#FCA325',
   accentOrangeTint: '#FFF2DE',
-  accentOrangeStrong: '#A15C00',
+  // Darkened from #A15C00, #0B7A3A and #7C7690 (2026-09-28): each fell
+  // below WCAG AA's 4.5:1 for body text on at least one of the tinted card
+  // backgrounds (grey on the lavender card was 3.5:1). Each now clears
+  // 4.5:1 on every light surface and tint: amber 5.1, green 5.1, grey 4.8.
+  accentOrangeStrong: '#8F5100',
   accentGreen: '#1AB65A',
   accentGreenTint: '#E2F6EA',
-  accentGreenStrong: '#0B7A3A',
-  accentRed: '#FA2A36',
+  accentGreenStrong: '#0A7034',
+  // Deepened from #FA2A36 (2026-09-28): white on it, and it as text on
+  // white, were 3.85:1 - the SOS pill and the unread badge among them.
+  accentRed: '#D6131F',
   accentRedTint: '#FFE5E7',
   accentRedStrong: '#B0121C',
   accentBlue: '#2F6FEB',
@@ -42,7 +48,7 @@ export const colors = {
   surface: '#FFFFFF',
   border: '#E8E3F1',
   textPrimary: '#241A33',
-  textSecondary: '#7C7690',
+  textSecondary: '#67617C',
   textInverse: '#FFFFFF',
   // The wordmark's 'OUT' only. A hotter orange than accentOrange, which is
   // the amber used for UI surfaces like the Parcel tile - they are two

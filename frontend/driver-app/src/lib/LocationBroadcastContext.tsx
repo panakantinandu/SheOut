@@ -8,6 +8,16 @@ import { dispatchApi } from '../api/client';
 // position is actually SENT, so GPS jitter doesn't spam dispatch.
 export const LOCATION_SEND_MS = 7000;
 
+/**
+ * A position report older than this, and dispatch may no longer be matching
+ * her: three missed sends. The Home status stops saying "looking for
+ * requests" and says it is reconnecting instead.
+ */
+export const LOCATION_STALE_MS = 3 * LOCATION_SEND_MS;
+
+/** What the browser says about location access; 'unknown' where the Permissions API is missing (older Safari). */
+export type LocationPermission = 'granted' | 'denied' | 'prompt' | 'unknown';
+
 export type LocationStatus = 'idle' | 'locating' | 'sharing' | 'blocked';
 
 export interface LocationBroadcast {
@@ -22,10 +32,22 @@ export interface LocationBroadcast {
   status: LocationStatus;
   /** Why sharing failed, in words a driver can act on. Null unless blocked. */
   error: string | null;
+  /** Location access, live: it changes the moment she allows or blocks it in settings. */
+  permission: LocationPermission;
+  /** When the server last accepted a position report from this phone; null before the first. */
+  lastReportAt: number | null;
+  /** When sharing last started, to allow the first report a moment to land. Null while idle. */
+  activeSince: number | null;
 }
 
 interface LocationBroadcastContextValue extends LocationBroadcast {
   retain: () => () => void;
+  restart: () => void;
+}
+
+export interface SharedLocation extends LocationBroadcast {
+  /** Start the watch again - after access has been granted where nothing else would say so. */
+  restart: () => void;
 }
 
 const Ctx = createContext<LocationBroadcastContextValue | null>(null);
@@ -73,6 +95,40 @@ export function LocationBroadcastProvider({ children }: { children: ReactNode })
   const [status, setStatus] = useState<LocationStatus>('idle');
   const [error, setError] = useState<string | null>(null);
   const [holders, setHolders] = useState(0);
+  const [permission, setPermission] = useState<LocationPermission>('unknown');
+  const [lastReportAt, setLastReportAt] = useState<number | null>(null);
+  const [activeSince, setActiveSince] = useState<number | null>(null);
+
+  // Location access, watched live. Allowing location in the phone's settings
+  // and coming back must bring her back online without a reload; blocking it
+  // must show at once, not after the next failed fix.
+  useEffect(() => {
+    const perms = typeof navigator !== 'undefined' ? navigator.permissions : undefined;
+    if (!perms?.query) return;
+    let status: PermissionStatus | null = null;
+    let cancelled = false;
+    const update = () => status && setPermission(status.state as LocationPermission);
+    perms
+      .query({ name: 'geolocation' as PermissionName })
+      .then((s) => {
+        if (cancelled) return;
+        status = s;
+        update();
+        s.addEventListener('change', update);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+      status?.removeEventListener('change', update);
+    };
+  }, []);
+  // A new watch when access is granted again: a watch that already failed
+  // for want of permission does not start delivering by itself.
+  const permissionEpoch = permission;
+  // Where the Permissions API is missing (older Safari) nothing announces a
+  // grant, so a screen that has just read a position asks for a new watch.
+  const [restartEpoch, setRestartEpoch] = useState(0);
+  const restart = useCallback(() => setRestartEpoch((n) => n + 1), []);
   // The sender reads a ref, not state - it must send the newest fix on each
   // tick without the interval being torn down and rebuilt on every update.
   const latest = useRef<{ lat: number; lng: number } | null>(null);
@@ -98,8 +154,11 @@ export function LocationBroadcastProvider({ children }: { children: ReactNode })
       setError(null);
       latest.current = null;
       setPosition(null);
+      setActiveSince(null);
+      setLastReportAt(null);
       return;
     }
+    setActiveSince(Date.now());
 
     if (!navigator.geolocation) {
       setStatus('blocked');
@@ -108,9 +167,30 @@ export function LocationBroadcastProvider({ children }: { children: ReactNode })
     }
 
     setStatus('locating');
+    const send = () => {
+      // Never invent a position. No real fix means no broadcast. This app
+      // used to fall back to a fixed central-Hyderabad coordinate and send
+      // that as though it were real, which put partners on a rider's map at
+      // a place they had never been.
+      if (!latest.current) return;
+      dispatchApi
+        .recordLocation(latest.current.lat, latest.current.lng)
+        // Only an accepted report counts: this is what "dispatch can see
+        // her" means, and what the Home status is honest about.
+        .then(() => setLastReportAt(Date.now()))
+        .catch(() => {});
+    };
+    // The first fix is sent the moment it arrives rather than at the next
+    // 7-second tick, so going online does not leave dispatch (and her Home
+    // status) waiting on a timer. After that, the interval as before.
+    let sentFirst = false;
     let watchId: number | null = navigator.geolocation.watchPosition(
       (pos) => {
         latest.current = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        if (!sentFirst) {
+          sentFirst = true;
+          send();
+        }
         // A heading from a device standing still is noise, so it only counts
         // above walking pace.
         const { heading, speed } = pos.coords;
@@ -118,12 +198,22 @@ export function LocationBroadcastProvider({ children }: { children: ReactNode })
         setPosition({ ...latest.current, heading: moving ? heading : null, accuracy: Number.isFinite(pos.coords.accuracy) ? pos.coords.accuracy : null });
         setStatus('sharing');
         setError(null);
+        // A fix is proof of access, whatever the Permissions API last said -
+        // some browsers never announce a grant made in the phone's settings.
+        setPermission((p) => (p === 'denied' ? 'granted' : p));
       },
       (err) => {
-        // Only a failure with nothing already known is fatal. Once a real
-        // fix exists, a transient watch error should not stop broadcasting
-        // the last genuine position.
-        if (!latest.current) {
+        // Access taken away is fatal whenever it happens: she is no longer
+        // sharing, and the old position must not go on being sent as if she
+        // were still there. Anything else only matters with nothing already
+        // known; once a real fix exists, a transient error should not stop
+        // broadcasting the last genuine position.
+        if (err.code === err.PERMISSION_DENIED) {
+          latest.current = null;
+          setPosition(null);
+          setStatus('blocked');
+          setError(describe(err));
+        } else if (!latest.current) {
           setStatus('blocked');
           setError(describe(err));
         }
@@ -133,14 +223,6 @@ export function LocationBroadcastProvider({ children }: { children: ReactNode })
       { enableHighAccuracy: true, maximumAge: 2000, timeout: 8000 }
     );
 
-    const send = () => {
-      // Never invent a position. No real fix means no broadcast. This app
-      // used to fall back to a fixed central-Hyderabad coordinate and send
-      // that as though it were real, which put partners on a rider's map at
-      // a place they had never been.
-      if (!latest.current) return;
-      dispatchApi.recordLocation(latest.current.lat, latest.current.lng).catch(() => {});
-    };
     send();
     const interval = setInterval(send, LOCATION_SEND_MS);
 
@@ -149,11 +231,11 @@ export function LocationBroadcastProvider({ children }: { children: ReactNode })
       watchId = null;
       clearInterval(interval);
     };
-  }, [active]);
+  }, [active, permissionEpoch, restartEpoch]);
 
   const value = useMemo(
-    () => ({ position, status, error, retain }),
-    [position, status, error, retain]
+    () => ({ position, status, error, permission, lastReportAt, activeSince, retain, restart }),
+    [position, status, error, permission, lastReportAt, activeSince, retain, restart]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
@@ -198,15 +280,15 @@ export function readPositionOnce(fallback: { lat: number; lng: number } | null):
  * booking is live" - and never how. Whether a watch is running, and whether
  * another screen also wants one, is the provider's business.
  */
-export function useShareLocation(active: boolean): LocationBroadcast {
+export function useShareLocation(active: boolean): SharedLocation {
   const ctx = useContext(Ctx);
   if (!ctx) throw new Error('useShareLocation must be used inside LocationBroadcastProvider');
-  const { retain, position, status, error } = ctx;
+  const { retain, restart, position, status, error, permission, lastReportAt, activeSince } = ctx;
 
   useEffect(() => {
     if (!active) return;
     return retain();
   }, [active, retain]);
 
-  return { position, status, error };
+  return { position, status, error, permission, lastReportAt, activeSince, restart };
 }

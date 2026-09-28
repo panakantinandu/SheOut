@@ -1,7 +1,7 @@
-import { Bell, CheckCircle2, ClipboardList, CloudOff, Globe2, Hourglass, IndianRupee, MapPinOff, Navigation2, Power, RefreshCw, ShieldCheck } from 'lucide-react';
+import { Bell, CloudOff, Hourglass, Menu, RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AggregateRatingText, AmountText, Avatar, BellBadge, Button, Card, IconCircle, LiveMap, PushPromptCard, SkeletonCard, StatusDot, TopHeader, bookingStatusLabel, brandIllustration, useCountUp, usePushMessages, usePushNotifications, useUnreadNotifications, vehicleLabel, ServiceArt, serviceArtFor } from '@sheout/design-system';
+import { AggregateRatingText, BellBadge, Button, Card, IconCircle, PushPromptCard, SkeletonList, bookingStatusLabel, usePushMessages, usePushNotifications, useUnreadNotifications, ServiceArt, serviceArtFor } from '@sheout/design-system';
 import {
   ApiError,
   PUSH_TOKEN_KEY,
@@ -21,9 +21,21 @@ import { readPositionOnce, useShareLocation } from '../lib/LocationBroadcastCont
 import { PartnerSos } from '../components/PartnerSos';
 import { playOfferChime, unlockChime } from '../lib/offerChime';
 import { useTranslation } from '@sheout/design-system';
+import { deriveHeroState, useNetworkUp, useNow } from '../lib/driverStatus';
+import { StatusHero } from '../components/home/StatusHero';
+import { LocationHelpSheet } from '../components/home/LocationHelpSheet';
+import { EarningsCard } from '../components/home/EarningsCard';
+import { RecentTrips } from '../components/home/RecentTrips';
+import { DRIVER_HOME_MAP_ENABLED, HomeMapCard } from '../components/home/HomeMapCard';
 
 const BOOKINGS_POLL_MS = 5000;
 const OFFER_POLL_MS = 4000;
+/** How many finished trips the Home list shows; the rest are a tap away in Bookings. */
+const RECENT_TRIPS = 5;
+
+function finishedAt(b: BookingSummary): number {
+  return new Date(b.completedAt ?? b.cancelledAt ?? b.requestedAt).getTime();
+}
 
 function startOfDay(): Date {
   const d = new Date();
@@ -81,6 +93,9 @@ export function Home() {
   const [profile, setProfile] = useState<DriverProfileSummary | null>(null);
   const [verification, setVerification] = useState<VerificationSummary | null>(null);
   const [bookings, setBookings] = useState<BookingSummary[]>([]);
+  /** The first bookings poll has answered - until then the trip list is a skeleton, not "no trips". */
+  const [bookingsLoaded, setBookingsLoaded] = useState(false);
+  const [locationHelpOpen, setLocationHelpOpen] = useState(false);
   /** A just-ended trip still waiting for the rider's payment - no new offers until it clears. */
   const [paymentHold, setPaymentHold] = useState<PaymentHold | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -159,6 +174,7 @@ export function Home() {
         if (!cancelled) {
           setBookings(result);
           setPaymentHold(hold);
+          setBookingsLoaded(true);
         }
       } catch {
         // Transient poll failure - next tick retries.
@@ -193,17 +209,14 @@ export function Home() {
       // "₹0" next to "2" and had no way to tell which was which.
       completedRides: completedToday.length,
       activeTripsCount: active,
-      recentTrips: completed
-        .slice()
-        .sort((a, b2) => new Date(b2.completedAt!).getTime() - new Date(a.completedAt!).getTime())
-        .slice(0, 3),
+      // Finished trips, newest first: completed ones (paid or still owed)
+      // and cancelled ones, as Bookings lists them.
+      recentTrips: bookings
+        .filter((b) => b.status === 'COMPLETED' || b.status === 'CANCELLED')
+        .sort((a, b2) => finishedAt(b2) - finishedAt(a))
+        .slice(0, RECENT_TRIPS),
     };
   }, [bookings]);
-
-  // The two counts beside the money, counting up with it so the row settles
-  // as one. Rounded, because a ride and a half is not a thing.
-  const ridesShown = Math.round(useCountUp(completedRides, true));
-  const activeTripsShown = Math.round(useCountUp(activeTripsCount, true));
 
   // Offer polling - only while online and with no active trip already in
   // hand. Navigates to the dedicated Offer screen rather than showing an
@@ -242,6 +255,42 @@ export function Home() {
   // itself lives above the router, so it is not dropped when this screen
   // unmounts into an offer or a trip; see LocationBroadcastContext.
   const location = useShareLocation(isOnline || Boolean(activeTrip));
+
+  // Where she really stands, as one state - see deriveHeroState. The clock
+  // only ticks while she is online, which is when a report can go stale.
+  const networkUp = useNetworkUp();
+  const now = useNow(isOnline);
+  const heroState = deriveHeroState({
+    profileLoaded: Boolean(profile),
+    verification: !verification ? 'loading' : isVerified ? 'verified' : 'pending',
+    isOnline,
+    permission: location.permission,
+    locationStatus: location.status,
+    lastReportAt: location.lastReportAt,
+    activeSince: location.activeSince,
+    networkUp,
+    now,
+  });
+
+  /**
+   * "Turn on location": ask the browser, which shows its prompt where it
+   * still can; if it will not (access already blocked), the steps sheet.
+   * Either way the card recovers by itself once access is granted.
+   */
+  function askForLocation() {
+    if (!navigator.geolocation) {
+      setLocationHelpOpen(true);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      () => {
+        setLocationHelpOpen(false);
+        location.restart();
+      },
+      () => setLocationHelpOpen(true),
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }
 
   // Straight after sign-in the dashboard is the first screen, so this is
   // where she is asked to turn alerts on - offers only last 15 seconds.
@@ -314,202 +363,72 @@ export function Home() {
     }
   }
 
+  const firstName = profile?.name?.trim().split(/\s+/)[0];
+
   return (
-    <div className="space-y-6">
-      {/* Centred "Partner Dashboard" title, per the mockup. The bell moves
-          into the right slot rather than disappearing with the greeting
-          header - it is this app's only route to the notifications screen.
-          <p>
-          No back arrow: this is the app's top-level destination, reached
-          from the tab bar, and there is nothing behind it. It used to carry
-          one wired to navigate(-1), which either did nothing on a fresh
-          launch or threw the driver back to whatever screen they had just
-          deliberately left - a back arrow that implies a hierarchy this
-          screen does not sit in. */}
-      <TopHeader
-        variant="plain"
-        centerTitle
-        title={t('home.title')}
-        // The drawer: language, payouts, support, the legal pages, log out.
-        onMenuClick={drawer.open}
-        rightSlot={
-          <button
-            type="button"
-            aria-label={unreadCount ? t('home.notificationsUnread', { count: unreadCount }) : t('notifications.title')}
-            onClick={() => navigate('/notifications')}
-            className="relative flex h-11 w-11 items-center justify-center rounded-full text-text-primary hover:bg-background"
-          >
-            <Bell className="h-5 w-5" />
-            {unreadCount ? <BellBadge count={unreadCount} /> : null}
-          </button>
-        }
-      />
-
-      {/* Always here, online or not: the drive home after the last trip is
-          still a drive alone. */}
-      <div className="-mt-3 flex justify-end">
-        <PartnerSos />
-      </div>
-
-      {/* The rider app opens on an illustrated banner and this screen opened
-          on white space above an alert card. Same treatment, her side of it:
-          she is not being sold a safe ride, she is the person providing one,
-          so it greets her by name and says what the day looks like. Same
-          brand illustration the rider app uses - one asset, downloaded once,
-          rather than a second drawing for one banner. */}
-      <Card variant="primary" className="relative overflow-hidden">
-        <div className="relative z-10 max-w-[64%]">
-          <p className="font-heading text-section">
-            {profile?.name ? t('home.welcomeNamed', { name: profile.name.split(' ')[0] }) : t('home.welcome')}
+    <div className="space-y-4">
+      {/* Menu, who she is and how riders rate her, then the bell and SOS.
+          SOS keeps its word label and its sheet; only its place changed -
+          it no longer takes a row of its own. */}
+      <header className="flex items-center gap-2" data-testid="home-header">
+        <button
+          type="button"
+          onClick={drawer.open}
+          aria-label={t('home.menu')}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-text-primary hover:bg-background"
+        >
+          <Menu className="h-6 w-6" aria-hidden="true" />
+        </button>
+        <div className="min-w-0 flex-1">
+          <p className="break-words font-heading text-section leading-tight text-text-primary" data-testid="home-greeting">
+            {firstName ? t('home.hi', { name: firstName }) : t('home.hiNoName')}
           </p>
-          <p className="mt-1 text-sm opacity-90">
-            {isOnline ? t('home.bannerOnline') : t('home.bannerOffline')}
-          </p>
+          {/* AggregateRatingText draws its own star; an icon here doubled it. */}
+          <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-primary-light px-2 py-0.5 text-xs font-semibold text-primary" data-testid="rating-chip">
+            <AggregateRatingText averageStars={rating?.averageStars} totalRatings={rating?.totalRatings} emptyLabel={t('home.notRated')} />
+          </span>
         </div>
-        <img
-          src={brandIllustration}
-          alt=""
-          aria-hidden="true"
-          className="pointer-events-none absolute -bottom-3 -right-3 h-28 w-28 object-contain opacity-95"
-        />
-      </Card>
+        <button
+          type="button"
+          aria-label={unreadCount ? t('home.notificationsUnread', { count: unreadCount }) : t('notifications.title')}
+          onClick={() => navigate('/notifications')}
+          className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-text-primary hover:bg-background"
+        >
+          <Bell className="h-5 w-5" />
+          {unreadCount ? <BellBadge count={unreadCount} /> : null}
+        </button>
+        {/* Always here, online or not: the drive home after the last trip is
+            still a drive alone. */}
+        <div className="shrink-0">
+          <PartnerSos />
+        </div>
+      </header>
 
-      {push.shouldPrompt && (
-        <PushPromptCard audience="partner" busy={push.busy} onTurnOn={push.turnOn} onDismiss={push.dismiss} />
-      )}
-
-      {error && <p className="text-sm text-danger">{error}</p>}
-
-      {/* Not a red error, because nothing failed and nothing can be retried.
-          SheOut runs in one city; a partner opening this app from anywhere
-          else needs to be told that plainly rather than left tapping a
-          button that used to say "Looking for ride requests nearby" while
-          dispatch had no possible trip to send her. */}
-      {outOfArea && (
-        <Card tone="warning" className="flex items-start gap-3">
-          <IconCircle color="orange" tone="soft" icon={<Globe2 />} />
-          <div className="min-w-0 flex-1">
-            <p className="font-heading text-card-title text-text-primary">{t('home.outsideArea')}</p>
-            <p className="mt-1 text-xs text-text-secondary">{outOfArea}</p>
-          </div>
-        </Card>
-      )}
-
-      {/* A driver who is online but not actually sharing a position is in no
-          dispatch search results at all. That used to be invisible: the app
-          broadcast a fixed city-centre coordinate instead, so everything
-          looked normal while requests went to drivers who were really
-          there. Say it plainly instead. */}
-      {isOnline && location.status === 'blocked' && (
-        <Card tone="danger" className="flex items-start gap-3">
-          <IconCircle color="red" tone="soft" icon={<MapPinOff />} />
-          <div className="flex-1">
-            <p className="font-heading text-card-title text-text-primary">{t('home.locationNotShared')}</p>
-            <p className="text-xs text-text-secondary">{location.error}</p>
-          </div>
-        </Card>
-      )}
-
+      {/* Where she stands, and the one thing to do about it. */}
       {profileError ? (
         <LoadError title={t('profile.loadError')} detail={profileError} onRetry={loadProfile} />
-      ) : !profile ? (
-        <SkeletonCard lines={2} label={t('home.loadingProfile')} />
+      ) : verificationError ? (
+        <LoadError title={t('home.verificationError')} detail={verificationError} onRetry={loadVerification} />
       ) : (
-      <Card className="flex items-center gap-3">
-        {/* Her own photo, the one riders see. It used to be a generic person
-            glyph even for partners who had uploaded one. */}
-        <Avatar url={profile.profilePhotoUrl} name={profile.name} size="lg" />
-        <div className="flex-1">
-          <p className="font-heading text-card-title text-text-primary">{profile.name || t('profile.addName')}</p>
-          <div className="flex items-center gap-2">
-            {/* Online/offline dot, as the mockup shows beside the name. Real
-                state from the profile, not decoration - and it breathes while
-                she is online, which is the one place this screen says "the
-                app is awake and listening" without words. */}
-            <span className="flex items-center gap-2 text-xs text-text-secondary">
-              <StatusDot live={isOnline} />
-              {isOnline ? t('home.online') : t('home.offline')}
-            </span>
-            {/* Real, from this partner's own ratings. See the file header. */}
-            <span className="text-xs text-text-secondary">
-              &middot;{' '}
-              <AggregateRatingText
-                averageStars={rating?.averageStars}
-                totalRatings={rating?.totalRatings}
-                emptyLabel={t('home.notRated')}
-              />{' '}
-              &middot; {vehicleLabel(profile.vehicleType)}
-            </span>
-          </div>
-        </div>
-      </Card>
+        <StatusHero
+          state={heroState}
+          toggling={togglingOnline}
+          onGoOnline={handleToggleOnline}
+          onGoOffline={handleToggleOnline}
+          onTurnOnLocation={() => (location.permission === 'denied' ? setLocationHelpOpen(true) : askForLocation())}
+          onReviewVerification={() => navigate('/verification')}
+          message={outOfArea ?? error}
+        />
       )}
 
-      {/* One card split by dividers, matching the mockup, rather than three
-          separate cards with gaps between them.
-          <p>
-          Each figure now sits under a coloured IconCircle, the same pattern
-          the rider app uses for Quick Access - bare monochrome glyphs made
-          three different facts read as one undifferentiated row of numbers.
-          The money counts up when it first lands; the counts beside it do
-          too, so the row settles together rather than one figure moving. */}
-      <Card className="flex items-stretch p-0">
-        <div className="flex flex-1 flex-col items-center gap-2 px-3 py-4 text-center">
-          <IconCircle size="sm" tone="soft" color="primary" icon={<IndianRupee />} />
-          <AmountText amount={todayEarnings} size="lg" animate />
-          <p className="text-caption text-text-secondary">{t('home.earnedToday')}</p>
-        </div>
-        <div className="w-px self-stretch bg-border" aria-hidden="true" />
-        <div className="flex flex-1 flex-col items-center gap-2 px-3 py-4 text-center">
-          <IconCircle size="sm" tone="soft" color="green" icon={<CheckCircle2 />} />
-          <p className="font-heading text-title tabular-nums text-text-primary">{ridesShown}</p>
-          <p className="text-caption text-text-secondary">{t('home.ridesToday')}</p>
-        </div>
-        <div className="w-px self-stretch bg-border" aria-hidden="true" />
-        <div className="flex flex-1 flex-col items-center gap-2 px-3 py-4 text-center">
-          <IconCircle size="sm" tone="soft" color="orange" icon={<ClipboardList />} />
-          <p className="font-heading text-title tabular-nums text-text-primary">{activeTripsShown}</p>
-          <p className="text-caption text-text-secondary">{t('home.activeTrips')}</p>
-        </div>
-      </Card>
-
-      {verificationError ? (
-        <LoadError title={t('home.verificationError')} detail={verificationError} onRetry={loadVerification} />
-      ) : !verification ? (
-        <SkeletonCard lines={2} label={t('home.checkingVerification')} />
-      ) : !isVerified ? (
-        <Card tone="warning" className="flex items-center gap-3">
-          <IconCircle color="orange" tone="soft" icon={<ShieldCheck />} />
-          <div className="flex-1">
-            <p className="font-heading text-card-title text-text-primary">{t('home.completeVerification')}</p>
-            <p className="text-xs text-text-secondary">{t('home.verificationRequired')}</p>
+      {/* A trip in hand comes before everything below it. */}
+      {activeTrip && (
+        <Card className="flex items-center gap-3 p-3" onClick={() => navigate(`/trip/${activeTrip.id}`)} data-testid="home-active-trip">
+          <ServiceArt kind={serviceArtFor(activeTrip.category)} size="md" />
+          <div className="min-w-0 flex-1">
+            <p className="font-heading text-card-title text-text-primary">{t('home.activeTrip', { status: bookingStatusLabel(activeTrip.status) })}</p>
+            <p className="truncate text-xs text-text-secondary">{activeTrip.drop.label}</p>
           </div>
-          <Button size="md" onClick={() => navigate('/verification')}>
-            Review
-          </Button>
-        </Card>
-      ) : !profile ? (
-        // Verified, but the profile never arrived, so the current online
-        // status is unknown. handleToggleOnline returns early without one,
-        // which would have made this a button that does nothing at all. The
-        // profile card above is already offering the retry.
-        null
-      ) : (
-        <Card variant={isOnline ? 'primary' : 'surface'} className="flex items-center justify-between">
-          <div>
-            <p className="font-heading text-section">{isOnline ? t('home.youreOnline') : t('home.youreOffline')}</p>
-            <p className="mt-1 text-sm opacity-80">{isOnline ? t('home.lookingForRequests') : t('home.goOnlineHint')}</p>
-          </div>
-          <Button
-            variant={isOnline ? 'danger' : 'success'}
-            size="md"
-            className="shrink-0 whitespace-nowrap"
-            icon={<Power className="h-4 w-4" />}
-            disabled={togglingOnline}
-            onClick={handleToggleOnline}
-          >
-            {togglingOnline ? '...' : isOnline ? t('home.goOffline') : t('home.goOnline')}
-          </Button>
         </Card>
       )}
 
@@ -537,48 +456,22 @@ export function Home() {
         </Card>
       )}
 
-      {activeTrip && (
-        <Card className="flex items-center gap-3 p-3" onClick={() => navigate(`/trip/${activeTrip.id}`)}>
-          <ServiceArt kind={serviceArtFor(activeTrip.category)} size="md" />
-          <div className="min-w-0 flex-1">
-            <p className="font-heading text-card-title text-text-primary">{t('home.activeTrip', { status: bookingStatusLabel(activeTrip.status) })}</p>
-            <p className="truncate text-xs text-text-secondary">{activeTrip.drop.label}</p>
-          </div>
-        </Card>
+      {/* Where she is, while online - behind a flag while its cost is measured. */}
+      {DRIVER_HOME_MAP_ENABLED && isOnline && location.position && <HomeMapCard position={location.position} />}
+
+      <EarningsCard amount={todayEarnings} rides={completedRides} activeTrips={activeTripsCount} onOpen={() => navigate('/earnings')} />
+
+      {push.shouldPrompt && (
+        <PushPromptCard audience="partner" busy={push.busy} onTurnOn={push.turnOn} onDismiss={push.dismiss} />
       )}
 
-      {/* Where the driver actually is, while online. A dashboard that is
-          mostly empty space tells a partner nothing; every real driver app
-          puts them on a map. Real position from the same broadcast the
-          customer's tracking map consumes - no marker at all until the
-          device gives a genuine fix. */}
-      {isOnline && location.position && (
-        <div className="space-y-1">
-          <LiveMap
-            markers={[{ key: 'me', lat: location.position.lat, lng: location.position.lng, label: t('home.you'), kind: 'driver', heading: location.position.heading }]}
-            className="h-52"
-          />
-          <p className="text-xs text-text-secondary">{t('home.positionNote')}</p>
-        </div>
+      {bookingsLoaded ? (
+        <RecentTrips trips={recentTrips} onSeeAll={() => navigate('/bookings')} onOpen={(id) => navigate(`/trip/${id}`)} />
+      ) : (
+        <SkeletonList rows={3} label={t('home.loadingTrips')} />
       )}
 
-      {recentTrips.length > 0 && (
-        <div>
-          <h2 className="mb-3 font-heading text-section text-text-primary">{t('home.recentTrips')}</h2>
-          <Card className="divide-y divide-border p-0">
-            {recentTrips.map((trip) => (
-              <div key={trip.id} className="flex items-center gap-3 p-4">
-                <ServiceArt kind={serviceArtFor(trip.category)} size="sm" />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-text-primary">{trip.drop.label}</p>
-                  <p className="text-xs text-text-secondary">{new Date(trip.completedAt!).toLocaleString()}</p>
-                </div>
-                <AmountText amount={trip.finalFare ?? trip.fareEstimate} />
-              </div>
-            ))}
-          </Card>
-        </div>
-      )}
+      <LocationHelpSheet open={locationHelpOpen} onClose={() => setLocationHelpOpen(false)} onAskAgain={askForLocation} />
 
       {/* The dashboard is where a partner lands after completing a trip, so
           this is where she is asked. It asks about whatever is actually

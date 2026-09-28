@@ -70,3 +70,17 @@ export function initErrorReporting({ dsn, environment }: ErrorReportingOptions):
   });
   return true;
 }
+
+/**
+ * A measurement worth seeing in Sentry that is not an error - e.g. how many
+ * billed map loads a feature causes per session. A no-op when reporting is
+ * not configured, like everything else here.
+ */
+export function reportMeasurement(name: string, values: Record<string, number>): void {
+  Sentry.captureMessage(name, { level: 'info', extra: values });
+}
+
+/** A step leading up to a later report, kept with it for context. */
+export function reportBreadcrumb(category: string, message: string): void {
+  Sentry.addBreadcrumb({ category, message });
+}
