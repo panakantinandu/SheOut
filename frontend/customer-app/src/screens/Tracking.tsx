@@ -764,8 +764,11 @@ export function Tracking() {
             glance; somebody trying to work out which side of a flyover a
             bike is on wants to pinch and zoom in something familiar.
             Offered only while a trip is live and a real position exists -
-            never a stale point from a finished trip. */}
-        {!isFinished && driverLocation && (
+            never a stale point from a finished trip. Not once a ride has
+            started either: the rider is on the bike, and "open her position"
+            would be her own. A parcel's sender is not on it, so a delivery
+            keeps it all the way. */}
+        {!isFinished && driverLocation && (booking?.status !== 'IN_PROGRESS' || booking?.type === 'DELIVERY') && (
           <OpenInMapsButton
             lat={driverLocation.lat}
             lng={driverLocation.lng}

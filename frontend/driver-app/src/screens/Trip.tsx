@@ -155,6 +155,11 @@ export function Trip() {
   /** Fixes in a row off the line: two, and she is re-routed. */
   const offRouteFixes = useRef(0);
   const [rerouting, setRerouting] = useState(false);
+  /** Failed route fetches in a row this phase. One is a blip and is not shown. */
+  const routeFailures = useRef(0);
+  /** Set by the retry timer: fetch again at the next chance, moved or not. */
+  const routeRetryDue = useRef(false);
+  const [routeRetryTick, setRouteRetryTick] = useState(0);
 
   // Live for the whole trip, MATCHED included. The subscription itself
   // lives above the router so it is not dropped on the way in from Home or
@@ -283,18 +288,42 @@ export function Trip() {
       // retried after she has moved on rather than on every fix.
       routedFrom.current = from;
       const generation = routeGeneration.current;
+      // A failed fetch used to be retried only once she had moved 300 m, so
+      // a single blip while she stood at the pickup (or had just set off)
+      // left "Could not draw the road" up for minutes. Now it is retried on
+      // a timer - 5 s, 10 s, 20 s ... at most once a minute, well inside the
+      // server's 8 a minute - and only a second failure in a row is shown.
+      const failed = () => {
+        if (generation !== routeGeneration.current) return;
+        routeFailures.current += 1;
+        setRouteError(routeFailures.current >= 2);
+        const delay = Math.min(5000 * 2 ** (routeFailures.current - 1), 60000);
+        window.setTimeout(() => {
+          if (generation !== routeGeneration.current) return;
+          routeRetryDue.current = true;
+          setRouteRetryTick((n) => n + 1);
+        }, delay);
+      };
       try {
         const fetched = await bookingApi.getRoute(bookingId, from);
         // A route for the phase that has just ended (fetched to the pickup,
         // arriving after the code was accepted) is dropped, never drawn.
         if (generation !== routeGeneration.current) return;
-        setRoute(fetched);
-        setRouteError(!fetched.points.length);
+        if (fetched.points.length) {
+          routeFailures.current = 0;
+          setRoute(fetched);
+          setRouteError(false);
+        } else {
+          // Keep any line already drawn: an empty answer to a re-route is no
+          // reason to take away the road she is following.
+          setRoute((current) => current ?? fetched);
+          failed();
+        }
       } catch {
         // A route is a convenience, not the trip. The destination marker and
         // the Google Maps button both still work without it, so this is
         // reported rather than treated as a screen error.
-        if (generation === routeGeneration.current) setRouteError(true);
+        failed();
       } finally {
         routeInFlight.current = false;
         setRerouting(false);
@@ -313,6 +342,8 @@ export function Trip() {
     setRouteError(false);
     routedFrom.current = null;
     offRouteFixes.current = 0;
+    routeFailures.current = 0;
+    routeRetryDue.current = false;
   }, [phase, bookingId, booking?.drop.lat, booking?.drop.lng]);
 
   /** After she answers a change of destination: the new drop and fare now, not at the next poll. */
@@ -336,8 +367,11 @@ export function Trip() {
       loadRoute(myPosition);
       return;
     }
-    if (routeError || !route) {
-      if (metresBetween(last, myPosition) >= ROUTE_REFRESH_METRES) loadRoute(myPosition);
+    if (routeError || !route || routeRetryDue.current) {
+      if (routeRetryDue.current || metresBetween(last, myPosition) >= ROUTE_REFRESH_METRES) {
+        routeRetryDue.current = false;
+        loadRoute(myPosition);
+      }
       return;
     }
     if (!nav) return;
@@ -350,7 +384,7 @@ export function Trip() {
     }
     // nav is derived from myPosition and route; both are listed.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [myPosition, booking?.status, route, routeError, loadRoute]);
+  }, [myPosition, booking?.status, route, routeError, loadRoute, routeRetryTick]);
 
   // In-app navigation opens by itself as each phase starts - on accepting,
   // to the pickup; once the code is accepted, to the drop - the way ride
