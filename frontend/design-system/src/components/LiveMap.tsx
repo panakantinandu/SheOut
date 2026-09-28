@@ -80,6 +80,14 @@ export interface LiveMapProps {
   fill?: boolean;
   /** Space kept clear when fitting the view, in pixels - e.g. under chips floating over the top of the map. */
   fitPadding?: { top: number; right: number; bottom: number; left: number };
+  /**
+   * Navigation camera: keep the view centred on this point (her own
+   * position) at street zoom, moving with every fix, instead of fitting the
+   * markers. Panning by hand pauses it; the recentre button resumes it.
+   * The map stays north-up - turning it with her heading needs a vector map
+   * (VITE_GOOGLE_MAPS_MAP_ID) - and her marker's pointer shows her direction.
+   */
+  follow?: RoutePoint | null;
 }
 
 const API_KEY: string = import.meta.env.VITE_GOOGLE_MAPS_API_KEY ?? '';
@@ -157,7 +165,7 @@ export function LiveMap(props: LiveMapProps) {
   );
 }
 
-function LoadedMap({ markers, route, className, autoFit = true, onPick, center, zoom, fitPadding }: LiveMapProps & { className: string }) {
+function LoadedMap({ markers, route, className, autoFit = true, onPick, center, zoom, fitPadding, follow }: LiveMapProps & { className: string }) {
   const status = useApiLoadingStatus();
   const authFailed = useMapsAuthFailed();
   const [, , theme] = useTheme();
@@ -215,7 +223,11 @@ function LoadedMap({ markers, route, className, autoFit = true, onPick, center, 
           />
         )}
         <Markers markers={markers} draggable={Boolean(onPick)} onPick={onPick} />
-        <CameraControl markers={markers} route={route} autoFit={autoFit} center={center} zoom={zoom} fitPadding={fitPadding} />
+        {follow ? (
+          <FollowCamera follow={follow} />
+        ) : (
+          <CameraControl markers={markers} route={route} autoFit={autoFit} center={center} zoom={zoom} fitPadding={fitPadding} />
+        )}
         {theme === 'dark' && <AttributionScrim />}
       </GoogleMap>
     </div>
@@ -329,6 +341,47 @@ function CameraControl({ markers, route, autoFit, center, zoom, fitPadding }: { 
       onClick={() => {
         setUserMoved(false);
         setFitNonce((n) => n + 1);
+      }}
+    />
+  );
+}
+
+/** Street zoom for navigation: the next turn and the road names around it readable at a glance. */
+const FOLLOW_ZOOM = 17;
+
+/**
+ * The navigation camera: centred on her, at street zoom, moving with each
+ * GPS fix. A drag hands the map to her (to look ahead, or back at a turn);
+ * the recentre button hands it back.
+ */
+function FollowCamera({ follow }: { follow: RoutePoint }) {
+  const map = useMap();
+  const [userMoved, setUserMoved] = useState(false);
+  const zoomed = useRef(false);
+
+  useEffect(() => {
+    if (!map) return;
+    const listener = map.addListener('dragstart', () => setUserMoved(true));
+    return () => listener.remove();
+  }, [map]);
+
+  useEffect(() => {
+    if (!map || userMoved) return;
+    if (!zoomed.current) {
+      map.setZoom(FOLLOW_ZOOM);
+      map.setCenter(follow);
+      zoomed.current = true;
+    } else {
+      map.panTo(follow);
+    }
+  }, [map, userMoved, follow.lat, follow.lng]);
+
+  if (!userMoved) return null;
+  return (
+    <RecentreButton
+      onClick={() => {
+        zoomed.current = false;
+        setUserMoved(false);
       }}
     />
   );

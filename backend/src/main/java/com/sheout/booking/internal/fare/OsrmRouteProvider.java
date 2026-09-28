@@ -147,7 +147,12 @@ public class OsrmRouteProvider implements RouteProvider {
     }
 
     /**
-     * The route's shape, for a partner's navigation map.
+     * The route's shape and turns, for a partner's in-app navigation.
+     * <p>
+     * steps=true adds OSRM's manoeuvres (type, modifier, road name, where),
+     * which the partner app turns into "In 200 m, turn left onto Road No. 7"
+     * in her own language. A few kilobytes more per route, fetched when a
+     * phase starts and when she leaves the line.
      * <p>
      * Asks for GeoJSON geometry rather than OSRM's encoded-polyline default.
      * The encoded form is smaller, but decoding it means writing and
@@ -165,7 +170,7 @@ public class OsrmRouteProvider implements RouteProvider {
         try {
             // lng,lat - OSRM's order, not this codebase's. Reversing it
             // returns a confident route somewhere else entirely.
-            String path = String.format(Locale.ROOT, "/route/v1/driving/%f,%f;%f,%f?overview=full&geometries=geojson&radiuses=%s",
+            String path = String.format(Locale.ROOT, "/route/v1/driving/%f,%f;%f,%f?overview=full&geometries=geojson&steps=true&radiuses=%s",
                     from.lng(), from.lat(), to.lng(), to.lat(), SNAP_LIMIT);
 
             OsrmGeometryResponse response = restClient.get()
@@ -180,24 +185,42 @@ public class OsrmRouteProvider implements RouteProvider {
                 return RoutePath.unavailable();
             }
 
-            OsrmGeometryRoute route = response.routes().get(0);
-            if (route.geometry() == null || route.geometry().coordinates() == null) {
-                return RoutePath.unavailable();
-            }
-
-            List<RoutePath.RoutePoint> points = route.geometry().coordinates().stream()
-                    // Each entry is [lng, lat]. Flipped here, once, so
-                    // nothing downstream has to remember.
-                    .filter(pair -> pair.size() >= 2)
-                    .map(pair -> new RoutePath.RoutePoint(pair.get(1), pair.get(0)))
-                    .toList();
-
-            return new RoutePath(points, route.distance() / 1000.0, route.duration() / 60.0);
+            return toRoutePath(response.routes().get(0));
         } catch (RuntimeException e) {
             // Type only - see route() above: the message carries coordinates.
             log.warn("OSRM route geometry failed ({})", e.getClass().getSimpleName());
             return RoutePath.unavailable();
         }
+    }
+
+    /** OSRM's first route as a RoutePath: the line, flipped to lat/lng, and every leg's steps in order. */
+    static RoutePath toRoutePath(OsrmGeometryRoute route) {
+        if (route.geometry() == null || route.geometry().coordinates() == null) {
+            return RoutePath.unavailable();
+        }
+        List<RoutePath.RoutePoint> points = route.geometry().coordinates().stream()
+                // Each entry is [lng, lat]. Flipped here, once, so
+                // nothing downstream has to remember.
+                .filter(pair -> pair.size() >= 2)
+                .map(pair -> new RoutePath.RoutePoint(pair.get(1), pair.get(0)))
+                .toList();
+        List<RoutePath.RouteStep> steps = route.legs() == null ? List.of() : route.legs().stream()
+                .filter(leg -> leg.steps() != null)
+                .flatMap(leg -> leg.steps().stream())
+                .filter(step -> step.maneuver() != null && step.maneuver().location() != null
+                        && step.maneuver().location().size() >= 2)
+                .map(step -> new RoutePath.RouteStep(
+                        step.maneuver().type(),
+                        step.maneuver().modifier(),
+                        step.name() == null ? "" : step.name(),
+                        step.maneuver().exit(),
+                        step.distance(),
+                        step.duration(),
+                        // lng,lat again.
+                        step.maneuver().location().get(1),
+                        step.maneuver().location().get(0)))
+                .toList();
+        return new RoutePath(points, route.distance() / 1000.0, route.duration() / 60.0, steps);
     }
 
     /**
@@ -230,7 +253,17 @@ public class OsrmRouteProvider implements RouteProvider {
     record OsrmGeometryResponse(String code, List<OsrmGeometryRoute> routes) {
     }
 
-    record OsrmGeometryRoute(double distance, double duration, OsrmGeometry geometry) {
+    record OsrmGeometryRoute(double distance, double duration, OsrmGeometry geometry, List<OsrmLeg> legs) {
+    }
+
+    record OsrmLeg(List<OsrmStep> steps) {
+    }
+
+    record OsrmStep(double distance, double duration, String name, OsrmManeuver maneuver) {
+    }
+
+    /** location is [lng, lat]; exit is set for roundabouts only. */
+    record OsrmManeuver(String type, String modifier, List<Double> location, Integer exit) {
     }
 
     /** GeoJSON LineString: a list of [lng, lat] pairs, in that order. */

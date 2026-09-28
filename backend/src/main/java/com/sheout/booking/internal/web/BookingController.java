@@ -64,6 +64,8 @@ public class BookingController {
 
     private static final Duration PICKUP_WINDOW = Duration.ofMinutes(15);
     private static final int BOOKINGS_PER_HOUR = 12;
+    /** A phase start, a re-route every 15 seconds at most, and room for a reload. */
+    private static final int ROUTE_REQUESTS_PER_MINUTE = 8;
 
     private final BookingService bookingService;
     private final ServiceArea serviceArea;
@@ -335,11 +337,12 @@ public class BookingController {
      * back out of the server would add a round trip, a staleness window and
      * a failure mode, to tell her something she already knows.
      * <p>
-     * Deliberately NOT cached or polled server-side. The apps fetch this
-     * about twice per trip - once per phase, plus a refresh if she strays
-     * well off the line - because the route is drawn for orientation and the
-     * real turn-by-turn happens in Google Maps. Re-routing on every location
-     * ping would multiply calls to a volunteer-run OSRM instance by fifty.
+     * The partner app navigates with it in-app: the line, and OSRM's turns
+     * for the "In 200 m, turn left" banner and voice. Fetched when a phase
+     * starts and again only when she leaves the route (the app decides that
+     * from her GPS against the line, and waits at least 15 seconds between
+     * re-routes). Rate-limited here too, per partner, so a misbehaving
+     * client cannot turn it into a stream of router calls.
      */
     @GetMapping("/api/v1/bookings/{bookingId}/route")
     public ResponseEntity<RouteResponse> route(
@@ -347,6 +350,8 @@ public class BookingController {
             @RequestParam @DecimalMin("-90") @DecimalMax("90") double fromLat,
             @RequestParam @DecimalMin("-180") @DecimalMax("180") double fromLng) {
         CurrentAccount caller = requireRole(AccountRole.DRIVER);
+        rateLimiter.tryConsume("trip-route:" + caller.accountId(), ROUTE_REQUESTS_PER_MINUTE, Duration.ofMinutes(1))
+                .orThrow("Too many route requests. Please wait a moment.");
         BookingSummary booking = bookingService.findById(bookingId)
                 .orElseThrow(() -> ApiException.notFound("No such booking"));
         if (!caller.accountId().equals(booking.driverId())) {
@@ -369,7 +374,9 @@ public class BookingController {
                 destination.label(),
                 path.points().stream().map(p -> new RoutePointResponse(p.lat(), p.lng())).toList(),
                 path.isAvailable() ? round(path.distanceKm()) : null,
-                path.isAvailable() ? round(path.durationMinutes()) : null));
+                path.isAvailable() ? round(path.durationMinutes()) : null,
+                path.steps().stream().map(s -> new RouteStepResponse(s.type(), s.modifier(), s.name(), s.exit(),
+                        Math.round(s.distanceMetres()), Math.round(s.durationSeconds()), s.lat(), s.lng())).toList()));
     }
 
     @GetMapping("/api/v1/bookings/{bookingId}/pickup-code")
@@ -678,11 +685,21 @@ public class BookingController {
             String destinationLabel,
             List<RoutePointResponse> points,
             BigDecimal distanceKm,
-            BigDecimal durationMinutes
+            BigDecimal durationMinutes,
+            List<RouteStepResponse> steps
     ) {
     }
 
     public record RoutePointResponse(double lat, double lng) {
+    }
+
+    /**
+     * One turn, for the partner's navigation banner and voice: OSRM's facts
+     * (type, modifier, the road after it, the roundabout exit), and where it
+     * is. The app writes the sentence, in her language.
+     */
+    public record RouteStepResponse(String type, String modifier, String name, Integer exit,
+                                    long distanceMetres, long durationSeconds, double lat, double lng) {
     }
 
     public record GeoAddressRequest(

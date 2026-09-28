@@ -14,9 +14,11 @@ export interface LocationBroadcast {
   /**
    * heading: the device's direction of travel, degrees from north, when it
    * reports one - only while actually moving; null when stopped or unknown.
-   * It turns her own bike marker and is never sent anywhere.
+   * It turns her own bike marker and is never sent anywhere. accuracy is
+   * the device's own radius of uncertainty in metres, for in-app navigation
+   * to tell a real wrong turn from GPS wobble; also never sent.
    */
-  position: { lat: number; lng: number; heading?: number | null } | null;
+  position: { lat: number; lng: number; heading?: number | null; accuracy?: number | null } | null;
   status: LocationStatus;
   /** Why sharing failed, in words a driver can act on. Null unless blocked. */
   error: string | null;
@@ -113,7 +115,7 @@ export function LocationBroadcastProvider({ children }: { children: ReactNode })
         // above walking pace.
         const { heading, speed } = pos.coords;
         const moving = heading != null && Number.isFinite(heading) && (speed == null || speed > 1);
-        setPosition({ ...latest.current, heading: moving ? heading : null });
+        setPosition({ ...latest.current, heading: moving ? heading : null, accuracy: Number.isFinite(pos.coords.accuracy) ? pos.coords.accuracy : null });
         setStatus('sharing');
         setError(null);
       },
@@ -126,7 +128,9 @@ export function LocationBroadcastProvider({ children }: { children: ReactNode })
           setError(describe(err));
         }
       },
-      { enableHighAccuracy: true, maximumAge: 10000, timeout: 8000 }
+      // Fresh fixes: in-app navigation turns on these, and a ten-second-old
+      // position is a turn missed.
+      { enableHighAccuracy: true, maximumAge: 2000, timeout: 8000 }
     );
 
     const send = () => {

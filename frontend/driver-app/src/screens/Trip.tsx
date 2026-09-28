@@ -30,6 +30,8 @@ import { CollectPaymentCard } from '../components/CollectPaymentCard';
 import { readPositionOnce, useShareLocation } from '../lib/LocationBroadcastContext';
 import { PartnerSos } from '../components/PartnerSos';
 import { DestinationChangePrompt } from '../components/DestinationChangePrompt';
+import { NavigationView } from '../components/NavigationView';
+import { useNavigation } from '../lib/navigation';
 import { useTranslation } from '@sheout/design-system';
 
 const POLL_INTERVAL_MS = 4000;
@@ -51,6 +53,17 @@ function formatWhen(iso: string): string {
  * Google Maps, one tap away, and it reroutes properly.
  */
 const ROUTE_REFRESH_METRES = 300;
+
+/**
+ * Off the line by more than this (or 1.5x her GPS accuracy, if worse), on
+ * two fixes running, and she has left the route: it is drawn again from
+ * where she is. One wobbly fix is not a wrong turn.
+ */
+const OFF_ROUTE_METRES = 40;
+/** Never re-route more often than this, whatever the GPS says. */
+const REROUTE_MIN_MS = 15000;
+/** Navigation closes on arrival within this much road of the destination. */
+const ARRIVED_ROAD_METRES = 100;
 
 const EARTH_RADIUS_M = 6371000;
 // UX hint only - the backend decides (TRIP_COMPLETION_RADIUS_METRES). Away
@@ -135,6 +148,13 @@ export function Trip() {
   // Where she was when the current line was drawn, so the next fix can be
   // measured against it rather than re-routing on every one.
   const routedFrom = useRef<{ lat: number; lng: number } | null>(null);
+  const routeInFlight = useRef(false);
+  const lastRouteAt = useRef(0);
+  /** Bumped at each phase change, so a route fetched for the phase before is dropped. */
+  const routeGeneration = useRef(0);
+  /** Fixes in a row off the line: two, and she is re-routed. */
+  const offRouteFixes = useRef(0);
+  const [rerouting, setRerouting] = useState(false);
 
   // Live for the whole trip, MATCHED included. The subscription itself
   // lives above the router so it is not dropped on the way in from Home or
@@ -256,17 +276,28 @@ export function Trip() {
    */
   const loadRoute = useCallback(
     async (from: { lat: number; lng: number }) => {
-      if (!bookingId) return;
+      if (!bookingId || routeInFlight.current) return;
+      routeInFlight.current = true;
+      lastRouteAt.current = Date.now();
+      // Where this attempt was made from, success or not, so a failure is
+      // retried after she has moved on rather than on every fix.
+      routedFrom.current = from;
+      const generation = routeGeneration.current;
       try {
         const fetched = await bookingApi.getRoute(bookingId, from);
+        // A route for the phase that has just ended (fetched to the pickup,
+        // arriving after the code was accepted) is dropped, never drawn.
+        if (generation !== routeGeneration.current) return;
         setRoute(fetched);
         setRouteError(!fetched.points.length);
-        routedFrom.current = from;
       } catch {
         // A route is a convenience, not the trip. The destination marker and
         // the Google Maps button both still work without it, so this is
-        // reported on the map caption rather than as a screen error.
-        setRouteError(true);
+        // reported rather than treated as a screen error.
+        if (generation === routeGeneration.current) setRouteError(true);
+      } finally {
+        routeInFlight.current = false;
+        setRerouting(false);
       }
     },
     [bookingId]
@@ -277,9 +308,11 @@ export function Trip() {
   // same when the drop itself moves - her rider changed destination and she
   // agreed - so the line to the old drop goes at once.
   useEffect(() => {
+    routeGeneration.current += 1;
     setRoute(null);
     setRouteError(false);
     routedFrom.current = null;
+    offRouteFixes.current = 0;
   }, [phase, bookingId, booking?.drop.lat, booking?.drop.lng]);
 
   /** After she answers a change of destination: the new drop and fare now, not at the next poll. */
@@ -288,13 +321,61 @@ export function Trip() {
     bookingApi.getById(bookingId).then(setBooking).catch(() => undefined);
   }
 
+  // Where she is along the route: the next turn, what is left, and whether
+  // she has left the line.
+  const { prepared, state: nav } = useNavigation(route, myPosition);
+
+  // When to fetch the route: once as each phase starts, and again only when
+  // she has really left it (see OFF_ROUTE_METRES), at most every 15 seconds.
+  // A failed fetch is retried once she has moved on 300 m.
   useEffect(() => {
     if (!myPosition || !booking) return;
     if (booking.status !== 'ACCEPTED' && booking.status !== 'IN_PROGRESS') return;
     const last = routedFrom.current;
-    if (last && metresBetween(last, myPosition) < ROUTE_REFRESH_METRES) return;
-    loadRoute(myPosition);
-  }, [myPosition, booking, loadRoute]);
+    if (!last) {
+      loadRoute(myPosition);
+      return;
+    }
+    if (routeError || !route) {
+      if (metresBetween(last, myPosition) >= ROUTE_REFRESH_METRES) loadRoute(myPosition);
+      return;
+    }
+    if (!nav) return;
+    const tolerance = Math.max(OFF_ROUTE_METRES, (myPosition.accuracy ?? 0) * 1.5);
+    offRouteFixes.current = nav.offRouteMetres > tolerance ? offRouteFixes.current + 1 : 0;
+    if (offRouteFixes.current >= 2 && Date.now() - lastRouteAt.current >= REROUTE_MIN_MS) {
+      offRouteFixes.current = 0;
+      setRerouting(true);
+      loadRoute(myPosition);
+    }
+    // nav is derived from myPosition and route; both are listed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [myPosition, booking?.status, route, routeError, loadRoute]);
+
+  // In-app navigation opens by itself as each phase starts - on accepting,
+  // to the pickup; once the code is accepted, to the drop - the way ride
+  // apps do. Once per phase: if she closes it for the trip details, it stays
+  // closed until she opens it again or the next phase starts.
+  const [navigating, setNavigating] = useState(false);
+  const autoNavFor = useRef<string | null>(null);
+  const arrivedHere = phase === 'PICKUP' ? pickupArrived : atDropOff;
+  const nearDestination = arrivedHere && (!nav || nav.remainingMetres <= ARRIVED_ROAD_METRES);
+  useEffect(() => {
+    if (!booking || (booking.status !== 'ACCEPTED' && booking.status !== 'IN_PROGRESS')) {
+      setNavigating(false);
+      return;
+    }
+    const key = `${booking.id}:${booking.status}`;
+    if (autoNavFor.current !== key) {
+      autoNavFor.current = key;
+      setNavigating(!nearDestination);
+    }
+  }, [booking?.id, booking?.status, nearDestination]);
+  // Arrived: navigation closes and the trip screen shows the next step -
+  // the pickup code, or End trip.
+  useEffect(() => {
+    if (nearDestination) setNavigating(false);
+  }, [nearDestination]);
 
   // One call, not a poll: the support number does not change mid-trip.
   useEffect(() => {
@@ -465,7 +546,11 @@ export function Trip() {
   // Support stay reachable but quiet, at the bottom, where a stray thumb
   // does not find them.
   if (booking && navigable && destination) {
-    const minutes = route?.durationMinutes == null ? null : Math.max(1, Math.round(route.durationMinutes));
+    // What is left from where she is, once she is on the line; the whole route before that.
+    const minutes = nav
+      ? Math.max(1, Math.round(nav.remainingSeconds / 60))
+      : route?.durationMinutes == null ? null : Math.max(1, Math.round(route.durationMinutes));
+    const kmLeft = nav ? Math.round(nav.remainingMetres / 100) / 10 : route?.distanceKm ?? null;
     const arrived = phase === 'PICKUP' && pickupArrived;
     const title = phase === 'DROP' ? t('trip.goToDrop') : arrived ? t('trip.arrivedTitle') : t('trip.goToPickup');
     return (
@@ -473,7 +558,8 @@ export function Trip() {
         {/* The map. Back and SOS float on its top edge; its bottom edge,
             where Google's logo and terms sit, is left clear. */}
         <div className="relative -mx-screen -mt-6 h-[46vh] min-h-[280px] overflow-hidden shadow-lift" data-testid="trip-map">
-          <LiveMap markers={markers} route={route?.points} fill />
+          {/* One map at a time: while navigation is open it has its own. */}
+          {!navigating && <LiveMap markers={markers} route={nav?.remaining ?? route?.points} fill />}
           <div className="pointer-events-none absolute inset-x-3 top-3 z-10 flex items-start justify-between">
             <button
               type="button"
@@ -502,10 +588,10 @@ export function Trip() {
             <StatusBadge tone="primary">{phase === 'PICKUP' ? t('trip.stepPickup') : t('trip.stepDrop')}</StatusBadge>
             {!arrived && (
               <span className="text-sm font-semibold text-accent-green-strong" data-testid="trip-eta">
-                {minutes != null && route?.distanceKm != null
-                  ? t('trip.etaShort', { minutes, km: route.distanceKm })
-                  : route?.distanceKm != null
-                    ? t('trip.kmShort', { km: route.distanceKm })
+                {minutes != null && kmLeft != null
+                  ? t('trip.etaShort', { minutes, km: kmLeft })
+                  : kmLeft != null
+                    ? t('trip.kmShort', { km: kmLeft })
                     : ''}
               </span>
             )}
@@ -548,9 +634,9 @@ export function Trip() {
           {/* The step's one action. */}
           {phase === 'PICKUP' && !arrived && (
             <div className="space-y-2">
-              <OpenInMapsButton lat={destination.lat} lng={destination.lng} label={destination.label} variant="primary">
+              <Button fullWidth icon={<Navigation className="h-5 w-5" />} onClick={() => setNavigating(true)} data-testid="start-navigation">
                 {t('trip.navigateToPickup')}
-              </OpenInMapsButton>
+              </Button>
               <p className="text-center text-xs text-text-secondary" data-testid="pickup-not-yet">{t('trip.notAtPickupYet')}</p>
             </div>
           )}
@@ -596,9 +682,9 @@ export function Trip() {
                 </Button>
               ) : (
                 <>
-                  <OpenInMapsButton lat={destination.lat} lng={destination.lng} label={destination.label} variant="primary">
+                  <Button fullWidth icon={<Navigation className="h-5 w-5" />} onClick={() => setNavigating(true)} data-testid="start-navigation">
                     {t('trip.navigateToDrop')}
-                  </OpenInMapsButton>
+                  </Button>
                   <Button fullWidth variant="secondary" size="md" disabled={busy} onClick={() => handleComplete()} data-testid="end-trip">
                     {busy ? t('trip.ending') : t('trip.endTrip')}
                   </Button>
@@ -651,6 +737,22 @@ export function Trip() {
           )}
           <ContactSupportButton phoneNumber={supportPhoneNumber} className="flex-1" />
         </div>
+
+        {/* Turn-by-turn, over everything. Dialogs below still open above it
+            (a rider asking to change destination, the drop-off reason). */}
+        {navigating && (
+          <NavigationView
+            phase={phase}
+            bookingId={bookingId}
+            destination={destination}
+            prepared={prepared}
+            nav={nav}
+            position={myPosition}
+            rerouting={rerouting}
+            routeError={routeError}
+            onExit={() => setNavigating(false)}
+          />
+        )}
 
         <CancelReasonDialog<DropOffReason>
           open={askingDropReason}

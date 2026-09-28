@@ -98,6 +98,21 @@ export interface TripRoute {
   points: { lat: number; lng: number }[];
   distanceKm: number | null;
   durationMinutes: number | null;
+  /** OSRM's turns along the line, for in-app navigation. Empty when the router gave none. */
+  steps?: RouteStep[];
+}
+
+/** One manoeuvre: OSRM's facts; the app writes the sentence in her language. */
+export interface RouteStep {
+  type: string;
+  modifier: string | null;
+  /** The road after the manoeuvre; empty when unnamed. */
+  name: string;
+  exit: number | null;
+  distanceMetres: number;
+  durationSeconds: number;
+  lat: number;
+  lng: number;
 }
 
 export type BookingType = 'RIDE' | 'DELIVERY';
