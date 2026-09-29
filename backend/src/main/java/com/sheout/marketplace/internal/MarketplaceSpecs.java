@@ -76,6 +76,7 @@ final class MarketplaceSpecs {
             if (like != null) {
                 where.add(cb.or(
                         cb.like(cb.lower(root.get("businessName")), like, '\\'),
+                        cb.like(cb.lower(root.get("area")), like, '\\'),
                         cb.like(root.get("contactPhone"), like, '\\')));
             }
             return cb.and(where.toArray(new Predicate[0]));
