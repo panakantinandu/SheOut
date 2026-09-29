@@ -1,5 +1,5 @@
 import { ArrowLeft, MapPinned, Pencil } from 'lucide-react';
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type PointerEvent } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type PointerEvent, type RefObject } from 'react';
 import { LiveMap, useTranslation } from '@sheout/design-system';
 import type { MapMarker, RoutePoint } from '@sheout/design-system';
 import type { GeoAddress } from '../api/types';
@@ -19,6 +19,10 @@ export interface BookingMapLayoutProps {
   /** What the pickup chip says while there is no pickup yet (finding her location, or "tap to choose"). */
   pickupPlaceholder: string;
   onEdit: (field: 'pickup' | 'drop', mode: 'search' | 'map') => void;
+  /** The chip whose picker is open, drawn lit up; null when neither is. */
+  active?: 'pickup' | 'drop' | null;
+  /** The two chips, so the picker can open as a sheet beneath them. */
+  chipsRef?: RefObject<HTMLDivElement>;
   markers: MapMarker[];
   route?: RoutePoint[];
   /** Always visible in the sheet: the fare, the times and the button. */
@@ -49,6 +53,8 @@ export function BookingMapLayout({
   drop,
   pickupPlaceholder,
   onEdit,
+  active = null,
+  chipsRef,
   markers,
   route,
   summary,
@@ -127,10 +133,11 @@ export function BookingMapLayout({
           >
             <ArrowLeft className="h-5 w-5" aria-hidden="true" />
           </button>
-          <div className="pointer-events-auto min-w-0 flex-1 space-y-2">
+          <div ref={chipsRef} className="pointer-events-auto min-w-0 flex-1 space-y-2">
             <p className="sr-only">{title}</p>
             <LocationChip
-              dot="bg-primary"
+              tone="pickup"
+              active={active === 'pickup'}
               label={t('booking.pickup')}
               value={pickup?.label ?? pickupPlaceholder}
               empty={!pickup}
@@ -139,7 +146,8 @@ export function BookingMapLayout({
               testId="chip-pickup"
             />
             <LocationChip
-              dot="bg-accent-orange"
+              tone="drop"
+              active={active === 'drop'}
               label={t('booking.drop')}
               value={drop?.label ?? t('booking.selectDestination')}
               empty={!drop}
@@ -191,8 +199,29 @@ export function BookingMapLayout({
   );
 }
 
+/**
+ * Each chip's colour is its pin's: purple for pickup, orange for drop. At
+ * rest only the dot carries it; while its picker is open the whole chip
+ * does - a tinted fill, a ring and a glow in that colour, and a solid pencil
+ * - so it is plain which end is being set.
+ */
+const CHIP_TONES = {
+  pickup: {
+    dot: 'bg-primary',
+    active: 'bg-primary-light ring-2 ring-primary shadow-[0_0_0_6px_rgb(var(--c-primary)/0.16),var(--elev-float)]',
+    pencil: 'text-primary',
+  },
+  drop: {
+    dot: 'bg-accent-orange',
+    active:
+      'bg-accent-orange-tint ring-2 ring-accent-orange shadow-[0_0_0_6px_rgb(var(--c-accent-orange)/0.24),var(--elev-float)]',
+    pencil: 'text-accent-orange-strong',
+  },
+} as const;
+
 function LocationChip({
-  dot,
+  tone,
+  active,
   label,
   value,
   empty,
@@ -200,7 +229,8 @@ function LocationChip({
   onMap,
   testId,
 }: {
-  dot: string;
+  tone: keyof typeof CHIP_TONES;
+  active: boolean;
   label: string;
   value: string;
   empty: boolean;
@@ -209,15 +239,26 @@ function LocationChip({
   testId: string;
 }) {
   const { t } = useTranslation();
+  const colours = CHIP_TONES[tone];
   return (
-    <div className="flex items-center gap-1 rounded-full bg-surface py-1 pl-4 pr-1 shadow-float" data-testid={testId}>
+    <div
+      className={`flex items-center gap-1 rounded-full py-1 pl-4 pr-1 transition-[background-color,box-shadow] duration-200 ${
+        active ? colours.active : 'bg-surface shadow-float'
+      }`}
+      data-testid={testId}
+      data-active={active}
+    >
       <button type="button" onClick={onEdit} className="flex min-w-0 flex-1 items-center gap-3 py-2 text-left">
-        <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${dot}`} aria-hidden="true" />
+        <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${colours.dot}`} aria-hidden="true" />
         <span className="min-w-0 flex-1">
           <span className="sr-only">{label}: </span>
           <span className={`block truncate text-sm ${empty ? 'text-text-secondary' : 'font-semibold text-text-primary'}`}>{value}</span>
         </span>
-        <Pencil className="h-4 w-4 shrink-0 text-text-secondary" aria-hidden="true" />
+        <Pencil
+          className={`h-4 w-4 shrink-0 ${active ? colours.pencil : 'text-text-secondary'}`}
+          fill={active ? 'currentColor' : 'none'}
+          aria-hidden="true"
+        />
       </button>
       <button
         type="button"

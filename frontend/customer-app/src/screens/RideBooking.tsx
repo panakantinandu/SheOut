@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, ServiceArt, useRouteLine } from '@sheout/design-system';
 import type { MapMarker } from '@sheout/design-system';
@@ -48,6 +48,7 @@ export function RideBooking() {
   const [drop, setDrop] = useState<GeoAddress | null>(null);
   const [picking, setPicking] = useState<'pickup' | 'drop' | null>(null);
   const [pickerMode, setPickerMode] = useState<PickerMode>('search');
+  const chipsRef = useRef<HTMLDivElement>(null);
 
   function openPicker(field: 'pickup' | 'drop', mode: PickerMode) {
     setPickerMode(mode);
@@ -126,6 +127,8 @@ export function RideBooking() {
         drop={drop}
         pickupPlaceholder={pickupError ? t('booking.tapToChoosePickup') : t('booking.findingLocation')}
         onEdit={openPicker}
+        active={picking}
+        chipsRef={chipsRef}
         markers={markers}
         route={route}
         summary={
@@ -173,6 +176,7 @@ export function RideBooking() {
         initialMode={pickerMode}
         markerKind={picking === 'pickup' ? 'pickup' : 'drop'}
         startAt={picking === 'pickup' ? pickup : drop}
+        below={chipsRef}
         onSelect={(address) => (picking === 'pickup' ? setPickup(address) : setDrop(address))}
         onClose={() => setPicking(null)}
       />

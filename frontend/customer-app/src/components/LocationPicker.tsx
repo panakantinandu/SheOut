@@ -1,5 +1,5 @@
 import { Crosshair, MapPin, MapPinned, Search, X, Home, Briefcase } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { Button, Card, IconCircle, LiveMap, TextField } from '@sheout/design-system';
 import type { MapMarker } from '@sheout/design-system';
@@ -46,13 +46,20 @@ export interface LocationPickerProps {
   markerKind?: 'pickup' | 'drop';
   /** Where the map opens when no pin has been dropped yet. */
   startAt?: GeoAddress | null;
+  /**
+   * Opens as a sheet under this element instead of over the whole screen,
+   * so what is above it stays in view - on the booking map, the pickup and
+   * drop chips, with the one being set lit up. Taps above the sheet are
+   * caught, not passed to the map or the chips; the close button closes.
+   */
+  below?: RefObject<HTMLElement>;
   onSelect: (address: GeoAddress) => void;
   onClose: () => void;
 }
 
 /**
- * A full-screen place picker: type an address, pick a saved shortcut, or
- * use the device's position.
+ * A place picker - a full screen, or a sheet under the booking chips: type
+ * an address, pick a saved shortcut, or use the device's position.
  * <p>
  * This replaces a hardcoded list of four destinations that was the only way
  * to set a drop, and a pickup that could ONLY come from geolocation - so a
@@ -75,10 +82,13 @@ export function LocationPicker({
   saved = [],
   markerKind = 'drop',
   startAt = null,
+  below,
   onSelect,
   onClose,
 }: LocationPickerProps) {
   const { t } = useTranslation();
+  /** Where the sheet's top edge sits, when it opens under `below`. */
+  const [sheetTop, setSheetTop] = useState<number | null>(null);
   const [mode, setMode] = useState<PickerMode>(initialMode);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<GeoAddress[]>([]);
@@ -262,12 +272,34 @@ export function LocationPicker({
     }
   }
 
+  useLayoutEffect(() => {
+    if (!open || !below) return;
+    const measure = () => {
+      if (below.current) setSheetTop(below.current.getBoundingClientRect().bottom + 12);
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [open, below]);
+
   if (!open) return null;
+
+  const asSheet = below != null && sheetTop != null;
 
   return (
     createPortal(
-    <div className="fixed inset-0 z-50 flex flex-col bg-background">
-      <div className="flex items-center gap-3 px-screen pt-6">
+    <>
+    {asSheet && <div className="fixed inset-x-0 top-0 z-50" style={{ height: sheetTop }} aria-hidden="true" data-testid="picker-sheet-guard" />}
+    <div
+      className={
+        asSheet
+          ? 'fixed inset-x-0 bottom-0 z-50 mx-auto flex max-w-md animate-sheet-up flex-col rounded-t-card bg-background shadow-overlay'
+          : 'fixed inset-0 z-50 flex flex-col bg-background'
+      }
+      style={asSheet ? { top: sheetTop } : undefined}
+      data-testid="location-picker"
+    >
+      <div className={`flex items-center gap-3 px-screen ${asSheet ? 'pt-4' : 'pt-6'}`}>
         <h2 className="flex-1 font-heading text-section text-text-primary">{title}</h2>
         <button
           type="button"
@@ -466,7 +498,8 @@ export function LocationPicker({
         {/* Google requires this beside Places results shown without a Google map. */}
         <p className="text-center text-xs text-text-secondary">{usingGoogle && (mode === 'search' || areaHint) ? 'Powered by Google' : t('picker.osm')}</p>
       </div>
-    </div>,
+    </div>
+    </>,
     document.body
     )
   );

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button, TextField, ServiceArt, useRouteLine } from '@sheout/design-system';
 import type { MapMarker } from '@sheout/design-system';
@@ -82,6 +82,7 @@ export function DeliveryBooking() {
   const [drop, setDrop] = useState<GeoAddress | null>(null);
   const [picking, setPicking] = useState<'pickup' | 'drop' | null>(null);
   const [pickerMode, setPickerMode] = useState<PickerMode>('search');
+  const chipsRef = useRef<HTMLDivElement>(null);
   const [details, setDetails] = useState('');
   const [mealType, setMealType] = useState<MealType>('VEG');
   const [plan, setPlan] = useState<Plan>('DAILY');
@@ -164,6 +165,8 @@ export function DeliveryBooking() {
         drop={drop}
         pickupPlaceholder={pickupError ? t('booking.tapToChoosePickup') : t('booking.findingLocation')}
         onEdit={openPicker}
+        active={picking}
+        chipsRef={chipsRef}
         markers={markers}
         route={route}
         summary={
@@ -272,6 +275,7 @@ export function DeliveryBooking() {
         initialMode={pickerMode}
         markerKind={picking === 'pickup' ? 'pickup' : 'drop'}
         startAt={picking === 'pickup' ? pickup : drop}
+        below={chipsRef}
         onSelect={(address) => (picking === 'pickup' ? setPickup(address) : setDrop(address))}
         onClose={() => setPicking(null)}
       />
