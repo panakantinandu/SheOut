@@ -233,6 +233,54 @@ export default {
           '20%': { opacity: '1' },
           '100%': { transform: 'translateY(-3rem) scale(1)', opacity: '0' },
         },
+        // THE PARTNER'S MOOD FACE (see MoodFace in the partner app). Every
+        // one ends on its resting pose, because under reduced motion an
+        // animation jumps straight to its last frame.
+        // Eyes closing for a moment, now and then.
+        blink: {
+          '0%, 92%, 100%': { transform: 'scaleY(1)' },
+          '95%': { transform: 'scaleY(0.1)' },
+        },
+        // Eyes looking one way, then the other: searching.
+        look: {
+          '0%, 100%': { transform: 'translateX(0)' },
+          '25%': { transform: 'translateX(-3px)' },
+          '65%': { transform: 'translateX(3px)' },
+        },
+        // A "z" rising from a sleeping face, drifting up and in (not out past
+        // the card's corner) and fading.
+        zzz: {
+          '0%': { transform: 'translate(0, 0) scale(0.6)', opacity: '0' },
+          '20%': { opacity: '1' },
+          '100%': { transform: 'translate(-0.5rem, -1.5rem) scale(1.2)', opacity: '0' },
+        },
+        // Slow breathing, for a face asleep.
+        breathe: {
+          '0%, 100%': { transform: 'scale(1)' },
+          '50%': { transform: 'scale(1.045)' },
+        },
+        // A head tilting side to side: unsure, worried.
+        wobble: {
+          '0%, 100%': { transform: 'rotate(0deg)' },
+          '25%': { transform: 'rotate(-6deg)' },
+          '75%': { transform: 'rotate(6deg)' },
+        },
+        // An hourglass turning over, then waiting.
+        'hourglass-flip': {
+          '0%, 70%': { transform: 'rotate(0deg)' },
+          '85%, 100%': { transform: 'rotate(180deg)' },
+        },
+        // A radar ring going out from the face and fading, kept close
+        // enough to stay inside the card it sits in.
+        ripple: {
+          '0%': { transform: 'scale(0.85)', opacity: '0.7' },
+          '100%': { transform: 'scale(1.5)', opacity: '0' },
+        },
+        // A soft green glow breathing out from a button: tap me.
+        'glow-go': {
+          '0%': { boxShadow: '0 0 0 0 rgba(22, 163, 74, 0.45)' },
+          '70%, 100%': { boxShadow: '0 0 0 0.75rem rgba(22, 163, 74, 0)' },
+        },
         // A finger tapping, for "tap a picture" - a hint that reads without words.
         'tap-hint': {
           '0%, 60%, 100%': { transform: 'translate(0, 0) scale(1)' },
@@ -264,6 +312,14 @@ export default {
         'pin-drop': 'pin-drop 700ms cubic-bezier(0.22, 1, 0.36, 1) both',
         'tap-hint': 'tap-hint 1.8s ease-in-out infinite',
         'heart-rise': 'heart-rise 3.2s ease-out infinite',
+        blink: 'blink 4.5s ease-in-out infinite',
+        look: 'look 2.4s ease-in-out infinite',
+        zzz: 'zzz 3s ease-out infinite',
+        breathe: 'breathe 4s ease-in-out infinite',
+        wobble: 'wobble 2.6s ease-in-out infinite',
+        'hourglass-flip': 'hourglass-flip 3s ease-in-out infinite',
+        'glow-go': 'glow-go 2.2s ease-out infinite',
+        ripple: 'ripple 2.4s ease-out infinite',
       },
     },
   },

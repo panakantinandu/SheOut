@@ -1,7 +1,7 @@
-import { ArrowRight, ChevronRight, Clock, MapPinned, ShieldAlert, Store, Wallet as WalletIcon } from 'lucide-react';
+import { ArrowRight, ChevronRight, LayoutGrid, Store } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ASSISTANT_NAME, AssistantEntryCard, IconCircle, ListRow, PushPromptCard, TopHeader, contentText, useContentSection, useAppLanguage, usePushNotifications, useUnreadNotifications, bikeTaxiArt, parcelArt, marketplaceArt, womenArt } from '@sheout/design-system';
+import { ASSISTANT_NAME, PushPromptCard, TopHeader, contentText, useContentSection, useAppLanguage, usePushNotifications, useUnreadNotifications, bikeTaxiArt, parcelArt, marketplaceArt, womenArt } from '@sheout/design-system';
 import { OutOfAreaBanner } from '../components/OutOfAreaBanner';
 import { UnpaidTripBanner } from '../components/UnpaidTripBanner';
 import { useAppDrawer } from '../components/AppDrawer';
@@ -9,6 +9,9 @@ import { Reveal } from '../components/Reveal';
 import { RideHero } from '../components/home/RideHero';
 import { CommunityCard } from '../components/home/CommunityCard';
 import { CategoryMarquee } from '../components/home/CategoryMarquee';
+import { QuickAccess } from '../components/home/QuickAccess';
+import { AllServicesSheet } from '../components/home/AllServicesSheet';
+import { AgentFab } from '../components/home/AgentFab';
 import { SELLER_CATEGORIES } from '../lib/seller';
 import { PUSH_TOKEN_KEY, contentApi, notificationsApi, pushApi, usersApi } from '../api/client';
 import type { CustomerProfileSummary } from '../api/types';
@@ -51,7 +54,8 @@ const SERVICES = [
  * what SheOut stands for (Women Supporting Women), then the rider's own
  * shortcuts (SOS, live trip, wallet, history). The
  * marketplace follows as one card, with its categories drifting past and a
- * way in for sellers.
+ * way in for sellers. "All services" beside the heading lists every service,
+ * Marketplace included, and the assistant waits in the bottom-right corner.
  */
 export function Home() {
   const { t } = useTranslation();
@@ -63,6 +67,7 @@ export function Home() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<CustomerProfileSummary | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
+  const [allServices, setAllServices] = useState(false);
   const copy = useContentSection('home.', contentApi.getSection);
 
   useEffect(() => {
@@ -125,7 +130,19 @@ export function Home() {
       />
 
       <div>
-        <h2 className="mb-3 font-heading text-section text-text-primary">{t('home.services')}</h2>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="font-heading text-section text-text-primary">{t('home.services')}</h2>
+          {/* Home shows the two ride services; every service, Marketplace too, is one tap away here. */}
+          <button
+            type="button"
+            onClick={() => setAllServices(true)}
+            className="flex shrink-0 items-center gap-1.5 rounded-full bg-primary-light py-1.5 pl-2.5 pr-3 text-caption font-semibold text-primary transition-transform duration-100 motion-safe:active:scale-95"
+            data-testid="home-all-services"
+          >
+            <LayoutGrid className="h-4 w-4" aria-hidden="true" />
+            {t('home.allServices')}
+          </button>
+        </div>
         {/* Two big cards, ride first. Lunch Box is deferred for launch; the
             backend still accepts LUNCHBOX and its card can return here. */}
         <div className="grid grid-cols-2 gap-3" data-testid="home-services">
@@ -181,13 +198,15 @@ export function Home() {
             two of them earned their place on the screen by doing nothing.
             They now open the same screen scoped to genuinely different
             questions: what is happening now, and what already happened. */}
-        <h2 className="mb-3 font-heading text-section text-text-primary">{t('home.quickAccess')}</h2>
-        <div className="flex justify-around">
-          <ListRow layout="stacked" icon={<IconCircle color="red" tone="soft" icon={<ShieldAlert />} />} label={t('home.sos')} onClick={() => navigate('/sos')} />
-          <ListRow layout="stacked" icon={<IconCircle tone="soft" icon={<MapPinned />} />} label={t('home.liveTrack')} onClick={() => navigate('/bookings?view=live')} />
-          <ListRow layout="stacked" icon={<IconCircle tone="soft" icon={<WalletIcon />} />} label={t('home.wallet')} onClick={() => navigate('/wallet')} />
-          <ListRow layout="stacked" icon={<IconCircle tone="soft" icon={<Clock />} />} label={t('home.history')} onClick={() => navigate('/bookings?view=history')} />
-        </div>
+        <QuickAccess
+          title={t('home.quickAccess')}
+          items={[
+            { key: 'sos', label: t('home.sos'), sub: t('home.quick.sos'), onOpen: () => navigate('/sos') },
+            { key: 'live', label: t('home.liveTrack'), sub: t('home.quick.live'), onOpen: () => navigate('/bookings?view=live') },
+            { key: 'wallet', label: t('home.wallet'), sub: t('home.quick.wallet'), onOpen: () => navigate('/wallet') },
+            { key: 'history', label: t('home.history'), sub: t('home.quick.history'), onOpen: () => navigate('/bookings?view=history') },
+          ]}
+        />
       </Reveal>
 
       {/* The marketplace, as one card: its categories drifting past - each
@@ -229,17 +248,42 @@ export function Home() {
         </section>
       </Reveal>
 
-      {/* The way into the assistant: a card, not a floating button - the
-          bottom bar below is where SOS is. The one place its avatar plays. */}
-      <Reveal>
-        <AssistantEntryCard
-          title={t('home.askCardTitle')}
-          body={t('home.askCardBody', { name: ASSISTANT_NAME })}
-          onOpen={() => navigate('/help/assistant')}
-          interactive
-          testId="home-ask-sheout"
-        />
-      </Reveal>
+      {/* Room at the foot, so the assistant in the corner never sits on the last card. */}
+      <div className="h-14" aria-hidden="true" />
+
+      {/* The assistant, standing by in the corner, clear of SOS in the middle of the bar. */}
+      <AgentFab
+        lines={[
+          t('home.agent.hello', { name: firstName || t('home.there') }),
+          t('home.agent.line1'),
+          t('home.agent.line2'),
+        ]}
+        label={t('home.agent.open', { name: ASSISTANT_NAME })}
+        onOpen={() => navigate('/help/assistant')}
+      />
+
+      <AllServicesSheet
+        open={allServices}
+        onClose={() => setAllServices(false)}
+        services={[
+          ...SERVICES.map((service) => ({
+            key: service.key,
+            label: t(service.labelKey),
+            body: t(service.bodyKey),
+            art: service.image,
+            tint: service.card,
+            onOpen: () => navigate(service.to, { replace: true }),
+          })),
+          {
+            key: 'marketplace',
+            label: t('home.market.title'),
+            body: t('home.market.body'),
+            art: marketplaceArt,
+            tint: 'bg-accent-red-tint',
+            onOpen: () => navigate('/seller', { replace: true }),
+          },
+        ]}
+      />
     </div>
   );
 }

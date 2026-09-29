@@ -38,8 +38,6 @@
     "liveTrack": "Live Track",
     "wallet": "Wallet",
     "history": "History",
-    "askCardTitle": "Ask SheOut",
-    "askCardBody": "Questions about rides, payments or verification? Ask {{name}}.",
     "serviceSeller": "Marketplace",
     "serviceRideBody": "Ride with a woman partner",
     "serviceParcelBody": "Send it across the city",
@@ -51,6 +49,19 @@
       "title": "Marketplace",
       "body": "Shop from women near you",
       "sell": "Sell your products"
+    },
+    "allServices": "All services",
+    "quick": {
+      "sos": "Alert your contacts",
+      "live": "Your trip, right now",
+      "wallet": "Balance and top-up",
+      "history": "Your past trips"
+    },
+    "agent": {
+      "hello": "Hi {{name}}! I am here if you need me",
+      "line1": "Where would you like to go today?",
+      "line2": "Ask me about rides, payments or safety",
+      "open": "Ask {{name}}"
     }
   },
   "about": {

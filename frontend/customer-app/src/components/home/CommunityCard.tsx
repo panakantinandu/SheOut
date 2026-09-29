@@ -17,16 +17,17 @@ export function CommunityCard({ title, subtitle, art, artAlt }: { title: string;
 
   return (
     <section
-      className="relative isolate flex min-h-[7.5rem] items-center overflow-hidden rounded-[1.75rem] border border-primary/10 bg-primary-light p-4 pr-[44%] shadow-lift"
+      className="relative isolate min-h-[8.25rem] overflow-hidden rounded-[1.75rem] border border-primary/10 bg-primary-light p-4 shadow-lift"
       data-testid="home-community"
     >
       <span aria-hidden="true" className="pointer-events-none absolute -bottom-16 -right-8 -z-10 h-44 w-44 rounded-full bg-accent-orange/25 blur-2xl motion-safe:animate-drift" />
       <span aria-hidden="true" className="pointer-events-none absolute -left-10 -top-14 -z-10 h-36 w-36 rounded-full bg-primary/15 blur-2xl motion-safe:animate-drift-slow" />
 
       <div className="relative z-10 min-w-0">
-        <h2 className="font-heading text-card-title leading-tight text-primary">{title}</h2>
+        {/* One line, across the whole card: the words are the point, the picture sits under them. */}
+        <h2 className="whitespace-nowrap font-heading text-card-title leading-tight text-primary" data-testid="community-title">{title}</h2>
         {parts.length > 1 ? (
-          <ul className="mt-2 flex flex-wrap gap-1.5">
+          <ul className="mt-2.5 flex max-w-[56%] flex-wrap gap-1.5">
             {parts.map((part, i) => (
               <li
                 key={part}
@@ -39,12 +40,12 @@ export function CommunityCard({ title, subtitle, art, artAlt }: { title: string;
             ))}
           </ul>
         ) : (
-          <p className="mt-1 text-caption text-text-secondary">{subtitle}</p>
+          <p className="mt-1 max-w-[56%] text-caption text-text-secondary">{subtitle}</p>
         )}
       </div>
 
       {/* Hearts floating up behind the three women. */}
-      <div aria-hidden="true" className="pointer-events-none absolute bottom-4 right-[18%] -z-10 flex gap-3">
+      <div aria-hidden="true" className="pointer-events-none absolute bottom-3 right-[18%] -z-10 flex gap-3">
         {[0, 1, 2].map((i) => (
           <Heart
             key={i}
@@ -58,7 +59,7 @@ export function CommunityCard({ title, subtitle, art, artAlt }: { title: string;
         src={art}
         alt={artAlt}
         draggable={false}
-        className="absolute bottom-0 right-2 h-[6.75rem] w-[42%] max-w-[11.25rem] select-none object-contain object-right-bottom motion-safe:animate-rise-in"
+        className="absolute bottom-0 right-2 h-[5.5rem] w-[42%] max-w-[11.25rem] select-none object-contain object-right-bottom motion-safe:animate-rise-in"
         style={{ animationDelay: '200ms' }}
       />
     </section>

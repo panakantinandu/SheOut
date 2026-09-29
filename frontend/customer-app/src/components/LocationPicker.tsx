@@ -22,6 +22,7 @@ import {
   type PlaceSuggestion,
 } from '../lib/places';
 import { useTranslation } from '@sheout/design-system';
+import { useCloseOnBack } from '../lib/useGoBack';
 
 /** Nominatim asks for roughly one request a second; this stays well inside that. */
 const SEARCH_DEBOUNCE_MS = 500;
@@ -49,8 +50,8 @@ export interface LocationPickerProps {
   /**
    * Opens as a sheet under this element instead of over the whole screen,
    * so what is above it stays in view - on the booking map, the pickup and
-   * drop chips, with the one being set lit up. Taps above the sheet are
-   * caught, not passed to the map or the chips; the close button closes.
+   * drop chips, with the one being set lit up. A tap above the sheet closes
+   * it without reaching the map or the chips; so do the close button and Back.
    */
   below?: RefObject<HTMLElement>;
   onSelect: (address: GeoAddress) => void;
@@ -110,6 +111,8 @@ export function LocationPicker({
   const [resolving, setResolving] = useState(false);
   const [pinError, setPinError] = useState<string | null>(null);
   const pinLookup = useRef<AbortController | null>(null);
+  // The phone's back button closes the picker, not the booking behind it.
+  useCloseOnBack(open, onClose);
 
   useEffect(() => {
     if (!open) {
@@ -289,7 +292,8 @@ export function LocationPicker({
   return (
     createPortal(
     <>
-    {asSheet && <div className="fixed inset-x-0 top-0 z-50" style={{ height: sheetTop }} aria-hidden="true" data-testid="picker-sheet-guard" />}
+    {/* A tap above the sheet - on the chips, the map or the header's back arrow - closes it, as a tap outside any sheet does. It is still caught, so it never also moves the map or opens a chip. */}
+    {asSheet && <div className="fixed inset-x-0 top-0 z-50" style={{ height: sheetTop }} aria-hidden="true" onClick={onClose} data-testid="picker-sheet-guard" />}
     <div
       className={
         asSheet

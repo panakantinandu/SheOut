@@ -1,6 +1,7 @@
-import { MapPinOff, Power, RefreshCw, ShieldCheck } from 'lucide-react';
-import { Button, Card, IconCircle, SkeletonCard, StatusDot, brandIllustration, useTranslation } from '@sheout/design-system';
+import { MapPinOff, Power } from 'lucide-react';
+import { Button, Card, SkeletonCard, StatusDot, useTranslation } from '@sheout/design-system';
 import type { HeroState } from '../../lib/driverStatus';
+import { MOOD_FOR, MoodFace } from './MoodFace';
 
 export interface StatusHeroProps {
   state: HeroState;
@@ -27,9 +28,12 @@ export interface StatusHeroProps {
  * secondary button, not full width, at the card's edge - so a thumb on a
  * handlebar mount does not end her shift by accident. Both are 56px tall.
  * <p>
- * The scooter illustration stays in its corner in the calm states and goes
- * in the amber ones, where the card has something to fix and nothing should
- * compete with it. A change of state cross-fades (one short fade, not a loop).
+ * Her state is also a face (MoodFace), so it reads without the words:
+ * asleep with z's when offline, looking around while going online,
+ * smiling with radar rings while online, worried, unsure or waiting in the
+ * amber states - small there, beside the words, where the card has
+ * something to fix. A change of state cross-fades and the new face pops in.
+ * Go Online glows softly while it is the thing to do.
  */
 export function StatusHero({ state, toggling, onGoOnline, onGoOffline, onTurnOnLocation, onReviewVerification, message }: StatusHeroProps) {
   const { t } = useTranslation();
@@ -47,10 +51,8 @@ export function StatusHero({ state, toggling, onGoOnline, onGoOffline, onTurnOnL
   return (
     <Card tone={tone} className="relative overflow-hidden" data-testid="status-hero" data-state={state}>
       <div key={state} className="relative z-10 space-y-4 motion-safe:animate-fade-in">
-        <div className={warning ? 'flex items-start gap-3' : 'min-h-[5.5rem] pr-24'}>
-          {state === 'noLocation' && <IconCircle color="orange" tone="soft" icon={<MapPinOff />} />}
-          {state === 'reconnecting' && <IconCircle color="orange" tone="soft" icon={<RefreshCw />} />}
-          {state === 'verification' && <IconCircle color="orange" tone="soft" icon={<ShieldCheck />} />}
+        <div className={warning ? 'flex items-start gap-3' : 'min-h-[6rem] pr-28'}>
+          {warning && <MoodFace mood={MOOD_FOR[state]} size={4} className="motion-safe:animate-pop-in" />}
           <div className="min-w-0 flex-1">
             <p className="flex items-center gap-2 font-heading text-section text-text-primary" data-testid="hero-title">
               {(state === 'live' || state === 'connecting' || state === 'offline') && (
@@ -65,7 +67,17 @@ export function StatusHero({ state, toggling, onGoOnline, onGoOffline, onTurnOnL
         {message && <p className="text-sm font-medium text-accent-orange-strong" role="alert">{message}</p>}
 
         {state === 'offline' && (
-          <Button variant="success" size="lg" fullWidth icon={<Power className="h-5 w-5" />} disabled={toggling} onClick={onGoOnline} data-testid="go-online">
+          <Button
+            variant="success"
+            size="lg"
+            fullWidth
+            icon={<Power className="h-5 w-5" />}
+            disabled={toggling}
+            onClick={onGoOnline}
+            // A soft glow breathing out from it: the one thing to do here.
+            className={toggling ? undefined : 'motion-safe:animate-glow-go'}
+            data-testid="go-online"
+          >
             {toggling ? '...' : t('home.goOnline')}
           </Button>
         )}
@@ -85,13 +97,13 @@ export function StatusHero({ state, toggling, onGoOnline, onGoOffline, onTurnOnL
         {(state === 'live' || state === 'connecting' || state === 'reconnecting') && <div className="flex justify-end">{goOffline}</div>}
       </div>
 
+      {/* Her state as a face - asleep, waking, smiling. Keyed apart from the
+          text block above (same key twice among siblings left a stale copy of
+          the old state on screen), so each change pops a new face in. */}
       {!warning && (
-        <img
-          src={brandIllustration}
-          alt=""
-          aria-hidden="true"
-          className="pointer-events-none absolute -right-3 -top-2 h-28 w-28 object-contain"
-        />
+        <span key={`face-${state}`} className="pointer-events-none absolute right-1 top-3 motion-safe:animate-pop-in">
+          <MoodFace mood={MOOD_FOR[state]} size={6.5} />
+        </span>
       )}
     </Card>
   );

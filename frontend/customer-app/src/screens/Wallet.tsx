@@ -166,7 +166,14 @@ export function Wallet() {
         onBack={() => (routeState.returnTo ? navigate(routeState.returnTo) : navigate('/home'))}
       />
 
-      {loadError && !wallet && <p className="text-sm text-danger">{loadError}</p>}
+      {loadError && !wallet && (
+        <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-danger">
+          {loadError}
+          <button type="button" onClick={() => void loadWallet()} className="font-semibold text-primary underline" data-testid="wallet-retry">
+            {t('common.tryAgain')}
+          </button>
+        </p>
+      )}
       {!wallet && !loadError && <SkeletonCard lines={2} label={t('wallet.loading')} />}
 
       {wallet && (
@@ -259,7 +266,14 @@ export function Wallet() {
       )}
 
       <div className="flex justify-around">
-        <button type="button" className="flex flex-col items-center gap-2" onClick={() => setAdding(true)}>
+        <button
+          type="button"
+          className="flex flex-col items-center gap-2"
+          // The add panel needs the balance. If it did not load, fetch it
+          // again first, rather than a tap that does nothing.
+          onClick={() => (wallet ? setAdding(true) : void loadWallet().then(() => setAdding(true)))}
+          data-testid="wallet-add-money-tile"
+        >
           <IconCircle tone="soft" icon={<PlusCircle />} />
           <span className="text-xs font-medium text-text-primary">{t('wallet.addMoney')}</span>
         </button>
