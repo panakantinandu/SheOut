@@ -4,7 +4,7 @@ import { cn } from '../lib/cn';
 
 export { bikeTaxiArt, parcelArt };
 export { default as womenArt } from '../assets/art/women.webp';
-/** SheOut Marketplace's Home tile, in the same 3D rounded style as the ride and parcel tiles. */
+/** The Marketplace's picture, in the same 3D rounded style as the ride and parcel tiles. */
 export { default as marketplaceArt } from '../assets/art/marketplace.webp';
 
 export type ServiceArtKind = 'ride' | 'parcel';
@@ -28,7 +28,7 @@ const sizes: Record<ServiceArtSize, string> = {
  * into a dozen places (the wallet, the fare card, a partner's trip card)
  * because the real artwork sat outside both apps, in the repository's
  * public/ folder, and only three screens reached it. It now lives here,
- * resized from 1254 px PNGs of ~2 MB to 480 px WebP of ~18 KB, and every
+ * resized from 1254 px PNGs of ~1.5 MB to 480 px WebP of 25-40 KB, and every
  * screen takes it from this one place.
  * <p>
  * Decorative by default: the text beside it names the service. Pass a

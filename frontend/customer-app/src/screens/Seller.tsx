@@ -15,7 +15,8 @@ import { marketplaceApi } from '../api/client';
 import type { ListingCard, SellerCategory, SmartSearchResult } from '../api/types';
 import { PriceTag } from '../components/PriceTag';
 import { SELLER_CATEGORIES, asProductCode, priceText } from '../lib/seller';
-import { CategoryGrid, HowItWorks, LaunchCard, MarketplaceHero, TrustStrip } from '../components/marketplace/MarketplaceDiscover';
+import { CategoryGrid, CategoryRail, HowItWorks, MarketplaceHero, SellCard } from '../components/marketplace/MarketplaceDiscover';
+import { Reveal } from '../components/Reveal';
 
 const CATEGORY_VALUES = new Set<string>(SELLER_CATEGORIES.map((c) => c.value));
 
@@ -63,8 +64,8 @@ function useDirectoryFilters() {
 }
 
 /**
- * SheOut Marketplace: a directory of women selling from home, reached from
- * the SheOut Marketplace tile on Home.
+ * Marketplace: a directory of women selling from home, reached from the
+ * Marketplace card on Home.
  * <p>
  * Search runs across product names and descriptions and shop names; the
  * filter panel narrows by price, by any of the six categories, and by the
@@ -73,12 +74,12 @@ function useDirectoryFilters() {
  * no part in any sale, so there is no cart and no checkout, and the foot of
  * the list says so.
  * <p>
- * Before she has searched or filtered, the screen is a place to browse,
- * not a bare list: the six categories as picture tiles, what she can count
- * on, how buying works, and then the newest listings. With no shops live
- * yet it says the marketplace is opening, and that is the one place it
- * offers "open your own shop" - running a shop otherwise has its own way in,
- * "Sell on SheOut" in the drawer and on Home.
+ * Before she has searched or filtered, the screen is a place to browse, in
+ * one order: what this is (and, with no shops live yet, that it is
+ * opening), the six categories as big pictures, the newest listings, how
+ * buying works, and last, for sellers, how to open a shop. Once she has
+ * picked a category the six stay above the list as a row of pictures, so
+ * switching never needs the filter sheet.
  */
 export function Seller() {
   const { t } = useTranslation();
@@ -208,12 +209,22 @@ export function Seller() {
   }, [categories.join(','), min, max, area, rangeInverted, t]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const activeFilters = chips.length;
+  // In the ordinary search the picture row below shows the categories, so they are not chips as well.
+  const shownChips = aiMode ? chips : chips.filter((chip) => !CATEGORY_VALUES.has(chip.key));
   const narrowed = activeFilters > 0 || q.trim().length > 0;
   /** Nothing searched or filtered yet: show the browsing layout around the list. */
   const browsing = !aiMode && !narrowed;
   const categoryOnly = categories.length > 0 && !q.trim() && !min && !max && !area.trim();
   const clearAll = () => filters.set({ q: '', cat: '', min: '', max: '', area: '', ask: '' });
   const examples = [t('seller.ask.example1'), t('seller.ask.example2'), t('seller.ask.example3')];
+
+  /** Browsing with nothing listed yet: the hero says the marketplace is opening. */
+  const noShopsYet = browsing && !list.loading && !list.error && list.items.length === 0;
+
+  /** From the picture row: just that category, or back to all if it was the only one. */
+  function pickCategory(value: SellerCategory) {
+    filters.set({ cat: categories.length === 1 && categories[0] === value ? '' : value });
+  }
 
   function toggleCategory(value: SellerCategory) {
     const next = categories.includes(value) ? categories.filter((v) => v !== value) : [...categories, value];
@@ -360,9 +371,9 @@ export function Seller() {
           </button>
         )}
 
-        {chips.length > 0 && (
+        {shownChips.length > 0 && (
           <div className="-mx-screen flex gap-2 overflow-x-auto px-screen pb-1" data-testid="active-filters">
-            {chips.map((chip) => (
+            {shownChips.map((chip) => (
               <button
                 key={chip.key}
                 type="button"
@@ -391,10 +402,14 @@ export function Seller() {
 
       {browsing && (
         <>
-          <MarketplaceHero />
+          <MarketplaceHero opening={noShopsYet} />
           <CategoryGrid onPick={toggleCategory} />
-          <TrustStrip />
         </>
+      )}
+
+      {/* A category picked: the six stay in reach as pictures. */}
+      {!aiMode && categories.length > 0 && (
+        <CategoryRail selected={categories} onPick={pickCategory} onAll={() => filters.set({ cat: '' })} />
       )}
 
       {!aiMode && list.loading && <SkeletonList rows={4} label={t('seller.directory.loading')} />}
@@ -419,9 +434,7 @@ export function Seller() {
             message={t('seller.browse.noMatch')}
             action={{ label: t('seller.browse.clearAll'), onClick: clearAll }}
           />
-        ) : (
-          <LaunchCard onSell={() => navigate('/seller/manage')} />
-        )
+        ) : null
       )}
 
       {browsing && !list.loading && list.items.length > 0 && (
@@ -441,7 +454,16 @@ export function Seller() {
 
       {!aiMode && <LoadMore shown={list.items.length} total={list.total} hasMore={list.hasMore} loading={list.loadingMore} onLoadMore={list.loadMore} />}
 
-      {browsing && !list.loading && <HowItWorks />}
+      {browsing && !list.loading && (
+        <>
+          <Reveal>
+            <HowItWorks />
+          </Reveal>
+          <Reveal>
+            <SellCard onOpen={() => navigate('/seller/manage')} />
+          </Reveal>
+        </>
+      )}
 
       <p className="pb-2 text-center text-caption text-text-secondary">{t('seller.directory.notInvolved')}</p>
     </div>

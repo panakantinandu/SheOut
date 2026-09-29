@@ -1,36 +1,55 @@
-import { ArrowRight, ChevronRight, Clock, MapPinned, ShieldAlert, Wallet as WalletIcon } from 'lucide-react';
+import { ArrowRight, ChevronRight, Clock, MapPinned, ShieldAlert, Store, Wallet as WalletIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ASSISTANT_NAME, AssistantEntryCard, brandIllustration, Card, IconCircle, ListRow, PushPromptCard, TopHeader, contentText, useContentSection, useAppLanguage, usePushNotifications, useUnreadNotifications, bikeTaxiArt, parcelArt, marketplaceArt, womenArt } from '@sheout/design-system';
+import { ASSISTANT_NAME, AssistantEntryCard, Card, IconCircle, ListRow, PushPromptCard, TopHeader, contentText, useContentSection, useAppLanguage, usePushNotifications, useUnreadNotifications, bikeTaxiArt, parcelArt, marketplaceArt, womenArt } from '@sheout/design-system';
 import { OutOfAreaBanner } from '../components/OutOfAreaBanner';
 import { UnpaidTripBanner } from '../components/UnpaidTripBanner';
 import { useAppDrawer } from '../components/AppDrawer';
 import { Reveal } from '../components/Reveal';
-import { HeroCarousel, type HeroSlide } from '../components/home/HeroCarousel';
+import { RideHero } from '../components/home/RideHero';
 import { CategoryMarquee } from '../components/home/CategoryMarquee';
-import { SellOnSheOutCard } from '../components/home/SellOnSheOutCard';
 import { SELLER_CATEGORIES } from '../lib/seller';
 import { PUSH_TOKEN_KEY, contentApi, notificationsApi, pushApi, usersApi } from '../api/client';
 import type { CustomerProfileSummary } from '../api/types';
 import { useTranslation } from '@sheout/design-system';
 
 /**
- * The service tiles, as data so another is one entry, not another copy of
- * the tile. Lunch Box is deferred for launch. SheOut Marketplace is here
- * for browsing as a customer; running your own shop is "Sell on SheOut", in the
- * drawer and on its own card further down - two intents, two ways in.
+ * The two services Home is built around, as data so another is one entry,
+ * not another copy of the card. Lunch Box is deferred for launch.
+ * Marketplace is not here: it is a smaller card further down, so the first
+ * screen reads as a ride app, not a shop.
  */
 const SERVICES = [
-  { key: 'ride', labelKey: 'home.serviceRide', to: '/book/ride', image: bikeTaxiArt },
-  { key: 'parcel', labelKey: 'home.serviceParcel', to: '/book/parcel', image: parcelArt },
-  { key: 'seller', labelKey: 'home.serviceSeller', to: '/seller', image: marketplaceArt },
+  {
+    key: 'ride',
+    labelKey: 'home.serviceRide',
+    bodyKey: 'home.serviceRideBody',
+    to: '/book/ride',
+    image: bikeTaxiArt,
+    card: 'bg-primary-light',
+    arrow: 'bg-primary',
+  },
+  {
+    key: 'parcel',
+    labelKey: 'home.serviceParcel',
+    bodyKey: 'home.serviceParcelBody',
+    to: '/book/parcel',
+    image: parcelArt,
+    card: 'bg-accent-orange-tint',
+    arrow: 'bg-accent-orange',
+  },
 ];
 
 /**
  * Real data: the greeting name comes from users' live GET /me. The banner and
  * the community card are editable copy from the content module - operators
  * change them in the ops console - with the text they were seeded with as the
- * fallback. Service tiles and quick access are still static UI.
+ * fallback. Service cards and quick access are still static UI.
+ * <p>
+ * Top to bottom it is a ride app: where are you going, the two services,
+ * then the rider's own shortcuts (SOS, live trip, wallet, history). The
+ * marketplace follows as one card, with its categories drifting past and a
+ * way in for sellers.
  */
 export function Home() {
   const { t } = useTranslation();
@@ -63,40 +82,7 @@ export function Home() {
   const push = usePushNotifications(pushApi, PUSH_TOKEN_KEY, true);
   const unreadCount = useUnreadNotifications(notificationsApi.unreadCount, true);
 
-  const heroSlides: HeroSlide[] = [
-    {
-      key: 'ride',
-      eyebrow: t('home.serviceRide'),
-      title: fromContent('home.banner.title', 'home.bannerTitle'),
-      body: fromContent('home.banner.subtitle', 'home.bannerSubtitle'),
-      cta: t('home.hero.rideCta'),
-      art: brandIllustration,
-      background: 'linear-gradient(135deg, #7B3FE4 0%, #4A1A9E 55%, #2E0E61 100%)',
-      onOpen: () => navigate('/book/ride'),
-    },
-    {
-      key: 'parcel',
-      eyebrow: t('home.serviceParcel'),
-      title: t('home.hero.parcelTitle'),
-      body: t('home.hero.parcelBody'),
-      cta: t('home.hero.parcelCta'),
-      art: parcelArt,
-      background: 'linear-gradient(135deg, #3B6FE0 0%, #1E3F9E 55%, #13235E 100%)',
-      onOpen: () => navigate('/book/parcel'),
-    },
-    {
-      key: 'shop',
-      eyebrow: t('home.serviceSeller'),
-      title: t('home.hero.shopTitle'),
-      body: t('home.hero.shopBody'),
-      cta: t('home.hero.shopCta'),
-      art: marketplaceArt,
-      background: 'linear-gradient(135deg, #14A38F 0%, #0B7466 55%, #064A42 100%)',
-      onOpen: () => navigate('/seller'),
-    },
-  ];
   const marqueeItems = SELLER_CATEGORIES.map((c) => ({ value: c.value, label: t(`seller.categories.${c.key}`), art: c.art, tint: c.tint }));
-  const sellArts = ['fashion', 'mehandi', 'gifts'].map((key) => SELLER_CATEGORIES.find((c) => c.key === key)!.art);
 
   return (
     <div className="space-y-6">
@@ -127,71 +113,110 @@ export function Home() {
       {/* An unpaid trip blocks the next booking - say so before she tries. */}
       <UnpaidTripBanner />
 
-      {/* The banner is now one slide of three, one per thing SheOut does.
-          The ride slide keeps the operator-edited banner copy. */}
-      <HeroCarousel slides={heroSlides} label={t('home.hero.label')} />
+      <RideHero
+        eyebrow={t('home.ride.eyebrow')}
+        title={fromContent('home.banner.title', 'home.bannerTitle')}
+        body={fromContent('home.banner.subtitle', 'home.bannerSubtitle')}
+        whereTo={t('home.ride.whereTo')}
+        art={bikeTaxiArt}
+        onBook={() => navigate('/book/ride')}
+      />
 
       <div>
         <h2 className="mb-3 font-heading text-section text-text-primary">{t('home.services')}</h2>
-        {/* Three equal service tiles keep the artwork, label, and action
-          aligned as one compact option each. Lunch Box is deferred for
-          launch; the backend still accepts LUNCHBOX and its tile can return
-          here. */}
-        <div className="grid grid-cols-3 gap-3" data-testid="home-services">
+        {/* Two big cards, ride first. Lunch Box is deferred for launch; the
+            backend still accepts LUNCHBOX and its card can return here. */}
+        <div className="grid grid-cols-2 gap-3" data-testid="home-services">
           {SERVICES.map((service, i) => (
             <button
               key={service.key}
               type="button"
               onClick={() => navigate(service.to)}
-              // Arriving one after another, left to right.
-              style={{ animationDelay: `${80 + i * 70}ms` }}
-              className="flex min-w-0 flex-col items-center gap-2 text-center motion-safe:animate-pop-in"
+              // Arriving one after the other, just after the hero.
+              style={{ animationDelay: `${160 + i * 90}ms` }}
+              className={`group relative isolate flex min-w-0 flex-col overflow-hidden rounded-[1.5rem] ${service.card} p-3 pb-3.5 text-left shadow-lift transition-transform duration-100 motion-safe:animate-pop-in motion-safe:active:scale-[0.97]`}
               data-testid={`service-${service.key}`}
             >
-              {/* The artwork is itself the tile - a rounded 3D square with a
-                  transparent surround. It used to sit on a second, flat
-                  coloured card, which showed as a box around a box. Its
-                  shadow follows the art's own shape (a drop-shadow, not a
-                  box-shadow), so it floats like the other tiles. */}
-              <span className="flex aspect-square w-[92%] items-center justify-center transition-transform duration-100 motion-safe:active:scale-95">
-                <img
-                  src={service.image}
-                  alt=""
+              {/* A soft disc of light the picture stands on. */}
+              <span aria-hidden="true" className="absolute left-1/2 top-4 -z-10 h-24 w-24 -translate-x-1/2 rounded-full bg-surface/70 blur-xl" />
+              <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 -z-10 w-1/2 bg-gradient-to-r from-transparent via-white/30 to-transparent motion-safe:animate-sheen" style={{ animationDelay: `${1.2 + i * 1.4}s` }} />
+              <img
+                src={service.image}
+                alt=""
+                aria-hidden="true"
+                draggable={false}
+                className="mx-auto aspect-square w-[82%] select-none object-contain drop-shadow-[0_10px_14px_rgba(74,26,158,0.25)] transition-transform duration-300 ease-out group-hover:-translate-y-1 group-hover:scale-[1.03]"
+              />
+              <span className="mt-2.5 flex items-end justify-between gap-2">
+                <span className="min-w-0">
+                  <span className="block font-heading text-card-title leading-tight text-text-primary">{t(service.labelKey)}</span>
+                  <span className="mt-0.5 block text-caption leading-snug text-text-secondary">{t(service.bodyKey)}</span>
+                </span>
+                <span
+                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${service.arrow} text-white shadow-lift transition-transform duration-200 group-hover:translate-x-0.5`}
                   aria-hidden="true"
-                  className="h-full w-full scale-[1.12] object-contain drop-shadow-[0_10px_16px_rgba(74,26,158,0.22)]"
-                />
-              </span>
-              <span className="flex w-[92%] items-center justify-between gap-1 text-left">
-                <span className="text-xs font-semibold leading-tight text-text-primary">{t(service.labelKey)}</span>
-                <ArrowRight className="h-3.5 w-3.5 shrink-0 text-text-primary" aria-hidden="true" />
+                >
+                  <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
+                </span>
               </span>
             </button>
           ))}
         </div>
       </div>
 
-      {/* The marketplace's categories, drifting past - each opens that category. */}
       <Reveal>
-        <div className="mb-3 flex items-end justify-between gap-3">
-          <div className="min-w-0">
-            <h2 className="font-heading text-section text-text-primary">{t('home.shop.title')}</h2>
-            <p className="mt-0.5 text-caption text-text-secondary">{t('home.shop.subtitle')}</p>
-          </div>
+        {/* Four tiles, four destinations. Live Track and History used to
+            both open /bookings, which is where the Bookings tab goes too -
+            so three of the app's entry points showed one identical list and
+            two of them earned their place on the screen by doing nothing.
+            They now open the same screen scoped to genuinely different
+            questions: what is happening now, and what already happened. */}
+        <h2 className="mb-3 font-heading text-section text-text-primary">{t('home.quickAccess')}</h2>
+        <div className="flex justify-around">
+          <ListRow layout="stacked" icon={<IconCircle color="red" tone="soft" icon={<ShieldAlert />} />} label={t('home.sos')} onClick={() => navigate('/sos')} />
+          <ListRow layout="stacked" icon={<IconCircle tone="soft" icon={<MapPinned />} />} label={t('home.liveTrack')} onClick={() => navigate('/bookings?view=live')} />
+          <ListRow layout="stacked" icon={<IconCircle tone="soft" icon={<WalletIcon />} />} label={t('home.wallet')} onClick={() => navigate('/wallet')} />
+          <ListRow layout="stacked" icon={<IconCircle tone="soft" icon={<Clock />} />} label={t('home.history')} onClick={() => navigate('/bookings?view=history')} />
+        </div>
+      </Reveal>
+
+      {/* The marketplace, as one card: its categories drifting past - each
+          opens that category - and, at its foot, the way in for sellers. */}
+      <Reveal>
+        <section className="overflow-hidden rounded-[1.75rem] border border-border bg-surface px-4 pb-3 pt-4 shadow-lift" data-testid="home-marketplace">
           <button
             type="button"
             onClick={() => navigate('/seller')}
-            className="flex shrink-0 items-center gap-0.5 text-caption font-semibold text-primary"
-            data-testid="home-shop-all"
+            className="group flex w-full items-center gap-3 text-left"
+            data-testid="service-seller"
           >
-            {t('home.shop.seeAll')}
-            <ChevronRight className="h-4 w-4" aria-hidden="true" />
+            <img
+              src={marketplaceArt}
+              alt=""
+              aria-hidden="true"
+              draggable={false}
+              className="h-16 w-16 shrink-0 select-none object-contain drop-shadow-[0_8px_10px_rgba(190,24,93,0.25)] motion-safe:animate-bob"
+            />
+            <span className="min-w-0 flex-1">
+              <span className="block font-heading text-card-title text-text-primary">{t('home.market.title')}</span>
+              <span className="mt-0.5 block text-caption text-text-secondary">{t('home.market.body')}</span>
+            </span>
+            <ChevronRight className="h-5 w-5 shrink-0 text-text-secondary transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden="true" />
           </button>
-        </div>
-        <CategoryMarquee items={marqueeItems} onPick={(value) => navigate(`/seller?cat=${value}`)} />
-      </Reveal>
-
-      <Reveal>
-        <SellOnSheOutCard arts={sellArts} onOpen={() => navigate('/seller/manage')} />
+          <div className="mt-3">
+            <CategoryMarquee items={marqueeItems} onPick={(value) => navigate(`/seller?cat=${value}`)} />
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/seller/manage')}
+            className="mt-2 flex items-center gap-1.5 py-1 text-caption font-semibold text-primary"
+            data-testid="home-sell-link"
+          >
+            <Store className="h-4 w-4" aria-hidden="true" />
+            {t('home.market.sell')}
+            <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
+        </section>
       </Reveal>
 
       <Reveal>
@@ -220,22 +245,6 @@ export function Home() {
           interactive
           testId="home-ask-sheout"
         />
-      </Reveal>
-
-      <Reveal>
-        {/* Four tiles, four destinations. Live Track and History used to
-            both open /bookings, which is where the Bookings tab goes too -
-            so three of the app's entry points showed one identical list and
-            two of them earned their place on the screen by doing nothing.
-            They now open the same screen scoped to genuinely different
-            questions: what is happening now, and what already happened. */}
-        <h2 className="mb-3 font-heading text-section text-text-primary">{t('home.quickAccess')}</h2>
-        <div className="flex justify-around">
-          <ListRow layout="stacked" icon={<IconCircle color="red" tone="soft" icon={<ShieldAlert />} />} label={t('home.sos')} onClick={() => navigate('/sos')} />
-          <ListRow layout="stacked" icon={<IconCircle tone="soft" icon={<MapPinned />} />} label={t('home.liveTrack')} onClick={() => navigate('/bookings?view=live')} />
-          <ListRow layout="stacked" icon={<IconCircle tone="soft" icon={<WalletIcon />} />} label={t('home.wallet')} onClick={() => navigate('/wallet')} />
-          <ListRow layout="stacked" icon={<IconCircle tone="soft" icon={<Clock />} />} label={t('home.history')} onClick={() => navigate('/bookings?view=history')} />
-        </div>
       </Reveal>
     </div>
   );

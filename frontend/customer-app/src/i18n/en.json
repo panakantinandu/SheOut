@@ -40,29 +40,17 @@
     "history": "History",
     "askCardTitle": "Ask SheOut",
     "askCardBody": "Questions about rides, payments or verification? Ask {{name}}.",
-    "serviceSeller": "SheOut Marketplace",
-    "hero": {
-      "label": "What SheOut does",
-      "rideCta": "Book a ride",
-      "parcelTitle": "Send it with someone you trust",
-      "parcelBody": "Picked up and dropped by verified women partners.",
-      "parcelCta": "Send a parcel",
-      "shopTitle": "Shop from women near you",
-      "shopBody": "Sarees, mehandi, tailoring and more, straight from the maker.",
-      "shopCta": "Explore"
+    "serviceSeller": "Marketplace",
+    "serviceRideBody": "Ride with a woman partner",
+    "serviceParcelBody": "Send it across the city",
+    "ride": {
+      "eyebrow": "Bike Taxi · Women riders",
+      "whereTo": "Where are you going?"
     },
-    "shop": {
-      "title": "Shop SheOut Marketplace",
-      "subtitle": "Made and sold by women in your city",
-      "seeAll": "See all"
-    },
-    "sell": {
-      "eyebrow": "Sell on SheOut",
-      "title": "Turn your skill into income",
-      "body": "Sarees, mehandi, tailoring, gifts: open your shop and reach women across your city.",
-      "point1": "No commission on your sales",
-      "point2": "Buyers contact you directly",
-      "cta": "Start selling"
+    "market": {
+      "title": "Marketplace",
+      "body": "Shop from women near you",
+      "sell": "Sell your products"
     }
   },
   "about": {
@@ -346,14 +334,14 @@
       "loading": "Loading product",
       "loadError": "Could not load this product. Please try again.",
       "goneTitle": "No longer available",
-      "gone": "This product is not in SheOut Marketplace any more.",
-      "backToDirectory": "Back to SheOut Marketplace",
+      "gone": "This product is not in the Marketplace any more.",
+      "backToDirectory": "Back to Marketplace",
       "photos_one": "{{count}} photo",
       "photos_other": "{{count}} photos",
       "priceNote": "Price set by the seller. Confirm it with her before you buy.",
       "contactWhatsapp": "Contact Seller on WhatsApp",
       "contactCall": "Call the Seller",
-      "whatsappMessage": "Hi, I saw \"{{title}}\" (product code {{code}}) on SheOut Marketplace.",
+      "whatsappMessage": "Hi, I saw \"{{title}}\" (product code {{code}}) on SheOut.",
       "moreFrom": "More from {{name}}",
       "code": "Product code:",
       "codeCopied": "Product code copied",
@@ -426,13 +414,13 @@
       "APPROVED_AWAITING_PAYMENT": {
         "title": "Approved! One step left",
         "badge": "Approved",
-        "body": "Pay the one-time listing fee of {{amount}} and your shop goes live in SheOut Marketplace."
+        "body": "Pay the one-time listing fee of {{amount}} and your shop goes live in the Marketplace."
       },
       "ACTIVE": {
         "title": "Your shop is live",
         "badge": "Live",
         "body": "Customers can find your products and contact you directly. You can keep adding and changing products.",
-        "view": "See it in SheOut Marketplace"
+        "view": "See it in the Marketplace"
       },
       "REJECTED": {
         "title": "Your shop needs changes",
@@ -556,7 +544,7 @@
         "submit": "Submit for review"
       }
     },
-    "marketplaceTitle": "SheOut Marketplace",
+    "marketplaceTitle": "Marketplace",
     "price": {
       "off": "{{percent}}% off",
       "was": "Was {{price}}"
@@ -588,38 +576,43 @@
       "error": "Search is not working right now. Please try again."
     },
     "discover": {
-      "eyebrow": "SheOut Marketplace",
+      "eyebrow": "Marketplace",
       "title": "Made by women, near you",
       "body": "Handpicked crafts, fashion and services, straight from the women who make them.",
-      "byCategory": "Browse by category",
+      "byCategory": "What are you looking for?",
       "fresh": "Fresh from sellers",
-      "trust": {
-        "label": "Why shop here",
-        "verifiedTitle": "Verified sellers",
-        "verifiedBody": "Every seller verifies her ID before her shop goes live.",
-        "directTitle": "Talk to her directly",
-        "directBody": "WhatsApp or call the seller. No middleman.",
-        "feeTitle": "No hidden cut",
-        "feeBody": "SheOut takes nothing from your purchase."
-      },
       "how": {
-        "title": "How it works",
-        "step1Title": "Find something you love",
-        "step1Body": "Browse a category, or search in your own words.",
-        "step2Title": "Contact the seller",
-        "step2Body": "One tap opens WhatsApp or a call with her.",
-        "step3Title": "Agree and buy directly",
-        "step3Body": "Price, pickup or delivery: settled between you two."
-      },
-      "launch": {
-        "badge": "Opening soon",
-        "title": "The first shops are opening",
-        "body": "Women sellers are setting up right now. Pick a category above to see what arrives first, or open your own shop and be one of the first.",
-        "cta": "Open your shop"
+        "title": "How buying works",
+        "step1Title": "Pick what you like",
+        "step1Body": "Every seller is verified with her ID.",
+        "step2Title": "Call or WhatsApp her",
+        "step2Body": "Talk to the seller directly. No middleman.",
+        "step3Title": "Pay her directly",
+        "step3Body": "SheOut takes nothing from your purchase."
       },
       "categoryEmptyTitle": "No {{name}} shops yet",
       "categoryEmpty": "New shops are joining. Check back soon, or look around the other categories.",
-      "allCategories": "See all categories"
+      "allCategories": "See all categories",
+      "byCategoryHint": "Tap a picture to see shops",
+      "all": "All",
+      "openingBadge": "Opening soon",
+      "openingBody": "Women sellers are setting up their shops right now.",
+      "hints": {
+        "fashion": "Sarees, kurtis, dresses",
+        "beauty": "Makeup, facials, hair",
+        "tailoring": "Blouses, stitching, fitting",
+        "mehandi": "Bridal and festival designs",
+        "gifts": "Hampers, handmade gifts",
+        "ornaments": "Earrings, bangles, necklaces"
+      },
+      "sell": {
+        "eyebrow": "For sellers",
+        "title": "Turn your skill into income",
+        "body": "Sarees, mehandi, tailoring, gifts: open your shop and reach women across your city.",
+        "point1": "No commission on your sales",
+        "point2": "Buyers contact you directly",
+        "cta": "Start selling"
+      }
     }
   },
   "refer": {

@@ -1,86 +1,109 @@
-import { ArrowRight, MessageCircle, Search, ShieldCheck, Sparkles, Store, Wallet } from 'lucide-react';
-import type { ReactNode } from 'react';
-import { useTranslation } from '@sheout/design-system';
+import { ArrowRight, Check, LayoutGrid, MessageCircle, Pointer, ShieldCheck, Sparkles, Wallet } from 'lucide-react';
+import { marketplaceArt, useTranslation } from '@sheout/design-system';
 import type { SellerCategory } from '../../api/types';
 import { SELLER_CATEGORIES } from '../../lib/seller';
 
 /*
  * What the marketplace shows before she has searched or filtered for
- * anything: a way to browse, not a blank list. Every piece here is true on
- * day one with no shops at all - the six categories, how buying works, and
- * what SheOut does and does not do in a sale - so the screen is worth
- * opening before the first seller is live, and still earns its place after.
+ * anything, in the order she needs it: what this place is, then the six
+ * things she can find here as big pictures, then what is for sale, then how
+ * buying works, and last - for the few who came to sell - how to open a
+ * shop. Pictures carry every step, so it works for someone who reads little.
+ * Every piece is true on day one with no shops at all.
  */
 
-/** The marketplace's opening card: what it is, over three of its category pictures. */
-export function MarketplaceHero() {
+/**
+ * The marketplace's opening card. With no shops live yet, its badge and
+ * line say the marketplace is opening, so that news sits at the top rather
+ * than in a card between the categories and the list.
+ */
+export function MarketplaceHero({ opening }: { opening: boolean }) {
   const { t } = useTranslation();
-  const arts = ['fashion', 'ornaments', 'mehandi'].map((key) => SELLER_CATEGORIES.find((c) => c.key === key)!.art);
   return (
     <section
-      className="relative isolate overflow-hidden rounded-[1.75rem] p-5 text-white shadow-float motion-safe:animate-fade-slide-in"
-      style={{ background: 'linear-gradient(135deg, #7B3FE4 0%, #4A1A9E 50%, #C2410C 130%)' }}
+      className="relative isolate flex min-h-[8.5rem] items-center overflow-hidden rounded-[1.75rem] p-4 pr-[40%] text-white shadow-[0_14px_26px_-12px_rgba(157,23,77,0.6)] motion-safe:animate-rise-in"
+      style={{ background: 'linear-gradient(135deg, #EC4899 0%, #BE185D 55%, #6B1D8F 110%)' }}
       data-testid="market-hero"
     >
-      <span aria-hidden="true" className="pointer-events-none absolute -left-12 -top-14 -z-10 h-44 w-44 rounded-full bg-white/15 blur-2xl motion-safe:animate-drift" />
-      <span aria-hidden="true" className="pointer-events-none absolute -bottom-16 -right-10 -z-10 h-48 w-48 rounded-full bg-accent-orange/40 blur-2xl motion-safe:animate-drift-slow" />
+      <span aria-hidden="true" className="pointer-events-none absolute -left-12 -top-14 -z-10 h-44 w-44 rounded-full bg-white/20 blur-2xl motion-safe:animate-drift" />
+      <span aria-hidden="true" className="pointer-events-none absolute -bottom-16 -right-10 -z-10 h-48 w-48 rounded-full bg-amber-300/30 blur-2xl motion-safe:animate-drift-slow" />
       <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 -z-10 w-1/3 bg-gradient-to-r from-transparent via-white/15 to-transparent motion-safe:animate-sheen" />
 
-      <div className="relative z-10 max-w-[64%]">
-        <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2.5 py-0.5 text-micro font-semibold uppercase tracking-wide backdrop-blur-sm">
-          <Sparkles className="h-3 w-3" aria-hidden="true" />
-          {t('seller.discover.eyebrow')}
+      <div className="relative z-10">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-2.5 py-0.5 text-micro font-semibold uppercase tracking-wide backdrop-blur-sm">
+          {opening ? (
+            <span className="relative flex h-1.5 w-1.5" aria-hidden="true">
+              <span className="absolute inset-0 rounded-full bg-emerald-300 motion-safe:animate-pulse-ring" />
+              <span className="relative h-1.5 w-1.5 rounded-full bg-emerald-300" />
+            </span>
+          ) : (
+            <Sparkles className="h-3 w-3" aria-hidden="true" />
+          )}
+          {opening ? t('seller.discover.openingBadge') : t('seller.discover.eyebrow')}
         </span>
         <h2 className="mt-2 font-heading text-section leading-tight [text-shadow:0_1px_2px_rgba(0,0,0,0.2)]">{t('seller.discover.title')}</h2>
-        <p className="mt-1 text-caption opacity-90">{t('seller.discover.body')}</p>
+        <p className="mt-1 text-caption opacity-90">{opening ? t('seller.discover.openingBody') : t('seller.discover.body')}</p>
       </div>
 
-      {/* Three pictures, stacked and hovering on their own beats. */}
-      <div aria-hidden="true" className="absolute -right-1 bottom-3 top-4 w-[38%]">
-        {arts.map((art, i) => (
-          <img
-            key={art}
-            src={art}
-            alt=""
-            draggable={false}
-            className={`absolute select-none object-contain drop-shadow-[0_12px_14px_rgba(0,0,0,0.3)] motion-safe:animate-bob ${
-              ['right-1 top-0 h-[4.5rem] w-[4.5rem]', 'left-0 top-1/2 h-16 w-16 -translate-y-1/2', 'bottom-0 right-4 h-[4.5rem] w-[4.5rem]'][i]
-            }`}
-            style={{ animationDelay: `${i * -1.7}s` }}
-          />
-        ))}
-      </div>
+      <img
+        src={marketplaceArt}
+        alt=""
+        aria-hidden="true"
+        draggable={false}
+        className="pointer-events-none absolute -right-1 top-1/2 h-[7.75rem] w-[7.75rem] -translate-y-1/2 select-none object-contain drop-shadow-[0_14px_16px_rgba(0,0,0,0.3)]"
+      />
     </section>
   );
 }
 
-/** Browse by category: the six, as big picture tiles, each narrowing the list to itself. */
+/**
+ * "What are you looking for?": the six categories as the screen's main
+ * control - big pictures two to a row, each with its name and what is in
+ * it, so she can find her way by picture alone. A light sweeps across them
+ * one after another, and a tapping finger beside the heading shows what to
+ * do without needing the words.
+ */
 export function CategoryGrid({ onPick }: { onPick: (value: SellerCategory) => void }) {
   const { t } = useTranslation();
   return (
     <section data-testid="market-categories">
-      <h2 className="mb-3 font-heading text-section text-text-primary">{t('seller.discover.byCategory')}</h2>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="mb-3 flex items-end justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="font-heading text-section text-text-primary">{t('seller.discover.byCategory')}</h2>
+          <p className="mt-0.5 flex items-center gap-1.5 text-caption font-medium text-primary">
+            <Pointer className="h-4 w-4 shrink-0 motion-safe:animate-tap-hint" aria-hidden="true" />
+            {t('seller.discover.byCategoryHint')}
+          </p>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
         {SELLER_CATEGORIES.map((c, i) => (
           <button
             key={c.value}
             type="button"
             onClick={() => onPick(c.value)}
-            style={{ animationDelay: `${120 + i * 60}ms` }}
-            className={`group relative flex flex-col items-center overflow-hidden rounded-card ${c.tint} px-1.5 pb-3 pt-2 text-center shadow-lift transition-transform duration-150 motion-safe:animate-pop-in motion-safe:active:scale-95`}
+            style={{ animationDelay: `${140 + i * 70}ms` }}
+            className={`group relative isolate flex min-w-0 flex-col items-center overflow-hidden rounded-[1.5rem] ${c.tint} px-2 pb-3 pt-3 text-center shadow-lift transition-transform duration-150 motion-safe:animate-pop-in motion-safe:active:scale-95`}
             data-testid={`market-category-${c.key}`}
           >
-            {/* A soft disc of light behind the picture, so each one sits on a stage. */}
-            <span aria-hidden="true" className="absolute left-1/2 top-3 h-16 w-16 -translate-x-1/2 rounded-full bg-surface/70 blur-md" />
+            {/* A soft disc of light the picture stands on. */}
+            <span aria-hidden="true" className="absolute left-1/2 top-4 -z-10 h-20 w-20 -translate-x-1/2 rounded-full bg-surface/80 blur-md" />
+            {/* The light passing from tile to tile, in reading order. */}
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-y-0 left-0 -z-10 w-1/2 bg-gradient-to-r from-transparent via-white/40 to-transparent motion-safe:animate-sheen"
+              style={{ animationDelay: `${1 + i * 0.45}s` }}
+            />
             <img
               src={c.art}
               alt=""
               aria-hidden="true"
               loading="lazy"
               draggable={false}
-              className="relative h-[4.5rem] w-[4.5rem] object-contain drop-shadow-[0_8px_10px_rgba(74,26,158,0.18)] transition-transform duration-300 ease-out group-hover:-translate-y-1 group-hover:scale-105"
+              className="h-24 w-24 select-none object-contain drop-shadow-[0_10px_12px_rgba(74,26,158,0.2)] transition-transform duration-300 ease-out group-hover:-translate-y-1 group-hover:scale-105"
             />
-            <span className="relative mt-1 text-caption font-semibold leading-tight text-text-primary">{t(`seller.categories.${c.key}`)}</span>
+            <span className="mt-1.5 font-heading text-card-title leading-tight text-text-primary">{t(`seller.categories.${c.key}`)}</span>
+            <span className="mt-0.5 line-clamp-2 text-caption leading-snug text-text-secondary">{t(`seller.discover.hints.${c.key}`)}</span>
           </button>
         ))}
       </div>
@@ -88,57 +111,89 @@ export function CategoryGrid({ onPick }: { onPick: (value: SellerCategory) => vo
   );
 }
 
-/** What she can count on here, in three short lines. */
-export function TrustStrip() {
+/**
+ * Once she has picked a category, the six stay in reach as a row of
+ * pictures, the ones she is looking at lit, so switching is one tap on a
+ * picture rather than a trip into the filter sheet. "All" goes back to
+ * browsing everything.
+ */
+export function CategoryRail({ selected, onPick, onAll }: {
+  selected: SellerCategory[];
+  onPick: (value: SellerCategory) => void;
+  onAll: () => void;
+}) {
   const { t } = useTranslation();
-  const items: { icon: ReactNode; title: string; body: string; tone: string }[] = [
-    { icon: <ShieldCheck />, title: t('seller.discover.trust.verifiedTitle'), body: t('seller.discover.trust.verifiedBody'), tone: 'bg-accent-green-tint text-accent-green-strong' },
-    { icon: <MessageCircle />, title: t('seller.discover.trust.directTitle'), body: t('seller.discover.trust.directBody'), tone: 'bg-accent-blue-tint text-accent-blue-strong' },
-    { icon: <Wallet />, title: t('seller.discover.trust.feeTitle'), body: t('seller.discover.trust.feeBody'), tone: 'bg-accent-orange-tint text-accent-orange-strong' },
-  ];
+  const pill = 'flex shrink-0 snap-start flex-col items-center gap-1 rounded-2xl border-2 px-2 pb-1.5 pt-1.5 transition-colors duration-200 motion-safe:active:scale-95';
   return (
-    <section
-      className="-mx-screen flex snap-x scroll-px-screen gap-3 overflow-x-auto px-screen pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      aria-label={t('seller.discover.trust.label')}
-      data-testid="market-trust"
+    <nav
+      aria-label={t('seller.browse.categories')}
+      className="-mx-screen flex snap-x scroll-px-screen gap-2 overflow-x-auto px-screen pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      data-testid="market-category-rail"
     >
-      {items.map((item, i) => (
-        <div
-          key={item.title}
-          style={{ animationDelay: `${260 + i * 80}ms` }}
-          className="flex w-[72%] max-w-[15rem] shrink-0 snap-start items-start gap-3 rounded-card border border-border bg-surface p-3 shadow-lift motion-safe:animate-fade-slide-in"
-        >
-          <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full [&>svg]:h-5 [&>svg]:w-5 ${item.tone}`} aria-hidden="true">
-            {item.icon}
-          </span>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-text-primary">{item.title}</p>
-            <p className="mt-0.5 text-caption text-text-secondary">{item.body}</p>
-          </div>
-        </div>
-      ))}
-    </section>
+      <button
+        type="button"
+        onClick={onAll}
+        aria-pressed={selected.length === 0}
+        className={`${pill} w-[4.75rem] ${selected.length === 0 ? 'border-primary bg-primary-light' : 'border-transparent bg-surface'}`}
+      >
+        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-text-inverse">
+          <LayoutGrid className="h-5 w-5" aria-hidden="true" />
+        </span>
+        <span className="text-micro font-semibold leading-tight text-text-primary">{t('seller.discover.all')}</span>
+      </button>
+      {SELLER_CATEGORIES.map((c, i) => {
+        const on = selected.includes(c.value);
+        return (
+          <button
+            key={c.value}
+            type="button"
+            onClick={() => onPick(c.value)}
+            aria-pressed={on}
+            style={{ animationDelay: `${i * 40}ms` }}
+            className={`${pill} w-[4.75rem] motion-safe:animate-fade-slide-in ${on ? 'border-primary bg-primary-light shadow-lift' : 'border-transparent bg-surface'}`}
+            data-testid={`rail-category-${c.key}`}
+          >
+            <span className={`relative flex h-12 w-12 items-center justify-center rounded-full ${c.tint}`}>
+              <img src={c.art} alt="" aria-hidden="true" loading="lazy" draggable={false} className={`h-11 w-11 object-contain transition-transform duration-300 ${on ? 'scale-110' : ''}`} />
+              {on && (
+                <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-text-inverse ring-2 ring-surface motion-safe:animate-pop-in">
+                  <Check className="h-2.5 w-2.5" strokeWidth={3.5} aria-hidden="true" />
+                </span>
+              )}
+            </span>
+            <span className={`line-clamp-2 text-center text-micro font-semibold leading-tight ${on ? 'text-primary' : 'text-text-primary'}`}>
+              {t(`seller.categories.${c.key}`)}
+            </span>
+          </button>
+        );
+      })}
+    </nav>
   );
 }
 
-/** How buying works here: find, contact, agree - joined by a line so it reads as one path. */
+/**
+ * How buying works, for the buyer: pick, contact her, pay her. Each step
+ * also carries one thing she can count on - the seller is verified, there
+ * is no middleman, SheOut takes nothing - so this is the only "why trust
+ * this" on the screen. The line joining the steps draws itself down.
+ */
 export function HowItWorks() {
   const { t } = useTranslation();
   const steps = [
-    { icon: <Search />, title: t('seller.discover.how.step1Title'), body: t('seller.discover.how.step1Body') },
-    { icon: <MessageCircle />, title: t('seller.discover.how.step2Title'), body: t('seller.discover.how.step2Body') },
-    { icon: <Store />, title: t('seller.discover.how.step3Title'), body: t('seller.discover.how.step3Body') },
+    { icon: <ShieldCheck />, tone: 'bg-accent-green', title: t('seller.discover.how.step1Title'), body: t('seller.discover.how.step1Body') },
+    { icon: <MessageCircle />, tone: 'bg-accent-blue', title: t('seller.discover.how.step2Title'), body: t('seller.discover.how.step2Body') },
+    { icon: <Wallet />, tone: 'bg-accent-orange', title: t('seller.discover.how.step3Title'), body: t('seller.discover.how.step3Body') },
   ];
   return (
-    <section className="rounded-card border border-border bg-surface p-4 shadow-lift" data-testid="market-how">
+    <section className="rounded-[1.5rem] border border-border bg-surface p-4 shadow-lift" data-testid="market-how">
       <h2 className="font-heading text-card-title text-text-primary">{t('seller.discover.how.title')}</h2>
-      <ol className="relative mt-3 space-y-4">
-        <span aria-hidden="true" className="absolute bottom-4 left-[1.125rem] top-4 w-0.5 rounded-full bg-gradient-to-b from-primary via-primary-mid to-accent-orange opacity-40" />
+      <ol className="relative mt-4 space-y-5">
+        <span aria-hidden="true" className="absolute bottom-5 left-[1.375rem] top-5 w-0.5 origin-top rounded-full bg-gradient-to-b from-accent-green via-accent-blue to-accent-orange opacity-50 motion-safe:animate-fill-y" />
         {steps.map((step, i) => (
-          <li key={step.title} className="relative flex items-start gap-3">
-            <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-text-inverse shadow-lift [&>svg]:h-4 [&>svg]:w-4" aria-hidden="true">
+          <li key={step.title} className="relative flex items-start gap-3 motion-safe:animate-fade-slide-in" style={{ animationDelay: `${250 + i * 180}ms` }}>
+            <span className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${step.tone} text-white shadow-lift [&>svg]:h-5 [&>svg]:w-5`} aria-hidden="true">
               {step.icon}
-              <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-accent-orange text-[0.625rem] font-bold text-white ring-2 ring-surface">
+              <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-surface text-[0.6875rem] font-bold text-text-primary shadow-lift">
                 {i + 1}
               </span>
             </span>
@@ -154,39 +209,75 @@ export function HowItWorks() {
 }
 
 /**
- * In place of "No shops yet": the marketplace is opening, not empty. Says
- * so plainly, and offers the one thing she can do about it today - open a
- * shop of her own.
+ * The seller's way in, last on the screen and labelled "For sellers", so a
+ * buyer never mistakes it for something she has to do. Opens the same place
+ * as the drawer's "Sell on SheOut": registration for a new seller, her shop
+ * for an existing one. Every claim on it is one the marketplace keeps:
+ * sellers pay a listing fee, SheOut takes nothing from a sale, and buyers
+ * contact her directly.
  */
-export function LaunchCard({ onSell }: { onSell: () => void }) {
+export function SellCard({ onOpen }: { onOpen: () => void }) {
   const { t } = useTranslation();
+  const points = [t('seller.discover.sell.point1'), t('seller.discover.sell.point2')];
+  const arts = ['fashion', 'mehandi', 'gifts'].map((key) => SELLER_CATEGORIES.find((c) => c.key === key)!.art);
+
   return (
     <section
-      className="relative isolate overflow-hidden rounded-card border border-primary/15 bg-primary-light p-5 text-center motion-safe:animate-fade-slide-in"
-      data-testid="market-launch"
+      className="relative isolate overflow-hidden rounded-[1.75rem] border border-primary/15 bg-primary-light p-5 shadow-lift"
+      data-testid="market-sell"
     >
-      <span aria-hidden="true" className="pointer-events-none absolute -right-12 -top-12 -z-10 h-40 w-40 rounded-full bg-accent-orange/25 blur-2xl motion-safe:animate-drift" />
-      <span className="relative mx-auto flex h-14 w-14 items-center justify-center">
-        <span aria-hidden="true" className="absolute inset-2 rounded-full bg-primary/40 motion-safe:animate-pulse-ring" />
-        <span className="relative flex h-14 w-14 items-center justify-center rounded-full bg-surface text-primary shadow-float">
-          <Store className="h-6 w-6" aria-hidden="true" />
-        </span>
-      </span>
-      <span className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-surface px-2.5 py-0.5 text-micro font-semibold uppercase tracking-wide text-primary">
-        <span className="h-1.5 w-1.5 rounded-full bg-accent-green" aria-hidden="true" />
-        {t('seller.discover.launch.badge')}
-      </span>
-      <h2 className="mt-2 font-heading text-section text-text-primary">{t('seller.discover.launch.title')}</h2>
-      <p className="mx-auto mt-1 max-w-[18rem] text-sm text-text-secondary">{t('seller.discover.launch.body')}</p>
+      <span aria-hidden="true" className="pointer-events-none absolute -right-16 -top-16 -z-10 h-48 w-48 rounded-full bg-accent-orange/25 blur-2xl motion-safe:animate-drift" />
+      <span aria-hidden="true" className="pointer-events-none absolute -bottom-20 -left-10 -z-10 h-44 w-44 rounded-full bg-primary/15 blur-2xl motion-safe:animate-drift-slow" />
+
+      <div className="flex gap-3">
+        <div className="min-w-0 flex-1">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-surface px-2.5 py-1 text-micro font-semibold uppercase tracking-wide text-primary shadow-lift">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inset-0 rounded-full bg-accent-orange motion-safe:animate-pulse-ring" />
+              <span className="relative h-2 w-2 rounded-full bg-accent-orange" />
+            </span>
+            {t('seller.discover.sell.eyebrow')}
+          </span>
+          <p className="mt-2.5 font-heading text-section leading-tight text-text-primary">{t('seller.discover.sell.title')}</p>
+          <p className="mt-1 text-caption text-text-secondary">{t('seller.discover.sell.body')}</p>
+          <ul className="mt-2.5 space-y-1">
+            {points.map((point) => (
+              <li key={point} className="flex items-center gap-1.5 text-caption font-medium text-text-primary">
+                <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-accent-green text-white">
+                  <Check className="h-2.5 w-2.5" strokeWidth={3.5} aria-hidden="true" />
+                </span>
+                {point}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Three of the category pictures, fanned like cards in a hand, each hovering on its own beat. */}
+        <div aria-hidden="true" className="relative h-32 w-[6.5rem] shrink-0">
+          {arts.map((art, i) => (
+            <span key={art} className={`absolute ${['left-0 top-7 z-0 -rotate-12', 'left-7 top-0 z-10 rotate-3', 'left-3 top-[4.5rem] z-20 rotate-6'][i]}`}>
+              <img
+                src={art}
+                alt=""
+                loading="lazy"
+                draggable={false}
+                className="h-[3.75rem] w-[3.75rem] rounded-2xl bg-surface object-contain p-1 shadow-float motion-safe:animate-bob"
+                style={{ animationDelay: `${i * -1.6}s` }}
+              />
+            </span>
+          ))}
+        </div>
+      </div>
+
       <button
         type="button"
-        onClick={onSell}
-        className="group relative mx-auto mt-4 flex items-center justify-center gap-2 overflow-hidden rounded-full bg-primary px-5 py-3 font-heading text-sm text-text-inverse shadow-float transition-transform duration-100 motion-safe:active:scale-[0.98]"
-        data-testid="market-launch-sell"
+        onClick={onOpen}
+        className="group relative mt-4 flex w-full items-center justify-center gap-2 overflow-hidden rounded-full bg-primary px-4 py-3 font-heading text-sm text-text-inverse shadow-float transition-transform duration-100 motion-safe:active:scale-[0.98]"
+        data-testid="market-sell-cta"
       >
         <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-transparent via-white/25 to-transparent motion-safe:animate-sheen" />
-        {t('seller.discover.launch.cta')}
-        <ArrowRight className="h-4 w-4" aria-hidden="true" />
+        {t('seller.discover.sell.cta')}
+        <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden="true" />
       </button>
     </section>
   );

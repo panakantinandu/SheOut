@@ -201,6 +201,37 @@ export default {
           from: { transform: 'scaleX(0)' },
           to: { transform: 'scaleX(1)' },
         },
+        // A line drawing itself downward, joining steps in order.
+        'fill-y': {
+          from: { transform: 'scaleY(0)' },
+          to: { transform: 'scaleY(1)' },
+        },
+        // A scooter on the move: the small, quick up-and-down of wheels on a
+        // road, with the faintest rock. Much faster and smaller than bob.
+        ride: {
+          '0%, 100%': { transform: 'translateY(0) rotate(0deg)' },
+          '25%': { transform: 'translateY(-2px) rotate(-0.8deg)' },
+          '50%': { transform: 'translateY(0) rotate(0deg)' },
+          '75%': { transform: 'translateY(-1.5px) rotate(0.6deg)' },
+        },
+        // A streak of wind passing behind something moving forward.
+        'speed-line': {
+          '0%': { transform: 'translateX(60%) scaleX(0.4)', opacity: '0' },
+          '25%': { opacity: '1' },
+          '100%': { transform: 'translateX(-180%) scaleX(1)', opacity: '0' },
+        },
+        // A map pin landing and settling: where you are going.
+        'pin-drop': {
+          '0%': { transform: 'translateY(-14px)', opacity: '0' },
+          '55%': { transform: 'translateY(2px)', opacity: '1' },
+          '75%': { transform: 'translateY(-3px)' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+        // A finger tapping, for "tap a picture" - a hint that reads without words.
+        'tap-hint': {
+          '0%, 60%, 100%': { transform: 'translate(0, 0) scale(1)' },
+          '30%': { transform: 'translate(2px, 3px) scale(0.86)' },
+        },
       },
       animation: {
         shimmer: 'shimmer 1.6s linear infinite',
@@ -221,6 +252,11 @@ export default {
         sheen: 'sheen 5.5s ease-in-out infinite',
         bob: 'bob 5s ease-in-out infinite',
         'fill-x': 'fill-x linear both',
+        'fill-y': 'fill-y 900ms cubic-bezier(0.22, 1, 0.36, 1) 200ms both',
+        ride: 'ride 0.9s ease-in-out infinite',
+        'speed-line': 'speed-line 1.3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'pin-drop': 'pin-drop 700ms cubic-bezier(0.22, 1, 0.36, 1) both',
+        'tap-hint': 'tap-hint 1.8s ease-in-out infinite',
       },
     },
   },
