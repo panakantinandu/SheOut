@@ -25,7 +25,6 @@
     "threeWomen": "Three women standing together",
     "serviceRide": "Bike Taxi",
     "serviceParcel": "Parcel Delivery",
-    "greeting": "Hello, {{name}} 👋",
     "there": "there",
     "subtitle": "Your safety, our priority",
     "bannerTitle": "Ride with confidence",
@@ -62,6 +61,28 @@
       "line1": "Where would you like to go today?",
       "line2": "Ask me about rides, payments or safety",
       "open": "Ask {{name}}"
+    },
+    "day": {
+      "morning": {
+        "greeting": "Good morning, {{name}}",
+        "line1": "Where are you headed today?",
+        "line2": "Start your day with a safe ride"
+      },
+      "afternoon": {
+        "greeting": "Good afternoon, {{name}}",
+        "line1": "Need a ride or a parcel sent?",
+        "line2": "Verified women partners, near you"
+      },
+      "evening": {
+        "greeting": "Good evening, {{name}}",
+        "line1": "Heading home? Book a safe ride",
+        "line2": "Share your trip with family in one tap"
+      },
+      "night": {
+        "greeting": "Hello, {{name}}",
+        "line1": "Travelling late? SOS is one tap away",
+        "line2": "Share your live trip with someone you trust"
+      }
     }
   },
   "about": {

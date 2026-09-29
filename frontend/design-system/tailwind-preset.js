@@ -276,6 +276,16 @@ export default {
           '0%': { transform: 'scale(0.85)', opacity: '0.7' },
           '100%': { transform: 'scale(1.5)', opacity: '0' },
         },
+        // A star in the night sky of the greeting, brightening and dimming.
+        twinkle: {
+          '0%, 100%': { opacity: '1', transform: 'scale(1)' },
+          '50%': { opacity: '0.3', transform: 'scale(0.6)' },
+        },
+        // A rupee coin turning over once as today's earnings arrive.
+        'coin-flip': {
+          from: { transform: 'rotateY(0deg)' },
+          to: { transform: 'rotateY(360deg)' },
+        },
         // The assistant's head, nodding a little as she listens.
         nod: {
           '0%, 100%': { transform: 'rotate(0deg)' },
@@ -332,6 +342,8 @@ export default {
         'glow-go': 'glow-go 2.2s ease-out infinite',
         ripple: 'ripple 2.4s ease-out infinite',
         nod: 'nod 3.6s ease-in-out infinite',
+        twinkle: 'twinkle 2.2s ease-in-out infinite',
+        'coin-flip': 'coin-flip 1.1s cubic-bezier(0.22, 1, 0.36, 1) 300ms both',
         'mic-glow': 'mic-glow 1.6s ease-in-out infinite',
       },
     },

@@ -414,6 +414,12 @@ sheout:
     max-products: ${SELLER_MAX_PRODUCTS:100}
 
   notifications:
+    # "We miss you" reminders to riders and partners away from the app for a
+    # week or more - see ReengagementNudger / ReengagementPlan. Push only,
+    # daytime hours in India, at most three per stretch away. Set
+    # REENGAGEMENT_ENABLED=false to stop them without a deploy.
+    reengagement:
+      enabled: ${REENGAGEMENT_ENABLED:true}
     sms:
       twilio:
         # Blank by default, same treatment as Razorpay's key-id/key-secret -

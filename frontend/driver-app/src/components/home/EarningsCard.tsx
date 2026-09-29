@@ -32,7 +32,13 @@ export function EarningsCard({ amount, rides, activeTrips, onOpen }: { amount: n
             ₹{rupees.format(Math.round(shownAmount))}
           </p>
         </div>
-        <ChevronRight className="mt-1 h-6 w-6 shrink-0 text-text-secondary" aria-hidden="true" />
+        <span className="flex shrink-0 items-center gap-2">
+          {/* A rupee coin turning over once as the figure arrives. */}
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-300 bg-gradient-to-br from-amber-200 to-amber-400 font-heading text-lg font-bold text-amber-900 shadow-lift ring-2 ring-amber-200 [perspective:400px] motion-safe:animate-coin-flip" aria-hidden="true" data-testid="earnings-coin">
+            ₹
+          </span>
+          <ChevronRight className="h-6 w-6 text-text-secondary" aria-hidden="true" />
+        </span>
       </div>
       <div className="mt-4 grid grid-cols-2 gap-3 border-t border-border pt-3">
         <Metric value={shownRides} label={t('home.ridesToday')} />

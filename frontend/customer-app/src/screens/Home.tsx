@@ -1,7 +1,7 @@
 import { ArrowRight, ChevronRight, LayoutGrid, Store } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ASSISTANT_NAME, PushPromptCard, TopHeader, contentText, useContentSection, useAppLanguage, usePushNotifications, useUnreadNotifications, bikeTaxiArt, parcelArt, marketplaceArt, womenArt } from '@sheout/design-system';
+import { ASSISTANT_NAME, AssistantFab, PushPromptCard, RotatingText, SkyIcon, TopHeader, useDayPart, contentText, useContentSection, useAppLanguage, usePushNotifications, useUnreadNotifications, bikeTaxiArt, parcelArt, marketplaceArt, womenArt } from '@sheout/design-system';
 import { OutOfAreaBanner } from '../components/OutOfAreaBanner';
 import { UnpaidTripBanner } from '../components/UnpaidTripBanner';
 import { useAppDrawer } from '../components/AppDrawer';
@@ -11,7 +11,7 @@ import { CommunityCard } from '../components/home/CommunityCard';
 import { CategoryMarquee } from '../components/home/CategoryMarquee';
 import { QuickAccess } from '../components/home/QuickAccess';
 import { AllServicesSheet } from '../components/home/AllServicesSheet';
-import { AgentFab } from '../components/home/AgentFab';
+
 import { SELLER_CATEGORIES } from '../lib/seller';
 import { PUSH_TOKEN_KEY, contentApi, notificationsApi, pushApi, usersApi } from '../api/client';
 import type { CustomerProfileSummary } from '../api/types';
@@ -84,7 +84,11 @@ export function Home() {
   // that fallback is only correct once we actually know the name is
   // missing, not while we simply don't know yet (was flashing briefly for
   // every user, including ones with a saved name, before the fetch resolved).
-  const greeting = profileLoading ? '' : t('home.greeting', { name: firstName || t('home.there') });
+  // Good morning / afternoon / evening, with the sky beside it and a line
+  // for that time of day changing softly under it.
+  const dayPart = useDayPart();
+  const greeting = profileLoading ? '' : t(`home.day.${dayPart}.greeting`, { name: firstName || t('home.there') });
+  const dayLines = [t(`home.day.${dayPart}.line1`), t(`home.day.${dayPart}.line2`), t('home.subtitle')];
   // Straight after sign-in this is the first screen she sees, so this is
   // where the one notification-permission prompt appears.
   const push = usePushNotifications(pushApi, PUSH_TOKEN_KEY, true);
@@ -97,7 +101,8 @@ export function Home() {
       <TopHeader
         variant="greeting"
         title={greeting}
-        subtitle={t('home.subtitle')}
+        titleIcon={<SkyIcon part={dayPart} size={26} />}
+        subtitle={<RotatingText lines={dayLines} />}
         // No side-drawer/menu screen exists - "Open menu" goes to the
         // closest thing that already serves that purpose (account/settings).
         // The drawer, not Profile: Profile already has its own tab, and the
@@ -255,7 +260,7 @@ export function Home() {
       <div className="h-14" aria-hidden="true" />
 
       {/* The assistant, standing by in the corner, clear of SOS in the middle of the bar. */}
-      <AgentFab
+      <AssistantFab
         lines={[
           t('home.agent.hello', { name: firstName || t('home.there') }),
           t('home.agent.line1'),

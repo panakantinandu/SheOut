@@ -30,7 +30,10 @@ interface BackHeaderProps {
 interface GreetingHeaderProps {
   variant: 'greeting';
   title: string;
-  subtitle?: string;
+  /** A line under the title - a string, or something livelier such as RotatingText. */
+  subtitle?: ReactNode;
+  /** A small picture before the title, such as the time of day's SkyIcon. */
+  titleIcon?: ReactNode;
   onMenuClick?: () => void;
   onBellClick?: () => void;
   /** Unread notifications; the bell shows a count above zero. */
@@ -105,9 +108,12 @@ export function TopHeader(props: TopHeaderProps) {
       >
         <Menu className="h-5 w-5" />
       </button>
-      <div className="flex-1 px-3">
-        <p className="font-heading text-section text-text-primary">{props.title}</p>
-        {props.subtitle && <p className="text-sm text-text-secondary">{props.subtitle}</p>}
+      <div className="min-w-0 flex-1 px-3">
+        <p className="flex items-center gap-2 font-heading text-section text-text-primary">
+          {props.titleIcon}
+          <span className="min-w-0">{props.title}</span>
+        </p>
+        {props.subtitle && <div className="text-sm text-text-secondary">{props.subtitle}</div>}
       </div>
       <button
         type="button"

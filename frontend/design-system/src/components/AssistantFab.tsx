@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { AssistantAvatar, usePrefersReducedMotion } from '@sheout/design-system';
+import { usePrefersReducedMotion } from '../lib/motion';
+import { AssistantAvatar } from './AssistantAvatar';
 
 /** How long each beat of the bubble lasts: typing, then the message, then a pause. */
 const TYPING_MS = 1400;
@@ -12,8 +13,8 @@ const REST_MS = 24000;
 type Phase = 'hidden' | 'typing' | 'message';
 
 /**
- * The assistant, as an agent standing by in the bottom-right corner of Home,
- * above the tab bar - not a card in the list.
+ * The assistant, as an agent standing by in the bottom-right corner of Home
+ * in both apps, above the tab bar - not a card in the list.
  * <p>
  * Its animated face sits in a slowly turning ring with a green "online"
  * dot. Beside it a chat bubble does what a live agent does: shows it
@@ -26,7 +27,7 @@ type Phase = 'hidden' | 'typing' | 'message';
  * wrapper (see Overlay), which would otherwise make `fixed` scroll away
  * with the page.
  */
-export function AgentFab({ lines, label, onOpen }: { lines: string[]; label: string; onOpen: () => void }) {
+export function AssistantFab({ lines, label, onOpen }: { lines: string[]; label: string; onOpen: () => void }) {
   const reduced = usePrefersReducedMotion();
   const [phase, setPhase] = useState<Phase>('hidden');
   const [line, setLine] = useState(0);

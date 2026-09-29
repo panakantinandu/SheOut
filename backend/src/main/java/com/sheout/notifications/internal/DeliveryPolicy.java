@@ -59,6 +59,9 @@ record DeliveryPolicy(boolean push, boolean emailFallback, boolean smsFallback, 
             // SOS contact texts are sent by SosService itself - to other
             // people's numbers, not through an account's devices.
             case SOS_ALERT -> INBOX_ONLY;
+            // A reminder, not news: a push she can swipe away, never a paid text
+            // or an email - a reminder that costs her attention elsewhere is spam.
+            case REENGAGEMENT -> PUSH_ONLY;
         };
     }
 }

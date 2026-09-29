@@ -62,3 +62,6 @@ export * from './ThinkingIndicator';
 export * from './AssistantEntryCard';
 export * from './Stepper';
 export * from './KeyboardAwareScreen';
+export * from './AssistantFab';
+export * from './SkyIcon';
+export * from './RotatingText';

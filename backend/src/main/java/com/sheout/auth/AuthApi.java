@@ -4,6 +4,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -27,6 +28,14 @@ public interface AuthApi {
 
     /** Whether there is a consent record for this account at all. */
     boolean hasAcceptedTerms(UUID accountId);
+
+    /**
+     * When she last used SheOut on any device she is still signed in on - the
+     * newest activity across her live sessions. Empty when she has none
+     * (signed out everywhere). For telling "hasn't opened the app in a
+     * while" from "opened it on another phone yesterday".
+     */
+    Optional<Instant> lastActiveAt(UUID accountId);
 
     /**
      * Email addresses of accounts in a role, a page at a time, for an

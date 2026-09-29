@@ -1,7 +1,7 @@
 import { Bell, CloudOff, Hourglass, Menu, RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AggregateRatingText, BellBadge, Button, Card, IconCircle, PushPromptCard, SkeletonList, bookingStatusLabel, usePushMessages, usePushNotifications, useUnreadNotifications, ServiceArt, serviceArtFor } from '@sheout/design-system';
+import { ASSISTANT_NAME, AggregateRatingText, AssistantFab, BellBadge, Button, Card, IconCircle, PushPromptCard, RotatingText, SkeletonList, SkyIcon, bookingStatusLabel, useDayPart, usePushMessages, usePushNotifications, useUnreadNotifications, ServiceArt, serviceArtFor } from '@sheout/design-system';
 import {
   ApiError,
   PUSH_TOKEN_KEY,
@@ -26,6 +26,7 @@ import { StatusHero } from '../components/home/StatusHero';
 import { LocationHelpSheet } from '../components/home/LocationHelpSheet';
 import { EarningsCard } from '../components/home/EarningsCard';
 import { RecentTrips } from '../components/home/RecentTrips';
+import { BrandStrip } from '../components/home/BrandStrip';
 import { DRIVER_HOME_MAP_ENABLED, HomeMapCard } from '../components/home/HomeMapCard';
 
 const BOOKINGS_POLL_MS = 5000;
@@ -364,29 +365,28 @@ export function Home() {
   }
 
   const firstName = profile?.name?.trim().split(/\s+/)[0];
+  // Good morning / afternoon / evening, the sky beside it, and a line for
+  // that time of day changing softly under it.
+  const dayPart = useDayPart();
+  const dayLines = [t(`home.day.${dayPart}.line1`), t(`home.day.${dayPart}.line2`)];
 
   return (
     <div className="space-y-4">
-      {/* Menu, who she is and how riders rate her, then the bell and SOS.
-          SOS keeps its word label and its sheet; only its place changed -
-          it no longer takes a row of its own. */}
+      {/* An app bar: the menu, SheOut Partner by name, then the bell and SOS.
+          SOS keeps its word label and its sheet; it no longer takes a row of
+          its own. Always here, online or not: the drive home after the last
+          trip is still a drive alone. */}
       <header className="flex items-center gap-2" data-testid="home-header">
         <button
           type="button"
           onClick={drawer.open}
           aria-label={t('home.menu')}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-text-primary hover:bg-background"
+          className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-text-primary hover:bg-background"
         >
           <Menu className="h-6 w-6" aria-hidden="true" />
         </button>
         <div className="min-w-0 flex-1">
-          <p className="break-words font-heading text-section leading-tight text-text-primary" data-testid="home-greeting">
-            {firstName ? t('home.hi', { name: firstName }) : t('home.hiNoName')}
-          </p>
-          {/* AggregateRatingText draws its own star; an icon here doubled it. */}
-          <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-primary-light px-2 py-0.5 text-xs font-semibold text-primary" data-testid="rating-chip">
-            <AggregateRatingText averageStars={rating?.averageStars} totalRatings={rating?.totalRatings} emptyLabel={t('home.notRated')} />
-          </span>
+          <BrandStrip />
         </div>
         <button
           type="button"
@@ -397,12 +397,25 @@ export function Home() {
           <Bell className="h-5 w-5" />
           {unreadCount ? <BellBadge count={unreadCount} /> : null}
         </button>
-        {/* Always here, online or not: the drive home after the last trip is
-            still a drive alone. */}
         <div className="shrink-0">
           <PartnerSos />
         </div>
       </header>
+
+      {/* Good morning, with the sky, a line for this time of day, and how riders rate her. */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="flex items-center gap-2 break-words font-heading text-section leading-tight text-text-primary" data-testid="home-greeting">
+            <SkyIcon part={dayPart} size={26} />
+            <span className="min-w-0">{t(`home.day.${dayPart}.greeting`, { name: firstName || t('home.there') })}</span>
+          </p>
+          <RotatingText lines={dayLines} className="mt-0.5 text-sm text-text-secondary" />
+        </div>
+        {/* AggregateRatingText draws its own star; an icon here doubled it. */}
+        <span className="mt-1 inline-flex shrink-0 items-center gap-1 rounded-full bg-primary-light px-2 py-0.5 text-xs font-semibold text-primary" data-testid="rating-chip">
+          <AggregateRatingText averageStars={rating?.averageStars} totalRatings={rating?.totalRatings} emptyLabel={t('home.notRated')} />
+        </span>
+      </div>
 
       {/* Where she stands, and the one thing to do about it. */}
       {profileError ? (
@@ -478,6 +491,16 @@ export function Home() {
           waiting, decided by the server, not by this screen's idea of what
           just finished. */}
       <RatingPrompt counterpartLabel={t('common.yourRider')} onRated={loadRating} />
+
+      {/* Room at the foot, so the assistant in the corner never sits on the last trip. */}
+      <div className="h-14" aria-hidden="true" />
+
+      {/* The assistant, standing by in the corner, as in the rider app. */}
+      <AssistantFab
+        lines={[t('home.agent.hello', { name: firstName || t('home.there') }), t('home.agent.line1'), t('home.agent.line2')]}
+        label={t('home.agent.open', { name: ASSISTANT_NAME })}
+        onOpen={() => navigate('/help/assistant')}
+      />
     </div>
   );
 }

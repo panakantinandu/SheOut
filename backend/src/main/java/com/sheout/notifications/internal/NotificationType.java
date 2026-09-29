@@ -48,5 +48,11 @@ public enum NotificationType {
     /** To a seller: her shop was approved, rejected, went live or was suspended - see marketplace's SellerStatusChanged. */
     SELLER_STATUS,
     /** An operator's announcement delivered to each account one by one (the SheOut Seller waitlist), not by topic. */
-    ANNOUNCEMENT
+    ANNOUNCEMENT,
+
+    /**
+     * "We miss you": to a rider or partner who has not opened SheOut for a week
+     * or more - see ReengagementNudger. Push only, never a paid text or an email.
+     */
+    REENGAGEMENT
 }

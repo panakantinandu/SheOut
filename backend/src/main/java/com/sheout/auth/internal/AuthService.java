@@ -3,6 +3,7 @@ package com.sheout.auth.internal;
 import com.sheout.auth.AccountBlock;
 import com.sheout.auth.AccountRegistered;
 import com.sheout.auth.AccountRole;
+import com.sheout.auth.AccountSession;
 import com.sheout.auth.AccountSummary;
 import com.sheout.auth.AuthApi;
 import com.sheout.auth.AuthenticatedSession;
@@ -24,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -362,6 +364,13 @@ public class AuthService implements AuthApi {
     @Override
     public boolean hasAcceptedTerms(UUID accountId) {
         return accountRepository.findById(accountId).map(AccountEntity::hasAcceptedTerms).orElse(false);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<Instant> lastActiveAt(UUID accountId) {
+        // Newest activity first; no current session to mark.
+        return sessions.liveSessions(accountId, null).stream().findFirst().map(AccountSession::lastActiveAt);
     }
 
     @Override

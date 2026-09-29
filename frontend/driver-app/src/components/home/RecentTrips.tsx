@@ -48,8 +48,10 @@ export function RecentTrips({ trips, onSeeAll, onOpen }: { trips: BookingSummary
         <ListEmptyState illustrated icon={<Bike />} title={t('home.noTripsTitle')} message={t('home.noTripsBody')} />
       ) : (
         <div className="space-y-3">
-          {trips.map((trip) => (
-            <Card key={trip.id} className="flex items-start gap-3 overflow-hidden p-4" onClick={() => onOpen(trip.id)} data-testid="recent-trip">
+          {trips.map((trip, i) => (
+            // One after another, as the list arrives.
+            <div key={trip.id} className="motion-safe:animate-fade-slide-in" style={{ animationDelay: `${120 + i * 80}ms` }}>
+            <Card className="flex items-start gap-3 overflow-hidden p-4" onClick={() => onOpen(trip.id)} data-testid="recent-trip">
               <ServiceArt kind={serviceArtFor(trip.category)} size="sm" className="mt-0.5 shrink-0" />
               <div className="min-w-0 flex-1">
                 <div className="flex items-start justify-between gap-2">
@@ -67,6 +69,7 @@ export function RecentTrips({ trips, onSeeAll, onOpen }: { trips: BookingSummary
                 </StatusBadge>
               </div>
             </Card>
+            </div>
           ))}
         </div>
       )}

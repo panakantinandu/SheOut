@@ -316,8 +316,6 @@
     "askCardTitle": "Ask SheOut",
     "askCardBody": "Questions about rides, payments or verification? Ask {{name}}.",
     "menu": "Menu",
-    "hi": "Hi, {{name}}",
-    "hiNoName": "Hi there",
     "hero": {
       "offline": {
         "title": "You're offline",
@@ -370,6 +368,36 @@
         "step3": "Allow location for this browser and for SheOut Partner.",
         "step4": "Come back here. This screen updates by itself."
       }
+    },
+    "day": {
+      "morning": {
+        "greeting": "Good morning, {{name}}",
+        "line1": "Ready to accept your next ride?",
+        "line2": "Every ride moves another woman forward"
+      },
+      "afternoon": {
+        "greeting": "Good afternoon, {{name}}",
+        "line1": "Riders near you are booking",
+        "line2": "Stay online to catch the next trip"
+      },
+      "evening": {
+        "greeting": "Good evening, {{name}}",
+        "line1": "Evening rush is on. Riders need you",
+        "line2": "Ride safe, earn well"
+      },
+      "night": {
+        "greeting": "Hello, {{name}}",
+        "line1": "Riding late? Keep SOS within reach",
+        "line2": "Rest well. Tomorrow's riders are waiting"
+      }
+    },
+    "there": "there",
+    "brandPartner": "Partner",
+    "agent": {
+      "hello": "Hi {{name}}! I am here if you need help",
+      "line1": "Questions about trips or payouts?",
+      "line2": "Ask me about verification or safety",
+      "open": "Ask {{name}}"
     }
   },
   "apiError": {
