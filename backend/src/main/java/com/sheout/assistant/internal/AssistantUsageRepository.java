@@ -33,6 +33,30 @@ interface AssistantUsageRepository extends JpaRepository<AssistantUsageEntity, A
              @Param("cacheRead") long cacheReadTokens, @Param("cacheWrite") long cacheWriteTokens,
              @Param("escalations") int escalations, @Param("emergencies") int emergencies);
 
+    /** One marketplace search "in your own words": counted apart from help messages, tokens added to the same totals. */
+    @Modifying
+    @Transactional
+    @Query(value = """
+            insert into assistant_usage (account_id, day, messages, searches, input_tokens, output_tokens, cache_read_tokens,
+                                         cache_write_tokens, escalations, emergencies)
+            values (:accountId, :day, 0, 1, :inputTokens, :outputTokens, :cacheRead, :cacheWrite, 0, 0)
+            on conflict (account_id, day) do update set
+                searches = assistant_usage.searches + 1,
+                input_tokens = assistant_usage.input_tokens + excluded.input_tokens,
+                output_tokens = assistant_usage.output_tokens + excluded.output_tokens,
+                cache_read_tokens = assistant_usage.cache_read_tokens + excluded.cache_read_tokens,
+                cache_write_tokens = assistant_usage.cache_write_tokens + excluded.cache_write_tokens
+            """, nativeQuery = true)
+    void addSearch(@Param("accountId") UUID accountId, @Param("day") LocalDate day,
+                   @Param("inputTokens") long inputTokens, @Param("outputTokens") long outputTokens,
+                   @Param("cacheRead") long cacheReadTokens, @Param("cacheWrite") long cacheWriteTokens);
+
+    @Query(value = "select coalesce(sum(searches), 0) from assistant_usage where account_id = :accountId and day = :day", nativeQuery = true)
+    long searchesOn(@Param("accountId") UUID accountId, @Param("day") LocalDate day);
+
+    @Query(value = "select coalesce(sum(searches), 0) from assistant_usage where day = :day", nativeQuery = true)
+    long allSearchesOn(@Param("day") LocalDate day);
+
     @Query(value = "select coalesce(sum(messages), 0) from assistant_usage where account_id = :accountId and day = :day", nativeQuery = true)
     long messagesOn(@Param("accountId") UUID accountId, @Param("day") LocalDate day);
 
@@ -52,7 +76,7 @@ interface AssistantUsageRepository extends JpaRepository<AssistantUsageEntity, A
     }
 
     @Query(value = """
-            select day as "day", count(*) as "accounts", sum(messages) as "messages", sum(input_tokens) as "inputTokens",
+            select day as "day", count(*) filter (where messages > 0) as "accounts", sum(messages) as "messages", sum(input_tokens) as "inputTokens",
                    sum(output_tokens) as "outputTokens", sum(cache_read_tokens) as "cacheReadTokens",
                    sum(cache_write_tokens) as "cacheWriteTokens", sum(escalations) as "escalations", sum(emergencies) as "emergencies"
             from assistant_usage where day >= :since group by day order by day desc

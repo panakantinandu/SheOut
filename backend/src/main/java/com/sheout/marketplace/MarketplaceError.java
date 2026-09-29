@@ -6,6 +6,10 @@ public enum MarketplaceError {
     ALREADY_A_SELLER,
     /** A contact number that is not a 10-digit Indian mobile number. */
     INVALID_PHONE,
+    /** A website that is not an http(s) address on a real domain. */
+    INVALID_WEBSITE,
+    /** An original price that is not above the price - there is no discount to show. */
+    INVALID_ORIGINAL_PRICE,
     /** Her shop cannot be changed while it is under review, awaiting payment or suspended. */
     NOT_EDITABLE,
     /** Only a draft or a rejected application can be sent for review. */

@@ -2432,7 +2432,7 @@ async function openSeller(r) {
   const whatsapp = s.whatsappNumber ? `+91 ${esc(s.whatsappNumber)}` : '<span class="subtle">None - customers are offered a call</span>';
   const products = detail.products.map(p => `
     <div class="check">
-      <div class="top"><h4>${esc(p.title)}</h4>${p.active ? '' : '<span class="badge b-grey">Hidden by her</span>'}<span class="num strong">${rupees(p.displayPrice)}</span></div>
+      <div class="top"><h4>${esc(p.title)}</h4><span class="badge b-grey num">${esc(p.code || '')}</span>${p.active ? '' : '<span class="badge b-grey">Hidden by her</span>'}<span class="num strong">${p.originalPrice ? `<s class="subtle">${rupees(p.originalPrice)}</s> ` : ''}${rupees(p.displayPrice)}</span></div>
       <p class="pre-wrap">${esc(p.description)}</p>
       ${p.images.length
         ? `<div class="docs">${p.images.map(i => `<div class="doc">${i.url ? `<a href="${escValue(i.url)}" target="_blank" rel="noopener"><img src="${escValue(i.url)}" alt="${escValue(p.title)}" loading="lazy"></a>` : '<div class="fallback">Photo not viewable here</div>'}</div>`).join('')}</div>`
@@ -2457,6 +2457,7 @@ async function openSeller(r) {
         <dt>Contact number</dt><dd class="num">+91 ${esc(s.contactPhone)}</dd>
         <dt>WhatsApp</dt><dd>${whatsapp}</dd>
         <dt>Area</dt><dd>${s.area ? esc(s.area) : '<span class="subtle">Not given</span>'}</dd>
+        <dt>Website</dt><dd>${s.websiteUrl ? `<a href="${escValue(s.websiteUrl)}" target="_blank" rel="noopener noreferrer">${esc(s.websiteUrl)}</a> <span class="subtle">- check it is her own shop</span>` : '<span class="subtle">None</span>'}</dd>
         <dt>Submitted</dt><dd>${s.submittedAt ? time(s.submittedAt) : '<span class="subtle">Not yet</span>'}</dd>
         <dt>Listing fee</dt><dd>${feeBadge(fee)} ${rupees(fee.amount)}${fee.paidAt ? ` <span class="subtle">paid ${esc(time(fee.paidAt))}${fee.method ? ` by ${esc(payMethodText(fee.method))}` : ''}</span>` : ''}</dd>
         ${s.activatedAt ? `<dt>Live since</dt><dd>${time(s.activatedAt)}</dd>` : ''}

@@ -300,14 +300,29 @@ export type SellerStatus = 'DRAFT' | 'SUBMITTED_FOR_REVIEW' | 'APPROVED_AWAITING
 /** One product in the directory list. */
 export interface ListingCard {
   productId: string;
+  /** Short reference code, e.g. 7K9M2XQ - quoted in the WhatsApp message and searchable. */
+  code: string;
   title: string;
   displayPrice: number;
+  /** The price before a discount; above displayPrice when set. */
+  originalPrice: number | null;
   imageUrl: string | null;
   sellerId: string;
   businessName: string;
   category: SellerCategory;
   /** The area the seller works from, in her words - null when she has not said. */
   area: string | null;
+}
+
+/**
+ * A search "in your own words". AI: the model picked these from real
+ * listings. EXACT: the keyword search answered instead, and reason says why.
+ */
+export interface SmartSearchResult {
+  mode: 'AI' | 'EXACT';
+  reason: 'UNAVAILABLE' | 'LIMIT_REACHED' | 'FAILED' | null;
+  items: ListingCard[];
+  remainingToday: number;
 }
 
 /** What a customer narrowed the directory to. Absent parts do not narrow it. */
@@ -323,14 +338,17 @@ export type DirectoryFilter = {
 /** A product as a customer sees it - with the seller's contact numbers, which are the point of the directory. */
 export interface ProductDetail {
   productId: string;
+  code: string;
   title: string;
   description: string;
   displayPrice: number;
+  originalPrice: number | null;
   imageUrls: string[];
   sellerId: string;
   businessName: string;
   category: SellerCategory;
   area: string | null;
+  websiteUrl: string | null;
   contactPhone: string;
   whatsappNumber: string | null;
   moreFromSeller: ListingCard[];
@@ -338,9 +356,11 @@ export interface ProductDetail {
 
 export interface SellerProduct {
   id: string;
+  code: string;
   title: string;
   description: string;
   displayPrice: number;
+  originalPrice: number | null;
   active: boolean;
   images: { id: string; url: string | null }[];
 }
@@ -360,6 +380,7 @@ export interface SellerShop {
   contactPhone: string;
   whatsappNumber: string | null;
   area: string | null;
+  websiteUrl: string | null;
   status: SellerStatus;
   rejectionReason: string | null;
   suspensionReason: string | null;
@@ -382,12 +403,14 @@ export interface SellerDetailsInput {
   contactPhone: string;
   whatsappNumber?: string;
   area?: string;
+  websiteUrl?: string;
 }
 
 export interface ProductInput {
   title: string;
   description: string;
   displayPrice: number;
+  originalPrice?: number | null;
   active: boolean;
 }
 

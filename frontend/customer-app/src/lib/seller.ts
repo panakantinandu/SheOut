@@ -46,6 +46,32 @@ export function contactLink(seller: { whatsappNumber: string | null; contactPhon
   return { kind: 'call', href: `tel:+91${seller.contactPhone}` };
 }
 
+/**
+ * "30% off", from the price and the price before the discount. Rounded down,
+ * so the app never claims more off than there is; null when there is no
+ * real discount to show.
+ */
+export function discountPercent(price: number, originalPrice: number | null | undefined): number | null {
+  if (originalPrice == null || !(originalPrice > price) || originalPrice <= 0) return null;
+  const off = Math.floor(((originalPrice - price) / originalPrice) * 100);
+  return off >= 1 ? off : null;
+}
+
+/** What she typed, as a product code, if it could be one - see ProductCodes on the server. */
+export function asProductCode(typed: string): string | null {
+  const code = typed.trim().toUpperCase().replace(/^#/, '');
+  return /^[ABCDEFGHJKMNPQRSTUVWXYZ2-9]{7}$/.test(code) ? code : null;
+}
+
+/** "lakshmisarees.in" from "https://www.lakshmisarees.in/shop" - what a person would read out. */
+export function websiteLabel(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return url;
+  }
+}
+
 /** The statuses as a tone for StatusBadge. */
 export const SELLER_STATUS_TONE: Record<SellerStatus, 'success' | 'warning' | 'danger' | 'neutral' | 'primary'> = {
   DRAFT: 'neutral',

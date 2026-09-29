@@ -5,6 +5,7 @@ import { Button, Card, ConfirmDialog, SkeletonCard, TextField, TopHeader, showTo
 import { marketplaceApi } from '../api/client';
 import type { SellerShop } from '../api/types';
 import { apiErrorText } from '../lib/apiErrors';
+import { discountPercent } from '../lib/seller';
 
 /**
  * Adding or changing one product: what it is, what it costs, and its
@@ -29,6 +30,8 @@ export function SellerProductEditor() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
+  /** The price before a discount - optional, and only if she genuinely charged it before. */
+  const [originalPrice, setOriginalPrice] = useState('');
   const [active, setActive] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,6 +55,7 @@ export function SellerProductEditor() {
           setTitle(p.title);
           setDescription(p.description);
           setPrice(String(p.displayPrice));
+          setOriginalPrice(p.originalPrice != null ? String(p.originalPrice) : '');
           setActive(p.active);
         }
       })
@@ -60,14 +64,23 @@ export function SellerProductEditor() {
 
   const priceNumber = Number(price);
   const priceOk = price.trim() !== '' && Number.isFinite(priceNumber) && priceNumber >= 0 && priceNumber <= 9999999;
-  const valid = title.trim().length > 0 && description.trim().length > 0 && priceOk;
+  const originalNumber = Number(originalPrice);
+  const originalOk = originalPrice.trim() === '' || (Number.isFinite(originalNumber) && priceOk && originalNumber > priceNumber && originalNumber <= 9999999);
+  const off = originalPrice.trim() && originalOk ? discountPercent(priceNumber, originalNumber) : null;
+  const valid = title.trim().length > 0 && description.trim().length > 0 && priceOk && originalOk;
 
   async function save() {
     setShowErrors(true);
     if (!valid || !shop) return;
     setBusy(true);
     setError(null);
-    const input = { title: title.trim(), description: description.trim(), displayPrice: priceNumber, active };
+    const input = {
+      title: title.trim(),
+      description: description.trim(),
+      displayPrice: priceNumber,
+      originalPrice: originalPrice.trim() ? originalNumber : null,
+      active,
+    };
     try {
       if (isNew) {
         const before = new Set(shop.products.map((p) => p.id));
@@ -182,6 +195,24 @@ export function SellerProductEditor() {
               name="displayPrice"
             />
             <p className="-mt-2 text-caption text-text-secondary">{t('seller.editor.priceHelp')}</p>
+            <TextField
+              label={t('seller.editor.originalPrice')}
+              value={originalPrice}
+              inputMode="decimal"
+              onChange={(e) => setOriginalPrice(e.target.value.replace(/[^\d.]/g, ''))}
+              placeholder={t('seller.editor.originalPricePlaceholder')}
+              error={showErrors && !originalOk ? t('seller.editor.originalPriceInvalid') : undefined}
+              name="originalPrice"
+            />
+            {off !== null && (
+              <p className="-mt-2 text-caption font-semibold text-accent-green-strong" data-testid="discount-preview">
+                {t('seller.editor.discountPreview', { percent: off })}
+              </p>
+            )}
+            {/* The honest-pricing declaration, where the "was" price is typed. */}
+            <p className="-mt-1 rounded-input bg-accent-orange-tint px-3 py-2 text-caption text-text-primary" role="note" data-testid="genuine-price-note">
+              {t('seller.legal.genuinePrice')}
+            </p>
             <label className="flex cursor-pointer items-start gap-3 text-sm text-text-primary">
               <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} className="mt-0.5 h-5 w-5 accent-primary" />
               <span>

@@ -1,5 +1,5 @@
-import { Check, ImageOff, MapPin, Store, X } from 'lucide-react';
-import { useCallback, useMemo } from 'react';
+import { Check, ImageOff, MapPin, Sparkles, Store, X } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ListEmptyState,
@@ -12,8 +12,9 @@ import {
   useTranslation,
 } from '@sheout/design-system';
 import { marketplaceApi } from '../api/client';
-import type { ListingCard, SellerCategory } from '../api/types';
-import { SELLER_CATEGORIES, priceText } from '../lib/seller';
+import type { ListingCard, SellerCategory, SmartSearchResult } from '../api/types';
+import { PriceTag } from '../components/PriceTag';
+import { SELLER_CATEGORIES, asProductCode, priceText } from '../lib/seller';
 
 const CATEGORY_VALUES = new Set<string>(SELLER_CATEGORIES.map((c) => c.value));
 
@@ -35,9 +36,13 @@ function useDirectoryFilters() {
   const min = (params.get('min') ?? '').replace(/[^\d]/g, '');
   const max = (params.get('max') ?? '').replace(/[^\d]/g, '');
   const area = params.get('area') ?? '';
+  /** 'ai' for search in her own words; absent for the ordinary search. */
+  const mode = params.get('mode') === 'ai' ? 'ai' : 'exact';
+  /** The words last sent to the AI search - only on Search, never per keystroke, since each costs a call. */
+  const ask = params.get('ask') ?? '';
 
   const set = useCallback(
-    (patch: Partial<Record<'q' | 'cat' | 'min' | 'max' | 'area', string>>) => {
+    (patch: Partial<Record<'q' | 'cat' | 'min' | 'max' | 'area' | 'mode' | 'ask', string>>) => {
       setParams(
         (prev) => {
           const next = new URLSearchParams(prev);
@@ -53,7 +58,7 @@ function useDirectoryFilters() {
     [setParams]
   );
 
-  return { q, categories, min, max, area, set };
+  return { q, categories, min, max, area, mode, ask, set };
 }
 
 /**
@@ -74,7 +79,8 @@ export function Seller() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const filters = useDirectoryFilters();
-  const { q, categories, min, max, area } = filters;
+  const { q, categories, min, max, area, mode, ask } = filters;
+  const aiMode = mode === 'ai';
 
   const minNumber = min ? Number(min) : undefined;
   const maxNumber = max ? Number(max) : undefined;
@@ -84,6 +90,8 @@ export function Seller() {
 
   const fetchPage = useCallback(
     (page: number) =>
+      // In AI mode the list comes from the AI search below; this one stays idle.
+      aiMode ? Promise.resolve({ items: [], page: 0, pageSize: 20, totalItems: 0, totalPages: 0, hasMore: false }) :
       marketplaceApi.listings({
         page,
         pageSize: 20,
@@ -95,11 +103,80 @@ export function Seller() {
       }),
     // categories is rebuilt every render; its joined form is the real dependency.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [q, categories.join(','), minNumber, maxNumber, rangeInverted, area]
+    [aiMode, q, categories.join(','), minNumber, maxNumber, rangeInverted, area]
   );
-  const list = usePagedList(fetchPage, [q.trim(), categories.join(','), rangeInverted ? '' : `${min}-${max}`, area.trim()], {
+  const list = usePagedList(fetchPage, [aiMode, q.trim(), categories.join(','), rangeInverted ? '' : `${min}-${max}`, area.trim()], {
     debounceMs: 350,
   });
+
+  // A product code typed into the search (a customer reading it off a
+  // message) opens that product straight away. Only for what she typed just
+  // now - arriving back here from the product with the code still in the
+  // box must not bounce her into it again.
+  const typedCode = useRef(false);
+  useEffect(() => {
+    if (aiMode || list.loading || !typedCode.current) return;
+    const code = asProductCode(q);
+    if (!code) return;
+    const hit = list.items.length === 1 ? list.items.find((i) => i.code === code) : undefined;
+    if (hit) {
+      typedCode.current = false;
+      navigate(`/seller/products/${hit.productId}`);
+    }
+  }, [aiMode, list.loading, list.items, q, navigate]);
+
+  // ---- search in her own words
+  const [draft, setDraft] = useState(ask);
+  const [smart, setSmart] = useState<{ loading: boolean; result: SmartSearchResult | null; error: string | null }>({
+    loading: false,
+    result: null,
+    error: null,
+  });
+  useEffect(() => {
+    if (!aiMode || !ask.trim()) {
+      setSmart({ loading: false, result: null, error: null });
+      return;
+    }
+    let live = true;
+    const narrowing = {
+      category: categories,
+      minPrice: rangeInverted ? undefined : minNumber,
+      maxPrice: rangeInverted ? undefined : maxNumber,
+      area: area.trim() || undefined,
+    };
+    setSmart({ loading: true, result: null, error: null });
+    marketplaceApi
+      .askListings({ q: ask.trim(), ...narrowing })
+      .then((result) => live && setSmart({ loading: false, result, error: null }))
+      .catch(async () => {
+        // The AI search itself could not be reached: the ordinary search
+        // answers instead, so searching never simply breaks.
+        try {
+          const page = await marketplaceApi.listings({ q: ask.trim(), pageSize: 20, ...narrowing });
+          if (live) setSmart({ loading: false, result: { mode: 'EXACT', reason: 'FAILED', items: page.items, remainingToday: -1 }, error: null });
+        } catch {
+          if (live) setSmart({ loading: false, result: null, error: t('seller.ask.error') });
+        }
+      });
+    return () => {
+      live = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aiMode, ask, categories.join(','), minNumber, maxNumber, rangeInverted, area]);
+
+  const submitAsk = (words: string) => {
+    const clean = words.trim().slice(0, 200);
+    setDraft(clean);
+    if (clean) filters.set({ ask: clean });
+  };
+  const switchMode = (next: 'ai' | 'exact') => {
+    if (next === 'ai') {
+      setDraft(ask || q);
+      filters.set({ mode: 'ai', ask: '' });
+    } else {
+      filters.set({ mode: '', ask: '', q: ask || q });
+    }
+  };
 
   // What the panel is narrowing by, each removable on its own. Shown under
   // the bar so a collapsed panel never hides why the list is short.
@@ -127,7 +204,8 @@ export function Seller() {
 
   const activeFilters = chips.length;
   const narrowed = activeFilters > 0 || q.trim().length > 0;
-  const clearAll = () => filters.set({ q: '', cat: '', min: '', max: '', area: '' });
+  const clearAll = () => filters.set({ q: '', cat: '', min: '', max: '', area: '', ask: '' });
+  const examples = [t('seller.ask.example1'), t('seller.ask.example2'), t('seller.ask.example3')];
 
   function toggleCategory(value: SellerCategory) {
     const next = categories.includes(value) ? categories.filter((v) => v !== value) : [...categories, value];
@@ -143,12 +221,50 @@ export function Seller() {
           control. The filters open as a sheet, so the pinned part stays one
           row plus the active filters, never a panel over the results. */}
       <div className="sticky top-0 z-20 -mx-screen space-y-3 bg-background/95 px-screen pb-2 pt-2 backdrop-blur" data-testid="seller-search">
+        {/* Two ways to search: the words as typed, or what she means. */}
+        <div className="grid grid-cols-2 gap-1 rounded-full bg-primary-light p-1" role="radiogroup" aria-label={t('seller.ask.modeLabel')}>
+          {(['exact', 'ai'] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              role="radio"
+              aria-checked={mode === m}
+              onClick={() => mode !== m && switchMode(m)}
+              className={`flex items-center justify-center gap-1.5 rounded-full px-3 py-2 text-caption font-semibold transition-colors ${
+                mode === m ? 'bg-surface text-primary shadow-card' : 'text-text-secondary'
+              }`}
+              data-testid={`search-mode-${m}`}
+            >
+              {m === 'ai' && <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />}
+              {m === 'ai' ? t('seller.ask.modeAi') : t('seller.ask.modeExact')}
+            </button>
+          ))}
+        </div>
+        {/* A form, so the keyboard's Search key sends an AI search; the ordinary search runs as she types. */}
+        <form
+          role="search"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (aiMode) submitAsk(draft);
+          }}
+        >
         <ListFilterBar
-          search={{ value: q, placeholder: t('seller.directory.searchPlaceholder'), onChange: (value) => filters.set({ q: value }) }}
+          search={
+            aiMode
+              ? { value: draft, placeholder: t('seller.ask.placeholder'), onChange: setDraft }
+              : {
+                  value: q,
+                  placeholder: t('seller.directory.searchPlaceholder'),
+                  onChange: (value) => {
+                    typedCode.current = true;
+                    filters.set({ q: value });
+                  },
+                }
+          }
           activeCount={activeFilters}
           onClearAll={() => filters.set({ cat: '', min: '', max: '', area: '' })}
           presentation="sheet"
-          resultCount={list.loading ? undefined : list.total}
+          resultCount={aiMode || list.loading ? undefined : list.total}
         >
           <fieldset>
             <legend className="mb-2 block text-sm font-medium text-text-primary">{t('seller.browse.categories')}</legend>
@@ -223,6 +339,18 @@ export function Seller() {
             data-testid="filter-area"
           />
         </ListFilterBar>
+        </form>
+
+        {aiMode && draft.trim() && draft.trim() !== ask && (
+          <button
+            type="button"
+            onClick={() => submitAsk(draft)}
+            className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-4 py-3 font-heading text-sm text-text-inverse shadow-lift"
+            data-testid="ask-submit"
+          >
+            <Sparkles className="h-4 w-4" aria-hidden="true" /> {t('seller.ask.submit')}
+          </button>
+        )}
 
         {chips.length > 0 && (
           <div className="-mx-screen flex gap-2 overflow-x-auto px-screen pb-1" data-testid="active-filters">
@@ -242,9 +370,20 @@ export function Seller() {
         )}
       </div>
 
-      {list.loading && <SkeletonList rows={4} label={t('seller.directory.loading')} />}
-      {!list.loading && list.error && <p className="text-sm text-danger">{list.error}</p>}
-      {!list.loading && !list.error && list.items.length === 0 && (
+      {aiMode && (
+        <AskResults
+          ask={ask}
+          state={smart}
+          examples={examples}
+          onExample={submitAsk}
+          onExact={() => switchMode('exact')}
+          onOpen={(id) => navigate(`/seller/products/${id}`)}
+        />
+      )}
+
+      {!aiMode && list.loading && <SkeletonList rows={4} label={t('seller.directory.loading')} />}
+      {!aiMode && !list.loading && list.error && <p className="text-sm text-danger">{list.error}</p>}
+      {!aiMode && !list.loading && !list.error && list.items.length === 0 && (
         narrowed ? (
           <ListEmptyState
             illustrated
@@ -258,7 +397,7 @@ export function Seller() {
         )
       )}
 
-      {!list.loading && list.items.length > 0 && (
+      {!aiMode && !list.loading && list.items.length > 0 && (
         <div className="grid grid-cols-2 gap-3" data-testid="seller-listings">
           {list.items.map((item) => (
             <ListingTile key={item.productId} item={item} onOpen={() => navigate(`/seller/products/${item.productId}`)} />
@@ -266,9 +405,93 @@ export function Seller() {
         </div>
       )}
 
-      <LoadMore shown={list.items.length} total={list.total} hasMore={list.hasMore} loading={list.loadingMore} onLoadMore={list.loadMore} />
+      {!aiMode && <LoadMore shown={list.items.length} total={list.total} hasMore={list.hasMore} loading={list.loadingMore} onLoadMore={list.loadMore} />}
 
       <p className="pb-2 text-center text-caption text-text-secondary">{t('seller.directory.notInvolved')}</p>
+    </div>
+  );
+}
+
+/**
+ * The AI search's answer. Its picks are always real listings - the server
+ * only returns products it showed the model - and when the model was not
+ * used, the banner says the list is the ordinary keyword search instead.
+ */
+function AskResults({
+  ask,
+  state,
+  examples,
+  onExample,
+  onExact,
+  onOpen,
+}: {
+  ask: string;
+  state: { loading: boolean; result: SmartSearchResult | null; error: string | null };
+  examples: string[];
+  onExample: (words: string) => void;
+  onExact: () => void;
+  onOpen: (productId: string) => void;
+}) {
+  const { t } = useTranslation();
+  if (!ask.trim()) {
+    return (
+      <div className="space-y-3 rounded-card border border-border bg-surface p-4" data-testid="ask-intro">
+        <div className="flex items-start gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-light text-primary">
+            <Sparkles className="h-5 w-5" aria-hidden="true" />
+          </span>
+          <div>
+            <p className="font-heading text-card-title text-text-primary">{t('seller.ask.introTitle')}</p>
+            <p className="mt-0.5 text-sm text-text-secondary">{t('seller.ask.introBody')}</p>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {examples.map((example) => (
+            <button
+              key={example}
+              type="button"
+              onClick={() => onExample(example)}
+              className="rounded-full border border-border bg-background px-3 py-1.5 text-caption font-semibold text-text-primary"
+            >
+              {example}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  if (state.loading) return <SkeletonList rows={4} label={t('seller.ask.loading')} />;
+  if (state.error || !state.result) return <p className="text-sm text-danger">{state.error ?? t('seller.ask.error')}</p>;
+
+  const { mode, reason, items, remainingToday } = state.result;
+  return (
+    <div className="space-y-3">
+      {mode === 'AI' ? (
+        <p className="flex items-center gap-2 rounded-input bg-primary-light px-3 py-2 text-caption text-primary" data-testid="ask-banner" data-mode="AI">
+          <Sparkles className="h-4 w-4 shrink-0" aria-hidden="true" />
+          <span className="flex-1">{t('seller.ask.picked', { count: items.length, query: ask })}</span>
+          {remainingToday >= 0 && <span className="shrink-0 text-text-secondary">{t('seller.ask.left', { count: remainingToday })}</span>}
+        </p>
+      ) : (
+        <p className="rounded-input bg-accent-orange-tint px-3 py-2 text-caption text-text-primary" data-testid="ask-banner" data-mode="EXACT">
+          {t(`seller.ask.fallback.${reason ?? 'FAILED'}`)}
+        </p>
+      )}
+      {items.length === 0 ? (
+        <ListEmptyState
+          illustrated
+          icon={<Store />}
+          title={t('seller.ask.noneTitle')}
+          message={t('seller.ask.none')}
+          action={{ label: t('seller.ask.tryExact'), onClick: onExact }}
+        />
+      ) : (
+        <div className="grid grid-cols-2 gap-3" data-testid="seller-listings">
+          {items.map((item) => (
+            <ListingTile key={item.productId} item={item} onOpen={() => onOpen(item.productId)} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -291,7 +514,7 @@ export function ListingTile({ item, onOpen }: { item: ListingCard; onOpen: () =>
       </div>
       <div className="flex flex-1 flex-col gap-0.5 p-3">
         <p className="line-clamp-2 text-sm font-semibold text-text-primary">{item.title}</p>
-        <p className="font-heading text-card-title text-primary">{priceText(item.displayPrice)}</p>
+        <PriceTag price={item.displayPrice} originalPrice={item.originalPrice} />
         <p className="mt-auto flex items-center gap-1 truncate text-caption text-text-secondary">
           <Store className="h-3 w-3 shrink-0" aria-hidden="true" />
           <span className="truncate">{item.businessName}</span>

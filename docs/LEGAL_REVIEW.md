@@ -71,3 +71,33 @@ Facts behind the wording, for the reviewer:
 
 When the wording is approved, change the string and bump `LEGAL_VERSION`, so
 everyone is asked to accept the new version (see `content.ts`).
+
+## SheOut Marketplace: discounts, and search "in your own words"
+
+**1. Honest "was" prices.** A seller may now give a product an original price,
+shown struck through above her price with the percentage off worked out by the
+app ("₹6,000 ₹4,500 25% off"). The app only checks that the original price is
+above the price; whether it was ever really charged is her declaration. She
+sees this line where she types it (product editor) and in the application
+flow (Seller Registration, Step 3), key `seller.legal.genuinePrice`:
+
+> An original price must be a price you genuinely charged before, not a higher
+> figure made up to make a discount look bigger. Indian consumer law requires
+> price and discount claims to be honest.
+
+For the reviewer: the brief cited "India's Legal Metrology (Consumer) rules".
+The user-facing line deliberately names no instrument until the right one is
+confirmed - likely candidates are the Consumer Protection Act, 2019 and the
+CCPA's Guidelines for Prevention of Misleading Advertisements (2022), and the
+Legal Metrology (Packaged Commodities) Rules, 2011 for MRP. Please confirm the
+citation, whether the seller terms need a matching clause, and whether SheOut
+should be able to remove a discount it believes is not genuine (the console
+shows every original price to operators).
+
+**2. Privacy Policy: marketplace searches reach Anthropic.** "Search in your
+own words" sends the words typed and up to 60 current public listings (title,
+category, price, area, shop name, first 160 characters of the description) to
+Anthropic's API, and gets back which listings fit. No name, phone number or
+account detail is sent; nothing typed is stored, only a per-account daily
+count and token totals for the usage cap. The Anthropic entry above should
+say it covers this search as well as the help chat.

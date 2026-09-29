@@ -6,6 +6,7 @@ import com.sheout.marketplace.MarketplaceViews.ProductDetail;
 import com.sheout.marketplace.MarketplaceViews.ProductDetails;
 import com.sheout.marketplace.MarketplaceViews.DirectoryFilter;
 import com.sheout.marketplace.MarketplaceViews.SellerDetails;
+import com.sheout.marketplace.MarketplaceViews.SmartSearchResult;
 import com.sheout.marketplace.MarketplaceViews.SellerView;
 import com.sheout.marketplace.SellerCategory;
 import com.sheout.marketplace.SellerStatus;
@@ -126,18 +127,32 @@ class MarketplaceFlowTest {
         assertThat(sellers.applyAsSeller(asha, details("Asha " + tag, "98765 00001", "abc")).error())
                 .isEqualTo(MarketplaceError.INVALID_PHONE);
         SellerView draft = ok(sellers.applyAsSeller(asha, new SellerDetails("Asha " + tag + " Sarees", SellerCategory.FASHION_SAREE,
-                "+91 98765 00001", "09876500002", "  Kukatpally   " + tag + " ")));
+                "+91 98765 00001", "09876500002", "  Kukatpally   " + tag + " ", "lakshmisarees.in/shop")));
         assertThat(draft.status()).isEqualTo(SellerStatus.DRAFT);
         assertThat(draft.contactPhone()).isEqualTo("9876500001");
         assertThat(draft.whatsappNumber()).isEqualTo("9876500002");
         assertThat(draft.area()).isEqualTo("Kukatpally " + tag);
+        assertThat(draft.websiteUrl()).as("a bare domain is stored as https").isEqualTo("https://lakshmisarees.in/shop");
+        for (String bad : List.of("javascript:alert(1)", "mysite", "http://localhost:8080", "ftp://files.example.com",
+                "https://user:pass@example.com", "www.exa mple.com")) {
+            assertThat(sellers.updateProfile(asha, new SellerDetails("Asha " + tag + " Sarees", SellerCategory.FASHION_SAREE,
+                    "9876500001", null, null, bad)).error()).as(bad).isEqualTo(MarketplaceError.INVALID_WEBSITE);
+        }
         assertThat(draft.listingFee().amount()).isEqualByComparingTo("299");
         assertThat(sellers.applyAsSeller(asha, details("Again", "9876500001", null)).error())
                 .isEqualTo(MarketplaceError.ALREADY_A_SELLER);
         assertThat(sellers.submitForReview(asha).error()).isEqualTo(MarketplaceError.NOTHING_TO_REVIEW);
 
         // ---- products and the photo caps (2 a product, 3 a shop here)
-        UUID silk = ok(products.addProduct(asha, product("Kanjivaram silk " + tag, "Handwoven, pure zari", "4500"))).products().get(0).id();
+        // A "was" price must be above the price.
+        assertThat(products.addProduct(asha, new ProductDetails("x", "y", new BigDecimal("4500"), new BigDecimal("4500"), true)).error())
+                .isEqualTo(MarketplaceError.INVALID_ORIGINAL_PRICE);
+        SellerView first = ok(products.addProduct(asha, new ProductDetails("Kanjivaram silk " + tag, "Handwoven, pure zari",
+                new BigDecimal("4500"), new BigDecimal("6000"), true)));
+        UUID silk = first.products().get(0).id();
+        String silkCode = first.products().get(0).code();
+        assertThat(silkCode).matches("[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{7}");
+        assertThat(first.products().get(0).originalPrice()).isEqualByComparingTo("6000");
         ok(products.addProductImage(asha, silk, photo()));
         ok(products.addProductImage(asha, silk, photo()));
         assertThat(products.addProductImage(asha, silk, photo()).error()).isEqualTo(MarketplaceError.PRODUCT_IMAGE_LIMIT_REACHED);
@@ -198,6 +213,22 @@ class MarketplaceFlowTest {
         });
         assertThat(directory(null, tag + "-nothing")).isEmpty();
 
+        // ---- a product code finds that one product, typed in any case, with or without #
+        assertThat(directory(null, silkCode.toLowerCase())).extracting(ListingCard::productId).containsExactly(silk);
+        assertThat(directory(null, " #" + silkCode + " ")).extracting(ListingCard::productId).containsExactly(silk);
+        assertThat(two.products().get(1).code()).isNotEqualTo(silkCode);
+
+        // ---- "in your own words" with no model configured: the keyword search answers instead, never an error
+        SmartSearchResult asked = products.askListings(bina, new DirectoryFilter(Set.of(), null, null, null, null), "Cotton saree");
+        assertThat(asked.mode()).isEqualTo(SmartSearchResult.Mode.EXACT);
+        assertThat(asked.reason()).isEqualTo(SmartSearchResult.FallbackReason.UNAVAILABLE);
+        assertThat(asked.items()).extracting(ListingCard::title).contains("Cotton saree");
+        // A sentence matches nothing as one phrase; the fallback finds it by its words.
+        assertThat(products.askListings(bina, new DirectoryFilter(Set.of(), null, null, null, null),
+                "looking for something handwoven under 5000").items())
+                .extracting(ListingCard::title).contains("Kanjivaram silk " + tag);
+        assertThat(ProductService.meaningfulWords("Something for a WEDDING under 2000, please!")).containsExactly("wedding");
+
         // ---- price range (inclusive), several categories at once, and area
         assertThat(browse(Set.of(), tag, "900", "900", null)).extracting(ListingCard::title).containsExactly("Cotton saree");
         assertThat(browse(Set.of(), tag, "1000", null, null)).extracting(ListingCard::title).containsExactly("Kanjivaram silk " + tag);
@@ -214,7 +245,7 @@ class MarketplaceFlowTest {
         assertThat(detail.moreFromSeller()).extracting(ListingCard::productId).containsExactly(cotton);
 
         // ---- a live shop can still change - noted for operations - and an inactive product leaves the directory
-        ok(products.updateProduct(asha, cotton, new ProductDetails("Cotton saree", "Everyday wear", new BigDecimal("900"), false)));
+        ok(products.updateProduct(asha, cotton, new ProductDetails("Cotton saree", "Everyday wear", new BigDecimal("900"), null, false)));
         assertThat(directory(null, tag)).hasSize(1);
         assertThat(products.getProductDetail(cotton)).isEmpty();
         assertThat(sellers.sellerDetail(sellerId).orElseThrow().seller().editedLiveAt()).isNotNull();
@@ -300,11 +331,11 @@ class MarketplaceFlowTest {
 
     private static SellerDetails details(String name, String phone, String whatsapp) {
         return new SellerDetails(name, name.contains("Mehandi") ? SellerCategory.MEHANDI : SellerCategory.FASHION_SAREE, phone, whatsapp,
-                null);
+                null, null);
     }
 
     private static ProductDetails product(String title, String description, String price) {
-        return new ProductDetails(title, description, new BigDecimal(price), true);
+        return new ProductDetails(title, description, new BigDecimal(price), null, true);
     }
 
     private static DocumentUpload photo() throws IOException {

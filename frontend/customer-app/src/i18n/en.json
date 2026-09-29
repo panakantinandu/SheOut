@@ -308,7 +308,8 @@
     },
     "legal": {
       "applicationNotice": "SheOut is a discovery platform - you handle your own sales, payments, and delivery directly with customers. SheOut charges a flat listing fee only and is not party to your transactions.",
-      "productNotice": "This sale happens directly with the seller. SheOut is not involved in payment or delivery for this listing."
+      "productNotice": "This sale happens directly with the seller. SheOut is not involved in payment or delivery for this listing.",
+      "genuinePrice": "An original price must be a price you genuinely charged before, not a higher figure made up to make a discount look bigger. Indian consumer law requires price and discount claims to be honest."
     },
     "directory": {
       "searchPlaceholder": "Search products, shops",
@@ -329,8 +330,14 @@
       "priceNote": "Price set by the seller. Confirm it with her before you buy.",
       "contactWhatsapp": "Contact Seller on WhatsApp",
       "contactCall": "Call the Seller",
-      "whatsappMessage": "Hi, I saw \"{{title}}\" on SheOut Marketplace.",
-      "moreFrom": "More from {{name}}"
+      "whatsappMessage": "Hi, I saw \"{{title}}\" (product code {{code}}) on SheOut Marketplace.",
+      "moreFrom": "More from {{name}}",
+      "code": "Product code:",
+      "codeCopied": "Product code copied",
+      "copyCode": "Copy product code {{code}}",
+      "website": "Visit {{site}}",
+      "codeInMessage": "The product code is added to your message, so she knows which one.",
+      "codeOnCall": "Tell her the product code {{code}} when you call."
     },
     "apply": {
       "understood": "I understand that I handle my own sales, payments and delivery, and that SheOut is not part of them."
@@ -349,7 +356,11 @@
       "saving": "Saving...",
       "area": "Your area (optional)",
       "areaPlaceholder": "e.g. Kukatpally, Hyderabad",
-      "areaHelp": "Customers can look for sellers near them by area."
+      "areaHelp": "Customers can look for sellers near them by area.",
+      "website": "Website (optional)",
+      "websitePlaceholder": "e.g. www.yourshop.in",
+      "websiteHelp": "Your shop website or Instagram page. It opens in the customer's own browser.",
+      "websiteInvalid": "Enter a website address such as www.yourshop.in."
     },
     "shop": {
       "title": "My SheOut shop",
@@ -373,7 +384,9 @@
       "addProduct": "Add a product",
       "submitted": "Sent for review",
       "areaOn": "Area: {{area}}",
-      "noArea": "No area given"
+      "noArea": "No area given",
+      "websiteOn": "Website: {{site}}",
+      "noWebsite": "No website given"
     },
     "status": {
       "reasonLabel": "Reason:",
@@ -460,7 +473,11 @@
       "deleteMessage": "It and its photos are removed for good.",
       "deleted": "Product deleted",
       "locked": "Your shop can't be changed right now.",
-      "notFound": "This product was not found."
+      "notFound": "This product was not found.",
+      "originalPrice": "Original price (₹, optional)",
+      "originalPricePlaceholder": "Only if you really sold it for more",
+      "originalPriceInvalid": "The original price must be more than the price.",
+      "discountPreview": "Customers will see {{percent}}% off"
     },
     "browse": {
       "categories": "Category",
@@ -516,7 +533,37 @@
         "submit": "Submit for review"
       }
     },
-    "marketplaceTitle": "SheOut Marketplace"
+    "marketplaceTitle": "SheOut Marketplace",
+    "price": {
+      "off": "{{percent}}% off",
+      "was": "Was {{price}}"
+    },
+    "ask": {
+      "modeLabel": "How to search",
+      "modeExact": "Exact words",
+      "modeAi": "In your own words",
+      "placeholder": "Describe what you want...",
+      "submit": "Search in my words",
+      "introTitle": "Search in your own words",
+      "introBody": "Describe what you want, and SheOut picks from real listings. For example:",
+      "example1": "Something for a wedding under ₹2,000",
+      "example2": "A gift for my mother",
+      "example3": "Blouse stitching near Kukatpally",
+      "loading": "Finding matches",
+      "picked_one": "1 match for \"{{query}}\"",
+      "picked_other": "{{count}} matches for \"{{query}}\"",
+      "left_one": "{{count}} left today",
+      "left_other": "{{count}} left today",
+      "fallback": {
+        "UNAVAILABLE": "Search in your own words is not available right now. Showing exact word matches instead.",
+        "LIMIT_REACHED": "You have used today's searches in your own words. Showing exact word matches instead.",
+        "FAILED": "That search did not go through just now. Showing exact word matches instead."
+      },
+      "noneTitle": "Nothing matched",
+      "none": "No listing fits what you described. Try other words, or search exact words.",
+      "tryExact": "Search exact words",
+      "error": "Search is not working right now. Please try again."
+    }
   },
   "refer": {
     "headline": "Invite a friend to SheOut",

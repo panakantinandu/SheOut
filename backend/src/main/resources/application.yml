@@ -385,6 +385,14 @@ sheout:
     # Messages from one IP address in an hour, across every account on it.
     per-ip-hourly-limit: ${ASSISTANT_PER_IP_HOURLY_LIMIT:60}
     global-daily-limit: ${ASSISTANT_GLOBAL_DAILY_LIMIT:3000}
+    # Marketplace search "in your own words" (ListingSearchService): the same
+    # key and model, its own caps. Short timeout and no retry, because a slow
+    # answer falls back to keyword search rather than keeping her waiting.
+    search:
+      max-tokens: ${ASSISTANT_SEARCH_MAX_TOKENS:200}
+      timeout-seconds: ${ASSISTANT_SEARCH_TIMEOUT_SECONDS:8}
+      daily-limit-per-account: ${ASSISTANT_SEARCH_DAILY_LIMIT:20}
+      global-daily-limit: ${ASSISTANT_SEARCH_GLOBAL_DAILY_LIMIT:2000}
     # US dollars per million tokens, for the console's cost estimate: Haiku 4.5's.
     price:
       input-per-mtok: ${ASSISTANT_PRICE_INPUT:1}

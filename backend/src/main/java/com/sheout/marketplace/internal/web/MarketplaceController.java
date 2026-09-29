@@ -10,6 +10,7 @@ import com.sheout.marketplace.MarketplaceViews.ProductDetail;
 import com.sheout.marketplace.MarketplaceViews.ProductDetails;
 import com.sheout.marketplace.MarketplaceViews.SellerDetails;
 import com.sheout.marketplace.MarketplaceViews.SellerView;
+import com.sheout.marketplace.MarketplaceViews.SmartSearchResult;
 import com.sheout.marketplace.ProductApi;
 import com.sheout.marketplace.SellerApi;
 import com.sheout.marketplace.SellerCategory;
@@ -94,6 +95,28 @@ public class MarketplaceController {
                 clip(q), minPrice, maxPrice, clip(area));
         PageRequest pageable = PageRequest.of(PageResponse.normalizePage(page), PageResponse.normalizePageSize(pageSize));
         return ResponseEntity.ok(PageResponse.from(products.browseListings(filter, pageable), card -> card));
+    }
+
+    /**
+     * The directory searched "in your own words" - "something for a wedding
+     * under 2000". The same filters as /listings narrow what the model may
+     * choose from; mode says whether the model chose (AI) or the keyword
+     * search answered instead (EXACT, with the reason).
+     */
+    @GetMapping("/listings/ask")
+    public ResponseEntity<SmartSearchResult> askListings(
+            @RequestParam String q,
+            @RequestParam(required = false) List<SellerCategory> category,
+            @RequestParam(required = false) BigDecimal minPrice,
+            @RequestParam(required = false) BigDecimal maxPrice,
+            @RequestParam(required = false) String area) {
+        CurrentAccount caller = requireCustomer();
+        String query = q == null ? "" : q.trim();
+        if (query.isEmpty() || query.length() > 200) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_QUERY", "Describe what you are looking for in up to 200 characters.");
+        }
+        DirectoryFilter filter = new DirectoryFilter(category == null ? Set.of() : Set.copyOf(category), null, minPrice, maxPrice, clip(area));
+        return ResponseEntity.ok(products.askListings(caller.accountId(), filter, query));
     }
 
     /** A search term as far as it is worth matching: 80 characters is longer than any shop name or area. */
@@ -197,9 +220,10 @@ public class MarketplaceController {
             @NotNull SellerCategory category,
             @NotBlank @Size(max = 20) String contactPhone,
             @Size(max = 20) String whatsappNumber,
-            @Size(max = 80) String area) {
+            @Size(max = 80) String area,
+            @Size(max = 200) String websiteUrl) {
         SellerDetails details() {
-            return new SellerDetails(businessName, category, contactPhone, whatsappNumber, area);
+            return new SellerDetails(businessName, category, contactPhone, whatsappNumber, area, websiteUrl);
         }
     }
 
@@ -207,9 +231,10 @@ public class MarketplaceController {
             @NotBlank @Size(max = 100) String title,
             @NotBlank @Size(max = 2000) String description,
             @NotNull @DecimalMin("0") @DecimalMax("9999999") BigDecimal displayPrice,
+            @DecimalMin("0") @DecimalMax("9999999") BigDecimal originalPrice,
             Boolean active) {
         ProductDetails details() {
-            return new ProductDetails(title, description, displayPrice, active == null || active);
+            return new ProductDetails(title, description, displayPrice, originalPrice, active == null || active);
         }
     }
 
@@ -240,6 +265,10 @@ public class MarketplaceController {
             case NOT_A_SELLER -> new ApiException(HttpStatus.NOT_FOUND, error.name(), "You have not applied to sell on SheOut yet.");
             case ALREADY_A_SELLER -> new ApiException(HttpStatus.CONFLICT, error.name(), "You already have a SheOut Seller shop.");
             case INVALID_PHONE -> new ApiException(HttpStatus.BAD_REQUEST, error.name(), "Enter a 10-digit Indian mobile number.");
+            case INVALID_WEBSITE -> new ApiException(HttpStatus.BAD_REQUEST, error.name(),
+                    "Enter a website address such as www.yourshop.com.");
+            case INVALID_ORIGINAL_PRICE -> new ApiException(HttpStatus.BAD_REQUEST, error.name(),
+                    "The original price must be more than the price.");
             case NOT_EDITABLE -> new ApiException(HttpStatus.CONFLICT, error.name(),
                     "Your shop can't be changed while it is being reviewed, awaiting payment or suspended.");
             case NOT_SUBMITTABLE -> new ApiException(HttpStatus.CONFLICT, error.name(), "Your shop has already been sent for review.");

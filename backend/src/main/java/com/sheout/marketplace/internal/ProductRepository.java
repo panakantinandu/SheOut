@@ -11,4 +11,6 @@ interface ProductRepository extends JpaRepository<ProductEntity, UUID>, JpaSpeci
     List<ProductEntity> findBySellerIdOrderByCreatedAtAsc(UUID sellerId);
 
     long countBySellerId(UUID sellerId);
+
+    boolean existsByCode(String code);
 }

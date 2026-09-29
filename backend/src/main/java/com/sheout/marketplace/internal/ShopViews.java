@@ -60,6 +60,7 @@ class ShopViews {
                 seller.getContactPhone(),
                 seller.getWhatsappNumber(),
                 seller.getArea(),
+                seller.getWebsiteUrl(),
                 seller.getStatus(),
                 seller.getRejectionReason(),
                 seller.getSuspensionReason(),
@@ -86,6 +87,7 @@ class ShopViews {
                 seller.getContactPhone(),
                 seller.getWhatsappNumber(),
                 seller.getArea(),
+                seller.getWebsiteUrl(),
                 (int) products.countBySellerId(seller.getId()),
                 (int) images.countBySellerId(seller.getId()),
                 seller.getCreatedAt(),
@@ -121,7 +123,7 @@ class ShopViews {
     List<ProductView> productViews(List<ProductEntity> list) {
         Map<UUID, List<ProductImageEntity>> byProduct = imagesOf(list.stream().map(ProductEntity::getId).toList());
         return list.stream().map(p -> new ProductView(
-                p.getId(), p.getTitle(), p.getDescription(), p.getDisplayPrice(), p.isActive(),
+                p.getId(), p.getCode(), p.getTitle(), p.getDescription(), p.getDisplayPrice(), p.getOriginalPrice(), p.isActive(),
                 byProduct.getOrDefault(p.getId(), List.of()).stream()
                         .map(i -> new ProductImageView(i.getId(), url(i.getStorageKey())))
                         .toList())).toList();
@@ -134,7 +136,7 @@ class ShopViews {
                 .map(p -> {
                     SellerProfileEntity s = sellers.get(p.getSellerId());
                     List<ProductImageEntity> photos = byProduct.getOrDefault(p.getId(), List.of());
-                    return new ListingCard(p.getId(), p.getTitle(), p.getDisplayPrice(),
+                    return new ListingCard(p.getId(), p.getCode(), p.getTitle(), p.getDisplayPrice(), p.getOriginalPrice(),
                             photos.isEmpty() ? null : url(photos.get(0).getStorageKey()),
                             s.getId(), s.getBusinessName(), s.getCategory(), s.getArea());
                 }).toList();

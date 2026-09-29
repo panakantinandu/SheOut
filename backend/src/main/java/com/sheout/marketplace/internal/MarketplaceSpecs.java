@@ -55,15 +55,46 @@ final class MarketplaceSpecs {
                 Subquery<UUID> namedSellers = query.subquery(UUID.class);
                 Root<SellerProfileEntity> named = namedSellers.from(SellerProfileEntity.class);
                 namedSellers.select(named.get("id")).where(cb.like(cb.lower(named.get("businessName")), like, '\\'));
-                where.add(cb.or(
+                List<Predicate> matches = new ArrayList<>(List.of(
                         cb.like(cb.lower(root.get("title")), like, '\\'),
                         cb.like(cb.lower(root.get("description")), like, '\\'),
                         root.get("sellerId").in(namedSellers)));
+                // A product code, typed as a customer read it off a message: that exact product.
+                String code = ProductCodes.normalize(filter.keyword());
+                if (code != null) {
+                    matches.add(cb.equal(root.get("code"), code));
+                }
+                where.add(cb.or(matches.toArray(new Predicate[0])));
             }
             liveSellers.select(seller.get("id")).where(sellerWhere.toArray(new Predicate[0]));
             where.add(root.get("sellerId").in(liveSellers));
             return cb.and(where.toArray(new Predicate[0]));
         };
+    }
+
+    /**
+     * The directory narrowed by the filter, matching any of these words in a
+     * product's title or description or its shop's name. For when a search
+     * "in your own words" falls back to keywords: the whole sentence as one
+     * phrase ("something for a wedding under 2000") matches nothing, while
+     * its words ("wedding") find what she meant.
+     */
+    static Specification<ProductEntity> directoryAnyWord(DirectoryFilter filter, List<String> words) {
+        DirectoryFilter withoutKeyword = new DirectoryFilter(filter.categories(), null, filter.minPrice(), filter.maxPrice(), filter.area());
+        Specification<ProductEntity> any = (root, query, cb) -> {
+            List<Predicate> matches = new ArrayList<>();
+            for (String word : words) {
+                String like = likePattern(word);
+                Subquery<UUID> namedSellers = query.subquery(UUID.class);
+                Root<SellerProfileEntity> named = namedSellers.from(SellerProfileEntity.class);
+                namedSellers.select(named.get("id")).where(cb.like(cb.lower(named.get("businessName")), like, '\\'));
+                matches.add(cb.like(cb.lower(root.get("title")), like, '\\'));
+                matches.add(cb.like(cb.lower(root.get("description")), like, '\\'));
+                matches.add(root.get("sellerId").in(namedSellers));
+            }
+            return cb.or(matches.toArray(new Predicate[0]));
+        };
+        return directory(withoutKeyword).and(any);
     }
 
     static Specification<SellerProfileEntity> sellers(SellerStatus status, String keyword) {

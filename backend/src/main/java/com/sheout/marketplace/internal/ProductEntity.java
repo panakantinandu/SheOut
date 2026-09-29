@@ -25,6 +25,14 @@ public class ProductEntity extends BaseEntity {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal displayPrice;
 
+    /** The price before a discount, shown struck through. Null when there is no discount; above displayPrice when set. */
+    @Column(precision = 10, scale = 2)
+    private BigDecimal originalPrice;
+
+    /** Short reference code, e.g. 7K9M2XQ - see ProductCodes. Set once, never changed. */
+    @Column(nullable = false, unique = true, length = 8, updatable = false)
+    private String code;
+
     @Column(nullable = false)
     private boolean active;
 
@@ -32,15 +40,18 @@ public class ProductEntity extends BaseEntity {
         // JPA
     }
 
-    ProductEntity(UUID sellerId, String title, String description, BigDecimal displayPrice, boolean active) {
+    ProductEntity(UUID sellerId, String code, String title, String description, BigDecimal displayPrice,
+                  BigDecimal originalPrice, boolean active) {
         this.sellerId = sellerId;
-        update(title, description, displayPrice, active);
+        this.code = code;
+        update(title, description, displayPrice, originalPrice, active);
     }
 
-    void update(String title, String description, BigDecimal displayPrice, boolean active) {
+    void update(String title, String description, BigDecimal displayPrice, BigDecimal originalPrice, boolean active) {
         this.title = title;
         this.description = description;
         this.displayPrice = displayPrice;
+        this.originalPrice = originalPrice;
         this.active = active;
     }
 
@@ -48,5 +59,7 @@ public class ProductEntity extends BaseEntity {
     public String getTitle() { return title; }
     public String getDescription() { return description; }
     public BigDecimal getDisplayPrice() { return displayPrice; }
+    public BigDecimal getOriginalPrice() { return originalPrice; }
+    public String getCode() { return code; }
     public boolean isActive() { return active; }
 }

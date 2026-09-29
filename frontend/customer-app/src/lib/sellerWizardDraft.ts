@@ -22,6 +22,7 @@ export interface WizardDraft {
   contactPhone?: string;
   whatsappNumber?: string;
   area?: string;
+  websiteUrl?: string;
   /** True while the fields above differ from what the server holds. */
   dirty?: boolean;
 }

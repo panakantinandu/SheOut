@@ -27,11 +27,16 @@ public final class MarketplaceViews {
      * directory).
      */
     public record SellerDetails(String businessName, SellerCategory category, String contactPhone, String whatsappNumber,
-                                String area) {
+                                String area, String websiteUrl) {
     }
 
-    /** A product or service. The price is for information only - nothing is ever charged in the app for it. */
-    public record ProductDetails(String title, String description, BigDecimal displayPrice, boolean active) {
+    /**
+     * A product or service. The price is for information only - nothing is
+     * ever charged in the app for it. originalPrice is the price before a
+     * discount, optional, and above displayPrice when given.
+     */
+    public record ProductDetails(String title, String description, BigDecimal displayPrice, BigDecimal originalPrice,
+                                 boolean active) {
     }
 
     // ------------------------------------------------------------ her own shop
@@ -39,8 +44,8 @@ public final class MarketplaceViews {
     public record ProductImageView(UUID id, String url) {
     }
 
-    public record ProductView(UUID id, String title, String description, BigDecimal displayPrice, boolean active,
-                              List<ProductImageView> images) {
+    public record ProductView(UUID id, String code, String title, String description, BigDecimal displayPrice,
+                              BigDecimal originalPrice, boolean active, List<ProductImageView> images) {
     }
 
     /** Where her listing fee stands. status, method and paidAt are null until she has started paying. */
@@ -59,6 +64,7 @@ public final class MarketplaceViews {
             String contactPhone,
             String whatsappNumber,
             String area,
+            String websiteUrl,
             SellerStatus status,
             String rejectionReason,
             String suspensionReason,
@@ -80,8 +86,20 @@ public final class MarketplaceViews {
     // ------------------------------------------------------------ the directory
 
     /** One product in the directory list. */
-    public record ListingCard(UUID productId, String title, BigDecimal displayPrice, String imageUrl,
-                              UUID sellerId, String businessName, SellerCategory category, String area) {
+    public record ListingCard(UUID productId, String code, String title, BigDecimal displayPrice, BigDecimal originalPrice,
+                              String imageUrl, UUID sellerId, String businessName, SellerCategory category, String area) {
+    }
+
+    /**
+     * A directory search "in your own words". mode AI: the model chose and
+     * ordered these from real listings. mode EXACT: the model was not asked
+     * or did not answer (reason says why), and these are the ordinary
+     * keyword results instead, so a search never comes back broken.
+     */
+    public record SmartSearchResult(Mode mode, FallbackReason reason, List<ListingCard> items, int remainingToday) {
+        public enum Mode { AI, EXACT }
+
+        public enum FallbackReason { UNAVAILABLE, LIMIT_REACHED, FAILED }
     }
 
     /**
@@ -103,9 +121,10 @@ public final class MarketplaceViews {
      * point of the directory: they are shown to any signed-in rider, the way
      * a shop's number is painted on its signboard.
      */
-    public record ProductDetail(UUID productId, String title, String description, BigDecimal displayPrice,
-                                List<String> imageUrls, UUID sellerId, String businessName, SellerCategory category,
-                                String area, String contactPhone, String whatsappNumber, List<ListingCard> moreFromSeller) {
+    public record ProductDetail(UUID productId, String code, String title, String description, BigDecimal displayPrice,
+                                BigDecimal originalPrice, List<String> imageUrls, UUID sellerId, String businessName,
+                                SellerCategory category, String area, String websiteUrl, String contactPhone,
+                                String whatsappNumber, List<ListingCard> moreFromSeller) {
     }
 
     // ------------------------------------------------------------ the console
@@ -119,6 +138,7 @@ public final class MarketplaceViews {
             String contactPhone,
             String whatsappNumber,
             String area,
+            String websiteUrl,
             int productCount,
             int imageCount,
             Instant createdAt,

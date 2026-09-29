@@ -45,6 +45,7 @@ import type {
   ProductInput,
   SellerDetailsInput,
   SellerShop,
+  SmartSearchResult,
   PaymentHold,
   RiderWallet,
   RiderWalletEntry,
@@ -937,6 +938,11 @@ export const referralsApi = {
 export const marketplaceApi = {
   listings(params: DirectoryFilter & { page?: number; pageSize?: number }): Promise<PagedResult<ListingCard>> {
     return request(`/api/v1/marketplace/listings${buildQuery(params)}`);
+  },
+
+  /** The directory searched in her own words; falls back to keyword results server-side, never errors for that. */
+  askListings(params: DirectoryFilter & { q: string }): Promise<SmartSearchResult> {
+    return request(`/api/v1/marketplace/listings/ask${buildQuery(params)}`);
   },
 
   product(productId: string): Promise<ProductDetail> {

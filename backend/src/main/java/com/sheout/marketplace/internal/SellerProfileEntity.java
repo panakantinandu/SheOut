@@ -42,6 +42,10 @@ public class SellerProfileEntity extends BaseEntity {
     @Column(length = 80)
     private String area;
 
+    /** Her own website, an http(s) address checked by WebsiteAddress. Null when she has none. */
+    @Column(length = 200)
+    private String websiteUrl;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private SellerStatus status;
@@ -68,10 +72,10 @@ public class SellerProfileEntity extends BaseEntity {
     }
 
     SellerProfileEntity(UUID accountId, String businessName, SellerCategory category, String contactPhone,
-                        String whatsappNumber, String area) {
+                        String whatsappNumber, String area, String websiteUrl) {
         this.accountId = accountId;
         this.status = SellerStatus.DRAFT;
-        setDetails(businessName, category, contactPhone, whatsappNumber, area);
+        setDetails(businessName, category, contactPhone, whatsappNumber, area, websiteUrl);
     }
 
     /**
@@ -89,7 +93,8 @@ public class SellerProfileEntity extends BaseEntity {
     }
 
     void setDetails(String businessName, SellerCategory category, String contactPhone, String whatsappNumber,
-                    String area) {
+                    String area, String websiteUrl) {
+        this.websiteUrl = websiteUrl;
         this.businessName = businessName;
         this.category = category;
         this.contactPhone = contactPhone;
@@ -152,6 +157,7 @@ public class SellerProfileEntity extends BaseEntity {
         contactPhone = "";
         whatsappNumber = null;
         area = null;
+        websiteUrl = null;
     }
 
     public UUID getAccountId() { return accountId; }
@@ -160,6 +166,7 @@ public class SellerProfileEntity extends BaseEntity {
     public String getContactPhone() { return contactPhone; }
     public String getWhatsappNumber() { return whatsappNumber; }
     public String getArea() { return area; }
+    public String getWebsiteUrl() { return websiteUrl; }
     public SellerStatus getStatus() { return status; }
     public String getRejectionReason() { return rejectionReason; }
     public String getSuspensionReason() { return suspensionReason; }

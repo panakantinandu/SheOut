@@ -1,10 +1,11 @@
-import { Info, MessageCircle, Phone, Store } from 'lucide-react';
+import { Copy, ExternalLink, Globe, Info, MessageCircle, Phone, Store } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Card, ListEmptyState, SkeletonCard, TopHeader, useTranslation } from '@sheout/design-system';
+import { Card, ListEmptyState, SkeletonCard, TopHeader, showToast, useTranslation } from '@sheout/design-system';
 import { ApiError, marketplaceApi } from '../api/client';
 import type { ProductDetail } from '../api/types';
-import { categoryKey, contactLink, priceText } from '../lib/seller';
+import { PriceTag } from '../components/PriceTag';
+import { categoryKey, contactLink, websiteLabel } from '../lib/seller';
 import { ListingTile } from './Seller';
 
 /**
@@ -40,8 +41,17 @@ export function SellerProduct() {
   }, [productId, t]);
 
   const contact = product
-    ? contactLink(product, t('seller.product.whatsappMessage', { title: product.title }))
+    ? contactLink(product, t('seller.product.whatsappMessage', { title: product.title, code: product.code }))
     : null;
+
+  async function copyCode(code: string) {
+    try {
+      await navigator.clipboard.writeText(code);
+      showToast(t('seller.product.codeCopied'));
+    } catch {
+      // Clipboard blocked: the code is on screen to read out.
+    }
+  }
 
   return (
     <div className="space-y-5 pb-4">
@@ -79,18 +89,48 @@ export function SellerProduct() {
 
           <div className="space-y-1">
             <h1 className="font-heading text-title text-text-primary" data-testid="product-title">{product.title}</h1>
-            <p className="font-heading text-display text-primary" data-testid="product-price">{priceText(product.displayPrice)}</p>
+            <PriceTag price={product.displayPrice} originalPrice={product.originalPrice} size="lg" />
             <p className="text-caption text-text-secondary">{t('seller.product.priceNote')}</p>
+            {/* The code she quotes to the seller, so both know exactly which product. */}
+            <button
+              type="button"
+              onClick={() => copyCode(product.code)}
+              className="mt-2 inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1.5 text-sm text-text-primary"
+              aria-label={t('seller.product.copyCode', { code: product.code })}
+              data-testid="product-code"
+            >
+              {t('seller.product.code')} <span className="font-mono font-bold tracking-wider">{product.code}</span>
+              <Copy className="h-4 w-4 text-text-secondary" aria-hidden="true" />
+            </button>
           </div>
 
-          <Card className="flex items-center gap-3">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary-light text-primary">
-              <Store className="h-5 w-5" aria-hidden="true" />
-            </span>
-            <div className="min-w-0">
-              <p className="truncate font-semibold text-text-primary" data-testid="product-seller">{product.businessName}</p>
-              <p className="text-caption text-text-secondary">{t(`seller.categories.${categoryKey(product.category)}`)}</p>
+          <Card className="space-y-3">
+            <div className="flex items-center gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary-light text-primary">
+                <Store className="h-5 w-5" aria-hidden="true" />
+              </span>
+              <div className="min-w-0">
+                <p className="truncate font-semibold text-text-primary" data-testid="product-seller">{product.businessName}</p>
+                <p className="text-caption text-text-secondary">
+                  {t(`seller.categories.${categoryKey(product.category)}`)}
+                  {product.area ? ` · ${product.area}` : ''}
+                </p>
+              </div>
             </div>
+            {/* Her own website, in the phone's browser - never inside SheOut. */}
+            {product.websiteUrl && (
+              <a
+                href={product.websiteUrl}
+                target="_blank"
+                rel="noopener noreferrer nofollow"
+                className="flex items-center gap-2 rounded-input bg-background px-3 py-2.5 text-sm font-semibold text-primary"
+                data-testid="seller-website"
+              >
+                <Globe className="h-4 w-4 shrink-0" aria-hidden="true" />
+                <span className="min-w-0 flex-1 truncate">{t('seller.product.website', { site: websiteLabel(product.websiteUrl) })}</span>
+                <ExternalLink className="h-4 w-4 shrink-0" aria-hidden="true" />
+              </a>
+            )}
           </Card>
 
           <p className="whitespace-pre-wrap text-body text-text-primary">{product.description}</p>
@@ -112,6 +152,9 @@ export function SellerProduct() {
             {contact.kind === 'whatsapp' ? <MessageCircle className="h-5 w-5" aria-hidden="true" /> : <Phone className="h-5 w-5" aria-hidden="true" />}
             {contact.kind === 'whatsapp' ? t('seller.product.contactWhatsapp') : t('seller.product.contactCall')}
           </a>
+          <p className="-mt-2 text-center text-caption text-text-secondary">
+            {contact.kind === 'whatsapp' ? t('seller.product.codeInMessage') : t('seller.product.codeOnCall', { code: product.code })}
+          </p>
 
           {product.moreFromSeller.length > 0 && (
             <section className="space-y-3">

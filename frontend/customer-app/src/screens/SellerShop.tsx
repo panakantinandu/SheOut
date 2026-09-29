@@ -7,6 +7,7 @@ import {
   Clock,
   ImageOff,
   IndianRupee,
+  Globe,
   Info,
   MapPin,
   PackagePlus,
@@ -35,7 +36,7 @@ import type { SellerCategory, SellerDetailsInput, SellerShop as Shop } from '../
 import { useAuth } from '../auth/AuthContext';
 import { apiErrorText } from '../lib/apiErrors';
 import { openRazorpayCheckout } from '../lib/razorpayCheckout';
-import { SELLER_CATEGORIES, SELLER_STATUS_TONE, categoryKey, priceText } from '../lib/seller';
+import { SELLER_CATEGORIES, SELLER_STATUS_TONE, categoryKey, priceText, websiteLabel } from '../lib/seller';
 import { clearWizardDraft, readWizardDraft, writeWizardDraft, type WizardDraft } from '../lib/sellerWizardDraft';
 
 /**
@@ -139,6 +140,7 @@ function SellerWizard({ shop, onShop, onSubmitted }: { shop: Shop | null; onShop
           contactPhone: shop.contactPhone,
           whatsappNumber: shop.whatsappNumber ?? '',
           area: shop.area ?? '',
+          websiteUrl: shop.websiteUrl ?? '',
         }
       : { step: 0 };
     const merged: WizardDraft = !shop || stored?.dirty ? { ...fromShop, ...stored, step: 0 } : { ...fromShop, step: 0 };
@@ -319,6 +321,7 @@ function DetailsStep({
     contactPhone: draft.contactPhone ?? '',
     whatsappNumber: draft.whatsappNumber ?? '',
     area: draft.area ?? '',
+    websiteUrl: draft.websiteUrl ?? '',
   };
   const valid = businessFieldsValid(values) && understood;
 
@@ -370,10 +373,28 @@ interface BusinessValues {
   contactPhone: string;
   whatsappNumber: string;
   area: string;
+  websiteUrl: string;
+}
+
+/**
+ * The same shape the server accepts (WebsiteAddress): http or https, a real
+ * domain, no spaces. "www.myshop.in" is fine - the server adds https://.
+ * The server's check is the one that counts; this only says so sooner.
+ */
+function websiteOk(v: string): boolean {
+  const value = v.trim();
+  if (!value) return true;
+  if (/\s/.test(value) || value.length > 200) return false;
+  try {
+    const url = new URL(value.includes('://') ? value : `https://${value}`);
+    return (url.protocol === 'https:' || url.protocol === 'http:') && !url.username && /^([a-z0-9-]+\.)+[a-z]{2,63}$/i.test(url.hostname);
+  } catch {
+    return false;
+  }
 }
 
 function businessFieldsValid(v: BusinessValues): boolean {
-  return v.businessName.trim().length > 0 && mobileOk(v.contactPhone) && (!v.whatsappNumber.trim() || mobileOk(v.whatsappNumber));
+  return v.businessName.trim().length > 0 && mobileOk(v.contactPhone) && (!v.whatsappNumber.trim() || mobileOk(v.whatsappNumber)) && websiteOk(v.websiteUrl);
 }
 
 function toDetailsInput(v: BusinessValues, category: SellerCategory): SellerDetailsInput {
@@ -383,6 +404,7 @@ function toDetailsInput(v: BusinessValues, category: SellerCategory): SellerDeta
     contactPhone: digits(v.contactPhone),
     whatsappNumber: v.whatsappNumber.trim() ? digits(v.whatsappNumber) : undefined,
     area: v.area.trim() || undefined,
+    websiteUrl: v.websiteUrl.trim() || undefined,
   };
 }
 
@@ -450,6 +472,21 @@ function BusinessFields({
         />
         <p className="text-caption text-text-secondary">{t('seller.form.areaHelp')}</p>
       </div>
+      <div className="space-y-1">
+        <TextField
+          label={t('seller.form.website')}
+          icon={<Globe className="h-4 w-4 shrink-0 text-text-secondary" />}
+          value={values.websiteUrl}
+          inputMode="url"
+          autoCapitalize="none"
+          maxLength={200}
+          onChange={(e) => onChange({ websiteUrl: e.target.value })}
+          placeholder={t('seller.form.websitePlaceholder')}
+          error={showErrors && !websiteOk(values.websiteUrl) ? t('seller.form.websiteInvalid') : undefined}
+          name="websiteUrl"
+        />
+        <p className="text-caption text-text-secondary">{t('seller.form.websiteHelp')}</p>
+      </div>
     </>
   );
 }
@@ -473,6 +510,10 @@ function ProductsStep({ shop, onContinue }: { shop: Shop; onContinue: () => void
       </div>
       <p className="text-caption text-text-secondary" data-testid="photo-usage">
         {t('seller.shop.photoUsage', { used: shop.imagesUsed, max: shop.maxImagesPerSeller })}
+      </p>
+      <p className="flex gap-2 rounded-input bg-accent-orange-tint px-3 py-2 text-caption text-text-primary" role="note" data-testid="genuine-price-note">
+        <Info className="mt-0.5 h-4 w-4 shrink-0 text-accent-orange-strong" aria-hidden="true" />
+        <span>{t('seller.legal.genuinePrice')}</span>
       </p>
       {shop.products.length === 0 && (
         <Card className="flex flex-col items-center gap-2 py-8 text-center">
@@ -528,7 +569,13 @@ function ProductRows({ shop, onOpen }: { shop: Shop; onOpen: (id: string) => voi
           </span>
           <span className="min-w-0 flex-1">
             <span className="block truncate font-semibold text-text-primary">{p.title}</span>
-            <span className="block text-sm text-primary">{priceText(p.displayPrice)}</span>
+            <span className="block text-sm text-primary">
+              {p.originalPrice != null && p.originalPrice > p.displayPrice && (
+                <s className="mr-1.5 text-text-secondary">{priceText(p.originalPrice)}</s>
+              )}
+              {priceText(p.displayPrice)}
+              <span className="ml-2 font-mono text-caption tracking-wider text-text-secondary">{p.code}</span>
+            </span>
             <span className={`block text-caption ${p.images.length === 0 ? 'font-semibold text-accent-orange-strong' : 'text-text-secondary'}`}>
               {p.images.length === 0 ? t('seller.wizard.products.missingPhoto') : t('seller.shop.productPhotos', { count: p.images.length })}
               {!p.active && ` · ${t('seller.shop.hidden')}`}
@@ -583,6 +630,9 @@ function ReviewStep({ shop, busy, onEdit, onSubmit }: { shop: Shop; busy: boolea
             {shop.whatsappNumber ? t('seller.shop.whatsappOn', { number: `+91 ${shop.whatsappNumber}` }) : t('seller.shop.noWhatsapp')}
           </p>
           <p className="text-text-secondary">{shop.area ? t('seller.shop.areaOn', { area: shop.area }) : t('seller.shop.noArea')}</p>
+          <p className="text-text-secondary" data-testid="review-website">
+            {shop.websiteUrl ? t('seller.shop.websiteOn', { site: websiteLabel(shop.websiteUrl) }) : t('seller.shop.noWebsite')}
+          </p>
         </div>
       </ReviewSection>
 
@@ -769,6 +819,7 @@ function ShopStatusScreen({ shop, onShop, reload, onFix }: { shop: Shop; onShop:
               {shop.whatsappNumber ? t('seller.shop.whatsappOn', { number: `+91 ${shop.whatsappNumber}` }) : t('seller.shop.noWhatsapp')}
             </p>
             {shop.area && <p className="text-text-secondary">{t('seller.shop.areaOn', { area: shop.area })}</p>}
+            {shop.websiteUrl && <p className="text-text-secondary">{t('seller.shop.websiteOn', { site: websiteLabel(shop.websiteUrl) })}</p>}
           </Card>
         )}
       </section>
@@ -826,6 +877,7 @@ function ShopFields({
     contactPhone: initial.contactPhone,
     whatsappNumber: initial.whatsappNumber ?? '',
     area: initial.area ?? '',
+    websiteUrl: initial.websiteUrl ?? '',
   });
   const [showErrors, setShowErrors] = useState(false);
   const valid = businessFieldsValid(values);

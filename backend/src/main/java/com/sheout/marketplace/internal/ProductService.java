@@ -1,11 +1,13 @@
 package com.sheout.marketplace.internal;
 
+import com.sheout.assistant.ListingSearchApi;
 import com.sheout.marketplace.MarketplaceError;
 import com.sheout.marketplace.MarketplaceViews.DirectoryFilter;
 import com.sheout.marketplace.MarketplaceViews.ListingCard;
 import com.sheout.marketplace.MarketplaceViews.ProductDetail;
 import com.sheout.marketplace.MarketplaceViews.ProductDetails;
 import com.sheout.marketplace.MarketplaceViews.SellerView;
+import com.sheout.marketplace.MarketplaceViews.SmartSearchResult;
 import com.sheout.marketplace.ProductApi;
 import com.sheout.sharedkernel.Result;
 import com.sheout.sharedkernel.storage.DocumentStorage;
@@ -21,9 +23,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -47,15 +55,17 @@ public class ProductService implements ProductApi {
     private final ShopViews views;
     private final DocumentStorage documentStorage;
     private final MarketplaceLimits limits;
+    private final ListingSearchApi listingSearch;
 
     ProductService(SellerProfileRepository sellers, ProductRepository products, ProductImageRepository images,
-                   ShopViews views, DocumentStorage documentStorage, MarketplaceLimits limits) {
+                   ShopViews views, DocumentStorage documentStorage, MarketplaceLimits limits, ListingSearchApi listingSearch) {
         this.sellers = sellers;
         this.products = products;
         this.images = images;
         this.views = views;
         this.documentStorage = documentStorage;
         this.limits = limits;
+        this.listingSearch = listingSearch;
     }
 
     // ------------------------------------------------------------ the directory
@@ -67,6 +77,73 @@ public class ProductService implements ProductApi {
                 PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by(Sort.Direction.DESC, "createdAt")));
         Map<UUID, SellerProfileEntity> bySeller = sellersOf(page.getContent());
         return new PageImpl<>(views.cards(page.getContent(), bySeller), page.getPageable(), page.getTotalElements());
+    }
+
+    /**
+     * How many listings the model is shown: the newest that match the rest
+     * of her filter. Enough to cover the directory while it is young, and a
+     * bounded, predictable input cost per search once it is not.
+     */
+    static final int SMART_SEARCH_CANDIDATES = 60;
+    /** As many keyword results as the model may return, so both modes show a page of the same size. */
+    static final int SMART_SEARCH_RESULTS = 20;
+
+    @Override
+    @Transactional(readOnly = true)
+    public SmartSearchResult askListings(UUID accountId, DirectoryFilter filter, String query) {
+        DirectoryFilter withoutWords = new DirectoryFilter(filter.categories(), null, filter.minPrice(), filter.maxPrice(), filter.area());
+        List<ProductEntity> pool = products.findAll(MarketplaceSpecs.directory(withoutWords),
+                PageRequest.of(0, SMART_SEARCH_CANDIDATES, Sort.by(Sort.Direction.DESC, "createdAt"))).getContent();
+        List<ListingCard> cards = views.cards(pool, sellersOf(pool));
+        Map<String, ListingCard> byRef = new LinkedHashMap<>();
+        List<ListingSearchApi.Candidate> candidates = new ArrayList<>();
+        Map<UUID, ProductEntity> byId = pool.stream().collect(Collectors.toMap(ProductEntity::getId, Function.identity()));
+        for (ListingCard card : cards) {
+            String ref = "p" + (byRef.size() + 1);
+            byRef.put(ref, card);
+            ProductEntity p = byId.get(card.productId());
+            candidates.add(new ListingSearchApi.Candidate(ref, card.title(), card.category().name(), card.displayPrice(),
+                    card.originalPrice(), p.getDescription(), card.area(), card.businessName()));
+        }
+
+        ListingSearchApi.Ranking ranking = listingSearch.rank(accountId, query, candidates);
+        if (ranking.outcome() == ListingSearchApi.Outcome.OK) {
+            // Only refs it was given can come back (ListingSearchService checks), so every one maps to a real card.
+            List<ListingCard> picked = ranking.refs().stream().map(byRef::get).filter(Objects::nonNull).toList();
+            return new SmartSearchResult(SmartSearchResult.Mode.AI, null, picked, ranking.remainingToday());
+        }
+        SmartSearchResult.FallbackReason reason = switch (ranking.outcome()) {
+            case LIMIT_REACHED -> SmartSearchResult.FallbackReason.LIMIT_REACHED;
+            case UNAVAILABLE -> SmartSearchResult.FallbackReason.UNAVAILABLE;
+            default -> SmartSearchResult.FallbackReason.FAILED;
+        };
+        // The ordinary search: her words as one phrase first (a product name, a
+        // shop, a code); if that finds nothing, any of her meaningful words.
+        DirectoryFilter withWords = new DirectoryFilter(filter.categories(), query, filter.minPrice(), filter.maxPrice(), filter.area());
+        List<ListingCard> exact = browseListings(withWords, PageRequest.of(0, SMART_SEARCH_RESULTS)).getContent();
+        List<String> words = meaningfulWords(query);
+        if (exact.isEmpty() && !words.isEmpty()) {
+            List<ProductEntity> found = products.findAll(MarketplaceSpecs.directoryAnyWord(filter, words),
+                    PageRequest.of(0, SMART_SEARCH_RESULTS, Sort.by(Sort.Direction.DESC, "createdAt"))).getContent();
+            exact = views.cards(found, sellersOf(found));
+        }
+        return new SmartSearchResult(SmartSearchResult.Mode.EXACT, reason, exact, ranking.remainingToday());
+    }
+
+    /** Words that carry no meaning on their own in a shopping request. */
+    private static final Set<String> FILLER = Set.of(
+            "a", "an", "the", "and", "or", "for", "of", "to", "in", "on", "at", "with", "by", "is", "it", "me", "my",
+            "i", "want", "need", "looking", "something", "anything", "some", "any", "under", "below", "above", "over",
+            "less", "more", "than", "near", "around", "within", "from", "rs", "inr", "rupees", "price", "cheap", "best",
+            "good", "nice", "please", "show", "find", "get", "buy");
+
+    /** Her query's words worth matching on their own: letters only, three or more, not filler. At most six. */
+    static List<String> meaningfulWords(String query) {
+        return Arrays.stream(query.toLowerCase(Locale.ROOT).split("[^\\p{L}]+"))
+                .filter(w -> w.length() >= 3 && !FILLER.contains(w))
+                .distinct()
+                .limit(6)
+                .toList();
     }
 
     @Override
@@ -92,9 +169,29 @@ public class ProductService implements ProductApi {
                 .filter(p -> p.isActive() && !p.getId().equals(product.getId()))
                 .limit(MORE_FROM_SELLER)
                 .toList();
-        return Optional.of(new ProductDetail(product.getId(), product.getTitle(), product.getDescription(),
-                product.getDisplayPrice(), photos, s.getId(), s.getBusinessName(), s.getCategory(),
-                s.getArea(), s.getContactPhone(), s.getWhatsappNumber(), views.cards(others, Map.of(s.getId(), s))));
+        return Optional.of(new ProductDetail(product.getId(), product.getCode(), product.getTitle(), product.getDescription(),
+                product.getDisplayPrice(), product.getOriginalPrice(), photos, s.getId(), s.getBusinessName(), s.getCategory(),
+                s.getArea(), s.getWebsiteUrl(), s.getContactPhone(), s.getWhatsappNumber(), views.cards(others, Map.of(s.getId(), s))));
+    }
+
+    /** A code no other product has. Almost always the first one drawn; see ProductCodes. */
+    private String freshCode() {
+        for (int attempt = 0; attempt < 10; attempt++) {
+            String code = ProductCodes.next();
+            if (!products.existsByCode(code)) {
+                return code;
+            }
+        }
+        throw new IllegalStateException("Could not draw an unused product code");
+    }
+
+    /**
+     * A "was" price must be above the price, or there is no discount to show.
+     * Whether it was a real earlier price is her declaration (see the seller
+     * terms), not something the app can check.
+     */
+    private static boolean discountValid(ProductDetails details) {
+        return details.originalPrice() == null || details.originalPrice().compareTo(details.displayPrice()) > 0;
     }
 
     private Map<UUID, SellerProfileEntity> sellersOf(List<ProductEntity> list) {
@@ -111,8 +208,11 @@ public class ProductService implements ProductApi {
             if (products.countBySellerId(seller.getId()) >= limits.maxProducts()) {
                 return Result.failure(MarketplaceError.PRODUCT_LIMIT_REACHED);
             }
-            products.save(new ProductEntity(seller.getId(), details.title().trim(), details.description().trim(),
-                    details.displayPrice(), details.active()));
+            if (!discountValid(details)) {
+                return Result.failure(MarketplaceError.INVALID_ORIGINAL_PRICE);
+            }
+            products.save(new ProductEntity(seller.getId(), freshCode(), details.title().trim(), details.description().trim(),
+                    details.displayPrice(), details.originalPrice(), details.active()));
             return Result.success(null);
         });
     }
@@ -120,8 +220,12 @@ public class ProductService implements ProductApi {
     @Override
     @Transactional
     public Result<SellerView, MarketplaceError> updateProduct(UUID accountId, UUID productId, ProductDetails details) {
+        if (!discountValid(details)) {
+            return Result.failure(MarketplaceError.INVALID_ORIGINAL_PRICE);
+        }
         return withEditableShop(accountId, seller -> ownProduct(seller, productId).map(product -> {
-            product.update(details.title().trim(), details.description().trim(), details.displayPrice(), details.active());
+            product.update(details.title().trim(), details.description().trim(), details.displayPrice(), details.originalPrice(),
+                    details.active());
             products.save(product);
             return Result.<Void, MarketplaceError>success(null);
         }).orElse(Result.failure(MarketplaceError.PRODUCT_NOT_FOUND)));

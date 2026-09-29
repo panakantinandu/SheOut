@@ -97,7 +97,7 @@ public class SellerService implements SellerApi, MarketplaceAdminApi {
         }
         SellerDetails d = clean.value();
         SellerProfileEntity seller = sellers.save(new SellerProfileEntity(accountId, d.businessName(), d.category(),
-                d.contactPhone(), d.whatsappNumber(), d.area()));
+                d.contactPhone(), d.whatsappNumber(), d.area(), d.websiteUrl()));
         log.info("Seller application started: {} by account {}", seller.getId(), accountId);
         return Result.success(views.sellerView(seller));
     }
@@ -118,7 +118,7 @@ public class SellerService implements SellerApi, MarketplaceAdminApi {
             return Result.failure(clean.error());
         }
         SellerDetails d = clean.value();
-        seller.setDetails(d.businessName(), d.category(), d.contactPhone(), d.whatsappNumber(), d.area());
+        seller.setDetails(d.businessName(), d.category(), d.contactPhone(), d.whatsappNumber(), d.area(), d.websiteUrl());
         seller.touchedWhileLive(Instant.now());
         return Result.success(views.sellerView(sellers.save(seller)));
     }
@@ -383,6 +383,13 @@ public class SellerService implements SellerApi, MarketplaceAdminApi {
             }
         }
         String area = d.area() == null || d.area().isBlank() ? null : d.area().trim().replaceAll("\\s+", " ");
-        return Result.success(new SellerDetails(d.businessName().trim(), d.category(), phone, whatsapp, area));
+        String website = null;
+        if (d.websiteUrl() != null && !d.websiteUrl().isBlank()) {
+            website = WebsiteAddress.normalize(d.websiteUrl());
+            if (website == null) {
+                return Result.failure(MarketplaceError.INVALID_WEBSITE);
+            }
+        }
+        return Result.success(new SellerDetails(d.businessName().trim(), d.category(), phone, whatsapp, area, website));
     }
 }
