@@ -142,7 +142,11 @@ export function HelpAssistantChat({ ask, sosAction, emergencyNumber, onRaiseTick
   }
 
   return (
-    <div className="flex min-h-[70vh] flex-col gap-4" data-testid="help-assistant">
+    // Fills the screen it is in (see KeyboardAwareScreen): the conversation
+    // scrolls inside, and the box she types in stays at the foot, just above
+    // the keyboard when it is open.
+    <div className="flex min-h-0 flex-1 flex-col" data-testid="help-assistant">
+      <div className="-mx-screen min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-screen pb-2" data-testid="assistant-scroll">
       {/* Who is talking. Calm and still while the SOS panel is up: nothing
           on screen should be moving then except her own thumb. */}
       <Card className="space-y-3" data-testid="assistant-header">
@@ -156,7 +160,7 @@ export function HelpAssistantChat({ ask, sosAction, emergencyNumber, onRaiseTick
         <p className="text-sm text-text-secondary">{t('assistant.intro', { name })}</p>
       </Card>
 
-      <div className="flex-1 space-y-3" aria-live="polite">
+      <div className="space-y-3" aria-live="polite">
         {entries.map((entry, i) =>
           entry.role === 'user' ? (
             <div key={i} className="ml-10 rounded-card rounded-br-sm bg-primary px-4 py-3 text-sm text-text-inverse" data-testid="assistant-user-message">
@@ -230,9 +234,10 @@ export function HelpAssistantChat({ ask, sosAction, emergencyNumber, onRaiseTick
 
         <div ref={bottom} />
       </div>
+      </div>
 
       <form
-        className="sticky bottom-0 bg-background pb-4 pt-2"
+        className="shrink-0 bg-background pb-[max(1rem,env(safe-area-inset-bottom))] pt-2"
         onSubmit={(e) => {
           e.preventDefault();
           void send();
@@ -242,7 +247,11 @@ export function HelpAssistantChat({ ask, sosAction, emergencyNumber, onRaiseTick
         <textarea
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          onFocus={() => setTyping(true)}
+          onFocus={() => {
+            setTyping(true);
+            // Once the keyboard is up and the screen has shrunk, the latest message goes back in view.
+            window.setTimeout(() => bottom.current?.scrollIntoView?.({ block: 'end' }), 350);
+          }}
           onBlur={() => setTyping(false)}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {

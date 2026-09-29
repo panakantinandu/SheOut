@@ -51,11 +51,12 @@ const SERVICES = [
  * fallback. Service cards and quick access are still static UI.
  * <p>
  * Top to bottom it is a ride app: where are you going, the two services,
- * what SheOut stands for (Women Supporting Women), then the rider's own
- * shortcuts (SOS, live trip, wallet, history). The
- * marketplace follows as one card, with its categories drifting past and a
- * way in for sellers. "All services" beside the heading lists every service,
- * Marketplace included, and the assistant waits in the bottom-right corner.
+ * then the marketplace straight under them as one card (its categories
+ * drifting past, a way in for sellers) - found with the other services,
+ * not at the foot of the page - then what SheOut stands for (Women
+ * Supporting Women) and the rider's own shortcuts (SOS, live trip, wallet,
+ * history). "All services" beside the heading lists every service, and the
+ * assistant waits in the bottom-right corner.
  */
 export function Home() {
   const { t } = useTranslation();
@@ -166,50 +167,26 @@ export function Home() {
                 draggable={false}
                 className="mx-auto aspect-square w-[82%] select-none object-contain drop-shadow-[0_10px_14px_rgba(74,26,158,0.25)] transition-transform duration-300 ease-out group-hover:-translate-y-1 group-hover:scale-[1.03]"
               />
-              <span className="mt-2.5 flex items-end justify-between gap-2">
-                <span className="min-w-0">
-                  <span className="block font-heading text-card-title leading-tight text-text-primary">{t(service.labelKey)}</span>
-                  <span className="mt-0.5 block text-caption leading-snug text-text-secondary">{t(service.bodyKey)}</span>
+              {/* The arrow sits in the corner, over the picture, so the name
+                  has the card's whole width and stays on one line. */}
+              <span
+                className={`absolute right-2.5 top-2.5 flex h-8 w-8 items-center justify-center rounded-full ${service.arrow} text-white shadow-lift transition-transform duration-200 group-hover:translate-x-0.5`}
+                aria-hidden="true"
+              >
+                <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
+              </span>
+              <span className="mt-2.5 block min-w-0">
+                <span className="block whitespace-nowrap font-heading text-card-title leading-tight text-text-primary" data-testid={`service-${service.key}-label`}>
+                  {t(service.labelKey)}
                 </span>
-                <span
-                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${service.arrow} text-white shadow-lift transition-transform duration-200 group-hover:translate-x-0.5`}
-                  aria-hidden="true"
-                >
-                  <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
-                </span>
+                <span className="mt-0.5 block text-caption leading-snug text-text-secondary">{t(service.bodyKey)}</span>
               </span>
             </button>
           ))}
         </div>
       </div>
 
-      {/* What SheOut stands for, straight after what it does. */}
-      <CommunityCard
-        title={fromContent('home.community.title', 'home.communityTitle')}
-        subtitle={fromContent('home.community.subtitle', 'home.communitySubtitle')}
-        art={womenArt}
-        artAlt={t('home.threeWomen')}
-      />
-
-      <Reveal>
-        {/* Four tiles, four destinations. Live Track and History used to
-            both open /bookings, which is where the Bookings tab goes too -
-            so three of the app's entry points showed one identical list and
-            two of them earned their place on the screen by doing nothing.
-            They now open the same screen scoped to genuinely different
-            questions: what is happening now, and what already happened. */}
-        <QuickAccess
-          title={t('home.quickAccess')}
-          items={[
-            { key: 'sos', label: t('home.sos'), sub: t('home.quick.sos'), onOpen: () => navigate('/sos') },
-            { key: 'live', label: t('home.liveTrack'), sub: t('home.quick.live'), onOpen: () => navigate('/bookings?view=live') },
-            { key: 'wallet', label: t('home.wallet'), sub: t('home.quick.wallet'), onOpen: () => navigate('/wallet') },
-            { key: 'history', label: t('home.history'), sub: t('home.quick.history'), onOpen: () => navigate('/bookings?view=history') },
-          ]}
-        />
-      </Reveal>
-
-      {/* The marketplace, as one card: its categories drifting past - each
+      {/* The marketplace, right under the two ride services and as one card: its categories drifting past - each
           opens that category - and, at its foot, the way in for sellers. */}
       <Reveal>
         <section className="overflow-hidden rounded-[1.75rem] border border-border bg-surface px-4 pb-3 pt-4 shadow-lift" data-testid="home-marketplace">
@@ -246,6 +223,32 @@ export function Home() {
             <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
           </button>
         </section>
+      </Reveal>
+
+      {/* What SheOut stands for, straight after what it does. */}
+      <CommunityCard
+        title={fromContent('home.community.title', 'home.communityTitle')}
+        subtitle={fromContent('home.community.subtitle', 'home.communitySubtitle')}
+        art={womenArt}
+        artAlt={t('home.threeWomen')}
+      />
+
+      <Reveal>
+        {/* Four tiles, four destinations. Live Track and History used to
+            both open /bookings, which is where the Bookings tab goes too -
+            so three of the app's entry points showed one identical list and
+            two of them earned their place on the screen by doing nothing.
+            They now open the same screen scoped to genuinely different
+            questions: what is happening now, and what already happened. */}
+        <QuickAccess
+          title={t('home.quickAccess')}
+          items={[
+            { key: 'sos', label: t('home.sos'), sub: t('home.quick.sos'), onOpen: () => navigate('/sos') },
+            { key: 'live', label: t('home.liveTrack'), sub: t('home.quick.live'), onOpen: () => navigate('/bookings?view=live') },
+            { key: 'wallet', label: t('home.wallet'), sub: t('home.quick.wallet'), onOpen: () => navigate('/wallet') },
+            { key: 'history', label: t('home.history'), sub: t('home.quick.history'), onOpen: () => navigate('/bookings?view=history') },
+          ]}
+        />
       </Reveal>
 
       {/* Room at the foot, so the assistant in the corner never sits on the last card. */}

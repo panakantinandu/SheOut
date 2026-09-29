@@ -967,34 +967,14 @@ function StatusCard({
         </p>
       )}
       {shop.status === 'APPROVED_AWAITING_PAYMENT' && (
-        <>
-          {/* Her SheOut wallet first when it covers the fee: one tap, no app to open. */}
-          {walletBalance != null && walletBalance >= shop.listingFee.amount && (
-            <Button className="w-full" size="lg" icon={<Wallet className="h-4 w-4" />} onClick={onPayFromWallet} disabled={busy} data-testid="pay-fee-wallet">
-              {busy ? t('seller.fee.paying') : t('seller.fee.payWallet', { amount: priceText(shop.listingFee.amount), balance: priceText(walletBalance) })}
-            </Button>
-          )}
-          <Button
-            className="w-full"
-            size="lg"
-            variant={walletBalance != null && walletBalance >= shop.listingFee.amount ? 'secondary' : 'primary'}
-            icon={<IndianRupee className="h-4 w-4" />}
-            onClick={onPay}
-            disabled={busy}
-            data-testid="pay-listing-fee"
-          >
-            {busy ? t('seller.fee.opening') : t('seller.fee.pay', { amount: priceText(shop.listingFee.amount) })}
-          </Button>
-          {walletBalance != null && walletBalance < shop.listingFee.amount && (
-            <p className="text-caption text-text-secondary" data-testid="fee-wallet-short">
-              {t('seller.fee.walletShort', { balance: priceText(walletBalance) })}{' '}
-              <button type="button" className="font-semibold text-primary" onClick={() => navigate('/wallet', { state: { returnTo: '/seller/manage' } })}>
-                {t('seller.fee.addMoney')}
-              </button>
-            </p>
-          )}
-          <p className="text-caption text-text-secondary">{t('seller.fee.oneTime')}</p>
-        </>
+        <FeeOptions
+          fee={shop.listingFee.amount}
+          walletBalance={walletBalance}
+          busy={busy}
+          onPayFromWallet={onPayFromWallet}
+          onPay={onPay}
+          onTopUp={(need) => navigate('/wallet', { state: { returnTo: '/seller/manage', need, purpose: 'listingFee' } })}
+        />
       )}
       {shop.status === 'ACTIVE' && (
         <Button variant="secondary" className="w-full" icon={<Store className="h-4 w-4" />} onClick={() => navigate('/seller')}>
@@ -1007,5 +987,81 @@ function StatusCard({
         </Button>
       )}
     </Card>
+  );
+}
+
+/**
+ * How she pays the listing fee: her SheOut wallet first, then UPI or card.
+ * <p>
+ * The wallet is always offered, not only when it already covers the fee -
+ * hidden, it read as "the wallet can't pay this". Covered: one tap. Short:
+ * how much more, and "Add ₹X to wallet", which opens the wallet asking for
+ * exactly that and brings her back here to pay with one more tap - never
+ * charged on the way back without her say. Balance unreadable: the button
+ * still works, and the server says if the balance is short.
+ */
+function FeeOptions({
+  fee,
+  walletBalance,
+  busy,
+  onPayFromWallet,
+  onPay,
+  onTopUp,
+}: {
+  fee: number;
+  walletBalance: number | null;
+  busy: boolean;
+  onPayFromWallet: () => void;
+  onPay: () => void;
+  onTopUp: (need: number) => void;
+}) {
+  const { t } = useTranslation();
+  const known = walletBalance != null;
+  const short = known && walletBalance < fee ? Math.ceil(fee - walletBalance) : 0;
+
+  return (
+    <div className="space-y-3" data-testid="fee-options">
+      <p className="text-sm font-semibold text-text-primary">{t('seller.fee.chooseHow')}</p>
+
+      {/* Her SheOut wallet. */}
+      <div className="rounded-card border-2 border-primary/30 bg-primary-light p-3" data-testid="fee-option-wallet">
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-text-inverse">
+            <Wallet className="h-5 w-5" aria-hidden="true" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="font-heading text-card-title text-text-primary">{t('seller.fee.walletTitle')}</p>
+            <p className="text-caption text-text-secondary" data-testid="fee-wallet-balance">
+              {known ? t('seller.fee.walletBalance', { balance: priceText(walletBalance) }) : t('seller.fee.walletUnknown')}
+            </p>
+          </div>
+        </div>
+        {short > 0 && (
+          <p className="mt-2 text-caption font-medium text-accent-orange-strong" data-testid="fee-wallet-short">
+            {t('seller.fee.shortBy', { amount: priceText(short) })}
+          </p>
+        )}
+        {short > 0 ? (
+          <Button className="mt-3 w-full" size="lg" icon={<Wallet className="h-4 w-4" />} onClick={() => onTopUp(short)} disabled={busy} data-testid="fee-wallet-topup">
+            {t('seller.fee.addToWallet', { amount: priceText(short) })}
+          </Button>
+        ) : (
+          <Button className="mt-3 w-full" size="lg" icon={<Wallet className="h-4 w-4" />} onClick={onPayFromWallet} disabled={busy} data-testid="pay-fee-wallet">
+            {busy ? t('seller.fee.paying') : t('seller.fee.payFromWallet', { amount: priceText(fee) })}
+          </Button>
+        )}
+      </div>
+
+      {/* Or online. */}
+      <div className="flex items-center gap-3 text-caption text-text-secondary" aria-hidden="true">
+        <span className="h-px flex-1 bg-border" />
+        {t('seller.fee.or')}
+        <span className="h-px flex-1 bg-border" />
+      </div>
+      <Button className="w-full" size="lg" variant="secondary" icon={<IndianRupee className="h-4 w-4" />} onClick={onPay} disabled={busy} data-testid="pay-listing-fee">
+        {busy ? t('seller.fee.opening') : t('seller.fee.pay', { amount: priceText(fee) })}
+      </Button>
+      <p className="text-caption text-text-secondary">{t('seller.fee.oneTime')}</p>
+    </div>
   );
 }

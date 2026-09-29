@@ -36,6 +36,23 @@ html {
   text-size-adjust: 100%;
 }
 
+/*
+ * iPhone Safari zooms the whole page in on any field whose text is under
+ * 16px the moment it is tapped, and leaves it zoomed: the screen slides
+ * sideways and up, and what she was reading is gone. With the root size
+ * above, every field is under 16px on a phone narrower than 390pt, and the
+ * assistant's box (text-sm) is under it on all of them. Fields are held at
+ * 16px or more on iOS only - pinch-zoom stays on, as it should for
+ * accessibility, and nothing changes anywhere else.
+ */
+@supports (-webkit-touch-callout: none) {
+  input,
+  textarea,
+  select {
+    font-size: max(16px, 1em) !important;
+  }
+}
+
 :root {
   --c-primary: 74 26 158;
   --c-primary-dark: 54 17 111;

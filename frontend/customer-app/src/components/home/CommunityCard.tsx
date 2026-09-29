@@ -9,7 +9,7 @@ const PILL_ICONS: ReactNode[] = [<ShieldCheck key="safe" />, <Sparkles key="empo
  * <p>
  * The three women rise into the card with small hearts floating up behind
  * them, and the operator's line ("Safe · Empowered · Together") arrives as
- * pills, one after another. The line is split on its dots; if an operator
+ * pills stacked one under another, each after the one above. The line is split on its dots; if an operator
  * writes it without them it shows as one plain line.
  */
 export function CommunityCard({ title, subtitle, art, artAlt }: { title: string; subtitle: string; art: string; artAlt: string }) {
@@ -27,7 +27,8 @@ export function CommunityCard({ title, subtitle, art, artAlt }: { title: string;
         {/* One line, across the whole card: the words are the point, the picture sits under them. */}
         <h2 className="whitespace-nowrap font-heading text-card-title leading-tight text-primary" data-testid="community-title">{title}</h2>
         {parts.length > 1 ? (
-          <ul className="mt-2.5 flex max-w-[56%] flex-wrap gap-1.5">
+          <ul className="mt-2.5 flex flex-col items-start gap-1.5">
+            {/* One under another, each arriving after the one above: a short list, read top to bottom. */}
             {parts.map((part, i) => (
               <li
                 key={part}
@@ -59,7 +60,7 @@ export function CommunityCard({ title, subtitle, art, artAlt }: { title: string;
         src={art}
         alt={artAlt}
         draggable={false}
-        className="absolute bottom-0 right-2 h-[5.5rem] w-[42%] max-w-[11.25rem] select-none object-contain object-right-bottom motion-safe:animate-rise-in"
+        className="absolute bottom-0 right-2 h-[6.75rem] w-[44%] max-w-[12rem] select-none object-contain object-right-bottom motion-safe:animate-rise-in"
         style={{ animationDelay: '200ms' }}
       />
     </section>

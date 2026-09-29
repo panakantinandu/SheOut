@@ -2,7 +2,7 @@ import { Siren } from 'lucide-react';
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGoBack } from '../lib/useGoBack';
-import { Button, ASSISTANT_NAME, HelpAssistantChat, assistantTicketDescription, SafetyText, TopHeader, useAppLanguage, useTranslation } from '@sheout/design-system';
+import { Button, ASSISTANT_NAME, HelpAssistantChat, KeyboardAwareScreen, assistantTicketDescription, SafetyText, TopHeader, useAppLanguage, useTranslation } from '@sheout/design-system';
 import { assistantApi } from '../api/client';
 import { localEmergencyNumber } from '../lib/emergency';
 
@@ -18,8 +18,12 @@ export function HelpAssistant() {
   const emergency = useMemo(localEmergencyNumber, []);
 
   return (
-    <div className="space-y-4">
-      <TopHeader variant="back" title={ASSISTANT_NAME} onBack={goBack} />
+    // A chat screen: it fits the area above the keyboard, so the header stays
+    // and the box she types in sits right above the keys (see KeyboardAwareScreen).
+    <KeyboardAwareScreen>
+      <div className="shrink-0 pb-4">
+        <TopHeader variant="back" title={ASSISTANT_NAME} onBack={goBack} />
+      </div>
       <HelpAssistantChat
         ask={(messages) => assistantApi.ask(messages, language)}
         emergencyNumber={emergency.number}
@@ -45,6 +49,6 @@ export function HelpAssistant() {
           })
         }
       />
-    </div>
+    </KeyboardAwareScreen>
   );
 }

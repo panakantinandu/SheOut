@@ -276,6 +276,17 @@ export default {
           '0%': { transform: 'scale(0.85)', opacity: '0.7' },
           '100%': { transform: 'scale(1.5)', opacity: '0' },
         },
+        // The assistant's head, nodding a little as she listens.
+        nod: {
+          '0%, 100%': { transform: 'rotate(0deg)' },
+          '30%': { transform: 'rotate(-4deg)' },
+          '60%': { transform: 'rotate(3deg)' },
+        },
+        // Her headset mic, glowing on and off as if she is on a call.
+        'mic-glow': {
+          '0%, 100%': { opacity: '1', transform: 'scale(1)' },
+          '50%': { opacity: '0.55', transform: 'scale(1.35)' },
+        },
         // A soft green glow breathing out from a button: tap me.
         'glow-go': {
           '0%': { boxShadow: '0 0 0 0 rgba(22, 163, 74, 0.45)' },
@@ -320,6 +331,8 @@ export default {
         'hourglass-flip': 'hourglass-flip 3s ease-in-out infinite',
         'glow-go': 'glow-go 2.2s ease-out infinite',
         ripple: 'ripple 2.4s ease-out infinite',
+        nod: 'nod 3.6s ease-in-out infinite',
+        'mic-glow': 'mic-glow 1.6s ease-in-out infinite',
       },
     },
   },

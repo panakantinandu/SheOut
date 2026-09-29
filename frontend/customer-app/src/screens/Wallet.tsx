@@ -11,10 +11,15 @@ import { PromotionsCard } from '../components/PromotionsCard';
 
 const QUICK_AMOUNTS = [100, 200, 500, 1000];
 
-/** Sent by the trip payment card when her balance is short, so the top-up returns her to the trip. */
+/**
+ * Sent when her balance is short of something she is paying - a trip, or her
+ * seller listing fee - so the top-up asks for enough and returns her to it.
+ */
 interface WalletRouteState {
   returnTo?: string;
   need?: number;
+  /** What the money is for, so the note says so. A trip when not given. */
+  purpose?: 'trip' | 'listingFee';
 }
 
 /**
@@ -200,7 +205,7 @@ export function Wallet() {
       {routeState.need && wallet && (
         <Card tone="warning">
           <p className="text-sm text-text-primary">
-            {t('wallet.needForTrip', { amount: Math.ceil(routeState.need) })}
+            {t(routeState.purpose === 'listingFee' ? 'wallet.needForFee' : 'wallet.needForTrip', { amount: Math.ceil(routeState.need) })}
           </p>
         </Card>
       )}

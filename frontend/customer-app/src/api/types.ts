@@ -170,7 +170,7 @@ export interface PaymentHold {
   holdUntil: string | null;
 }
 
-/** Her SheOut wallet: a closed-loop balance, topped up online and spent only on her own trips. */
+/** Her SheOut wallet: a closed-loop balance, topped up online and spent only on her own trips and her seller listing fee. */
 export interface RiderWallet {
   balance: number;
   minTopup: number;

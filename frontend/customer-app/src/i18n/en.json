@@ -460,10 +460,15 @@
       "checkoutDescription": "SheOut Seller listing fee",
       "failed": "The payment did not go through: {{reason}}",
       "error": "The payment could not be completed. Please try again.",
-      "payWallet": "Pay {{amount}} from SheOut wallet (balance {{balance}})",
       "paying": "Paying...",
-      "walletShort": "Your SheOut wallet has {{balance}}.",
-      "addMoney": "Add money"
+      "chooseHow": "How would you like to pay?",
+      "walletTitle": "SheOut wallet",
+      "walletBalance": "Balance {{balance}}",
+      "walletUnknown": "Balance not available right now",
+      "shortBy": "{{amount}} more needed",
+      "payFromWallet": "Pay {{amount}} from wallet",
+      "or": "or",
+      "addToWallet": "Add {{amount}} to wallet"
     },
     "editor": {
       "newTitle": "Add a product",
@@ -816,7 +821,7 @@
     "razorpayNote": "Paid securely through Razorpay by UPI, card or netbanking. Money is added once your bank confirms it.",
     "payTrip": "Pay a Trip",
     "tripPayments": "Trip Payments",
-    "closedLoopNote": "Your wallet pays only for your own SheOut trips, and each fare goes to your partner's SheOut wallet. It can't be sent to other people or withdrawn.",
+    "closedLoopNote": "Your wallet pays for your own SheOut trips and your seller listing fee. Each fare goes to your partner's SheOut wallet. It can't be sent to other people or withdrawn.",
     "activity": "Wallet activity",
     "activityLoading": "Loading your wallet activity",
     "activityEmptyTitle": "No activity yet",
@@ -826,7 +831,8 @@
     "balanceAfter": "Balance ₹{{amount}}",
     "nothingToPay": "No trip is waiting to be paid.",
     "payTripDue": "Pay ₹{{amount}}",
-    "payTripError": "Could not check for unpaid trips. Please try again."
+    "payTripError": "Could not check for unpaid trips. Please try again.",
+    "needForFee": "Add at least ₹{{amount}} to pay your listing fee. You'll go straight back to your shop."
   },
   "tripPay": {
     "lowBalance": "Your wallet balance is too low for this fare. Add money, or pay online.",

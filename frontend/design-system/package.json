@@ -15,7 +15,6 @@
   "dependencies": {
     "@sentry/react": "^10.74.0",
     "@vis.gl/react-google-maps": "^1.10.0",
-    "bot-avatars": "0.1.1",
     "clsx": "^2.1.1",
     "firebase": "^12.19.0",
     "i18next": "^23.16.8",
