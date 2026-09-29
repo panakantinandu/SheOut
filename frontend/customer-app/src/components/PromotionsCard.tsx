@@ -79,7 +79,7 @@ export function PromotionsCard() {
       ))}
 
       <div className="flex items-end gap-2">
-        <div className="flex-1">
+        <div className="min-w-0 flex-1">
           <TextField
             label={t('promo.codeLabel')}
             value={code}
@@ -89,7 +89,7 @@ export function PromotionsCard() {
             data-testid="promo-code-input"
           />
         </div>
-        <Button size="md" variant="secondary" disabled={busy || !code.trim()} onClick={redeem} data-testid="promo-code-apply">
+        <Button size="md" variant="secondary" disabled={busy || !code.trim()} onClick={redeem} className="shrink-0 whitespace-nowrap" data-testid="promo-code-apply">
           {t('promo.apply')}
         </Button>
       </div>

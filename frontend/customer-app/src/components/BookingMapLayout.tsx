@@ -8,8 +8,10 @@ import type { GeoAddress } from '../api/types';
 const SHEET_CHROME = 40;
 /** How tall the sheet may grow, as a share of the screen. */
 const EXPANDED_SHARE = 0.78;
-/** Clear space for the floating pickup/drop chips when the view fits the route. */
-const FIT_PADDING = { top: 150, right: 40, bottom: 40, left: 40 };
+/** Space kept clear round the route when the view fits it; the top also clears the chips. */
+const FIT_PADDING = { right: 40, bottom: 40, left: 40 };
+/** Below the chips' bottom edge, before the route may start. */
+const CHIPS_CLEARANCE = 34;
 
 export interface BookingMapLayoutProps {
   title: string;
@@ -61,6 +63,10 @@ export function BookingMapLayout({
   more,
 }: BookingMapLayoutProps) {
   const { t } = useTranslation();
+  const ownChipsRef = useRef<HTMLDivElement>(null);
+  const chips = chipsRef ?? ownChipsRef;
+  /** The chips grow to two lines for a long address, so the route clears their real height. */
+  const [chipsBottom, setChipsBottom] = useState(116);
   const summaryRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const [summaryHeight, setSummaryHeight] = useState(220);
@@ -84,6 +90,19 @@ export function BookingMapLayout({
     if (contentRef.current) observer.observe(contentRef.current);
     return () => observer.disconnect();
   }, []);
+
+  useLayoutEffect(() => {
+    const el = chips.current;
+    if (!el) return;
+    const measure = () => {
+      const mapTop = el.closest('[data-testid=booking-map-area]')?.getBoundingClientRect().top ?? 0;
+      setChipsBottom(Math.round(el.getBoundingClientRect().bottom - mapTop));
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [chips]);
 
   useEffect(() => {
     const onResize = () => setViewport(window.innerHeight);
@@ -122,7 +141,7 @@ export function BookingMapLayout({
     <div className="fixed inset-0 z-10 mx-auto flex max-w-md flex-col bg-surface" data-testid="booking-map-layout">
       {/* The map: everything above the sheet, and nothing below it. */}
       <div className="relative min-h-0 flex-1" data-testid="booking-map-area">
-        <LiveMap markers={markers} route={route} fill fitPadding={FIT_PADDING} />
+        <LiveMap markers={markers} route={route} fill fitPadding={{ ...FIT_PADDING, top: chipsBottom + CHIPS_CLEARANCE }} />
 
         <div className="pointer-events-none absolute inset-x-3 top-3 z-10 flex gap-2">
           <button
@@ -133,7 +152,7 @@ export function BookingMapLayout({
           >
             <ArrowLeft className="h-5 w-5" aria-hidden="true" />
           </button>
-          <div ref={chipsRef} className="pointer-events-auto min-w-0 flex-1 space-y-2">
+          <div ref={chips} className="pointer-events-auto min-w-0 flex-1 space-y-2">
             <p className="sr-only">{title}</p>
             <LocationChip
               tone="pickup"
@@ -252,7 +271,15 @@ function LocationChip({
         <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${colours.dot}`} aria-hidden="true" />
         <span className="min-w-0 flex-1">
           <span className="sr-only">{label}: </span>
-          <span className={`block truncate text-sm ${empty ? 'text-text-secondary' : 'font-semibold text-text-primary'}`}>{value}</span>
+          {/* Up to two lines, then an ellipsis: the chip is the only place
+              on this screen the address is written, so one line cut off
+              most Hyderabad addresses mid-locality. */}
+          <span
+            title={value}
+            className={`line-clamp-2 break-words text-sm leading-snug ${empty ? 'text-text-secondary' : 'font-semibold text-text-primary'}`}
+          >
+            {value}
+          </span>
         </span>
         <Pencil
           className={`h-4 w-4 shrink-0 ${active ? colours.pencil : 'text-text-secondary'}`}

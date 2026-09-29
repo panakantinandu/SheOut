@@ -69,8 +69,11 @@ export function ListRow({
     >
       {icon}
       <span className="flex-1 min-w-0">
-        <span className="block truncate text-sm font-medium text-text-primary">{label}</span>
-        {sublabel && <span className="block truncate text-xs text-text-secondary">{sublabel}</span>}
+        {/* Both wrap: they are sentences, and a row cut to one line lost
+            the end of them in Hindi and Telugu at every width. An email or
+            number with no spaces breaks anywhere rather than running out. */}
+        <span className="block break-words text-sm font-medium text-text-primary [overflow-wrap:anywhere]">{label}</span>
+        {sublabel && <span className="mt-0.5 block break-words text-xs text-text-secondary [overflow-wrap:anywhere]">{sublabel}</span>}
       </span>
       {rightSlot ?? (chevron && <ChevronRight className="h-4 w-4 shrink-0 text-text-secondary" />)}
     </Wrapper>

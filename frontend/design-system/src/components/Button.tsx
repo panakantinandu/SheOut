@@ -21,9 +21,11 @@ const variantClasses: Record<ButtonVariant, string> = {
   success: 'bg-accent-green-strong text-text-inverse shadow-lift hover:brightness-95',
 };
 
+// A minimum height, not a fixed one: a label that needs a second line - a
+// long one in Telugu, say - grows the pill instead of spilling out of it.
 const sizeClasses: Record<ButtonSize, string> = {
-  md: 'h-11 px-5 text-sm gap-2',
-  lg: 'h-14 px-6 text-base gap-3',
+  md: 'min-h-11 px-5 py-2 text-sm gap-2',
+  lg: 'min-h-14 px-6 py-3 text-base gap-3',
 };
 
 /**
@@ -37,7 +39,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       <button
         ref={ref}
         className={cn(
-          'inline-flex items-center justify-center rounded-full font-heading font-semibold',
+          'inline-flex items-center justify-center rounded-full text-center font-heading font-semibold leading-snug',
           // The press. CSS on :active, so the tap handler has already fired
           // by the time anything moves - this can never delay an action,
           // only acknowledge one. Three per cent: felt rather than seen.

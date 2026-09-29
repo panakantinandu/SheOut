@@ -73,7 +73,7 @@ export function SafetyCenter() {
             }}
             data-testid="sc-copy-shortcut"
           >
-            <span className="min-w-0 truncate font-mono">{SHORTCUT_LINK}</span>
+            <span className="min-w-0 break-all font-mono">{SHORTCUT_LINK}</span>
             <Copy className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
           </button>
         </div>

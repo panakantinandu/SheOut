@@ -131,7 +131,7 @@ export function Drawer({ open, onClose, header, sections, footer }: DrawerProps)
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block text-sm font-semibold">{item.label}</span>
-                        {item.sublabel && <span className="block truncate text-xs text-text-secondary">{item.sublabel}</span>}
+                        {item.sublabel && <span className="block break-words text-xs text-text-secondary [overflow-wrap:anywhere]">{item.sublabel}</span>}
                       </span>
                       {item.tone !== 'danger' && <ChevronRight className="h-4 w-4 shrink-0 text-text-secondary" aria-hidden="true" />}
                     </button>

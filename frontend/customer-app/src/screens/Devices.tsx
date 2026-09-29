@@ -84,8 +84,8 @@ export function Devices() {
                   was last used sit under it, so nothing is cut off on a
                   narrow phone. */}
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-text-primary">{session.device}</p>
-                <p className="truncate text-xs text-text-secondary">
+                <p className="break-words text-sm font-medium text-text-primary">{session.device}</p>
+                <p className="text-xs text-text-secondary">
                   {/* When the device in her hand was last used is now, which
                       tells her nothing - it just crowds the row. */}
                   {session.current

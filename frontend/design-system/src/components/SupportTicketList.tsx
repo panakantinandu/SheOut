@@ -127,7 +127,7 @@ export function SupportTicketList({ audience, fetchPage, onOpen }: SupportTicket
         <Card key={ticket.id} className="flex items-center gap-3" onClick={() => onOpen(ticket.id)}>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium text-text-primary">{ticket.subject}</p>
-            <p className="truncate text-xs text-text-secondary">
+            <p className="text-xs text-text-secondary">
               {supportCategoryLabel(ticket.category, audience)} &middot; updated{' '}
               {new Date(ticket.lastActivityAt).toLocaleString([], {
                 day: 'numeric',
