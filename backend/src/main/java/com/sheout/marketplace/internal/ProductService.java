@@ -1,12 +1,12 @@
 package com.sheout.marketplace.internal;
 
 import com.sheout.marketplace.MarketplaceError;
+import com.sheout.marketplace.MarketplaceViews.DirectoryFilter;
 import com.sheout.marketplace.MarketplaceViews.ListingCard;
 import com.sheout.marketplace.MarketplaceViews.ProductDetail;
 import com.sheout.marketplace.MarketplaceViews.ProductDetails;
 import com.sheout.marketplace.MarketplaceViews.SellerView;
 import com.sheout.marketplace.ProductApi;
-import com.sheout.marketplace.SellerCategory;
 import com.sheout.sharedkernel.Result;
 import com.sheout.sharedkernel.storage.DocumentStorage;
 import com.sheout.sharedkernel.storage.DocumentUpload;
@@ -62,8 +62,8 @@ public class ProductService implements ProductApi {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ListingCard> browseListings(SellerCategory category, String keyword, Pageable pageable) {
-        Page<ProductEntity> page = products.findAll(MarketplaceSpecs.directory(category, keyword),
+    public Page<ListingCard> browseListings(DirectoryFilter filter, Pageable pageable) {
+        Page<ProductEntity> page = products.findAll(MarketplaceSpecs.directory(filter),
                 PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by(Sort.Direction.DESC, "createdAt")));
         Map<UUID, SellerProfileEntity> bySeller = sellersOf(page.getContent());
         return new PageImpl<>(views.cards(page.getContent(), bySeller), page.getPageable(), page.getTotalElements());
@@ -94,7 +94,7 @@ public class ProductService implements ProductApi {
                 .toList();
         return Optional.of(new ProductDetail(product.getId(), product.getTitle(), product.getDescription(),
                 product.getDisplayPrice(), photos, s.getId(), s.getBusinessName(), s.getCategory(),
-                s.getContactPhone(), s.getWhatsappNumber(), views.cards(others, Map.of(s.getId(), s))));
+                s.getArea(), s.getContactPhone(), s.getWhatsappNumber(), views.cards(others, Map.of(s.getId(), s))));
     }
 
     private Map<UUID, SellerProfileEntity> sellersOf(List<ProductEntity> list) {

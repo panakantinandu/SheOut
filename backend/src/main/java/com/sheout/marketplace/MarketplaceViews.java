@@ -6,6 +6,7 @@ import com.sheout.payments.PaymentStatus;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -20,8 +21,13 @@ public final class MarketplaceViews {
 
     // ------------------------------------------------------------ input
 
-    /** Her shop: what it is called, what she sells, and how customers reach her. */
-    public record SellerDetails(String businessName, SellerCategory category, String contactPhone, String whatsappNumber) {
+    /**
+     * Her shop: what it is called, what she sells, how customers reach her,
+     * and the area she works from (optional free text, filterable in the
+     * directory).
+     */
+    public record SellerDetails(String businessName, SellerCategory category, String contactPhone, String whatsappNumber,
+                                String area) {
     }
 
     /** A product or service. The price is for information only - nothing is ever charged in the app for it. */
@@ -52,6 +58,7 @@ public final class MarketplaceViews {
             SellerCategory category,
             String contactPhone,
             String whatsappNumber,
+            String area,
             SellerStatus status,
             String rejectionReason,
             String suspensionReason,
@@ -74,7 +81,21 @@ public final class MarketplaceViews {
 
     /** One product in the directory list. */
     public record ListingCard(UUID productId, String title, BigDecimal displayPrice, String imageUrl,
-                              UUID sellerId, String businessName, SellerCategory category) {
+                              UUID sellerId, String businessName, SellerCategory category, String area) {
+    }
+
+    /**
+     * What a customer narrowed the directory to. Every part is optional: an
+     * empty category set is every category, a null bound is no bound, and a
+     * blank keyword or area matches everything. The keyword looks at the
+     * product's title and description and the shop's name; the area at the
+     * area the seller gave.
+     */
+    public record DirectoryFilter(Set<SellerCategory> categories, String keyword, BigDecimal minPrice,
+                                  BigDecimal maxPrice, String area) {
+        public DirectoryFilter {
+            categories = categories == null ? Set.of() : Set.copyOf(categories);
+        }
     }
 
     /**
@@ -84,7 +105,7 @@ public final class MarketplaceViews {
      */
     public record ProductDetail(UUID productId, String title, String description, BigDecimal displayPrice,
                                 List<String> imageUrls, UUID sellerId, String businessName, SellerCategory category,
-                                String contactPhone, String whatsappNumber, List<ListingCard> moreFromSeller) {
+                                String area, String contactPhone, String whatsappNumber, List<ListingCard> moreFromSeller) {
     }
 
     // ------------------------------------------------------------ the console
@@ -97,6 +118,7 @@ public final class MarketplaceViews {
             SellerStatus status,
             String contactPhone,
             String whatsappNumber,
+            String area,
             int productCount,
             int imageCount,
             Instant createdAt,

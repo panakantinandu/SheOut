@@ -97,7 +97,7 @@ public class SellerService implements SellerApi, MarketplaceAdminApi {
         }
         SellerDetails d = clean.value();
         SellerProfileEntity seller = sellers.save(new SellerProfileEntity(accountId, d.businessName(), d.category(),
-                d.contactPhone(), d.whatsappNumber()));
+                d.contactPhone(), d.whatsappNumber(), d.area()));
         log.info("Seller application started: {} by account {}", seller.getId(), accountId);
         return Result.success(views.sellerView(seller));
     }
@@ -118,7 +118,7 @@ public class SellerService implements SellerApi, MarketplaceAdminApi {
             return Result.failure(clean.error());
         }
         SellerDetails d = clean.value();
-        seller.setDetails(d.businessName(), d.category(), d.contactPhone(), d.whatsappNumber());
+        seller.setDetails(d.businessName(), d.category(), d.contactPhone(), d.whatsappNumber(), d.area());
         seller.touchedWhileLive(Instant.now());
         return Result.success(views.sellerView(sellers.save(seller)));
     }
@@ -366,7 +366,10 @@ public class SellerService implements SellerApi, MarketplaceAdminApi {
 
     // ------------------------------------------------------------ input
 
-    /** Trimmed, with both numbers as ten digits; the shape of each field is checked where it arrives. */
+    /**
+     * Trimmed, with both numbers as ten digits and a blank area as none; the
+     * shape of each field is checked where it arrives.
+     */
     private static Result<SellerDetails, MarketplaceError> cleaned(SellerDetails d) {
         String phone = IndianMobile.normalize(d.contactPhone());
         if (phone == null) {
@@ -379,6 +382,7 @@ public class SellerService implements SellerApi, MarketplaceAdminApi {
                 return Result.failure(MarketplaceError.INVALID_PHONE);
             }
         }
-        return Result.success(new SellerDetails(d.businessName().trim(), d.category(), phone, whatsapp));
+        String area = d.area() == null || d.area().isBlank() ? null : d.area().trim().replaceAll("\\s+", " ");
+        return Result.success(new SellerDetails(d.businessName().trim(), d.category(), phone, whatsapp, area));
     }
 }

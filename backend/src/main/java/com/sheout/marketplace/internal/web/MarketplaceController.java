@@ -4,6 +4,7 @@ import com.sheout.auth.AccountRole;
 import com.sheout.auth.CurrentAccount;
 import com.sheout.auth.CurrentAccountContext;
 import com.sheout.marketplace.MarketplaceError;
+import com.sheout.marketplace.MarketplaceViews.DirectoryFilter;
 import com.sheout.marketplace.MarketplaceViews.ListingCard;
 import com.sheout.marketplace.MarketplaceViews.ProductDetail;
 import com.sheout.marketplace.MarketplaceViews.ProductDetails;
@@ -37,6 +38,8 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -65,18 +68,37 @@ public class MarketplaceController {
 
     // ------------------------------------------------------------ the directory
 
+    /**
+     * The directory, narrowed. category may repeat (?category=MEHANDI&category=GIFTS)
+     * for any of several; minPrice and maxPrice are inclusive rupee bounds on
+     * the display price; area matches the seller's own area text.
+     */
     @GetMapping("/listings")
     public ResponseEntity<PageResponse<ListingCard>> listings(
-            @RequestParam(required = false) SellerCategory category,
+            @RequestParam(required = false) List<SellerCategory> category,
             @RequestParam(required = false) String q,
+            @RequestParam(required = false) BigDecimal minPrice,
+            @RequestParam(required = false) BigDecimal maxPrice,
+            @RequestParam(required = false) String area,
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer pageSize) {
         requireCustomer();
-        if (q != null && q.length() > 80) {
-            q = q.substring(0, 80);
+        if ((minPrice != null && minPrice.signum() < 0) || (maxPrice != null && maxPrice.signum() < 0)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_PRICE_RANGE", "Prices can't be below zero.");
         }
+        if (minPrice != null && maxPrice != null && minPrice.compareTo(maxPrice) > 0) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_PRICE_RANGE", "The lowest price is above the highest.");
+        }
+        DirectoryFilter filter = new DirectoryFilter(
+                category == null ? Set.of() : Set.copyOf(category),
+                clip(q), minPrice, maxPrice, clip(area));
         PageRequest pageable = PageRequest.of(PageResponse.normalizePage(page), PageResponse.normalizePageSize(pageSize));
-        return ResponseEntity.ok(PageResponse.from(products.browseListings(category, q, pageable), card -> card));
+        return ResponseEntity.ok(PageResponse.from(products.browseListings(filter, pageable), card -> card));
+    }
+
+    /** A search term as far as it is worth matching: 80 characters is longer than any shop name or area. */
+    private static String clip(String text) {
+        return text != null && text.length() > 80 ? text.substring(0, 80) : text;
     }
 
     @GetMapping("/products/{productId}")
@@ -174,9 +196,10 @@ public class MarketplaceController {
             @NotBlank @Size(max = 80) String businessName,
             @NotNull SellerCategory category,
             @NotBlank @Size(max = 20) String contactPhone,
-            @Size(max = 20) String whatsappNumber) {
+            @Size(max = 20) String whatsappNumber,
+            @Size(max = 80) String area) {
         SellerDetails details() {
-            return new SellerDetails(businessName, category, contactPhone, whatsappNumber);
+            return new SellerDetails(businessName, category, contactPhone, whatsappNumber, area);
         }
     }
 

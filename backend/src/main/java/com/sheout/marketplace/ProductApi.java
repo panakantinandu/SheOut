@@ -1,5 +1,6 @@
 package com.sheout.marketplace;
 
+import com.sheout.marketplace.MarketplaceViews.DirectoryFilter;
 import com.sheout.marketplace.MarketplaceViews.ListingCard;
 import com.sheout.marketplace.MarketplaceViews.ProductDetail;
 import com.sheout.marketplace.MarketplaceViews.ProductDetails;
@@ -20,8 +21,8 @@ import java.util.UUID;
  */
 public interface ProductApi {
 
-    /** The directory: live sellers' active products, newest first, optionally in one category and matching a keyword. */
-    Page<ListingCard> browseListings(SellerCategory category, String keyword, Pageable pageable);
+    /** The directory: live sellers' active products, newest first, narrowed by whatever the filter holds. */
+    Page<ListingCard> browseListings(DirectoryFilter filter, Pageable pageable);
 
     /** One product, if it is in the directory now. */
     Optional<ProductDetail> getProductDetail(UUID productId);

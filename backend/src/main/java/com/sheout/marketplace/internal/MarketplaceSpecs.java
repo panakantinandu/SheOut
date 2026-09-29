@@ -1,6 +1,6 @@
 package com.sheout.marketplace.internal;
 
-import com.sheout.marketplace.SellerCategory;
+import com.sheout.marketplace.MarketplaceViews.DirectoryFilter;
 import com.sheout.marketplace.SellerStatus;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
@@ -24,20 +24,32 @@ final class MarketplaceSpecs {
 
     /**
      * Active products of live sellers. The keyword matches the product's
-     * title or description, or the shop's name, ignoring case.
+     * title or description, or the shop's name, ignoring case; categories
+     * and area narrow by the shop, the price bounds (inclusive) by the
+     * product's display price.
      */
-    static Specification<ProductEntity> directory(SellerCategory category, String keyword) {
+    static Specification<ProductEntity> directory(DirectoryFilter filter) {
         return (root, query, cb) -> {
             Subquery<UUID> liveSellers = query.subquery(UUID.class);
             Root<SellerProfileEntity> seller = liveSellers.from(SellerProfileEntity.class);
             List<Predicate> sellerWhere = new ArrayList<>();
             sellerWhere.add(cb.equal(seller.get("status"), SellerStatus.ACTIVE));
-            if (category != null) {
-                sellerWhere.add(cb.equal(seller.get("category"), category));
+            if (!filter.categories().isEmpty()) {
+                sellerWhere.add(seller.get("category").in(filter.categories()));
             }
-            String like = likePattern(keyword);
+            String areaLike = likePattern(filter.area());
+            if (areaLike != null) {
+                sellerWhere.add(cb.like(cb.lower(seller.get("area")), areaLike, '\\'));
+            }
+            String like = likePattern(filter.keyword());
             List<Predicate> where = new ArrayList<>();
             where.add(cb.isTrue(root.get("active")));
+            if (filter.minPrice() != null) {
+                where.add(cb.greaterThanOrEqualTo(root.get("displayPrice"), filter.minPrice()));
+            }
+            if (filter.maxPrice() != null) {
+                where.add(cb.lessThanOrEqualTo(root.get("displayPrice"), filter.maxPrice()));
+            }
             if (like != null) {
                 // A shop-name match brings in all of that shop's products.
                 Subquery<UUID> namedSellers = query.subquery(UUID.class);

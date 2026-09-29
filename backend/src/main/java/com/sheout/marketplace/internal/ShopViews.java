@@ -59,6 +59,7 @@ class ShopViews {
                 seller.getCategory(),
                 seller.getContactPhone(),
                 seller.getWhatsappNumber(),
+                seller.getArea(),
                 seller.getStatus(),
                 seller.getRejectionReason(),
                 seller.getSuspensionReason(),
@@ -84,6 +85,7 @@ class ShopViews {
                 seller.getStatus(),
                 seller.getContactPhone(),
                 seller.getWhatsappNumber(),
+                seller.getArea(),
                 (int) products.countBySellerId(seller.getId()),
                 (int) images.countBySellerId(seller.getId()),
                 seller.getCreatedAt(),
@@ -134,7 +136,7 @@ class ShopViews {
                     List<ProductImageEntity> photos = byProduct.getOrDefault(p.getId(), List.of());
                     return new ListingCard(p.getId(), p.getTitle(), p.getDisplayPrice(),
                             photos.isEmpty() ? null : url(photos.get(0).getStorageKey()),
-                            s.getId(), s.getBusinessName(), s.getCategory());
+                            s.getId(), s.getBusinessName(), s.getCategory(), s.getArea());
                 }).toList();
     }
 

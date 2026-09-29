@@ -38,6 +38,10 @@ public class SellerProfileEntity extends BaseEntity {
     @Column(length = 15)
     private String whatsappNumber;
 
+    /** Where she works from, as she writes it - a locality, not coordinates. Null when she has not said. */
+    @Column(length = 80)
+    private String area;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private SellerStatus status;
@@ -64,10 +68,10 @@ public class SellerProfileEntity extends BaseEntity {
     }
 
     SellerProfileEntity(UUID accountId, String businessName, SellerCategory category, String contactPhone,
-                        String whatsappNumber) {
+                        String whatsappNumber, String area) {
         this.accountId = accountId;
         this.status = SellerStatus.DRAFT;
-        setDetails(businessName, category, contactPhone, whatsappNumber);
+        setDetails(businessName, category, contactPhone, whatsappNumber, area);
     }
 
     /**
@@ -84,11 +88,13 @@ public class SellerProfileEntity extends BaseEntity {
         return status == SellerStatus.DRAFT || status == SellerStatus.REJECTED;
     }
 
-    void setDetails(String businessName, SellerCategory category, String contactPhone, String whatsappNumber) {
+    void setDetails(String businessName, SellerCategory category, String contactPhone, String whatsappNumber,
+                    String area) {
         this.businessName = businessName;
         this.category = category;
         this.contactPhone = contactPhone;
         this.whatsappNumber = whatsappNumber;
+        this.area = area;
     }
 
     /** A live shop changed after it was approved - noted for operations, not re-reviewed. */
@@ -145,6 +151,7 @@ public class SellerProfileEntity extends BaseEntity {
         businessName = "[deleted]";
         contactPhone = "";
         whatsappNumber = null;
+        area = null;
     }
 
     public UUID getAccountId() { return accountId; }
@@ -152,6 +159,7 @@ public class SellerProfileEntity extends BaseEntity {
     public SellerCategory getCategory() { return category; }
     public String getContactPhone() { return contactPhone; }
     public String getWhatsappNumber() { return whatsappNumber; }
+    public String getArea() { return area; }
     public SellerStatus getStatus() { return status; }
     public String getRejectionReason() { return rejectionReason; }
     public String getSuspensionReason() { return suspensionReason; }

@@ -2271,6 +2271,7 @@ async function openSeller(r) {
         <dt>Account</dt><dd><span class="num">${esc(detail.row.ownerPhone || '—')}</span>${detail.row.ownerBlocked ? ' <span class="badge b-blocked">Blocked</span>' : ''}</dd>
         <dt>Contact number</dt><dd class="num">+91 ${esc(s.contactPhone)}</dd>
         <dt>WhatsApp</dt><dd>${whatsapp}</dd>
+        <dt>Area</dt><dd>${s.area ? esc(s.area) : '<span class="subtle">Not given</span>'}</dd>
         <dt>Submitted</dt><dd>${s.submittedAt ? time(s.submittedAt) : '<span class="subtle">Not yet</span>'}</dd>
         <dt>Listing fee</dt><dd>${feeBadge(fee)} ${rupees(fee.amount)}${fee.paidAt ? ` <span class="subtle">paid ${esc(time(fee.paidAt))}${fee.method ? ` by ${esc(payMethodText(fee.method))}` : ''}</span>` : ''}</dd>
         ${s.activatedAt ? `<dt>Live since</dt><dd>${time(s.activatedAt)}</dd>` : ''}

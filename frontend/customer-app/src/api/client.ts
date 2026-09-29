@@ -39,10 +39,10 @@ import type {
   PagedResult,
   CheckoutDetails,
   CheckoutResult,
+  DirectoryFilter,
   ListingCard,
   ProductDetail,
   ProductInput,
-  SellerCategory,
   SellerDetailsInput,
   SellerShop,
   PaymentHold,
@@ -935,7 +935,7 @@ export const referralsApi = {
  * there is nothing here to buy - only to find and contact.
  */
 export const marketplaceApi = {
-  listings(params: { category?: SellerCategory; q?: string; page?: number; pageSize?: number }): Promise<PagedResult<ListingCard>> {
+  listings(params: DirectoryFilter & { page?: number; pageSize?: number }): Promise<PagedResult<ListingCard>> {
     return request(`/api/v1/marketplace/listings${buildQuery(params)}`);
   },
 

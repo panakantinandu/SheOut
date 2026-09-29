@@ -109,7 +109,10 @@ function App() {
       <Route path="/tracking/:bookingId" element={protectedOnly(<Tracking />)} />
       <Route path="/chat/:bookingId" element={protectedOnly(<Chat />)} />
 
-      <Route path="/seller" element={shell(<Seller />)} />
+      {/* The directory is reached from Home's SheOut Seller tile and pushed
+          on top like the booking flow. Same URL as when it was a tab, so
+          the waitlist announcements that link to /seller still land here. */}
+      <Route path="/seller" element={protectedOnly(<Seller />)} />
       <Route path="/seller/products/:productId" element={protectedOnly(<SellerProduct />)} />
       <Route path="/seller/manage" element={protectedOnly(<SellerShop />)} />
       <Route path="/seller/manage/products/:productId" element={protectedOnly(<SellerProductEditor />)} />

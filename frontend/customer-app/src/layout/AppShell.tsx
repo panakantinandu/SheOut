@@ -1,4 +1,4 @@
-import { Calendar, Home, Siren, Store, Wallet } from 'lucide-react';
+import { Calendar, Home, Siren, User, Wallet } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { BottomNavBar, PageTransition } from '@sheout/design-system';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -21,13 +21,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     { key: 'bookings', label: t('nav.bookings'), icon: <Calendar />, path: '/bookings' },
     { key: 'sos', label: t('nav.sos'), icon: <Siren />, path: '/sos', raised: true },
     { key: 'wallet', label: t('nav.wallet'), icon: <Wallet />, path: '/wallet' },
-    // SheOut Seller is a tab, not a drawer item, so the directory is one tap
-    // away. It took Profile's slot rather than adding a sixth: six tabs
-    // around the raised SOS leave each under 52 px on a 360 px phone and
-    // truncate the Hindi and Telugu labels. Profile - account settings,
-    // visited rarely - is at the top of the drawer, and her photo there
-    // opens it.
-    { key: 'seller', label: t('nav.seller'), icon: <Store />, path: '/seller' },
+    { key: 'profile', label: t('nav.profile'), icon: <User />, path: '/profile' },
   ];
 
   return (

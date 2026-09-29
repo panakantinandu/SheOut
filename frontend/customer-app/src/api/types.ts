@@ -306,7 +306,19 @@ export interface ListingCard {
   sellerId: string;
   businessName: string;
   category: SellerCategory;
+  /** The area the seller works from, in her words - null when she has not said. */
+  area: string | null;
 }
+
+/** What a customer narrowed the directory to. Absent parts do not narrow it. */
+export type DirectoryFilter = {
+  q?: string;
+  /** Any of these; empty or absent is every category. */
+  category?: SellerCategory[];
+  minPrice?: number;
+  maxPrice?: number;
+  area?: string;
+};
 
 /** A product as a customer sees it - with the seller's contact numbers, which are the point of the directory. */
 export interface ProductDetail {
@@ -318,6 +330,7 @@ export interface ProductDetail {
   sellerId: string;
   businessName: string;
   category: SellerCategory;
+  area: string | null;
   contactPhone: string;
   whatsappNumber: string | null;
   moreFromSeller: ListingCard[];
@@ -346,6 +359,7 @@ export interface SellerShop {
   category: SellerCategory;
   contactPhone: string;
   whatsappNumber: string | null;
+  area: string | null;
   status: SellerStatus;
   rejectionReason: string | null;
   suspensionReason: string | null;
@@ -367,6 +381,7 @@ export interface SellerDetailsInput {
   category: SellerCategory;
   contactPhone: string;
   whatsappNumber?: string;
+  area?: string;
 }
 
 export interface ProductInput {

@@ -39,7 +39,8 @@
     "wallet": "Wallet",
     "history": "History",
     "askCardTitle": "Ask SheOut",
-    "askCardBody": "Questions about rides, payments or verification? Ask {{name}}."
+    "askCardBody": "Questions about rides, payments or verification? Ask {{name}}.",
+    "serviceSeller": "SheOut Marketplace"
   },
   "about": {
     "title": "About SheOut",
@@ -297,8 +298,6 @@
     "safety": "Safety Center"
   },
   "seller": {
-    "title": "SheOut Seller",
-    "categoriesTitle": "Browse by category",
     "categories": {
       "fashion": "Fashion & Saree",
       "beauty": "Beauty Services",
@@ -312,50 +311,34 @@
       "productNotice": "This sale happens directly with the seller. SheOut is not involved in payment or delivery for this listing."
     },
     "directory": {
-      "headline": "Shop from women near you",
-      "subhead": "Sarees, beauty, tailoring, mehandi, gifts and ornaments from women who sell from home. Contact a seller directly.",
-      "sellOnSheOut": "Sell on SheOut",
-      "manageShop": "Manage your shop",
-      "searchPlaceholder": "Search products or shops",
-      "category": "Category",
-      "anyCategory": "All categories",
+      "searchPlaceholder": "Search products, shops",
       "loading": "Loading shops",
       "emptyTitle": "No shops yet",
       "empty": "Sellers are joining now. Check back soon - or be one of the first.",
       "noMatchTitle": "Nothing matches",
-      "noMatch": "Try another word, or clear the category.",
       "notInvolved": "Sales happen directly between you and the seller. SheOut is not involved in payment or delivery."
     },
     "product": {
       "loading": "Loading product",
       "loadError": "Could not load this product. Please try again.",
       "goneTitle": "No longer available",
-      "gone": "This product is not in SheOut Seller any more.",
-      "backToDirectory": "Back to SheOut Seller",
+      "gone": "This product is not in SheOut Marketplace any more.",
+      "backToDirectory": "Back to SheOut Marketplace",
       "photos_one": "{{count}} photo",
       "photos_other": "{{count}} photos",
       "priceNote": "Price set by the seller. Confirm it with her before you buy.",
       "contactWhatsapp": "Contact Seller on WhatsApp",
       "contactCall": "Call the Seller",
-      "whatsappMessage": "Hi, I saw \"{{title}}\" on SheOut Seller.",
+      "whatsappMessage": "Hi, I saw \"{{title}}\" on SheOut Marketplace.",
       "moreFrom": "More from {{name}}"
     },
     "apply": {
-      "title": "Sell on SheOut",
-      "subtitle": "Reach women across the city with what you make or offer from home.",
-      "steps": {
-        "one": "Set up your shop and add your products with photos.",
-        "two": "Send it for review. A person at SheOut checks it - free.",
-        "three": "Once approved, pay the one-time listing fee and your shop goes live."
-      },
-      "understood": "I understand that I handle my own sales, payments and delivery, and that SheOut is not part of them.",
-      "submit": "Start my shop"
+      "understood": "I understand that I handle my own sales, payments and delivery, and that SheOut is not part of them."
     },
     "form": {
       "businessName": "Shop name",
       "businessNamePlaceholder": "e.g. Lakshmi's Sarees",
       "category": "What you sell",
-      "categoryPlaceholder": "Choose a category",
       "contactPhone": "Phone number for customers",
       "whatsapp": "WhatsApp number (optional)",
       "whatsappPlaceholder": "Leave empty if customers should call",
@@ -363,7 +346,10 @@
       "sameAsPhone": "Same as phone number",
       "phoneInvalid": "Enter a 10-digit Indian mobile number.",
       "required": "This is needed.",
-      "saving": "Saving..."
+      "saving": "Saving...",
+      "area": "Your area (optional)",
+      "areaPlaceholder": "e.g. Kukatpally, Hyderabad",
+      "areaHelp": "Customers can look for sellers near them by area."
     },
     "shop": {
       "title": "My SheOut shop",
@@ -385,7 +371,9 @@
       "productPhotos_other": "{{count}} photos",
       "hidden": "Hidden",
       "addProduct": "Add a product",
-      "submitted": "Sent for review"
+      "submitted": "Sent for review",
+      "areaOn": "Area: {{area}}",
+      "noArea": "No area given"
     },
     "status": {
       "reasonLabel": "Reason:",
@@ -402,18 +390,18 @@
       "APPROVED_AWAITING_PAYMENT": {
         "title": "Approved! One step left",
         "badge": "Approved",
-        "body": "Pay the one-time listing fee of {{amount}} and your shop goes live in SheOut Seller."
+        "body": "Pay the one-time listing fee of {{amount}} and your shop goes live in SheOut Marketplace."
       },
       "ACTIVE": {
         "title": "Your shop is live",
         "badge": "Live",
         "body": "Customers can find your products and contact you directly. You can keep adding and changing products.",
-        "view": "See SheOut Seller"
+        "view": "See it in SheOut Marketplace"
       },
       "REJECTED": {
         "title": "Your shop needs changes",
         "badge": "Changes needed",
-        "body": "Make the changes below, then send it for review again. Nothing has been charged."
+        "body": "Tap Make changes, fix what is asked, then send your shop for review again. Nothing has been charged."
       },
       "SUSPENDED": {
         "title": "Your shop is paused",
@@ -427,7 +415,6 @@
       "verified": "Your ID is verified",
       "product": "At least one product with a photo",
       "verifyNow": "Verify now",
-      "send": "Send for review",
       "resend": "Send for review again",
       "free": "Review is free. You pay the {{amount}} listing fee only after your shop is approved."
     },
@@ -474,7 +461,62 @@
       "deleted": "Product deleted",
       "locked": "Your shop can't be changed right now.",
       "notFound": "This product was not found."
-    }
+    },
+    "browse": {
+      "categories": "Category",
+      "priceRange": "Price (₹)",
+      "minPrice": "Lowest price",
+      "maxPrice": "Highest price",
+      "min": "Min",
+      "max": "Max",
+      "rangeInverted": "The lowest price is above the highest.",
+      "area": "Area",
+      "areaPlaceholder": "e.g. Kukatpally",
+      "removeFilter": "Remove filter: {{name}}",
+      "priceBetween": "{{min}} to {{max}}",
+      "priceFrom": "From {{min}}",
+      "priceUpTo": "Up to {{max}}",
+      "noMatch": "Try another word, or widen the price, category or area.",
+      "clearAll": "Clear search and filters"
+    },
+    "wizard": {
+      "title": "Seller Registration",
+      "stepOf": "Step {{current}} of {{total}} · {{name}}",
+      "continue": "Continue",
+      "makeChanges": "Make changes",
+      "steps": {
+        "category": "Category",
+        "details": "Business details",
+        "products": "Products",
+        "review": "Review"
+      },
+      "category": {
+        "title": "Tell us about your business",
+        "subtitle": "What do you sell or offer? Pick the one that fits best. You can change it later."
+      },
+      "details": {
+        "title": "Business details",
+        "subtitle": "Your shop name, and how customers reach you."
+      },
+      "products": {
+        "title": "Add your products",
+        "subtitle": "Add what you sell, with a clear photo of each.",
+        "needPhoto": "Add a photo to at least one product to continue. A person checks your shop, and needs to see what you sell.",
+        "missingPhoto": "No photo yet"
+      },
+      "review": {
+        "title": "Review and submit",
+        "subtitle": "Check everything once. You can change any part before you send it.",
+        "category": "Category",
+        "business": "Business details",
+        "products": "Products",
+        "productCount_one": "{{count}} product",
+        "productCount_other": "{{count}} products",
+        "fix": "Add one",
+        "submit": "Submit for review"
+      }
+    },
+    "marketplaceTitle": "SheOut Marketplace"
   },
   "refer": {
     "headline": "Invite a friend to SheOut",
@@ -835,7 +877,6 @@
     "sos": "SOS",
     "wallet": "Wallet",
     "profile": "Profile",
-    "seller": "Seller",
     "soon": "Soon"
   },
   "splash": {

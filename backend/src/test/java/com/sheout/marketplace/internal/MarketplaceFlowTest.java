@@ -4,6 +4,7 @@ import com.sheout.marketplace.MarketplaceError;
 import com.sheout.marketplace.MarketplaceViews.ListingCard;
 import com.sheout.marketplace.MarketplaceViews.ProductDetail;
 import com.sheout.marketplace.MarketplaceViews.ProductDetails;
+import com.sheout.marketplace.MarketplaceViews.DirectoryFilter;
 import com.sheout.marketplace.MarketplaceViews.SellerDetails;
 import com.sheout.marketplace.MarketplaceViews.SellerView;
 import com.sheout.marketplace.SellerCategory;
@@ -46,6 +47,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -123,10 +125,12 @@ class MarketplaceFlowTest {
         // ---- her application
         assertThat(sellers.applyAsSeller(asha, details("Asha " + tag, "98765 00001", "abc")).error())
                 .isEqualTo(MarketplaceError.INVALID_PHONE);
-        SellerView draft = ok(sellers.applyAsSeller(asha, details("Asha " + tag + " Sarees", "+91 98765 00001", "09876500002")));
+        SellerView draft = ok(sellers.applyAsSeller(asha, new SellerDetails("Asha " + tag + " Sarees", SellerCategory.FASHION_SAREE,
+                "+91 98765 00001", "09876500002", "  Kukatpally   " + tag + " ")));
         assertThat(draft.status()).isEqualTo(SellerStatus.DRAFT);
         assertThat(draft.contactPhone()).isEqualTo("9876500001");
         assertThat(draft.whatsappNumber()).isEqualTo("9876500002");
+        assertThat(draft.area()).isEqualTo("Kukatpally " + tag);
         assertThat(draft.listingFee().amount()).isEqualByComparingTo("299");
         assertThat(sellers.applyAsSeller(asha, details("Again", "9876500001", null)).error())
                 .isEqualTo(MarketplaceError.ALREADY_A_SELLER);
@@ -193,6 +197,16 @@ class MarketplaceFlowTest {
             assertThat(c.businessName()).isEqualTo("Asha " + tag + " Sarees");
         });
         assertThat(directory(null, tag + "-nothing")).isEmpty();
+
+        // ---- price range (inclusive), several categories at once, and area
+        assertThat(browse(Set.of(), tag, "900", "900", null)).extracting(ListingCard::title).containsExactly("Cotton saree");
+        assertThat(browse(Set.of(), tag, "1000", null, null)).extracting(ListingCard::title).containsExactly("Kanjivaram silk " + tag);
+        assertThat(browse(Set.of(), tag, null, "899", null)).isEmpty();
+        assertThat(browse(Set.of(SellerCategory.MEHANDI, SellerCategory.FASHION_SAREE), tag, null, null, null)).hasSize(2);
+        assertThat(browse(Set.of(SellerCategory.MEHANDI, SellerCategory.GIFTS), tag, null, null, null)).isEmpty();
+        assertThat(browse(Set.of(), null, null, null, "kukatpally " + tag)).hasSize(2)
+                .allSatisfy(c -> assertThat(c.area()).isEqualTo("Kukatpally " + tag));
+        assertThat(browse(Set.of(), null, null, null, "Madhapur " + tag)).isEmpty();
         ProductDetail detail = products.getProductDetail(silk).orElseThrow();
         assertThat(detail.whatsappNumber()).isEqualTo("9876500002");
         assertThat(detail.contactPhone()).isEqualTo("9876500001");
@@ -275,11 +289,18 @@ class MarketplaceFlowTest {
     // ------------------------------------------------------------ helpers
 
     private List<ListingCard> directory(SellerCategory category, String keyword) {
-        return products.browseListings(category, keyword, PageRequest.of(0, 50)).getContent();
+        return browse(category == null ? Set.of() : Set.of(category), keyword, null, null, null);
+    }
+
+    private List<ListingCard> browse(Set<SellerCategory> categories, String keyword, String minPrice, String maxPrice, String area) {
+        DirectoryFilter filter = new DirectoryFilter(categories, keyword,
+                minPrice == null ? null : new BigDecimal(minPrice), maxPrice == null ? null : new BigDecimal(maxPrice), area);
+        return products.browseListings(filter, PageRequest.of(0, 50)).getContent();
     }
 
     private static SellerDetails details(String name, String phone, String whatsapp) {
-        return new SellerDetails(name, name.contains("Mehandi") ? SellerCategory.MEHANDI : SellerCategory.FASHION_SAREE, phone, whatsapp);
+        return new SellerDetails(name, name.contains("Mehandi") ? SellerCategory.MEHANDI : SellerCategory.FASHION_SAREE, phone, whatsapp,
+                null);
     }
 
     private static ProductDetails product(String title, String description, String price) {

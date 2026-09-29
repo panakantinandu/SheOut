@@ -45,7 +45,7 @@ export function SellerProduct() {
 
   return (
     <div className="space-y-5 pb-4">
-      <TopHeader variant="back" title={t('seller.title')} onBack={() => navigate(-1)} />
+      <TopHeader variant="back" title={t('seller.marketplaceTitle')} onBack={() => navigate(-1)} />
 
       {!product && !gone && !error && <SkeletonCard lines={5} label={t('seller.product.loading')} />}
       {error && <p className="text-sm text-danger">{error}</p>}

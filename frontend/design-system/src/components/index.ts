@@ -60,3 +60,4 @@ export * from './HelpAssistantChat';
 export * from './AssistantAvatar';
 export * from './ThinkingIndicator';
 export * from './AssistantEntryCard';
+export * from './Stepper';

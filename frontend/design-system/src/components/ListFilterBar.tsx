@@ -1,6 +1,8 @@
 import { Search, SlidersHorizontal, X } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
+import { Button } from './Button';
 import { Card } from './Card';
+import { Overlay } from './Overlay';
 import { TextField } from './TextField';
 import { useTranslation } from 'react-i18next';
 
@@ -18,6 +20,16 @@ export interface ListFilterBarProps {
   onClearAll: () => void;
   /** Start with the panel open, e.g. when arriving from a link that already has filters. */
   defaultOpen?: boolean;
+  /**
+   * Where the filters open. `inline` (the default) drops a panel under the
+   * bar, which suits a history list with two or three controls. `sheet`
+   * raises them from the bottom of the screen, for a screen whose bar is
+   * pinned while the list scrolls: a tall inline panel there would sit on
+   * top of the very list it narrows.
+   */
+  presentation?: 'inline' | 'sheet';
+  /** Sheet only: how many results the filters leave, for its "Show N results" button. Omit while unknown. */
+  resultCount?: number;
 }
 
 /**
@@ -42,6 +54,8 @@ export function ListFilterBar({
   activeCount,
   onClearAll,
   defaultOpen = false,
+  presentation = 'inline',
+  resultCount,
 }: ListFilterBarProps) {
   const { t } = useTranslation('ds');
   const [open, setOpen] = useState(defaultOpen);
@@ -52,8 +66,9 @@ export function ListFilterBar({
         {search && (
           <div className="min-w-0 flex-1">
             <TextField
-              icon={<Search className="h-4 w-4 text-text-secondary" />}
+              icon={<Search className="h-4 w-4 shrink-0 text-text-secondary" />}
               type="search"
+              className="min-w-0 text-ellipsis"
               placeholder={search.placeholder}
               value={search.value}
               onChange={(e) => search.onChange(e.target.value)}
@@ -81,7 +96,34 @@ export function ListFilterBar({
         </button>
       </div>
 
-      {open && (
+      {presentation === 'sheet' && (
+        <Overlay open={open} label={t('filters.title')} align="sheet" onDismiss={() => setOpen(false)}>
+          <div
+            className="flex max-h-[85vh] w-full flex-col rounded-t-[28px] bg-surface shadow-overlay motion-safe:animate-sheet-up"
+            data-testid="filter-sheet"
+          >
+            <div className="px-screen pt-3">
+              <span className="mx-auto mb-3 block h-1.5 w-10 rounded-full bg-border" aria-hidden="true" />
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <p className="font-heading text-section text-text-primary">{t('filters.title')}</p>
+                {activeCount > 0 && (
+                  <button type="button" onClick={onClearAll} className="text-sm font-semibold text-danger">
+                    {t('filters.clear')}
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="flex-1 space-y-5 overflow-y-auto px-screen pb-4">{children}</div>
+            <div className="border-t border-border px-screen pb-6 pt-3">
+              <Button fullWidth onClick={() => setOpen(false)} data-testid="filter-sheet-done">
+                {resultCount === undefined ? t('filters.done') : t('filters.showResults', { count: resultCount })}
+              </Button>
+            </div>
+          </div>
+        </Overlay>
+      )}
+
+      {presentation === 'inline' && open && (
         <Card className="space-y-4">
           {children}
           {activeCount > 0 && (

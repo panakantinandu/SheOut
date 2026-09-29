@@ -1,7 +1,7 @@
 import { ArrowRight, Clock, MapPinned, ShieldAlert, Wallet as WalletIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ASSISTANT_NAME, AssistantEntryCard, brandIllustration, Card, IconCircle, ListRow, PushPromptCard, TopHeader, contentText, useContentSection, useAppLanguage, usePushNotifications, useUnreadNotifications, bikeTaxiArt, parcelArt, womenArt } from '@sheout/design-system';
+import { ASSISTANT_NAME, AssistantEntryCard, brandIllustration, Card, IconCircle, ListRow, PushPromptCard, TopHeader, contentText, useContentSection, useAppLanguage, usePushNotifications, useUnreadNotifications, bikeTaxiArt, parcelArt, marketplaceArt, womenArt } from '@sheout/design-system';
 import { OutOfAreaBanner } from '../components/OutOfAreaBanner';
 import { UnpaidTripBanner } from '../components/UnpaidTripBanner';
 import { useAppDrawer } from '../components/AppDrawer';
@@ -10,13 +10,15 @@ import type { CustomerProfileSummary } from '../api/types';
 import { useTranslation } from '@sheout/design-system';
 
 /**
- * Two of the mockup's three service tiles - Lunch Box is deferred for
- * launch. Kept as data rather than repeated markup so restoring the third
- * is one entry, not another copy of the tile.
+ * The service tiles, as data so another is one entry, not another copy of
+ * the tile. Lunch Box is deferred for launch. SheOut Marketplace is here
+ * for browsing as a customer; running your own shop is "Sell on SheOut" in the
+ * drawer - two intents, two ways in.
  */
 const SERVICES = [
-  { key: 'ride', labelKey: 'home.serviceRide', to: '/book/ride', image: bikeTaxiArt, alt: 'Bike Taxi' },
-  { key: 'parcel', labelKey: 'home.serviceParcel', to: '/book/parcel', image: parcelArt, alt: 'Parcel Delivery' },
+  { key: 'ride', labelKey: 'home.serviceRide', to: '/book/ride', image: bikeTaxiArt },
+  { key: 'parcel', labelKey: 'home.serviceParcel', to: '/book/parcel', image: parcelArt },
+  { key: 'seller', labelKey: 'home.serviceSeller', to: '/seller', image: marketplaceArt },
 ];
 
 /**
@@ -104,16 +106,18 @@ export function Home() {
 
       <div>
         <h2 className="mb-3 font-heading text-section text-text-primary">{t('home.services')}</h2>
-        {/* Two equal service tiles keep the artwork, label, and action aligned
-          as one compact option. Lunch Box is deferred for launch; the
-          backend still accepts LUNCHBOX and its tile can return here. */}
-        <div className="grid grid-cols-2 gap-4">
+        {/* Three equal service tiles keep the artwork, label, and action
+          aligned as one compact option each. Lunch Box is deferred for
+          launch; the backend still accepts LUNCHBOX and its tile can return
+          here. */}
+        <div className="grid grid-cols-3 gap-3" data-testid="home-services">
           {SERVICES.map((service) => (
             <button
               key={service.key}
               type="button"
               onClick={() => navigate(service.to)}
               className="flex min-w-0 flex-col items-center gap-2 text-center"
+              data-testid={`service-${service.key}`}
             >
               {/* The artwork is itself the tile - a rounded 3D square with a
                   transparent surround. It used to sit on a second, flat
@@ -123,7 +127,8 @@ export function Home() {
               <span className="flex aspect-square w-[92%] items-center justify-center transition-transform duration-100 motion-safe:active:scale-95">
                 <img
                   src={service.image}
-                  alt={service.alt}
+                  alt=""
+                  aria-hidden="true"
                   className="h-full w-full scale-[1.12] object-contain drop-shadow-[0_10px_16px_rgba(74,26,158,0.22)]"
                 />
               </span>

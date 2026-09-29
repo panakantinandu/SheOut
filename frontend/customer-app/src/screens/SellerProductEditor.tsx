@@ -1,6 +1,6 @@
 import { ImagePlus, Trash2, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Button, Card, ConfirmDialog, SkeletonCard, TextField, TopHeader, showToast, useTranslation } from '@sheout/design-system';
 import { marketplaceApi } from '../api/client';
 import type { SellerShop } from '../api/types';
@@ -19,7 +19,12 @@ export function SellerProductEditor() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { productId } = useParams<{ productId: string }>();
+  const location = useLocation();
   const isNew = !productId || productId === 'new';
+  // Opened from her shop (the registration wizard or the live shop): go back
+  // to it, so the wizard is not stacked twice in history. Opened directly: replace.
+  const fromShop = !!(location.state as { fromShop?: boolean } | null)?.fromShop;
+  const leave = () => (fromShop ? navigate(-1) : navigate('/seller/manage', { replace: true }));
   const [shop, setShop] = useState<SellerShop | null>(null);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -70,12 +75,12 @@ export function SellerProductEditor() {
         const created = updated.products.find((p) => !before.has(p.id));
         showToast(t('seller.editor.added'));
         // Straight on to its photos: a product without one cannot be reviewed.
-        if (created) navigate(`/seller/manage/products/${created.id}`, { replace: true });
-        else navigate('/seller/manage');
+        if (created) navigate(`/seller/manage/products/${created.id}`, { replace: true, state: location.state });
+        else leave();
       } else {
         setShop(await marketplaceApi.updateProduct(productId!, input));
         showToast(t('seller.editor.saved'));
-        navigate('/seller/manage');
+        leave();
       }
     } catch (err) {
       setError(apiErrorText(err, 'seller.editor.saveError'));
@@ -122,7 +127,7 @@ export function SellerProductEditor() {
     try {
       await marketplaceApi.deleteProduct(product.id);
       showToast(t('seller.editor.deleted'));
-      navigate('/seller/manage', { replace: true });
+      leave();
     } catch (err) {
       setError(apiErrorText(err, 'seller.editor.saveError'));
       setBusy(false);
@@ -137,7 +142,7 @@ export function SellerProductEditor() {
       <TopHeader
         variant="back"
         title={isNew ? t('seller.editor.newTitle') : t('seller.editor.editTitle')}
-        onBack={() => navigate('/seller/manage')}
+        onBack={leave}
       />
       {!shop && !error && <SkeletonCard lines={4} label={t('seller.shop.loading')} />}
       {shop && !shop.canEdit && <p className="text-sm text-text-secondary">{t('seller.editor.locked')}</p>}

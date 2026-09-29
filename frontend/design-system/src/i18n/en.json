@@ -129,7 +129,11 @@
     "dateRange": "Date range",
     "from": "From date",
     "to": "To date",
-    "clear": "Clear filters"
+    "clear": "Clear filters",
+    "title": "Filters",
+    "done": "Done",
+    "showResults_one": "Show {{count}} result",
+    "showResults_other": "Show {{count}} results"
   },
   "support": {
     "contact": "Contact Support",
@@ -449,5 +453,11 @@
     "status": "Answers from SheOut's help content",
     "asleepStatus": "Resting until tomorrow. Support tickets are open.",
     "you": "Me"
+  },
+  "stepper": {
+    "label": "Step {{current}} of {{total}}",
+    "done": "done",
+    "current": "current step",
+    "upcoming": "not started"
   }
 }

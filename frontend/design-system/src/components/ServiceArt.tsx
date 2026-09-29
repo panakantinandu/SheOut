@@ -4,6 +4,8 @@ import { cn } from '../lib/cn';
 
 export { bikeTaxiArt, parcelArt };
 export { default as womenArt } from '../assets/art/women.webp';
+/** SheOut Marketplace's Home tile, in the same 3D rounded style as the ride and parcel tiles. */
+export { default as marketplaceArt } from '../assets/art/marketplace.webp';
 
 export type ServiceArtKind = 'ride' | 'parcel';
 export type ServiceArtSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
