@@ -64,6 +64,8 @@ function useDirectoryFilters() {
         },
         { replace: !step }
       );
+      // A step is somewhere new - a category, another search - so it opens at the top, where its results start.
+      if (step) window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
     },
     [setParams]
   );

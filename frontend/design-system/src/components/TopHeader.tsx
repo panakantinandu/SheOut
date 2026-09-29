@@ -1,5 +1,5 @@
 import { ArrowLeft, Bell, Menu } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
 import { cn } from '../lib/cn';
 import { useTranslation } from 'react-i18next';
 
@@ -79,12 +79,15 @@ export function TopHeader(props: TopHeaderProps) {
           )
         )}
         <h1
+          // Keyed by the title, so a screen that changes its title (Live Track
+          // to Trip History) plays it again.
+          key={props.title}
           className={cn(
-            'font-heading text-section text-text-primary',
+            'min-w-0 font-heading text-section text-text-primary',
             props.centerTitle && 'flex-1 text-center'
           )}
         >
-          {props.title}
+          <AnimatedTitle text={props.title} />
         </h1>
         {props.rightSlot ? (
           <div className={cn(!props.centerTitle && 'ml-auto')}>{props.rightSlot}</div>
@@ -137,6 +140,38 @@ export function BellBadge({ count }: { count: number }) {
       aria-hidden="true"
     >
       {count > 99 ? '99+' : count}
+    </span>
+  );
+}
+
+/**
+ * A screen's title arriving: word by word, each rising out of a soft blur
+ * into place, then a short brand-coloured line drawing itself in beneath -
+ * so opening Marketplace, SOS, Wallet or Trip History feels like arriving
+ * somewhere. By word, never by letter: Hindi and Telugu letters join, and
+ * pulling them apart would break the words. Read as ordinary text; under
+ * reduced motion it is simply there.
+ */
+function AnimatedTitle({ text }: { text: string }) {
+  const words = text.split(' ').filter(Boolean);
+  const step = 70;
+  return (
+    <span className="relative inline-block pb-1.5" data-testid="header-title">
+      {words.map((word, i) => (
+        // An ordinary space between the words, outside each moving word, so
+        // it is kept and read as a space.
+        <Fragment key={i}>
+          {i > 0 && ' '}
+          <span className="inline-block motion-safe:animate-title-word" style={{ animationDelay: `${i * step}ms` }}>
+            {word}
+          </span>
+        </Fragment>
+      ))}
+      <span
+        aria-hidden="true"
+        className="absolute bottom-0 left-0 h-[3px] w-8 origin-left rounded-full bg-gradient-to-r from-primary to-accent-orange motion-safe:animate-fill-x"
+        style={{ animationDuration: '520ms', animationDelay: `${words.length * step + 120}ms` }}
+      />
     </span>
   );
 }

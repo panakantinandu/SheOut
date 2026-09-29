@@ -21,7 +21,7 @@ export function MarketplaceHero({ opening }: { opening: boolean }) {
   const { t } = useTranslation();
   return (
     <section
-      className="relative isolate flex min-h-[8.5rem] items-center overflow-hidden rounded-[1.75rem] p-4 pr-[40%] text-white shadow-[0_14px_26px_-12px_rgba(157,23,77,0.6)] motion-safe:animate-rise-in"
+      className="relative isolate overflow-hidden rounded-[1.75rem] p-4 text-white shadow-[0_14px_26px_-12px_rgba(157,23,77,0.6)] motion-safe:animate-rise-in"
       style={{ background: 'linear-gradient(135deg, #EC4899 0%, #BE185D 55%, #6B1D8F 110%)' }}
       data-testid="market-hero"
     >
@@ -41,17 +41,22 @@ export function MarketplaceHero({ opening }: { opening: boolean }) {
           )}
           {opening ? t('seller.discover.openingBadge') : t('seller.discover.eyebrow')}
         </span>
-        <h2 className="mt-2 font-heading text-section leading-tight [text-shadow:0_1px_2px_rgba(0,0,0,0.2)]">{t('seller.discover.title')}</h2>
-        <p className="mt-1 text-caption opacity-90">{opening ? t('seller.discover.openingBody') : t('seller.discover.body')}</p>
+        {/* On one line, across the card; the picture waits in the corner below it. */}
+        <h2 className="mt-2 whitespace-nowrap font-heading text-section leading-tight [text-shadow:0_1px_2px_rgba(0,0,0,0.2)]" data-testid="market-hero-title">{t('seller.discover.title')}</h2>
+        {/* The words on the left, the picture beside them - in one row under
+            the title, so however long the title or the words run in her
+            language, the picture never sits under the title. */}
+        <div className="mt-3 flex items-center gap-2">
+          <p className="min-w-0 flex-1 text-caption opacity-90">{opening ? t('seller.discover.openingBody') : t('seller.discover.body')}</p>
+          <img
+            src={marketplaceArt}
+            alt=""
+            aria-hidden="true"
+            draggable={false}
+            className="pointer-events-none -mb-2 -mr-2 h-24 w-24 shrink-0 select-none object-contain drop-shadow-[0_14px_16px_rgba(0,0,0,0.3)] motion-safe:animate-float"
+          />
+        </div>
       </div>
-
-      <img
-        src={marketplaceArt}
-        alt=""
-        aria-hidden="true"
-        draggable={false}
-        className="pointer-events-none absolute -right-1 top-1/2 h-[7.75rem] w-[7.75rem] -translate-y-1/2 select-none object-contain drop-shadow-[0_14px_16px_rgba(0,0,0,0.3)]"
-      />
     </section>
   );
 }
@@ -222,63 +227,89 @@ export function SellCard({ onOpen }: { onOpen: () => void }) {
   const arts = ['fashion', 'mehandi', 'gifts'].map((key) => SELLER_CATEGORIES.find((c) => c.key === key)!.art);
 
   return (
-    <section
-      className="relative isolate overflow-hidden rounded-[1.75rem] border border-primary/15 bg-primary-light p-5 shadow-lift"
-      data-testid="market-sell"
-    >
-      <span aria-hidden="true" className="pointer-events-none absolute -right-16 -top-16 -z-10 h-48 w-48 rounded-full bg-accent-orange/25 blur-2xl motion-safe:animate-drift" />
-      <span aria-hidden="true" className="pointer-events-none absolute -bottom-20 -left-10 -z-10 h-44 w-44 rounded-full bg-primary/15 blur-2xl motion-safe:animate-drift-slow" />
+    // A frame of light travelling round the card: purple, pink and orange
+    // chasing each other along its edge, slowly - the one moving border on
+    // the screen, so the way in for sellers is found without being loud.
+    <section className="relative isolate overflow-hidden rounded-[1.75rem] p-[2px] shadow-float" data-testid="market-sell">
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-[-60%] -z-10 motion-safe:animate-[spin_7s_linear_infinite]"
+        style={{ background: 'conic-gradient(from 0deg, #7B3FE4, #EC4899, #F59E0B, #7B3FE4)' }}
+      />
+      <div className="relative isolate overflow-hidden rounded-[calc(1.75rem-2px)] bg-surface p-5">
+        <span aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-br from-primary-light via-surface to-accent-orange-tint" />
+        <span aria-hidden="true" className="pointer-events-none absolute -right-16 -top-16 -z-10 h-48 w-48 rounded-full bg-accent-orange/25 blur-2xl motion-safe:animate-drift" />
+        <span aria-hidden="true" className="pointer-events-none absolute -bottom-20 -left-10 -z-10 h-44 w-44 rounded-full bg-primary/15 blur-2xl motion-safe:animate-drift-slow" />
+        {/* Sparkles twinkling at the corners, each on its own beat. */}
+        {[
+          { cls: 'right-4 top-4 h-4 w-4 text-accent-orange', d: '0s' },
+          { cls: 'right-[42%] top-3 h-3 w-3 text-primary', d: '0.8s' },
+          { cls: 'bottom-[4.5rem] right-3 h-3.5 w-3.5 text-pink-500', d: '1.5s' },
+        ].map((spark) => (
+          <Sparkles key={spark.d} aria-hidden="true" className={`pointer-events-none absolute ${spark.cls} motion-safe:animate-twinkle`} style={{ animationDelay: spark.d }} />
+        ))}
 
-      <div className="flex gap-3">
-        <div className="min-w-0 flex-1">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-surface px-2.5 py-1 text-micro font-semibold uppercase tracking-wide text-primary shadow-lift">
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inset-0 rounded-full bg-accent-orange motion-safe:animate-pulse-ring" />
-              <span className="relative h-2 w-2 rounded-full bg-accent-orange" />
-            </span>
-            {t('seller.discover.sell.eyebrow')}
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-pink-600 via-fuchsia-600 to-primary px-3 py-1 text-micro font-bold uppercase tracking-wide text-white shadow-lift" data-testid="market-sell-badge">
+          <span className="relative flex h-2 w-2">
+            <span className="absolute inset-0 rounded-full bg-white motion-safe:animate-pulse-ring" />
+            <span className="relative h-2 w-2 rounded-full bg-white" />
           </span>
-          <p className="mt-2.5 font-heading text-section leading-tight text-text-primary">{t('seller.discover.sell.title')}</p>
-          <p className="mt-1 text-caption text-text-secondary">{t('seller.discover.sell.body')}</p>
-          <ul className="mt-2.5 space-y-1">
-            {points.map((point) => (
-              <li key={point} className="flex items-center gap-1.5 text-caption font-medium text-text-primary">
-                <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-accent-green text-white">
-                  <Check className="h-2.5 w-2.5" strokeWidth={3.5} aria-hidden="true" />
-                </span>
-                {point}
-              </li>
+          {t('seller.discover.sell.eyebrow')}
+        </span>
+        {/* On one line, across the card. */}
+        <p className="mt-3 whitespace-nowrap font-heading text-section leading-tight text-text-primary" data-testid="market-sell-title">
+          {t('seller.discover.sell.title')}
+        </p>
+
+        {/* What it is on the left; the pictures lower, beside it, not beside the title. */}
+        <div className="mt-2 flex gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-caption text-text-secondary">{t('seller.discover.sell.body')}</p>
+            <ul className="mt-2.5 space-y-1">
+              {points.map((point, i) => (
+                <li
+                  key={point}
+                  className="flex items-center gap-1.5 text-caption font-medium text-text-primary motion-safe:animate-fade-slide-in"
+                  style={{ animationDelay: `${300 + i * 150}ms` }}
+                >
+                  <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-accent-green text-white">
+                    <Check className="h-2.5 w-2.5" strokeWidth={3.5} aria-hidden="true" />
+                  </span>
+                  {point}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Three of the category pictures, fanned like cards in a hand, each hovering on its own beat. */}
+          <div aria-hidden="true" className="relative mt-1 h-32 w-[6.5rem] shrink-0">
+            {arts.map((art, i) => (
+              <span key={art} className={`absolute ${['left-0 top-7 z-0 -rotate-12', 'left-7 top-0 z-10 rotate-3', 'left-3 top-[4.5rem] z-20 rotate-6'][i]}`}>
+                <img
+                  src={art}
+                  alt=""
+                  loading="lazy"
+                  draggable={false}
+                  className="h-[3.75rem] w-[3.75rem] rounded-2xl bg-surface object-contain p-1 shadow-float motion-safe:animate-bob"
+                  style={{ animationDelay: `${i * -1.6}s` }}
+                />
+              </span>
             ))}
-          </ul>
+          </div>
         </div>
 
-        {/* Three of the category pictures, fanned like cards in a hand, each hovering on its own beat. */}
-        <div aria-hidden="true" className="relative h-32 w-[6.5rem] shrink-0">
-          {arts.map((art, i) => (
-            <span key={art} className={`absolute ${['left-0 top-7 z-0 -rotate-12', 'left-7 top-0 z-10 rotate-3', 'left-3 top-[4.5rem] z-20 rotate-6'][i]}`}>
-              <img
-                src={art}
-                alt=""
-                loading="lazy"
-                draggable={false}
-                className="h-[3.75rem] w-[3.75rem] rounded-2xl bg-surface object-contain p-1 shadow-float motion-safe:animate-bob"
-                style={{ animationDelay: `${i * -1.6}s` }}
-              />
-            </span>
-          ))}
-        </div>
+        <button
+          type="button"
+          onClick={onOpen}
+          // The brand gradient, and a breath of purple going out from it: an invitation.
+          className="group relative mt-4 flex w-full items-center justify-center gap-2 overflow-hidden rounded-full bg-gradient-to-r from-primary via-primary-mid to-pink-600 px-4 py-3 font-heading text-sm text-white shadow-float transition-transform duration-100 motion-safe:animate-glow-brand motion-safe:active:scale-[0.98]"
+          data-testid="market-sell-cta"
+        >
+          <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-transparent via-white/30 to-transparent motion-safe:animate-sheen" />
+          {t('seller.discover.sell.cta')}
+          <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden="true" />
+        </button>
       </div>
-
-      <button
-        type="button"
-        onClick={onOpen}
-        className="group relative mt-4 flex w-full items-center justify-center gap-2 overflow-hidden rounded-full bg-primary px-4 py-3 font-heading text-sm text-text-inverse shadow-float transition-transform duration-100 motion-safe:active:scale-[0.98]"
-        data-testid="market-sell-cta"
-      >
-        <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-transparent via-white/25 to-transparent motion-safe:animate-sheen" />
-        {t('seller.discover.sell.cta')}
-        <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden="true" />
-      </button>
     </section>
   );
 }

@@ -38,6 +38,7 @@ import { AppDrawerProvider } from './components/AppDrawer'
 import { DiscreetSosGuard } from './components/DiscreetSosGuard'
 import { SafetyCenter } from './screens/SafetyCenter'
 import { HelpAssistant } from './screens/HelpAssistant'
+import { ScrollToTop } from './components/ScrollToTop'
 
 // Screens with the bottom tab bar (Home/Bookings/Wallet/Profile/SOS) get
 // wrapped in AppShell; booking-flow and tracking screens push on top with
@@ -75,6 +76,7 @@ function App() {
   return (
     <AppDrawerProvider>
     <DiscreetSosGuard>
+    <ScrollToTop />
     <Routes>
       <Route path="/" element={<Splash />} />
       <Route path="/login" element={<Login />} />

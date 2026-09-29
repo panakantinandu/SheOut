@@ -276,6 +276,12 @@ export default {
           '0%': { transform: 'scale(0.85)', opacity: '0.7' },
           '100%': { transform: 'scale(1.5)', opacity: '0' },
         },
+        // A word of a screen's title arriving: up from below, out of a soft
+        // blur, into place - one word after another (see TopHeader).
+        'title-word': {
+          from: { opacity: '0', transform: 'translateY(0.55em)', filter: 'blur(4px)' },
+          to: { opacity: '1', transform: 'none', filter: 'blur(0)' },
+        },
         // A star in the night sky of the greeting, brightening and dimming.
         twinkle: {
           '0%, 100%': { opacity: '1', transform: 'scale(1)' },
@@ -296,6 +302,12 @@ export default {
         'mic-glow': {
           '0%, 100%': { opacity: '1', transform: 'scale(1)' },
           '50%': { opacity: '0.55', transform: 'scale(1.35)' },
+        },
+        // The same breath in the brand purple, for a call to action that is
+        // an invitation rather than "go" (the Marketplace's Start selling).
+        'glow-brand': {
+          '0%': { boxShadow: '0 0 0 0 rgba(123, 63, 228, 0.45)' },
+          '70%, 100%': { boxShadow: '0 0 0 0.75rem rgba(123, 63, 228, 0)' },
         },
         // A soft green glow breathing out from a button: tap me.
         'glow-go': {
@@ -340,9 +352,11 @@ export default {
         wobble: 'wobble 2.6s ease-in-out infinite',
         'hourglass-flip': 'hourglass-flip 3s ease-in-out infinite',
         'glow-go': 'glow-go 2.2s ease-out infinite',
+        'glow-brand': 'glow-brand 2.4s ease-out infinite',
         ripple: 'ripple 2.4s ease-out infinite',
         nod: 'nod 3.6s ease-in-out infinite',
         twinkle: 'twinkle 2.2s ease-in-out infinite',
+        'title-word': 'title-word 560ms cubic-bezier(0.22, 1, 0.36, 1) both',
         'coin-flip': 'coin-flip 1.1s cubic-bezier(0.22, 1, 0.36, 1) 300ms both',
         'mic-glow': 'mic-glow 1.6s ease-in-out infinite',
       },

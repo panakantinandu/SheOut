@@ -1,14 +1,15 @@
 import { Heart, HeartHandshake, ShieldCheck, Sparkles } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-const PILL_ICONS: ReactNode[] = [<ShieldCheck key="safe" />, <Sparkles key="empowered" />, <HeartHandshake key="together" />];
+/** In the tagline's order - Safe, Together, Empowered: a shield, joined hands, a spark. */
+const PILL_ICONS: ReactNode[] = [<ShieldCheck key="safe" />, <HeartHandshake key="together" />, <Sparkles key="empowered" />];
 
 /**
  * "Women Supporting Women": what SheOut stands for, so it sits just under
  * the services instead of at the foot of Home.
  * <p>
  * The three women rise into the card with small hearts floating up behind
- * them, and the operator's line ("Safe · Empowered · Together") arrives as
+ * them, and the operator's line ("Safe · Together · Empowered") arrives as
  * pills stacked one under another, each after the one above. The line is split on its dots; if an operator
  * writes it without them it shows as one plain line.
  */
