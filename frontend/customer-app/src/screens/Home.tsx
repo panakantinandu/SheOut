@@ -1,12 +1,13 @@
 import { ArrowRight, ChevronRight, Clock, MapPinned, ShieldAlert, Store, Wallet as WalletIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ASSISTANT_NAME, AssistantEntryCard, Card, IconCircle, ListRow, PushPromptCard, TopHeader, contentText, useContentSection, useAppLanguage, usePushNotifications, useUnreadNotifications, bikeTaxiArt, parcelArt, marketplaceArt, womenArt } from '@sheout/design-system';
+import { ASSISTANT_NAME, AssistantEntryCard, IconCircle, ListRow, PushPromptCard, TopHeader, contentText, useContentSection, useAppLanguage, usePushNotifications, useUnreadNotifications, bikeTaxiArt, parcelArt, marketplaceArt, womenArt } from '@sheout/design-system';
 import { OutOfAreaBanner } from '../components/OutOfAreaBanner';
 import { UnpaidTripBanner } from '../components/UnpaidTripBanner';
 import { useAppDrawer } from '../components/AppDrawer';
 import { Reveal } from '../components/Reveal';
 import { RideHero } from '../components/home/RideHero';
+import { CommunityCard } from '../components/home/CommunityCard';
 import { CategoryMarquee } from '../components/home/CategoryMarquee';
 import { SELLER_CATEGORIES } from '../lib/seller';
 import { PUSH_TOKEN_KEY, contentApi, notificationsApi, pushApi, usersApi } from '../api/client';
@@ -47,7 +48,8 @@ const SERVICES = [
  * fallback. Service cards and quick access are still static UI.
  * <p>
  * Top to bottom it is a ride app: where are you going, the two services,
- * then the rider's own shortcuts (SOS, live trip, wallet, history). The
+ * what SheOut stands for (Women Supporting Women), then the rider's own
+ * shortcuts (SOS, live trip, wallet, history). The
  * marketplace follows as one card, with its categories drifting past and a
  * way in for sellers.
  */
@@ -164,6 +166,14 @@ export function Home() {
         </div>
       </div>
 
+      {/* What SheOut stands for, straight after what it does. */}
+      <CommunityCard
+        title={fromContent('home.community.title', 'home.communityTitle')}
+        subtitle={fromContent('home.community.subtitle', 'home.communitySubtitle')}
+        art={womenArt}
+        artAlt={t('home.threeWomen')}
+      />
+
       <Reveal>
         {/* Four tiles, four destinations. Live Track and History used to
             both open /bookings, which is where the Bookings tab goes too -
@@ -217,22 +227,6 @@ export function Home() {
             <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
           </button>
         </section>
-      </Reveal>
-
-      <Reveal>
-      <Card tone="brand" className="flex items-center justify-between gap-3 overflow-hidden rounded-[1.75rem] p-4">
-        <div className="min-w-0 max-w-[58%] flex-1">
-          <p className="text-sm font-semibold text-primary">{fromContent('home.community.title', 'home.communityTitle')}</p>
-          <p className="mt-1 text-xs text-text-secondary">{fromContent('home.community.subtitle', 'home.communitySubtitle')}</p>
-        </div>
-        <div className="relative flex h-20 w-[42%] max-w-[11.25rem] shrink-0 items-end justify-end overflow-visible">
-          <img
-            src={womenArt}
-            alt={t('home.threeWomen')}
-            className="h-full w-full object-contain object-right-bottom"
-          />
-        </div>
-      </Card>
       </Reveal>
 
       {/* The way into the assistant: a card, not a floating button - the

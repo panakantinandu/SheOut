@@ -44,7 +44,7 @@
     "serviceRideBody": "Ride with a woman partner",
     "serviceParcelBody": "Send it across the city",
     "ride": {
-      "eyebrow": "Bike Taxi · Women riders",
+      "eyebrow": "Women riders",
       "whereTo": "Where are you going?"
     },
     "market": {

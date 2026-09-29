@@ -227,6 +227,12 @@ export default {
           '75%': { transform: 'translateY(-3px)' },
           '100%': { transform: 'translateY(0)', opacity: '1' },
         },
+        // A small heart floating up and fading, behind the three women.
+        'heart-rise': {
+          '0%': { transform: 'translateY(0) scale(0.6)', opacity: '0' },
+          '20%': { opacity: '1' },
+          '100%': { transform: 'translateY(-3rem) scale(1)', opacity: '0' },
+        },
         // A finger tapping, for "tap a picture" - a hint that reads without words.
         'tap-hint': {
           '0%, 60%, 100%': { transform: 'translate(0, 0) scale(1)' },
@@ -257,6 +263,7 @@ export default {
         'speed-line': 'speed-line 1.3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'pin-drop': 'pin-drop 700ms cubic-bezier(0.22, 1, 0.36, 1) both',
         'tap-hint': 'tap-hint 1.8s ease-in-out infinite',
+        'heart-rise': 'heart-rise 3.2s ease-out infinite',
       },
     },
   },
