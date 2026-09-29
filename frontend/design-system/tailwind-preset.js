@@ -177,6 +177,30 @@ export default {
           from: { transform: 'translateY(12%)', opacity: '0' },
           to: { transform: 'translateY(0)', opacity: '1' },
         },
+        // A strip that scrolls itself forever. The strip holds its items
+        // twice, so moving it by half its width lands on a frame identical
+        // to the first and the loop has no seam.
+        marquee: {
+          from: { transform: 'translate3d(0, 0, 0)' },
+          to: { transform: 'translate3d(-50%, 0, 0)' },
+        },
+        // A band of light crossing a card now and then, then resting: most
+        // of the cycle is still, so it catches the eye without nagging it.
+        sheen: {
+          '0%': { transform: 'translateX(-120%) skewX(-18deg)' },
+          '28%, 100%': { transform: 'translateX(260%) skewX(-18deg)' },
+        },
+        // Artwork hovering with a slight tilt - float's livelier sibling,
+        // for illustrations rather than the brand mark.
+        bob: {
+          '0%, 100%': { transform: 'translateY(0) rotate(-2deg)' },
+          '50%': { transform: 'translateY(-8px) rotate(2deg)' },
+        },
+        // A carousel dot filling while its slide is shown.
+        'fill-x': {
+          from: { transform: 'scaleX(0)' },
+          to: { transform: 'scaleX(1)' },
+        },
       },
       animation: {
         shimmer: 'shimmer 1.6s linear infinite',
@@ -193,6 +217,10 @@ export default {
         'fade-in': 'fade-in 160ms ease-out both',
         'sheet-up': 'sheet-up 260ms cubic-bezier(0.22, 1, 0.36, 1) both',
         'confetti-fall': 'confetti-fall 2.2s cubic-bezier(0.25, 0.6, 0.45, 1) both',
+        marquee: 'marquee 38s linear infinite',
+        sheen: 'sheen 5.5s ease-in-out infinite',
+        bob: 'bob 5s ease-in-out infinite',
+        'fill-x': 'fill-x linear both',
       },
     },
   },

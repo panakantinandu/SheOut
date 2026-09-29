@@ -1,10 +1,15 @@
-import { ArrowRight, Clock, MapPinned, ShieldAlert, Wallet as WalletIcon } from 'lucide-react';
+import { ArrowRight, ChevronRight, Clock, MapPinned, ShieldAlert, Wallet as WalletIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ASSISTANT_NAME, AssistantEntryCard, brandIllustration, Card, IconCircle, ListRow, PushPromptCard, TopHeader, contentText, useContentSection, useAppLanguage, usePushNotifications, useUnreadNotifications, bikeTaxiArt, parcelArt, marketplaceArt, womenArt } from '@sheout/design-system';
 import { OutOfAreaBanner } from '../components/OutOfAreaBanner';
 import { UnpaidTripBanner } from '../components/UnpaidTripBanner';
 import { useAppDrawer } from '../components/AppDrawer';
+import { Reveal } from '../components/Reveal';
+import { HeroCarousel, type HeroSlide } from '../components/home/HeroCarousel';
+import { CategoryMarquee } from '../components/home/CategoryMarquee';
+import { SellOnSheOutCard } from '../components/home/SellOnSheOutCard';
+import { SELLER_CATEGORIES } from '../lib/seller';
 import { PUSH_TOKEN_KEY, contentApi, notificationsApi, pushApi, usersApi } from '../api/client';
 import type { CustomerProfileSummary } from '../api/types';
 import { useTranslation } from '@sheout/design-system';
@@ -12,8 +17,8 @@ import { useTranslation } from '@sheout/design-system';
 /**
  * The service tiles, as data so another is one entry, not another copy of
  * the tile. Lunch Box is deferred for launch. SheOut Marketplace is here
- * for browsing as a customer; running your own shop is "Sell on SheOut" in the
- * drawer - two intents, two ways in.
+ * for browsing as a customer; running your own shop is "Sell on SheOut", in the
+ * drawer and on its own card further down - two intents, two ways in.
  */
 const SERVICES = [
   { key: 'ride', labelKey: 'home.serviceRide', to: '/book/ride', image: bikeTaxiArt },
@@ -58,6 +63,41 @@ export function Home() {
   const push = usePushNotifications(pushApi, PUSH_TOKEN_KEY, true);
   const unreadCount = useUnreadNotifications(notificationsApi.unreadCount, true);
 
+  const heroSlides: HeroSlide[] = [
+    {
+      key: 'ride',
+      eyebrow: t('home.serviceRide'),
+      title: fromContent('home.banner.title', 'home.bannerTitle'),
+      body: fromContent('home.banner.subtitle', 'home.bannerSubtitle'),
+      cta: t('home.hero.rideCta'),
+      art: brandIllustration,
+      background: 'linear-gradient(135deg, #7B3FE4 0%, #4A1A9E 55%, #2E0E61 100%)',
+      onOpen: () => navigate('/book/ride'),
+    },
+    {
+      key: 'parcel',
+      eyebrow: t('home.serviceParcel'),
+      title: t('home.hero.parcelTitle'),
+      body: t('home.hero.parcelBody'),
+      cta: t('home.hero.parcelCta'),
+      art: parcelArt,
+      background: 'linear-gradient(135deg, #3B6FE0 0%, #1E3F9E 55%, #13235E 100%)',
+      onOpen: () => navigate('/book/parcel'),
+    },
+    {
+      key: 'shop',
+      eyebrow: t('home.serviceSeller'),
+      title: t('home.hero.shopTitle'),
+      body: t('home.hero.shopBody'),
+      cta: t('home.hero.shopCta'),
+      art: marketplaceArt,
+      background: 'linear-gradient(135deg, #14A38F 0%, #0B7466 55%, #064A42 100%)',
+      onOpen: () => navigate('/seller'),
+    },
+  ];
+  const marqueeItems = SELLER_CATEGORIES.map((c) => ({ value: c.value, label: t(`seller.categories.${c.key}`), art: c.art, tint: c.tint }));
+  const sellArts = ['fashion', 'mehandi', 'gifts'].map((key) => SELLER_CATEGORIES.find((c) => c.key === key)!.art);
+
   return (
     <div className="space-y-6">
       <TopHeader
@@ -87,22 +127,9 @@ export function Home() {
       {/* An unpaid trip blocks the next booking - say so before she tries. */}
       <UnpaidTripBanner />
 
-      {/* The mockup puts a woman-in-helmet graphic on the banner's right.
-          Reusing the existing brand illustration (a woman in a helmet on a
-          scooter) rather than adding a second asset for one banner - it is
-          cropped by the card's overflow so the rider fills the corner. */}
-      <Card variant="primary" className="relative overflow-hidden">
-        <div className="relative z-10 max-w-[62%]">
-          <p className="font-heading text-section">{fromContent('home.banner.title', 'home.bannerTitle')}</p>
-          <p className="mt-1 text-sm opacity-90">{fromContent('home.banner.subtitle', 'home.bannerSubtitle')}</p>
-        </div>
-        <img
-          src={brandIllustration}
-          alt=""
-          aria-hidden="true"
-          className="pointer-events-none absolute -bottom-3 -right-3 h-28 w-28 object-contain opacity-95"
-        />
-      </Card>
+      {/* The banner is now one slide of three, one per thing SheOut does.
+          The ride slide keeps the operator-edited banner copy. */}
+      <HeroCarousel slides={heroSlides} label={t('home.hero.label')} />
 
       <div>
         <h2 className="mb-3 font-heading text-section text-text-primary">{t('home.services')}</h2>
@@ -111,12 +138,14 @@ export function Home() {
           launch; the backend still accepts LUNCHBOX and its tile can return
           here. */}
         <div className="grid grid-cols-3 gap-3" data-testid="home-services">
-          {SERVICES.map((service) => (
+          {SERVICES.map((service, i) => (
             <button
               key={service.key}
               type="button"
               onClick={() => navigate(service.to)}
-              className="flex min-w-0 flex-col items-center gap-2 text-center"
+              // Arriving one after another, left to right.
+              style={{ animationDelay: `${80 + i * 70}ms` }}
+              className="flex min-w-0 flex-col items-center gap-2 text-center motion-safe:animate-pop-in"
               data-testid={`service-${service.key}`}
             >
               {/* The artwork is itself the tile - a rounded 3D square with a
@@ -141,12 +170,37 @@ export function Home() {
         </div>
       </div>
 
+      {/* The marketplace's categories, drifting past - each opens that category. */}
+      <Reveal>
+        <div className="mb-3 flex items-end justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="font-heading text-section text-text-primary">{t('home.shop.title')}</h2>
+            <p className="mt-0.5 text-caption text-text-secondary">{t('home.shop.subtitle')}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/seller')}
+            className="flex shrink-0 items-center gap-0.5 text-caption font-semibold text-primary"
+            data-testid="home-shop-all"
+          >
+            {t('home.shop.seeAll')}
+            <ChevronRight className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
+        <CategoryMarquee items={marqueeItems} onPick={(value) => navigate(`/seller?cat=${value}`)} />
+      </Reveal>
+
+      <Reveal>
+        <SellOnSheOutCard arts={sellArts} onOpen={() => navigate('/seller/manage')} />
+      </Reveal>
+
+      <Reveal>
       <Card tone="brand" className="flex items-center justify-between gap-3 overflow-hidden rounded-[1.75rem] p-4">
         <div className="min-w-0 max-w-[58%] flex-1">
           <p className="text-sm font-semibold text-primary">{fromContent('home.community.title', 'home.communityTitle')}</p>
           <p className="mt-1 text-xs text-text-secondary">{fromContent('home.community.subtitle', 'home.communitySubtitle')}</p>
         </div>
-        <div className="relative flex h-20 w-[42%] max-w-[180px] shrink-0 items-end justify-end overflow-visible">
+        <div className="relative flex h-20 w-[42%] max-w-[11.25rem] shrink-0 items-end justify-end overflow-visible">
           <img
             src={womenArt}
             alt={t('home.threeWomen')}
@@ -154,18 +208,21 @@ export function Home() {
           />
         </div>
       </Card>
+      </Reveal>
 
       {/* The way into the assistant: a card, not a floating button - the
           bottom bar below is where SOS is. The one place its avatar plays. */}
-      <AssistantEntryCard
-        title={t('home.askCardTitle')}
-        body={t('home.askCardBody', { name: ASSISTANT_NAME })}
-        onOpen={() => navigate('/help/assistant')}
-        interactive
-        testId="home-ask-sheout"
-      />
+      <Reveal>
+        <AssistantEntryCard
+          title={t('home.askCardTitle')}
+          body={t('home.askCardBody', { name: ASSISTANT_NAME })}
+          onOpen={() => navigate('/help/assistant')}
+          interactive
+          testId="home-ask-sheout"
+        />
+      </Reveal>
 
-      <div>
+      <Reveal>
         {/* Four tiles, four destinations. Live Track and History used to
             both open /bookings, which is where the Bookings tab goes too -
             so three of the app's entry points showed one identical list and
@@ -179,7 +236,7 @@ export function Home() {
           <ListRow layout="stacked" icon={<IconCircle tone="soft" icon={<WalletIcon />} />} label={t('home.wallet')} onClick={() => navigate('/wallet')} />
           <ListRow layout="stacked" icon={<IconCircle tone="soft" icon={<Clock />} />} label={t('home.history')} onClick={() => navigate('/bookings?view=history')} />
         </div>
-      </div>
+      </Reveal>
     </div>
   );
 }

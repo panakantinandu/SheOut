@@ -15,6 +15,7 @@ import { marketplaceApi } from '../api/client';
 import type { ListingCard, SellerCategory, SmartSearchResult } from '../api/types';
 import { PriceTag } from '../components/PriceTag';
 import { SELLER_CATEGORIES, asProductCode, priceText } from '../lib/seller';
+import { CategoryGrid, HowItWorks, LaunchCard, MarketplaceHero, TrustStrip } from '../components/marketplace/MarketplaceDiscover';
 
 const CATEGORY_VALUES = new Set<string>(SELLER_CATEGORIES.map((c) => c.value));
 
@@ -72,8 +73,12 @@ function useDirectoryFilters() {
  * no part in any sale, so there is no cart and no checkout, and the foot of
  * the list says so.
  * <p>
- * Running your own shop is a different errand with its own way in, "Sell on
- * SheOut" in the drawer, so this screen does not advertise it.
+ * Before she has searched or filtered, the screen is a place to browse,
+ * not a bare list: the six categories as picture tiles, what she can count
+ * on, how buying works, and then the newest listings. With no shops live
+ * yet it says the marketplace is opening, and that is the one place it
+ * offers "open your own shop" - running a shop otherwise has its own way in,
+ * "Sell on SheOut" in the drawer and on Home.
  */
 export function Seller() {
   const { t } = useTranslation();
@@ -204,6 +209,9 @@ export function Seller() {
 
   const activeFilters = chips.length;
   const narrowed = activeFilters > 0 || q.trim().length > 0;
+  /** Nothing searched or filtered yet: show the browsing layout around the list. */
+  const browsing = !aiMode && !narrowed;
+  const categoryOnly = categories.length > 0 && !q.trim() && !min && !max && !area.trim();
   const clearAll = () => filters.set({ q: '', cat: '', min: '', max: '', area: '', ask: '' });
   const examples = [t('seller.ask.example1'), t('seller.ask.example2'), t('seller.ask.example3')];
 
@@ -381,10 +389,29 @@ export function Seller() {
         />
       )}
 
+      {browsing && (
+        <>
+          <MarketplaceHero />
+          <CategoryGrid onPick={toggleCategory} />
+          <TrustStrip />
+        </>
+      )}
+
       {!aiMode && list.loading && <SkeletonList rows={4} label={t('seller.directory.loading')} />}
       {!aiMode && !list.loading && list.error && <p className="text-sm text-danger">{list.error}</p>}
       {!aiMode && !list.loading && !list.error && list.items.length === 0 && (
-        narrowed ? (
+        categoryOnly ? (
+          // Only a category was picked: that category has no shops yet, not "nothing matches".
+          <ListEmptyState
+            illustrated
+            icon={<Store />}
+            title={t('seller.discover.categoryEmptyTitle', {
+              name: categories.map((v) => t(`seller.categories.${SELLER_CATEGORIES.find((c) => c.value === v)!.key}`)).join(', '),
+            })}
+            message={t('seller.discover.categoryEmpty')}
+            action={{ label: t('seller.discover.allCategories'), onClick: clearAll }}
+          />
+        ) : narrowed ? (
           <ListEmptyState
             illustrated
             icon={<Store />}
@@ -393,19 +420,28 @@ export function Seller() {
             action={{ label: t('seller.browse.clearAll'), onClick: clearAll }}
           />
         ) : (
-          <ListEmptyState illustrated icon={<Store />} title={t('seller.directory.emptyTitle')} message={t('seller.directory.empty')} />
+          <LaunchCard onSell={() => navigate('/seller/manage')} />
         )
+      )}
+
+      {browsing && !list.loading && list.items.length > 0 && (
+        <h2 className="flex items-center gap-2 font-heading text-section text-text-primary">
+          <Sparkles className="h-4 w-4 text-accent-orange" aria-hidden="true" />
+          {t('seller.discover.fresh')}
+        </h2>
       )}
 
       {!aiMode && !list.loading && list.items.length > 0 && (
         <div className="grid grid-cols-2 gap-3" data-testid="seller-listings">
-          {list.items.map((item) => (
-            <ListingTile key={item.productId} item={item} onOpen={() => navigate(`/seller/products/${item.productId}`)} />
+          {list.items.map((item, i) => (
+            <ListingTile key={item.productId} item={item} index={i} onOpen={() => navigate(`/seller/products/${item.productId}`)} />
           ))}
         </div>
       )}
 
       {!aiMode && <LoadMore shown={list.items.length} total={list.total} hasMore={list.hasMore} loading={list.loadingMore} onLoadMore={list.loadMore} />}
+
+      {browsing && !list.loading && <HowItWorks />}
 
       <p className="pb-2 text-center text-caption text-text-secondary">{t('seller.directory.notInvolved')}</p>
     </div>
@@ -497,12 +533,14 @@ function AskResults({
 }
 
 /** One product in a grid: its first photo, name, price, and whose shop it is and where. */
-export function ListingTile({ item, onOpen }: { item: ListingCard; onOpen: () => void }) {
+export function ListingTile({ item, onOpen, index = 0 }: { item: ListingCard; onOpen: () => void; index?: number }) {
   return (
     <button
       type="button"
       onClick={onOpen}
-      className="flex flex-col overflow-hidden rounded-card border border-border bg-surface text-left shadow-card transition-transform duration-100 motion-safe:active:scale-[0.98]"
+      // The first screenful arrives one after another; later pages without a wait.
+      style={{ animationDelay: `${Math.min(index, 7) * 50}ms` }}
+      className="flex flex-col overflow-hidden rounded-card border border-border bg-surface text-left shadow-card transition-transform duration-100 motion-safe:animate-fade-slide-in motion-safe:active:scale-[0.98]"
       data-testid="listing-tile"
     >
       <div className="flex aspect-square w-full items-center justify-center bg-primary-light">

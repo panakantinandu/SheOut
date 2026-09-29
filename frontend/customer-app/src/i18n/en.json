@@ -40,7 +40,30 @@
     "history": "History",
     "askCardTitle": "Ask SheOut",
     "askCardBody": "Questions about rides, payments or verification? Ask {{name}}.",
-    "serviceSeller": "SheOut Marketplace"
+    "serviceSeller": "SheOut Marketplace",
+    "hero": {
+      "label": "What SheOut does",
+      "rideCta": "Book a ride",
+      "parcelTitle": "Send it with someone you trust",
+      "parcelBody": "Picked up and dropped by verified women partners.",
+      "parcelCta": "Send a parcel",
+      "shopTitle": "Shop from women near you",
+      "shopBody": "Sarees, mehandi, tailoring and more, straight from the maker.",
+      "shopCta": "Explore"
+    },
+    "shop": {
+      "title": "Shop SheOut Marketplace",
+      "subtitle": "Made and sold by women in your city",
+      "seeAll": "See all"
+    },
+    "sell": {
+      "eyebrow": "Sell on SheOut",
+      "title": "Turn your skill into income",
+      "body": "Sarees, mehandi, tailoring, gifts: open your shop and reach women across your city.",
+      "point1": "No commission on your sales",
+      "point2": "Buyers contact you directly",
+      "cta": "Start selling"
+    }
   },
   "about": {
     "title": "About SheOut",
@@ -563,6 +586,40 @@
       "none": "No listing fits what you described. Try other words, or search exact words.",
       "tryExact": "Search exact words",
       "error": "Search is not working right now. Please try again."
+    },
+    "discover": {
+      "eyebrow": "SheOut Marketplace",
+      "title": "Made by women, near you",
+      "body": "Handpicked crafts, fashion and services, straight from the women who make them.",
+      "byCategory": "Browse by category",
+      "fresh": "Fresh from sellers",
+      "trust": {
+        "label": "Why shop here",
+        "verifiedTitle": "Verified sellers",
+        "verifiedBody": "Every seller verifies her ID before her shop goes live.",
+        "directTitle": "Talk to her directly",
+        "directBody": "WhatsApp or call the seller. No middleman.",
+        "feeTitle": "No hidden cut",
+        "feeBody": "SheOut takes nothing from your purchase."
+      },
+      "how": {
+        "title": "How it works",
+        "step1Title": "Find something you love",
+        "step1Body": "Browse a category, or search in your own words.",
+        "step2Title": "Contact the seller",
+        "step2Body": "One tap opens WhatsApp or a call with her.",
+        "step3Title": "Agree and buy directly",
+        "step3Body": "Price, pickup or delivery: settled between you two."
+      },
+      "launch": {
+        "badge": "Opening soon",
+        "title": "The first shops are opening",
+        "body": "Women sellers are setting up right now. Pick a category above to see what arrives first, or open your own shop and be one of the first.",
+        "cta": "Open your shop"
+      },
+      "categoryEmptyTitle": "No {{name}} shops yet",
+      "categoryEmpty": "New shops are joining. Check back soon, or look around the other categories.",
+      "allCategories": "See all categories"
     }
   },
   "refer": {
