@@ -57,9 +57,9 @@ export const colors = {
 };
 
 export const radii = {
-  card: '20px',
-  input: '14px',
-  chip: '10px',
+  card: '1.25rem',
+  input: '0.875rem',
+  chip: '0.625rem',
 };
 
 /*
@@ -84,19 +84,19 @@ export const shadows = {
  * headings), Inter for body and caption.
  */
 export const typeScale = {
-  display: ['30px', { lineHeight: '36px', fontWeight: '700', letterSpacing: '-0.02em' }],
-  title: ['22px', { lineHeight: '28px', fontWeight: '600', letterSpacing: '-0.01em' }],
-  section: ['17px', { lineHeight: '24px', fontWeight: '600' }],
-  'card-title': ['15px', { lineHeight: '20px', fontWeight: '600' }],
-  body: ['15px', { lineHeight: '22px', fontWeight: '400' }],
-  caption: ['12px', { lineHeight: '16px', fontWeight: '500', letterSpacing: '0.01em' }],
+  display: ['1.875rem', { lineHeight: '2.25rem', fontWeight: '700', letterSpacing: '-0.02em' }],
+  title: ['1.375rem', { lineHeight: '1.75rem', fontWeight: '600', letterSpacing: '-0.01em' }],
+  section: ['1.0625rem', { lineHeight: '1.5rem', fontWeight: '600' }],
+  'card-title': ['0.9375rem', { lineHeight: '1.25rem', fontWeight: '600' }],
+  body: ['0.9375rem', { lineHeight: '1.375rem', fontWeight: '400' }],
+  caption: ['0.75rem', { lineHeight: '1rem', fontWeight: '500', letterSpacing: '0.01em' }],
   // Badge numerals and one-word tags only (an unread count, "Soon"). Never
   // for a sentence: anything a person reads is caption or larger.
-  micro: ['10px', { lineHeight: '12px', fontWeight: '700', letterSpacing: '0.02em' }],
+  micro: ['0.625rem', { lineHeight: '0.75rem', fontWeight: '700', letterSpacing: '0.02em' }],
 };
 
 export const spacing = {
-  screen: '20px',
+  screen: '1.25rem',
 };
 
 export const fonts = {

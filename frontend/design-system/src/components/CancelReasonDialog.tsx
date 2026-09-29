@@ -127,7 +127,7 @@ export function CancelReasonDialog<R extends string = CancellationReason>({
           <label className="mt-3 block">
             <span className="mb-2 block text-sm font-medium text-text-primary">{t('cancelDialog.noteLabel')}</span>
             <textarea
-              className="min-h-[80px] w-full rounded-input border border-border bg-surface p-3 text-sm text-text-primary outline-none transition-colors focus:border-primary"
+              className="min-h-[5rem] w-full rounded-input border border-border bg-surface p-3 text-sm text-text-primary outline-none transition-colors focus:border-primary"
               maxLength={NOTE_MAX}
               value={note}
               disabled={busy}

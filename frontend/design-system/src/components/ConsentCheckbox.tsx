@@ -48,7 +48,7 @@ export function ConsentCheckbox({ checked, onChange, onOpenTerms, onOpenPrivacy,
       <span
         aria-hidden="true"
         className={cn(
-          'mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-[6px] border-2 transition-colors',
+          'mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-[0.375rem] border-2 transition-colors',
           checked ? 'border-primary bg-primary text-text-inverse' : 'border-border bg-surface'
         )}
       >

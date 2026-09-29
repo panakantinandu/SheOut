@@ -85,7 +85,7 @@ export function Drawer({ open, onClose, header, sections, footer }: DrawerProps)
         aria-label={t('drawer.label')}
         tabIndex={-1}
         className={cn(
-          'absolute inset-y-0 left-0 flex w-[82%] max-w-[320px] flex-col bg-surface shadow-overlay outline-none transition-transform duration-300 ease-out',
+          'absolute inset-y-0 left-0 flex w-[82%] max-w-[20rem] flex-col bg-surface shadow-overlay outline-none transition-transform duration-300 ease-out',
           open ? 'translate-x-0' : '-translate-x-full'
         )}
         data-testid="drawer"
@@ -123,7 +123,7 @@ export function Drawer({ open, onClose, header, sections, footer }: DrawerProps)
                     >
                       <span
                         className={cn(
-                          'flex h-9 w-9 shrink-0 items-center justify-center rounded-full [&>svg]:h-[18px] [&>svg]:w-[18px]',
+                          'flex h-9 w-9 shrink-0 items-center justify-center rounded-full [&>svg]:h-[1.125rem] [&>svg]:w-[1.125rem]',
                           item.tone === 'danger' ? 'bg-danger/10 text-danger' : 'bg-primary-light text-primary'
                         )}
                       >

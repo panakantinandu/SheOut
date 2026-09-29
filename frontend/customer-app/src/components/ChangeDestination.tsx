@@ -173,7 +173,7 @@ export function ChangeDestination({ booking }: { booking: BookingSummary }) {
       />
 
       <Overlay open={proposal !== null} label={t('changeDestination.confirmTitle')} align="sheet" onDismiss={() => !sending && setProposal(null)}>
-        <div className="max-h-[92vh] w-full overflow-y-auto rounded-t-[28px] bg-surface px-5 pb-8 pt-5 shadow-overlay motion-safe:animate-sheet-up" data-testid="destination-change-sheet">
+        <div className="max-h-[92vh] w-full overflow-y-auto rounded-t-[1.75rem] bg-surface px-5 pb-8 pt-5 shadow-overlay motion-safe:animate-sheet-up" data-testid="destination-change-sheet">
           <p className="font-heading text-section text-text-primary">{t('changeDestination.confirmTitle')}</p>
           {proposal && !proposal.quote ? (
             <p className="mt-3 text-sm text-text-secondary">{t('changeDestination.pricing')}</p>

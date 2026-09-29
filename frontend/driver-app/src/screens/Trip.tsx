@@ -591,7 +591,7 @@ export function Trip() {
       <div className="space-y-4" data-testid="trip-live">
         {/* The map. Back and SOS float on its top edge; its bottom edge,
             where Google's logo and terms sit, is left clear. */}
-        <div className="relative -mx-screen -mt-6 h-[46vh] min-h-[280px] overflow-hidden shadow-lift" data-testid="trip-map">
+        <div className="relative -mx-screen -mt-6 h-[46vh] min-h-[17.5rem] overflow-hidden shadow-lift" data-testid="trip-map">
           {/* One map at a time: while navigation is open it has its own. */}
           {!navigating && <LiveMap markers={markers} route={nav?.remaining ?? route?.points} fill />}
           <div className="pointer-events-none absolute inset-x-3 top-3 z-10 flex items-start justify-between">

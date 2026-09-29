@@ -13,6 +13,29 @@
  * [data-theme=light] - somebody who chose light on a phone that is in
  * dark mode must get light.
  */
+
+/*
+ * ONE LAYOUT ON EVERY PHONE. The root size follows the screen's width, and
+ * every text size, gap, radius and box in both apps is in rem (tokens.js and
+ * Tailwind's own scale), so the whole screen scales as one picture: a 375pt
+ * phone and a 430pt one show the same lines breaking in the same places,
+ * where fixed pixels used to fit more words per line on the wider phone.
+ *
+ * 16px at 390pt, the width the screens are designed at. Bounded so a very
+ * narrow phone keeps readable text (14px, from ~340pt down) and a tablet or
+ * desktop, where the app is a centred phone-width column, stops growing
+ * (18px, from ~440pt up). text-size-adjust keeps iOS in landscape and
+ * Android's font boosting from inflating paragraphs on their own.
+ *
+ * What stays in px on purpose: hairline borders, shadows, map markers, and
+ * the 44/48px minimum tap targets, which must not shrink on a small phone.
+ */
+html {
+  font-size: clamp(14px, calc(100vw * 16 / 390), 18px);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 :root {
   --c-primary: 74 26 158;
   --c-primary-dark: 54 17 111;

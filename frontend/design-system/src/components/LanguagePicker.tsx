@@ -28,7 +28,7 @@ export function LanguagePicker({ open, onClose, onSelect }: LanguagePickerProps)
   return (
     <Overlay open={open} label={t('language.title')} align="sheet" onDismiss={onClose}>
       <div
-        className="w-full rounded-t-[28px] bg-surface px-screen pb-8 pt-3 shadow-overlay motion-safe:animate-sheet-up"
+        className="w-full rounded-t-[1.75rem] bg-surface px-screen pb-8 pt-3 shadow-overlay motion-safe:animate-sheet-up"
         data-testid="language-picker"
       >
         <span className="mx-auto mb-4 block h-1.5 w-10 rounded-full bg-border" aria-hidden="true" />

@@ -69,8 +69,10 @@ export function AssistantAvatar({ size = 40, state = 'idle', interactive = false
 
   return (
     <span
-      className={['relative flex shrink-0 items-center justify-center overflow-visible [&>canvas]:block', className].filter(Boolean).join(' ')}
-      style={{ width: size, height: size }}
+      // In rem, so the avatar scales with the text beside it (see theme.css);
+      // the canvas and SVG fill it at whatever size that works out to.
+      className={['relative flex shrink-0 items-center justify-center overflow-visible [&>canvas]:block [&>canvas]:!h-full [&>canvas]:!w-full', className].filter(Boolean).join(' ')}
+      style={{ width: `${size / 16}rem`, height: `${size / 16}rem` }}
       aria-hidden="true"
       data-testid="assistant-avatar"
       data-animated={lib ? 'true' : 'false'}
@@ -91,16 +93,16 @@ export function AssistantAvatar({ size = 40, state = 'idle', interactive = false
           theme={theme === 'dark' ? 'dark' : 'light'}
         />
       ) : (
-        <StaticAvatar size={size} color={color} sleeping={state === 'sleeping'} />
+        <StaticAvatar color={color} sleeping={state === 'sleeping'} />
       )}
     </span>
   );
 }
 
 /** The drop, flat, with the same face: what shows until (or instead of) the animated one. */
-function StaticAvatar({ size, color, sleeping }: { size: number; color: string; sleeping: boolean }) {
+function StaticAvatar({ color, sleeping }: { color: string; sleeping: boolean }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 100 100" data-testid="assistant-avatar-static">
+    <svg width="100%" height="100%" viewBox="0 0 100 100" data-testid="assistant-avatar-static">
       <path d="M50 6C50 6 16 44 16 64a34 34 0 0 0 68 0C84 44 50 6 50 6z" fill={color} />
       {sleeping ? (
         <g stroke="#fff" strokeWidth="4" strokeLinecap="round" fill="none">

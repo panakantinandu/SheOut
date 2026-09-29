@@ -108,7 +108,7 @@ export function BottomNavBar({ items, className }: BottomNavBarProps) {
                 className={cn(
                   'relative',
                   item.active
-                    ? 'text-primary [&_svg]:h-[22px] [&_svg]:w-[22px] [&_svg]:[stroke-width:2.4]'
+                    ? 'text-primary [&_svg]:h-[1.375rem] [&_svg]:w-[1.375rem] [&_svg]:[stroke-width:2.4]'
                     : 'text-text-secondary [&_svg]:h-5 [&_svg]:w-5 [&_svg]:[stroke-width:1.75]',
                   item.active && justArrived === item.key && 'motion-safe:animate-nav-pop'
                 )}

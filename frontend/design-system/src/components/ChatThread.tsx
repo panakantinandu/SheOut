@@ -89,7 +89,7 @@ export function ChatThread({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="min-h-[160px] space-y-2 rounded-card bg-background p-3">
+      <div className="min-h-[10rem] space-y-2 rounded-card bg-background p-3">
         {loading && messages.length === 0 ? (
           <p className="py-6 text-center text-sm text-text-secondary">{t('chat.loading')}</p>
         ) : messages.length === 0 ? (

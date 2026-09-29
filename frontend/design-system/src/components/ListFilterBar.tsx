@@ -99,7 +99,7 @@ export function ListFilterBar({
       {presentation === 'sheet' && (
         <Overlay open={open} label={t('filters.title')} align="sheet" onDismiss={() => setOpen(false)}>
           <div
-            className="flex max-h-[85vh] w-full flex-col rounded-t-[28px] bg-surface shadow-overlay motion-safe:animate-sheet-up"
+            className="flex max-h-[85vh] w-full flex-col rounded-t-[1.75rem] bg-surface shadow-overlay motion-safe:animate-sheet-up"
             data-testid="filter-sheet"
           >
             <div className="px-screen pt-3">

@@ -29,9 +29,9 @@ export function SuccessCheck({ size = 64, className, label: labelProp }: Success
       className={cn('inline-flex items-center justify-center', className)}
       role="img"
       aria-label={label}
-      style={{ width: size, height: size }}
+      style={{ width: `${size / 16}rem`, height: `${size / 16}rem` }}
     >
-      <svg viewBox="0 0 52 52" width={size} height={size} aria-hidden="true">
+      <svg viewBox="0 0 52 52" width="100%" height="100%" aria-hidden="true">
         <circle
           cx="26"
           cy="26"

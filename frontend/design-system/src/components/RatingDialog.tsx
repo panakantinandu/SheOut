@@ -117,7 +117,7 @@ export function RatingDialog({
 
   return (
     <Overlay open={open} label={title} align="sheet" onDismiss={busy ? undefined : onSkip}>
-      <div className="max-h-[92vh] overflow-y-auto rounded-t-[28px] bg-surface px-5 pb-6 pt-3 shadow-overlay motion-safe:animate-sheet-up">
+      <div className="max-h-[92vh] overflow-y-auto rounded-t-[1.75rem] bg-surface px-5 pb-6 pt-3 shadow-overlay motion-safe:animate-sheet-up">
         {/* The grabber: what every sheet on a phone has, so this reads as
             something she can push back down rather than something stuck. */}
         <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-border" aria-hidden="true" />
@@ -189,7 +189,7 @@ export function RatingDialog({
           <label className="mt-4 block">
             <span className="mb-2 block text-sm font-medium text-text-primary">{t('rating.commentLabel')}</span>
             <textarea
-              className="min-h-[76px] w-full rounded-input border border-border bg-background p-3 text-sm text-text-primary outline-none transition-colors focus:border-primary"
+              className="min-h-[4.75rem] w-full rounded-input border border-border bg-background p-3 text-sm text-text-primary outline-none transition-colors focus:border-primary"
               maxLength={COMMENT_MAX}
               value={comment}
               disabled={busy}

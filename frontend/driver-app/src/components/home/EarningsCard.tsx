@@ -28,7 +28,7 @@ export function EarningsCard({ amount, rides, activeTrips, onOpen }: { amount: n
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm font-medium text-text-secondary">{t('home.earnedToday')}</p>
-          <p className="mt-1 font-heading text-[40px] font-bold leading-none tabular-nums text-text-primary" data-testid="earnings-today">
+          <p className="mt-1 font-heading text-[2.5rem] font-bold leading-none tabular-nums text-text-primary" data-testid="earnings-today">
             ₹{rupees.format(Math.round(shownAmount))}
           </p>
         </div>
