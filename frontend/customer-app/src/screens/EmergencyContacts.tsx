@@ -1,6 +1,6 @@
 import { Plus, Trash2, UserRound } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useGoBack } from '../lib/useGoBack';
 import {
   Button,
   Card,
@@ -36,7 +36,7 @@ const RELATIONSHIPS = ['Mother', 'Father', 'Sister', 'Brother', 'Partner', 'Frie
 export function EmergencyContacts() {
   const { t } = useTranslation();
   const safety = useSafetyString();
-  const navigate = useNavigate();
+  const goBack = useGoBack('/profile');
   const [contacts, setContacts] = useState<EmergencyContact[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
@@ -100,7 +100,7 @@ export function EmergencyContacts() {
 
   return (
     <div className="space-y-6">
-      <TopHeader variant="back" title={t('profile.emergencyContacts')} onBack={() => navigate(-1)} />
+      <TopHeader variant="back" title={t('profile.emergencyContacts')} onBack={goBack} />
 
       <Card className="space-y-2">
         <p className="text-sm text-text-primary">

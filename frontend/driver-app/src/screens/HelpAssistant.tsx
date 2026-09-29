@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { useGoBack } from '../lib/useGoBack';
 import { ASSISTANT_NAME, HelpAssistantChat, assistantTicketDescription, TopHeader, useAppLanguage, useTranslation } from '@sheout/design-system';
 import { assistantApi } from '../api/client';
 import { PartnerSos } from '../components/PartnerSos';
@@ -11,11 +12,12 @@ import { PartnerSos } from '../components/PartnerSos';
 export function HelpAssistant() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const goBack = useGoBack('/help');
   const language = useAppLanguage();
 
   return (
     <div className="space-y-4">
-      <TopHeader variant="back" title={ASSISTANT_NAME} onBack={() => navigate(-1)} />
+      <TopHeader variant="back" title={ASSISTANT_NAME} onBack={goBack} />
       <HelpAssistantChat
         ask={(messages) => assistantApi.ask(messages, language)}
         emergencyNumber="112"

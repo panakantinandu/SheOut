@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
+import { useGoBack } from '../lib/useGoBack';
 import {
   Card,
   SkeletonCard,
@@ -23,7 +24,7 @@ import { useTranslation } from '@sheout/design-system';
  */
 export function SupportTicket() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
+  const goBack = useGoBack('/help');
   const { ticketId = '' } = useParams();
   const [thread, setThread] = useState<SupportTicketThreadResponse | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -64,7 +65,7 @@ export function SupportTicket() {
   const ticket = thread?.ticket;
   return (
     <div className="space-y-4">
-      <TopHeader variant="back" title={t('help.yourTicket')} onBack={() => navigate('/help')} />
+      <TopHeader variant="back" title={t('help.yourTicket')} onBack={goBack} />
       {loadError && <p className="text-sm text-danger">{loadError}</p>}
       {!thread && !loadError && <SkeletonCard lines={3} label={t('help.loadingTicket')} />}
       {ticket && thread && (

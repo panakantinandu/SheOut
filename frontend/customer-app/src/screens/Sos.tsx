@@ -1,6 +1,7 @@
 import { Bell, CheckCircle2, ChevronRight, CloudOff, MapPin, MessageSquareText, Phone, Share2, ShieldCheck, Users } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useGoBack } from '../lib/useGoBack';
 import { Button, Card, IconCircle, ListRow, SafetyText, TopHeader, i18next, useSafetyString } from '@sheout/design-system';
 import { usersApi } from '../api/client';
 import type { EmergencyContact, SosResponse } from '../api/types';
@@ -93,6 +94,7 @@ export function Sos() {
   const s = useSafetyString();
   const { i18n } = useTranslation();
   const navigate = useNavigate();
+  const goBack = useGoBack('/home');
   const location = useLocation();
   const routeState = location.state as { bookingId?: string; autoSend?: { source: TriggerSource } } | null;
   const bookingId = routeState?.bookingId;
@@ -292,7 +294,7 @@ export function Sos() {
 
   return (
     <div className="space-y-6">
-      <TopHeader variant="back" title={t('home.sos')} onBack={() => navigate('/home')} />
+      <TopHeader variant="back" title={t('home.sos')} onBack={goBack} />
 
       {/* The circle IS the trigger, as in the mockup - there is no separate
           button beneath it. */}

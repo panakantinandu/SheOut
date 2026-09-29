@@ -7,6 +7,7 @@ import type { ProductDetail } from '../api/types';
 import { PriceTag } from '../components/PriceTag';
 import { categoryKey, contactLink, websiteLabel } from '../lib/seller';
 import { ListingTile } from './Seller';
+import { useGoBack } from '../lib/useGoBack';
 
 /**
  * One product in the directory: its photos, price and description, who is
@@ -20,6 +21,7 @@ import { ListingTile } from './Seller';
 export function SellerProduct() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const goBack = useGoBack('/seller');
   const { productId } = useParams<{ productId: string }>();
   const [product, setProduct] = useState<ProductDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -55,7 +57,7 @@ export function SellerProduct() {
 
   return (
     <div className="space-y-5 pb-4">
-      <TopHeader variant="back" title={t('seller.marketplaceTitle')} onBack={() => navigate(-1)} />
+      <TopHeader variant="back" title={t('seller.marketplaceTitle')} onBack={goBack} />
 
       {!product && !gone && !error && <SkeletonCard lines={5} label={t('seller.product.loading')} />}
       {error && <p className="text-sm text-danger">{error}</p>}

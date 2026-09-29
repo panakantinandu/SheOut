@@ -1,5 +1,5 @@
 import { Heart, Shield, Users } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useGoBack } from '../lib/useGoBack';
 import { Card, IconCircle, TopHeader, contentText, useAppLanguage, useContentSection } from '@sheout/design-system';
 import { contentApi } from '../api/client';
 import { useTranslation } from '@sheout/design-system';
@@ -20,12 +20,12 @@ export function About() {
   // Operators edit the English in the console; other languages use the
   // translated defaults until the content module has per-language copy.
   const text = (key: string, fallbackKey: string) => (lng === 'en' ? contentText(copy, key, t(fallbackKey)) : t(fallbackKey));
-  const navigate = useNavigate();
+  const goBack = useGoBack('/home');
   const copy = useContentSection('about.', contentApi.getSection);
 
   return (
     <div className="space-y-6">
-      <TopHeader variant="back" title={t('about.title')} onBack={() => navigate(-1)} />
+      <TopHeader variant="back" title={t('about.title')} onBack={goBack} />
 
       <Card className="text-center">
         <IconCircle size="lg" tone="soft" icon={<Heart />} className="mx-auto" />

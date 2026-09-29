@@ -1,6 +1,7 @@
 import { Camera, Car, CheckCircle2, Clock, FileText, FileWarning, IdCard, ShieldCheck, Check, Upload } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useGoBack } from '../lib/useGoBack';
 import { Button, Card, DocumentMasker, IconCircle, LiveSelfieCapture, SkeletonCard, StatusBadge, TextField, TopHeader, verificationStatusLabel } from '@sheout/design-system';
 import type { LiveSelfieResult } from '@sheout/design-system';
 import type { StatusTone } from '@sheout/design-system';
@@ -44,6 +45,7 @@ export function Verification() {
   const { t } = useTranslation();
   const [explaining, setExplaining] = useState(false);
   const navigate = useNavigate();
+  const goBack = useGoBack('/home');
   const idInputRef = useRef<HTMLInputElement>(null);
   const rcInputRef = useRef<HTMLInputElement>(null);
   const [idFile, setIdFile] = useState<File | null>(null);
@@ -159,7 +161,7 @@ export function Verification() {
 
   return (
     <div className="space-y-6">
-      <TopHeader variant="back" title={t('verification.title')} onBack={() => navigate('/home')} />
+      <TopHeader variant="back" title={t('verification.title')} onBack={goBack} />
 
       {error && <p className="text-sm text-danger">{error}</p>}
       {!summary && !error && <SkeletonCard lines={3} label={t('verification.loading')} />}

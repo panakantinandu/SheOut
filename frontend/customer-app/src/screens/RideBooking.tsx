@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useGoBack } from '../lib/useGoBack';
 import { Button, ServiceArt, useRouteLine } from '@sheout/design-system';
 import type { MapMarker } from '@sheout/design-system';
 import { UnpaidTripBanner } from '../components/UnpaidTripBanner';
@@ -43,6 +44,7 @@ const DROP_PRESETS: GeoAddress[] = [
 export function RideBooking() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const goBack = useGoBack('/home');
   const [pickup, setPickup] = useState<GeoAddress | null>(null);
   const [pickupError, setPickupError] = useState<string | null>(null);
   const [drop, setDrop] = useState<GeoAddress | null>(null);
@@ -122,7 +124,7 @@ export function RideBooking() {
     <>
       <BookingMapLayout
         title={t('home.serviceRide')}
-        onBack={() => navigate(-1)}
+        onBack={goBack}
         pickup={pickup}
         drop={drop}
         pickupPlaceholder={pickupError ? t('booking.tapToChoosePickup') : t('booking.findingLocation')}

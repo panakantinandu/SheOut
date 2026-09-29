@@ -1,7 +1,7 @@
 import { i18next } from '@sheout/design-system';
 import { Landmark, Wallet } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useGoBack } from '../lib/useGoBack';
 import {
   Button,
   Card,
@@ -82,7 +82,7 @@ function rupees(amount: number): string {
  */
 export function Payouts() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
+  const goBack = useGoBack('/profile');
   const [overview, setOverview] = useState<PayoutOverview | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -186,7 +186,7 @@ export function Payouts() {
 
   return (
     <div className="space-y-6">
-      <TopHeader variant="back" title={t('payouts.title')} onBack={() => navigate(-1)} />
+      <TopHeader variant="back" title={t('payouts.title')} onBack={goBack} />
 
       {loadError && <p className="text-sm text-danger">{loadError}</p>}
       {!overview && !loadError && <SkeletonCard lines={4} label={t('payouts.loading')} />}

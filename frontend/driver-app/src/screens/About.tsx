@@ -1,5 +1,5 @@
 import { HeartHandshake, IndianRupee, ShieldCheck } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useGoBack } from '../lib/useGoBack';
 import { Card, IconCircle, TopHeader, brandIllustration, useTranslation } from '@sheout/design-system';
 
 const APP_VERSION = '0.1.0';
@@ -7,7 +7,7 @@ const APP_VERSION = '0.1.0';
 /** About SheOut, told to a partner - what the platform promises her. */
 export function About() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
+  const goBack = useGoBack('/home');
   const points = [
     { key: 'safety', icon: <ShieldCheck />, color: 'primary' as const },
     { key: 'earnings', icon: <IndianRupee />, color: 'green' as const },
@@ -16,7 +16,7 @@ export function About() {
 
   return (
     <div className="space-y-6">
-      <TopHeader variant="back" title={t('about.title')} onBack={() => navigate(-1)} />
+      <TopHeader variant="back" title={t('about.title')} onBack={goBack} />
 
       <Card variant="primary" className="relative overflow-hidden">
         <div className="relative z-10 max-w-[62%]">

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
+import { useGoBack } from '../lib/useGoBack';
 import { Card, ChatThread, ContactSupportButton, TopHeader } from '@sheout/design-system';
 import { ApiError, chatApi } from '../api/client';
 import type { ChatMessage } from '../api/types';
@@ -31,7 +32,7 @@ const POLL_INTERVAL_MS = 4000;
 export function Chat() {
   const { t } = useTranslation();
   const { bookingId } = useParams<{ bookingId: string }>();
-  const navigate = useNavigate();
+  const goBack = useGoBack(`/tracking/${bookingId}`);
   const { accountId } = useAuth();
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -100,7 +101,7 @@ export function Chat() {
 
   return (
     <div className="space-y-5">
-      <TopHeader variant="back" title={t('chat.title')} onBack={() => navigate(-1)} />
+      <TopHeader variant="back" title={t('chat.title')} onBack={goBack} />
 
       {loadError && <p className="text-sm text-danger">{loadError}</p>}
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useGoBack } from '../lib/useGoBack';
 import { Button, ReferAFriend, SkeletonCard, TopHeader, useTranslation } from '@sheout/design-system';
 import type { ReferralSummary } from '@sheout/design-system';
 import { referralsApi } from '../api/client';
@@ -13,7 +13,7 @@ import { apiErrorText } from '../lib/apiErrors';
  */
 export function Refer() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
+  const goBack = useGoBack('/home');
   const [summary, setSummary] = useState<ReferralSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,7 +25,7 @@ export function Refer() {
 
   return (
     <div className="space-y-6">
-      <TopHeader variant="back" title={t('drawer.refer')} onBack={() => navigate(-1)} />
+      <TopHeader variant="back" title={t('drawer.refer')} onBack={goBack} />
       {summary ? (
         <ReferAFriend summary={summary} />
       ) : error ? (

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useGoBack } from '../lib/useGoBack';
 import { Button, RaiseIssueForm, SafetyText, TopHeader, bookingCategoryLabel, showToast } from '@sheout/design-system';
 import type { RaiseIssueValues, SelectOption } from '@sheout/design-system';
 import { ApiError, bookingApi, supportApi } from '../api/client';
@@ -16,6 +17,7 @@ import { useTranslation } from '@sheout/design-system';
 export function RaiseIssue() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const goBack = useGoBack('/help');
   /** A question SheOut Help handed to a person - she reads and edits it before sending. */
   const prefill = (useLocation().state as { prefill?: { category?: RaiseIssueValues['category']; subject?: string; description?: string } } | null)?.prefill;
   const [bookingOptions, setBookingOptions] = useState<SelectOption[]>([]);
@@ -63,7 +65,7 @@ export function RaiseIssue() {
 
   return (
     <div className="space-y-6">
-      <TopHeader variant="back" title={t('help.raiseIssue')} onBack={() => navigate('/help')} />
+      <TopHeader variant="back" title={t('help.raiseIssue')} onBack={goBack} />
       <RaiseIssueForm
         audience="customer"
         bookingOptions={bookingOptions}

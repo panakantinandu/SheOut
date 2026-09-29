@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useGoBack } from '../lib/useGoBack';
 import { Button, TextField, ServiceArt, useRouteLine } from '@sheout/design-system';
 import type { MapMarker } from '@sheout/design-system';
 import { UnpaidTripBanner } from '../components/UnpaidTripBanner';
@@ -66,6 +67,7 @@ export function DeliveryBooking() {
   const { kind } = useParams<{ kind: 'parcel' | 'lunchbox' }>();
   const config = CONFIG[kind === 'lunchbox' ? 'lunchbox' : 'parcel'];
   const navigate = useNavigate();
+  const goBack = useGoBack('/home');
 
   // Lunch Box is deferred for launch. Its Home tile is gone, but /book/:kind
   // is a URL anyone can still type, so the route is closed here too -
@@ -160,7 +162,7 @@ export function DeliveryBooking() {
     <>
       <BookingMapLayout
         title={t(`delivery.${config.key}.title`)}
-        onBack={() => navigate(-1)}
+        onBack={goBack}
         pickup={pickup}
         drop={drop}
         pickupPlaceholder={pickupError ? t('booking.tapToChoosePickup') : t('booking.findingLocation')}

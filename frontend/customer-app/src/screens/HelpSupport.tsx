@@ -1,6 +1,7 @@
 import { Bot, LifeBuoy, Mail, Phone, Plus, Siren, Scale } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useGoBack } from '../lib/useGoBack';
 import {
   Button,
   Card,
@@ -53,6 +54,7 @@ export function HelpSupport() {
   const fromContent = (section: Record<string, string>, key: string, fallbackKey: string) =>
     lng === 'en' ? contentText(section, key, t(fallbackKey)) : t(fallbackKey);
   const navigate = useNavigate();
+  const goBack = useGoBack('/home');
   const [supportPhone, setSupportPhone] = useState<string | null>(null);
   const [grievanceEmail, setGrievanceEmail] = useState<string | null>(null);
   const intro = useContentSection('help.customer.', contentApi.getSection);
@@ -91,7 +93,7 @@ export function HelpSupport() {
 
   return (
     <div className="space-y-6">
-      <TopHeader variant="back" title={t('help.title')} onBack={() => navigate(-1)} />
+      <TopHeader variant="back" title={t('help.title')} onBack={goBack} />
 
       {/* Answers from SheOut's own help content, now; hands anything else to the same ticket below. */}
       <AssistantEntryCard

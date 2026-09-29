@@ -1,6 +1,7 @@
 import { CheckCircle2, Headphones, MessageCircle, Navigation, Radio, SearchX, ShieldAlert, Star, Wallet as WalletIcon, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { hasAppHistory } from '../lib/useGoBack';
 import { AggregateRatingText, AmountText, Avatar, Button, CancelReasonDialog, ConfirmDialog, Card, CUSTOMER_CANCELLATION_REASONS, IconCircle, LiveMap, OpenInMapsButton, PickupCodeCard, SafetyText, SkeletonCard, StatusBadge, SuccessCheck, ThinkingIndicator, TopHeader, bookingStatusLabel, vehicleLabel, useRouteLine } from '@sheout/design-system';
 import type { CancellationReason as SharedCancellationReason, MapMarker } from '@sheout/design-system';
 import { ApiError, bookingApi, chatApi, dispatchApi, routesApi } from '../api/client';
@@ -543,7 +544,13 @@ export function Tracking() {
                 ? t('tracking.header.onTheWay')
                 : t('tracking.header.finding')
         }
-        onBack={() => navigate('/home')}
+        onBack={() => {
+          // A finished trip is a record, opened from My Bookings, Wallet or a
+          // notification: back to that. A live one goes Home, never back into
+          // the booking form it was just made from.
+          if (isFinished && hasAppHistory()) navigate(-1);
+          else navigate(isFinished ? '/bookings' : '/home');
+        }}
       />
 
       {error && <p className="text-sm text-danger">{error}</p>}

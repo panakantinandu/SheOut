@@ -17,6 +17,7 @@ import { PriceTag } from '../components/PriceTag';
 import { SELLER_CATEGORIES, asProductCode, priceText } from '../lib/seller';
 import { CategoryGrid, CategoryRail, HowItWorks, MarketplaceHero, SellCard } from '../components/marketplace/MarketplaceDiscover';
 import { Reveal } from '../components/Reveal';
+import { useGoBack } from '../lib/useGoBack';
 
 const CATEGORY_VALUES = new Set<string>(SELLER_CATEGORIES.map((c) => c.value));
 
@@ -43,8 +44,15 @@ function useDirectoryFilters() {
   /** The words last sent to the AI search - only on Search, never per keystroke, since each costs a call. */
   const ask = params.get('ask') ?? '';
 
+  /**
+   * Typing, a price or an area replaces the current entry, so Back is not
+   * a walk through every letter. A step she would call "going somewhere" -
+   * into a category, to all of them, another search mode, an AI search -
+   * is `step`: a history entry of its own, so Back returns from it to the
+   * marketplace as it was, not straight to Home.
+   */
   const set = useCallback(
-    (patch: Partial<Record<'q' | 'cat' | 'min' | 'max' | 'area' | 'mode' | 'ask', string>>) => {
+    (patch: Partial<Record<'q' | 'cat' | 'min' | 'max' | 'area' | 'mode' | 'ask', string>>, step = false) => {
       setParams(
         (prev) => {
           const next = new URLSearchParams(prev);
@@ -54,7 +62,7 @@ function useDirectoryFilters() {
           }
           return next;
         },
-        { replace: true }
+        { replace: !step }
       );
     },
     [setParams]
@@ -84,6 +92,7 @@ function useDirectoryFilters() {
 export function Seller() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const goBack = useGoBack('/home');
   const filters = useDirectoryFilters();
   const { q, categories, min, max, area, mode, ask } = filters;
   const aiMode = mode === 'ai';
@@ -173,14 +182,14 @@ export function Seller() {
   const submitAsk = (words: string) => {
     const clean = words.trim().slice(0, 200);
     setDraft(clean);
-    if (clean) filters.set({ ask: clean });
+    if (clean) filters.set({ ask: clean }, true);
   };
   const switchMode = (next: 'ai' | 'exact') => {
     if (next === 'ai') {
       setDraft(ask || q);
-      filters.set({ mode: 'ai', ask: '' });
+      filters.set({ mode: 'ai', ask: '' }, true);
     } else {
-      filters.set({ mode: '', ask: '', q: ask || q });
+      filters.set({ mode: '', ask: '', q: ask || q }, true);
     }
   };
 
@@ -215,7 +224,7 @@ export function Seller() {
   /** Nothing searched or filtered yet: show the browsing layout around the list. */
   const browsing = !aiMode && !narrowed;
   const categoryOnly = categories.length > 0 && !q.trim() && !min && !max && !area.trim();
-  const clearAll = () => filters.set({ q: '', cat: '', min: '', max: '', area: '', ask: '' });
+  const clearAll = () => filters.set({ q: '', cat: '', min: '', max: '', area: '', ask: '' }, true);
   const examples = [t('seller.ask.example1'), t('seller.ask.example2'), t('seller.ask.example3')];
 
   /** Browsing with nothing listed yet: the hero says the marketplace is opening. */
@@ -223,7 +232,7 @@ export function Seller() {
 
   /** From the picture row: just that category, or back to all if it was the only one. */
   function pickCategory(value: SellerCategory) {
-    filters.set({ cat: categories.length === 1 && categories[0] === value ? '' : value });
+    filters.set({ cat: categories.length === 1 && categories[0] === value ? '' : value }, true);
   }
 
   function toggleCategory(value: SellerCategory) {
@@ -234,7 +243,7 @@ export function Seller() {
 
   return (
     <div className="space-y-4">
-      <TopHeader variant="back" title={t('seller.marketplaceTitle')} onBack={() => navigate(-1)} />
+      <TopHeader variant="back" title={t('seller.marketplaceTitle')} onBack={goBack} />
 
       {/* Pinned while the results scroll: the search is the screen's main
           control. The filters open as a sheet, so the pinned part stays one
@@ -403,13 +412,13 @@ export function Seller() {
       {browsing && (
         <>
           <MarketplaceHero opening={noShopsYet} />
-          <CategoryGrid onPick={toggleCategory} />
+          <CategoryGrid onPick={(value) => filters.set({ cat: value }, true)} />
         </>
       )}
 
       {/* A category picked: the six stay in reach as pictures. */}
       {!aiMode && categories.length > 0 && (
-        <CategoryRail selected={categories} onPick={pickCategory} onAll={() => filters.set({ cat: '' })} />
+        <CategoryRail selected={categories} onPick={pickCategory} onAll={() => filters.set({ cat: '' }, true)} />
       )}
 
       {!aiMode && list.loading && <SkeletonList rows={4} label={t('seller.directory.loading')} />}

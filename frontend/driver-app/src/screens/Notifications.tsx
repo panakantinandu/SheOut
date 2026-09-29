@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useGoBack } from '../lib/useGoBack';
 import {
   NotificationInbox,
   PushStatusNote,
@@ -18,13 +19,14 @@ import { useTranslation } from '@sheout/design-system';
 export function Notifications() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const goBack = useGoBack('/home');
   const push = usePushNotifications(pushApi, PUSH_TOKEN_KEY, true);
   const [refreshKey, setRefreshKey] = useState(0);
   usePushMessages(useCallback(() => setRefreshKey((k) => k + 1), []));
 
   return (
     <div className="space-y-6">
-      <TopHeader variant="back" title={t('notifications.title')} onBack={() => navigate('/home')} />
+      <TopHeader variant="back" title={t('notifications.title')} onBack={goBack} />
       <PushStatusNote status={push.status} busy={push.busy} onTurnOn={push.turnOn} />
       <NotificationInbox
         fetchPage={notificationsApi.inbox}

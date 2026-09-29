@@ -1,6 +1,7 @@
 import { BadgeCheck, Check, Clock, Eye, ShieldCheck, Upload, UserCheck } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useGoBack } from '../lib/useGoBack';
 import {
   Button,
   Card,
@@ -49,6 +50,7 @@ const MAX_BYTES = 10 * 1024 * 1024; // matches the backend's multipart limit
 export function Verification() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const goBack = useGoBack('/profile');
   const [status, setStatus] = useState<VerificationSummary | null>(null);
   const [turnaround, setTurnaround] = useState<VerificationTurnaround | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -134,7 +136,7 @@ export function Verification() {
 
   return (
     <div className="space-y-6">
-      <TopHeader variant="back" title={t('verification.title')} onBack={() => navigate(-1)} />
+      <TopHeader variant="back" title={t('verification.title')} onBack={goBack} />
 
       {error && <p className="text-sm text-danger">{error}</p>}
       {notice && (

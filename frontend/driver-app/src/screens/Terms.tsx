@@ -1,8 +1,8 @@
-import { useNavigate } from 'react-router-dom';
+import { useGoBack } from '../lib/useGoBack';
 import { LegalDocumentView, TERMS_OF_SERVICE } from '@sheout/design-system';
 
 /** Reachable from the sign-in screen and from Profile, signed in or not. */
 export function Terms() {
-  const navigate = useNavigate();
-  return <LegalDocumentView document={TERMS_OF_SERVICE} onBack={() => navigate(-1)} />;
+  const goBack = useGoBack('/');
+  return <LegalDocumentView document={TERMS_OF_SERVICE} onBack={goBack} />;
 }

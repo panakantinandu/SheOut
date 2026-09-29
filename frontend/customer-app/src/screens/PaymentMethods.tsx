@@ -1,6 +1,6 @@
 import { ReceiptText, SearchX } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useGoBack } from '../lib/useGoBack';
 import {
   AmountText,
   Card,
@@ -50,7 +50,7 @@ const STATUS_VALUES: PaymentStatus[] = ['CAPTURED', 'PENDING', 'FAILED', 'REFUND
  */
 export function PaymentMethods() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
+  const goBack = useGoBack('/profile');
   const [status, setStatus] = useState<PaymentStatus | ''>('');
   const [dates, setDates] = useState<DateRangeValue>({ from: '', to: '' });
   const [minAmount, setMinAmount] = useState('');
@@ -89,7 +89,7 @@ export function PaymentMethods() {
 
   return (
     <div className="space-y-6">
-      <TopHeader variant="back" title={t('payments.history')} onBack={() => navigate(-1)} />
+      <TopHeader variant="back" title={t('payments.history')} onBack={goBack} />
 
       <Card>
         <p className="text-sm text-text-primary">{t('payments.howPaid')}</p>

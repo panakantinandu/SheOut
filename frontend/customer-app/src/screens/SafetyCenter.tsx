@@ -1,6 +1,7 @@
 import { BadgeCheck, Copy, HelpCircle, MapPin, PhoneCall, Siren, Vibrate, WifiOff } from 'lucide-react';
 import { useMemo, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useGoBack } from '../lib/useGoBack';
 import { Button, Card, IconCircle, SafetyText, TopHeader, showToast, useAppLanguage, useTranslation } from '@sheout/design-system';
 import { DiscreetSosToggle } from '../components/DiscreetSosToggle';
 import { localEmergencyNumber } from '../lib/emergency';
@@ -24,13 +25,14 @@ const SHORTCUT_LINK = `${typeof window !== 'undefined' ? window.location.origin 
 export function SafetyCenter() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const goBack = useGoBack('/home');
   const lng = useAppLanguage();
   const emergency = useMemo(localEmergencyNumber, []);
   const number = { number: emergency.number };
 
   return (
     <div className="space-y-5 pb-6">
-      <TopHeader variant="back" title={t('safetyCenter.title')} onBack={() => navigate(-1)} />
+      <TopHeader variant="back" title={t('safetyCenter.title')} onBack={goBack} />
 
       <Card variant="primary" className="space-y-2">
         <p className="font-heading text-title"><SafetyText k="safetyCenter.introTitle" englishClassName="font-normal" /></p>

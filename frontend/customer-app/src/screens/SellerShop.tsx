@@ -17,7 +17,8 @@ import {
   Wallet,
 } from 'lucide-react';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { useGoBack } from '../lib/useGoBack';
 import {
   Button,
   Card,
@@ -80,13 +81,6 @@ export function SellerShop() {
     return <SellerWizard shop={shop} onShop={setShop} onSubmitted={() => setFixing(false)} />;
   }
   return <ShopStatusScreen shop={shop} onShop={setShop} reload={load} onFix={() => setFixing(true)} />;
-}
-
-/** Back to wherever she came from - Home if this page was opened directly. */
-function useGoBack() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  return () => (location.key === 'default' ? navigate('/home') : navigate(-1));
 }
 
 // ================================================================ the wizard
