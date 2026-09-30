@@ -78,10 +78,13 @@ public class DispatchController {
     private final RatingsApi ratingsApi;
     private final CustomerProfileApi customerProfileApi;
     private final RateLimiter rateLimiter;
+    private final com.sheout.driververification.ShiftCheckApi shiftCheckApi;
 
     public DispatchController(DispatchService dispatchService, BookingApi bookingApi,
                               DriverProfileApi driverProfileApi, RatingsApi ratingsApi,
-                              CustomerProfileApi customerProfileApi, RateLimiter rateLimiter) {
+                              CustomerProfileApi customerProfileApi, RateLimiter rateLimiter,
+                              com.sheout.driververification.ShiftCheckApi shiftCheckApi) {
+        this.shiftCheckApi = shiftCheckApi;
         this.rateLimiter = rateLimiter;
         this.customerProfileApi = customerProfileApi;
         this.dispatchService = dispatchService;
@@ -324,6 +327,10 @@ public class DispatchController {
         return driverProfileApi.findByAccountId(booking.driverId())
                 .map(profile -> {
                     AggregateRating rating = ratingsApi.getAggregateRating(booking.driverId());
+                    // Today's safety check, said to the rider only when it
+                    // really happened: a face matched on this shift, a
+                    // helmet photo taken with it.
+                    com.sheout.driververification.ShiftCheckState shift = shiftCheckApi.stateFor(booking.driverId());
                     return ResponseEntity.ok(new AssignedDriverResponse(
                             profile.name(),
                             // Null when she has no photo yet; the app draws a
@@ -332,7 +339,9 @@ public class DispatchController {
                             profile.vehicleType(),
                             profile.vehicleRegistrationNumber(),
                             rating.averageStars(),
-                            rating.totalRatings()));
+                            rating.totalRatings(),
+                            shift.faceMatched() ? shift.checkedAt() : null,
+                            shift.helmetPhotoOnFile()));
                 })
                 .orElseThrow(() -> ApiException.notFound("No driver details available for this booking yet"));
     }
@@ -402,7 +411,11 @@ public class DispatchController {
             VehicleType vehicleType,
             String vehicleRegistrationNumber,
             Double averageStars,
-            int totalRatings
+            int totalRatings,
+            /** When her face was matched at the start of this shift; null if it was not. */
+            java.time.Instant faceVerifiedAt,
+            /** She took a helmet photo with this shift's check. */
+            boolean helmetChecked
     ) {
     }
 }

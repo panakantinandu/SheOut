@@ -73,6 +73,7 @@ public class DispatchService implements com.sheout.dispatch.NearbyPartnerApi {
     private final long searchTimeoutSeconds;
     private final double arrivingRadiusMetres;
     private final NearbyDriverPreview nearbyPreview;
+    private final com.sheout.driververification.ShiftCheckApi shiftCheckApi;
 
     public DispatchService(
             DriverLocationStore locationStore,
@@ -80,6 +81,7 @@ public class DispatchService implements com.sheout.dispatch.NearbyPartnerApi {
             OfferStore offerStore,
             MatchingStrategy matchingStrategy,
             DriverProfileApi driverProfileApi,
+            com.sheout.driververification.ShiftCheckApi shiftCheckApi,
             BookingApi bookingApi,
             AuthApi authApi,
             DomainEventPublisher eventPublisher,
@@ -104,6 +106,7 @@ public class DispatchService implements com.sheout.dispatch.NearbyPartnerApi {
         this.offerStore = offerStore;
         this.matchingStrategy = matchingStrategy;
         this.driverProfileApi = driverProfileApi;
+        this.shiftCheckApi = shiftCheckApi;
         this.authApi = authApi;
         this.bookingApi = bookingApi;
         this.eventPublisher = eventPublisher;
@@ -484,6 +487,12 @@ public class DispatchService implements com.sheout.dispatch.NearbyPartnerApi {
         // aboard stayed in the geo set and could be offered, and could
         // accept, a second trip mid-ride.
         if (bookingApi.hasActiveTripAsDriver(driverId)) {
+            return false;
+        }
+        // Her start-of-shift selfie has lapsed, or is held for review. The
+        // users module takes her offline within minutes; this stops offers
+        // in the meantime. See ShiftCheckApi.
+        if (!shiftCheckApi.stateFor(driverId).valid()) {
             return false;
         }
         return driverProfileApi.isCurrentlyVerified(driverId);

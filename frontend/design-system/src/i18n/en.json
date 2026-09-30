@@ -300,7 +300,8 @@
     "WRONG_PICKUP_LOCATION": "The pickup point is wrong",
     "CUSTOMER_NOT_AT_PICKUP": "The rider was not at the pickup point",
     "DRIVER_UNAVAILABLE": "I cannot complete this trip",
-    "OTHER": "Something else"
+    "OTHER": "Something else",
+    "IDENTITY_MISMATCH": "Not the person shown in the app"
   },
   "brand": {
     "tagline": "Your Delivery, Our Priority"
@@ -459,5 +460,8 @@
     "done": "done",
     "current": "current step",
     "upcoming": "not started"
+  },
+  "paymentFlash": {
+    "continue": "Continue"
   }
 }

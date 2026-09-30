@@ -28,6 +28,10 @@ export interface LiveSelfieCaptureProps {
   /** Set once a selfie has been accepted, so the step shows it as done. */
   captured?: LiveSelfieResult | null;
   busy?: boolean;
+  /** What this selfie is for, in place of the sign-up explanation - the start-of-shift check says its own. */
+  why?: string;
+  /** The first button, in place of "Open camera". */
+  startLabel?: string;
 }
 
 type Stage = 'intro' | 'starting' | 'blocked' | 'prompting' | 'noMotion' | 'review';
@@ -65,7 +69,7 @@ type Step = { key: SelfiePrompt | 'STRAIGHT' | 'STRAIGHT_AGAIN' };
  * The movement check only catches a feed that did not change at all and
  * asks her to try again; a person compares the selfie with the ID.
  */
-export function LiveSelfieCapture({ requestChallenge, onCaptured, onReset, captured = null, busy = false }: LiveSelfieCaptureProps) {
+export function LiveSelfieCapture({ requestChallenge, onCaptured, onReset, captured = null, busy = false, why, startLabel }: LiveSelfieCaptureProps) {
   const { t } = useTranslation('ds');
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -235,6 +239,10 @@ export function LiveSelfieCapture({ requestChallenge, onCaptured, onReset, captu
     if (!video || !streamRef.current) return;
     video.srcObject = streamRef.current;
     await video.play().catch(() => undefined);
+    // The camera opens under whatever explained it; bring it, and the
+    // instruction beneath it, into view so she is not following prompts
+    // she cannot see.
+    video.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
     // Give the sensor a moment to settle its exposure.
     await wait(800);
 
@@ -286,12 +294,12 @@ export function LiveSelfieCapture({ requestChallenge, onCaptured, onReset, captu
     <div className="space-y-3" data-testid="live-selfie">
       <div className="flex items-start gap-2">
         <ShieldCheck className="mt-1 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
-        <p className="text-xs leading-relaxed text-text-secondary">{t('selfie.why')}</p>
+        <p className="text-xs leading-relaxed text-text-secondary">{why ?? t('selfie.why')}</p>
       </div>
 
       {stage === 'intro' && (
         <Button fullWidth icon={<Camera className="h-4 w-4" />} disabled={busy} onClick={start} data-testid="selfie-start">
-          {t('selfie.start')}
+          {startLabel ?? t('selfie.start')}
         </Button>
       )}
 

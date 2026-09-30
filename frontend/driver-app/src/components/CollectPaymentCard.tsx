@@ -1,5 +1,5 @@
 import { CheckCircle2, HelpCircle, Hourglass, QrCode, RefreshCw, ShieldCheck } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AmountText, Button, Card, IconCircle, paymentMethodLabel } from '@sheout/design-system';
 import { paymentsApi, type UpiQr } from '../api/client';
 import { apiErrorText } from '../lib/apiErrors';
@@ -19,7 +19,7 @@ const POLL_INTERVAL_MS = 4000;
  * paid. Taking cash is now against the rules, and the card says so, so she
  * has something to point a rider at.
  */
-export function CollectPaymentCard({ bookingId, onPaid }: { bookingId: string; onPaid?: () => void }) {
+export function CollectPaymentCard({ bookingId, onPaid }: { bookingId: string; onPaid?: (payment: PaymentSummary, justNow: boolean) => void }) {
   const { t } = useTranslation();
   const [payment, setPayment] = useState<PaymentSummary | null>(null);
   /** The UPI QR she is showing, if she opened it. While it is up, each poll asks Razorpay too. */
@@ -30,9 +30,16 @@ export function CollectPaymentCard({ bookingId, onPaid }: { bookingId: string; o
   const qrExpired = qr ? new Date(qr.expiresAt).getTime() <= now : false;
 
   const paid = payment?.status === 'CAPTURED' || payment?.status === 'WAIVED';
+  /**
+   * This screen saw the fare still owed before it saw it paid - so the capture
+   * happened while she was watching, and is worth marking. Opened from
+   * history, a paid trip is just a record.
+   */
+  const sawUnpaid = useRef(false);
+  if (payment && !paid) sawUnpaid.current = true;
 
   useEffect(() => {
-    if (paid) onPaid?.();
+    if (paid && payment) onPaid?.(payment, sawUnpaid.current);
     // onPaid is a fresh closure on every parent render; firing once when paid is the point.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paid]);

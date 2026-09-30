@@ -24,6 +24,7 @@ import { Trip } from './screens/Trip'
 import { Chat } from './screens/Chat'
 import { CompleteProfile } from './screens/CompleteProfile'
 import { Verification } from './screens/Verification'
+import { ShiftCheck } from './screens/ShiftCheck'
 import { ScrollToTop } from './components/ScrollToTop'
 
 // Dashboard-level screens (Home/Earnings/Bookings/Profile) get the bottom
@@ -77,6 +78,7 @@ function App() {
       <Route path="/help/assistant" element={protectedOnly(<HelpAssistant />)} />
       <Route path="/help/tickets/:ticketId" element={protectedOnly(<SupportTicket />)} />
       <Route path="/verification" element={protectedOnly(<Verification />)} />
+      <Route path="/shift-check" element={protectedOnly(<ShiftCheck />)} />
       <Route path="/payouts" element={protectedOnly(<Payouts />)} />
       <Route path="/offer/:bookingId" element={protectedOnly(<Offer />)} />
       <Route path="/trip/:bookingId" element={protectedOnly(<Trip />)} />

@@ -33,6 +33,7 @@ A staging backend started with:
 | `DEV_OTP_NUMBERS` | `+919700000000..0199` and `+919600000000..0199`, each `:246810` | the test accounts' sign-in |
 | `LOGIN_PER_CLIENT` | `100000` | every simulated person comes from one machine; the per-network sign-in limit would stop the setup |
 | `OSRM_BASE_URL` | the staging OSRM | measure our own router, not the public one |
+| `SHIFT_CHECK_ENABLED` | `false` | since 2026-09-30 a partner needs a live start-of-shift selfie to go online; scripted partners cannot take one. Staging only - never switch it off where real partners work |
 
 and the same database/Redis the backend uses, reachable with `psql` and
 `redis-cli` from where the script runs (`--psql`, `--redis-cli`,

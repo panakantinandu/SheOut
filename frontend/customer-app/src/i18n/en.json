@@ -106,7 +106,8 @@
     "close": "Close",
     "tryAgain": "Try again",
     "cancel": "Cancel",
-    "next": "Next"
+    "next": "Next",
+    "back": "Back"
   },
   "addPhone": {
     "title": "Add your phone number",
@@ -1018,7 +1019,47 @@
     "endHereTitle": "End your trip here?",
     "endHereBody": "Only if you have got off and are safe. Your fare stays as quoted, and you will be asked to pay next.",
     "endHereConfirm": "Yes, end trip",
-    "endHereError": "Could not end the trip. Try again, or ask your partner."
+    "endHereError": "Could not end the trip. Try again, or ask your partner.",
+    "comingToCollectBody": "Watch her approach on the map. Your pickup code appears when she arrives.",
+    "live": {
+      "phaseComing": "Partner on the way",
+      "phaseArrived": "Partner has arrived",
+      "phaseOnTrip": "On your trip",
+      "phaseNearDrop": "Almost there",
+      "comingTitle_one": "Arriving in about 1 min",
+      "comingTitle_other": "Arriving in about {{count}} min",
+      "comingTitleNoEta": "Your partner is on her way",
+      "arrivedTitle": "{{name}} is here",
+      "onTripTitle": "On the way to your drop",
+      "nearDropTitle": "You're almost there",
+      "pickupLabel": "Pickup",
+      "dropLabel": "Drop",
+      "eta": "{{minutes}} min · {{km}} km",
+      "updated": "Updated {{seconds}}s ago",
+      "reconnecting": "Reconnecting...",
+      "faceVerified": "Face verified today",
+      "helmetChecked": "Helmet checked",
+      "codeWhenArrived": "Your 4-digit pickup code will appear here when she arrives.",
+      "checkTitle": "Check before you get on",
+      "checkFace": "Same face as the photo above",
+      "checkPlate": "Number plate",
+      "checkHelmet": "Wear the helmet she gives you",
+      "checkYes": "Yes, it's her - show my code",
+      "checkNo": "Something's not right",
+      "mismatchTitle": "Don't get on",
+      "mismatchCancel": "Cancel ride - no charge",
+      "mismatchCancelling": "Cancelling...",
+      "mismatchCall": "Call SheOut support",
+      "mismatchBack": "It's her after all",
+      "nearDropHint": "Get ready to get out once the vehicle has fully stopped. Your partner will end the trip.",
+      "nearDropHintBike": "Get off only once the bike has fully stopped, and hand back the helmet. Your partner will end the trip.",
+      "fare": "Fare",
+      "moreOptions": "Change destination or end here"
+    },
+    "paidFlash": {
+      "title": "Payment successful",
+      "body": "Paid to {{name}}. Thank you for riding with SheOut!"
+    }
   },
   "nav": {
     "home": "Home",

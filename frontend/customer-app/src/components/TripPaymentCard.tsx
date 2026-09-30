@@ -1,5 +1,5 @@
 import { CheckCircle2, CreditCard, ShieldCheck, Wallet as WalletIcon } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AmountText, Button, Card, IconCircle, paymentMethodLabel } from '@sheout/design-system';
 import { ApiError, paymentsApi, usersApi, walletApi } from '../api/client';
@@ -23,7 +23,7 @@ const POLL_INTERVAL_MS = 4000;
  * Polls until paid, because the capture can land elsewhere - Razorpay's
  * webhook after a Checkout she closed too early.
  */
-export function TripPaymentCard({ booking, onPaid }: { booking: BookingSummary; onPaid?: () => void }) {
+export function TripPaymentCard({ booking, onPaid }: { booking: BookingSummary; onPaid?: (payment: PaymentSummary, justNow: boolean) => void }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [payment, setPayment] = useState<PaymentSummary | null>(null);
@@ -32,9 +32,16 @@ export function TripPaymentCard({ booking, onPaid }: { booking: BookingSummary; 
   const [message, setMessage] = useState<string | null>(null);
 
   const paid = payment?.status === 'CAPTURED' || payment?.status === 'WAIVED';
+  /**
+   * This screen saw the fare still owed before it saw it paid - so the capture
+   * happened while she was watching, and is worth marking. Opened from
+   * history, a paid trip is just a record.
+   */
+  const sawUnpaid = useRef(false);
+  if (payment && !paid) sawUnpaid.current = true;
 
   useEffect(() => {
-    if (paid) onPaid?.();
+    if (paid && payment) onPaid?.(payment, sawUnpaid.current);
     // onPaid is a fresh closure on every parent render; firing once per capture is the point.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paid]);

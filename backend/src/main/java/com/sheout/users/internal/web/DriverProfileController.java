@@ -202,6 +202,10 @@ public class DriverProfileController {
             case LOCATION_REQUIRED -> new ApiException(
                     HttpStatus.BAD_REQUEST, "LOCATION_REQUIRED",
                     "We need your location to send you nearby trips. Allow location access and try again.");
+            case SHIFT_CHECK_REQUIRED -> new ApiException(HttpStatus.CONFLICT, "SHIFT_CHECK_REQUIRED",
+                    "Take a quick selfie to start your shift.");
+            case SHIFT_CHECK_UNDER_REVIEW -> new ApiException(HttpStatus.CONFLICT, "SHIFT_CHECK_UNDER_REVIEW",
+                    "Our team is checking your selfie. You can go online once they have.");
         };
     }
 

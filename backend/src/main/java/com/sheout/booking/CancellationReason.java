@@ -35,6 +35,14 @@ public enum CancellationReason {
     /** Partner cannot complete it - vehicle trouble, an emergency. */
     DRIVER_UNAVAILABLE,
 
+    /**
+     * Either side, at the pickup: the person there is not the one the app
+     * showed - a different face, a different number plate, a man. Never
+     * counted against whoever cancelled; the other account goes to an
+     * operator instead. See UserProfileEventListeners.
+     */
+    IDENTITY_MISMATCH,
+
     /** Anything else. Requires a note. */
     OTHER;
 

@@ -300,7 +300,8 @@
     "WRONG_PICKUP_LOCATION": "पिकअप की जगह गलत है",
     "CUSTOMER_NOT_AT_PICKUP": "राइडर पिकअप की जगह पर नहीं थीं",
     "DRIVER_UNAVAILABLE": "मैं यह ट्रिप पूरी नहीं कर सकती",
-    "OTHER": "कुछ और"
+    "OTHER": "कुछ और",
+    "IDENTITY_MISMATCH": "ऐप में दिखाया गया व्यक्ति नहीं"
   },
   "brand": {
     "tagline": "आपकी डिलीवरी, हमारी प्राथमिकता"
@@ -459,5 +460,8 @@
     "done": "पूरा",
     "current": "मौजूदा चरण",
     "upcoming": "अभी शुरू नहीं"
+  },
+  "paymentFlash": {
+    "continue": "आगे बढ़ें"
   }
 }

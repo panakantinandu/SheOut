@@ -159,6 +159,28 @@ class UserProfileEventListeners {
             return;
         }
 
+        // "This is not the person in the app." Cancelling was the right thing
+        // to do, so it is not counted against whoever did it - a rider who
+        // refuses to get on a stranger's bike must never be nudged toward
+        // getting on it to protect her cancellation rate. The account she
+        // reported is put in front of an operator instead.
+        if (event.reason() == com.sheout.booking.CancellationReason.IDENTITY_MISMATCH) {
+            String reason = "Reported at pickup as not the person shown in the app (trip " + event.bookingId() + ")";
+            if (cancelledBy.equals(event.customerId()) && event.driverId() != null) {
+                driverProfileRepository.findByAccountId(event.driverId()).ifPresent(profile -> {
+                    profile.flagForReview(reason);
+                    driverProfileRepository.save(profile);
+                });
+            } else if (cancelledBy.equals(event.driverId())) {
+                customerProfileRepository.findByAccountId(event.customerId()).ifPresent(profile -> {
+                    profile.flagForReview(reason);
+                    customerProfileRepository.save(profile);
+                });
+            }
+            log.warn("Identity mismatch reported on booking {} by {}", event.bookingId(), cancelledBy);
+            return;
+        }
+
         if (cancelledBy.equals(event.customerId())) {
             customerProfileRepository.findByAccountId(cancelledBy).ifPresent(profile -> {
                 profile.recordCancellation();
@@ -176,6 +198,16 @@ class UserProfileEventListeners {
             // against either of them, because neither of them did it.
             log.debug("Cancellation of booking {} was not by a participant - not counted", event.bookingId());
         }
+    }
+
+    /** Her selfie kept not matching - in front of an operator, with the reason. */
+    @EventListener
+    @Transactional
+    public void onShiftCheckNeedsReview(com.sheout.driververification.ShiftCheckNeedsReview event) {
+        driverProfileRepository.findByAccountId(event.accountId()).ifPresent(profile -> {
+            profile.flagForReview("Start-of-shift selfie did not match her verified selfie several times running");
+            driverProfileRepository.save(profile);
+        });
     }
 
     /**

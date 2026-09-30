@@ -1,11 +1,11 @@
-import { CheckCircle2, Headphones, MessageCircle, Navigation, Radio, SearchX, ShieldAlert, Star, Wallet as WalletIcon, XCircle } from 'lucide-react';
+import { ArrowLeft, BadgeCheck, CheckCircle2, Headphones, MessageCircle, Navigation, Radio, SearchX, ShieldAlert, Star, TriangleAlert, Wallet as WalletIcon, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { hasAppHistory } from '../lib/useGoBack';
-import { AggregateRatingText, AmountText, Avatar, Button, CancelReasonDialog, ConfirmDialog, Card, CUSTOMER_CANCELLATION_REASONS, IconCircle, LiveMap, OpenInMapsButton, PickupCodeCard, SafetyText, SkeletonCard, StatusBadge, SuccessCheck, ThinkingIndicator, TopHeader, bookingStatusLabel, vehicleLabel, useRouteLine } from '@sheout/design-system';
+import { AggregateRatingText, AmountText, Avatar, Button, HelmetIcon, PaymentSuccessFlash, CancelReasonDialog, ConfirmDialog, Card, CUSTOMER_CANCELLATION_REASONS, IconCircle, LiveMap, OpenInMapsButton, PickupCodeCard, SafetyText, SkeletonCard, StatusBadge, SuccessCheck, ThinkingIndicator, TopHeader, bookingStatusLabel, vehicleLabel, useRouteLine } from '@sheout/design-system';
 import type { CancellationReason as SharedCancellationReason, MapMarker } from '@sheout/design-system';
 import { ApiError, bookingApi, chatApi, dispatchApi, routesApi } from '../api/client';
-import type { AssignedDriver, BookingStatus, BookingSummary, DriverLocation } from '../api/types';
+import type { AssignedDriver, BookingStatus, BookingSummary, DriverLocation, PaymentSummary } from '../api/types';
 import { RatingPrompt } from '../components/RatingPrompt';
 import { TripPaymentCard } from '../components/TripPaymentCard';
 import { PromoFareLines } from '../components/PromoFareLines';
@@ -154,6 +154,50 @@ export function Tracking() {
   const [confirmEndHere, setConfirmEndHere] = useState(false);
   const [endingHere, setEndingHere] = useState(false);
   const [endHereError, setEndHereError] = useState<string | null>(null);
+  /**
+   * She has looked at the woman at the kerb and said "yes, it's her" - the
+   * step before her code is shown. Kept for this booking across a refresh.
+   */
+  const [partnerConfirmed, setPartnerConfirmed] = useState(() => {
+    try {
+      return sessionStorage.getItem(`sheout_partner_confirmed_${bookingId}`) === '1';
+    } catch {
+      return false;
+    }
+  });
+  /** "Something's not right" is open: don't get on, and the ways out. */
+  const [mismatchOpen, setMismatchOpen] = useState(false);
+  const [reportingMismatch, setReportingMismatch] = useState(false);
+  const [mismatchError, setMismatchError] = useState<string | null>(null);
+  /** The payment has just gone through, while she watched - the flash, then the rating. */
+  const [paidFlash, setPaidFlash] = useState<PaymentSummary | null>(null);
+
+  function confirmPartner() {
+    setPartnerConfirmed(true);
+    try {
+      sessionStorage.setItem(`sheout_partner_confirmed_${bookingId}`, '1');
+    } catch {
+      // Private mode: she may be asked again after a refresh, which is fine.
+    }
+  }
+
+  /**
+   * Not the partner the app showed. Cancelled with a reason that is never
+   * held against her, and the partner's account goes to the safety team.
+   */
+  async function reportMismatch() {
+    if (!bookingId) return;
+    setReportingMismatch(true);
+    setMismatchError(null);
+    try {
+      await bookingApi.cancel(bookingId, 'IDENTITY_MISMATCH');
+      navigate('/home', { replace: true });
+    } catch (err) {
+      setMismatchError(apiErrorText(err, 'tracking.cancelError'));
+    } finally {
+      setReportingMismatch(false);
+    }
+  }
 
   async function handleEndHere() {
     if (!bookingId) return;
@@ -531,6 +575,303 @@ export function Tracking() {
   const canCancel =
     booking && !searchFailed && ['REQUESTED', 'MATCHED', 'ACCEPTED'].includes(booking.status);
 
+  /**
+   * She is here. The server only releases the code once her partner is
+   * within the pickup radius, so the code arriving IS the arrival - the
+   * same fact the partner's screen switches on. A short buzz, once, so a
+   * rider waiting with the phone in her bag feels it.
+   */
+  const partnerArrived = booking?.status === 'ACCEPTED' && pickupCode != null;
+  useEffect(() => {
+    if (!partnerArrived) return;
+    try {
+      navigator.vibrate?.([120, 80, 120]);
+    } catch {
+      // Not allowed everywhere; the screen says it anyway.
+    }
+  }, [partnerArrived]);
+
+  // THE LIVE TRIP, the way ride apps show it: a big map, and under it one
+  // card that says what is happening now and shows only this phase's place -
+  // the pickup while she waits, the drop once she is on the way. Before she
+  // reads her code out she checks the woman at the kerb is the one in the
+  // app. SOS sits on the map, where a thumb finds it without scrolling.
+  if (booking && hasDriver && (booking.status === 'ACCEPTED' || booking.status === 'IN_PROGRESS')) {
+    const onTrip = booking.status === 'IN_PROGRESS';
+    const target = onTrip ? booking.drop : booking.pickup;
+    const km = validDriverLocation ? straightLineKm(validDriverLocation, target) : null;
+    const minutes = km == null ? null : Math.max(1, Math.round((km / CITY_SPEED_KMH) * 60));
+    // Close enough to the drop to get ready - read off her partner's last
+    // position. Her partner ends the trip; this only tells her it is coming.
+    const nearDrop = onTrip && km != null && km <= 0.25;
+    const isBike = booking.type === 'RIDE' && booking.category === 'BIKE';
+    const liveMarkers: MapMarker[] = [
+      onTrip
+        ? { key: 'drop', lat: booking.drop.lat, lng: booking.drop.lng, label: t('booking.drop'), kind: 'drop' }
+        : { key: 'pickup', lat: booking.pickup.lat, lng: booking.pickup.lng, label: t('booking.pickup'), kind: 'pickup' },
+    ];
+    if (validDriverLocation) {
+      liveMarkers.push({ key: 'driver', lat: validDriverLocation.lat, lng: validDriverLocation.lng, label: t('tracking.driver'), kind: 'driver' });
+    }
+    const phaseLabel = onTrip
+      ? (nearDrop ? t('tracking.live.phaseNearDrop') : t('tracking.live.phaseOnTrip'))
+      : (partnerArrived ? t('tracking.live.phaseArrived') : t('tracking.live.phaseComing'));
+    const title = onTrip
+      ? (nearDrop ? t('tracking.live.nearDropTitle') : t('tracking.live.onTripTitle'))
+      : partnerArrived
+        ? t('tracking.live.arrivedTitle', { name: driver?.name?.trim().split(/\s+/)[0] || t('tracking.yourPartner') })
+        : minutes != null
+          ? t('tracking.live.comingTitle', { count: minutes })
+          : t('tracking.live.comingTitleNoEta');
+    const faceVerifiedToday = driver?.faceVerifiedAt
+      ? new Date(driver.faceVerifiedAt).toDateString() === new Date().toDateString()
+      : false;
+
+    return (
+      <div className="space-y-4" data-testid="tracking-live">
+        {/* The map steps back when there is something to do: at the kerb, the check and the code matter more than the map. */}
+        <div
+          className={`relative -mx-screen -mt-6 overflow-hidden shadow-lift transition-[height] duration-500 ${partnerArrived && !onTrip ? 'h-[24vh] min-h-[10rem]' : 'h-[42vh] min-h-[16rem]'}`}
+          data-testid="tracking-map"
+        >
+          <LiveMap markers={liveMarkers} route={onTrip ? route : undefined} fill />
+          <div className="pointer-events-none absolute inset-x-3 top-3 z-10 flex items-start justify-between">
+            <button
+              type="button"
+              onClick={() => navigate('/home')}
+              aria-label={t('common.back')}
+              className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full bg-surface text-text-primary shadow-float"
+            >
+              <ArrowLeft className="h-5 w-5" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/sos', { state: { bookingId } })}
+              className="pointer-events-auto flex h-11 items-center gap-2 rounded-full bg-danger px-4 font-heading font-bold text-white shadow-float"
+              data-testid="tracking-sos"
+            >
+              <ShieldAlert className="h-5 w-5" aria-hidden="true" />
+              {t('home.sos')}
+            </button>
+          </div>
+          {driverLocation && (
+            <p className="absolute bottom-2 left-3 z-10 rounded-full bg-surface/90 px-2.5 py-1 text-[11px] text-text-secondary shadow-float">
+              {t('tracking.live.updated', { seconds: secondsAgo(driverLocation.recordedAt) })}
+            </p>
+          )}
+        </div>
+
+        {error && <p className="text-center text-xs text-text-secondary">{t('tracking.live.reconnecting')}</p>}
+
+        <Card className="space-y-4" data-testid="trip-phase">
+          <div className="flex items-center justify-between gap-2">
+            <StatusBadge tone={partnerArrived || nearDrop ? 'success' : 'primary'} data-testid="trip-phase-label">{phaseLabel}</StatusBadge>
+            {!partnerArrived && km != null && (
+              <span className="text-sm font-semibold text-accent-green-strong" data-testid="trip-eta">
+                {t('tracking.live.eta', { minutes, km: km.toFixed(1) })}
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-start gap-3">
+            <span className="relative mt-1.5 flex h-3 w-3 shrink-0" aria-hidden="true">
+              {(partnerArrived || nearDrop) && (
+                <span className={`absolute inset-0 rounded-full motion-safe:animate-pulse-ring ${onTrip ? 'bg-accent-orange' : 'bg-primary'}`} />
+              )}
+              <span className={`relative h-3 w-3 rounded-full ring-4 ${onTrip ? 'bg-accent-orange ring-accent-orange/20' : 'bg-primary ring-primary/15'}`} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="font-heading text-title leading-tight text-text-primary" data-testid="trip-phase-title">{title}</p>
+              <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                {onTrip ? t('tracking.live.dropLabel') : t('tracking.live.pickupLabel')}
+              </p>
+              <p className="line-clamp-2 text-sm text-text-primary" data-testid="trip-phase-place">{target.label}</p>
+            </div>
+          </div>
+
+          {/* Who is coming - the face, the name and the plate she checks at the kerb. */}
+          <div className="flex items-center gap-3 border-t border-border pt-3" data-testid="trip-partner">
+            <Avatar url={driver?.photoUrl} name={driver?.name ?? undefined} size="lg" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-heading text-card-title text-text-primary">{driver?.name || t('tracking.yourPartner')}</p>
+              {driver && (
+                <p className="truncate text-xs text-text-secondary">
+                  <AggregateRatingText averageStars={driver.averageStars} totalRatings={driver.totalRatings} emptyLabel={t('tracking.newPartner')} />
+                  {driver.vehicleType && <> &middot; {vehicleLabel(driver.vehicleType)}</>}
+                </p>
+              )}
+              {driver?.vehicleRegistrationNumber && (
+                <p className="mt-1 inline-block rounded bg-background px-2 py-0.5 font-heading text-card-title tracking-wider text-text-primary" data-testid="trip-plate">
+                  {driver.vehicleRegistrationNumber}
+                </p>
+              )}
+            </div>
+            <button
+              aria-label={t('tracking.messagePartner')}
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-background text-primary"
+              onClick={() => navigate(`/chat/${bookingId}`)}
+            >
+              <MessageCircle className="h-5 w-5" aria-hidden="true" />
+            </button>
+          </div>
+
+          {/* What SheOut checked about her today - only what really happened. */}
+          {(faceVerifiedToday || driver?.helmetChecked) && (
+            <div className="flex flex-wrap gap-2" data-testid="trip-partner-checks">
+              {faceVerifiedToday && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-accent-green/10 px-2.5 py-1 text-xs font-semibold text-accent-green-strong">
+                  <BadgeCheck className="h-3.5 w-3.5" aria-hidden="true" />
+                  {t('tracking.live.faceVerified')}
+                </span>
+              )}
+              {driver?.helmetChecked && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-accent-orange/10 px-2.5 py-1 text-xs font-semibold text-accent-orange">
+                  <HelmetIcon className="h-3.5 w-3.5" />
+                  {t('tracking.live.helmetChecked')}
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Waiting: what happens next, so the missing code is not a mystery. */}
+          {!onTrip && !partnerArrived && (
+            <p className="rounded-input bg-background px-3 py-2 text-sm text-text-secondary" data-testid="code-coming">
+              {t('tracking.live.codeWhenArrived')}
+            </p>
+          )}
+
+          {/* She is here: check her, then the code. */}
+          {partnerArrived && !partnerConfirmed && !mismatchOpen && (
+            <div className="space-y-3 rounded-card border-2 border-primary/25 bg-primary-light/40 p-4 motion-safe:animate-fade-slide-in" data-testid="partner-check">
+              <p className="font-heading text-card-title text-text-primary">{t('tracking.live.checkTitle')}</p>
+              <ul className="space-y-2 text-sm text-text-primary">
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+                  {t('tracking.live.checkFace')}
+                </li>
+                {driver?.vehicleRegistrationNumber && (
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+                    <span>{t('tracking.live.checkPlate')} <strong className="font-heading tracking-wider">{driver.vehicleRegistrationNumber}</strong></span>
+                  </li>
+                )}
+                {isBike && (
+                  <li className="flex items-start gap-2">
+                    <HelmetIcon className="mt-0.5 h-4 w-4 shrink-0 text-accent-orange" />
+                    {t('tracking.live.checkHelmet')}
+                  </li>
+                )}
+              </ul>
+              <Button fullWidth onClick={confirmPartner} data-testid="partner-check-yes">{t('tracking.live.checkYes')}</Button>
+              <Button fullWidth variant="secondary" onClick={() => { setMismatchError(null); setMismatchOpen(true); }} data-testid="partner-check-no">
+                {t('tracking.live.checkNo')}
+              </Button>
+            </div>
+          )}
+
+          {partnerArrived && mismatchOpen && (
+            <div className="space-y-3 rounded-card border-2 border-danger/30 bg-danger/5 p-4" role="alert" data-testid="partner-mismatch">
+              <p className="flex items-center gap-2 font-heading text-card-title text-danger">
+                <TriangleAlert className="h-5 w-5" aria-hidden="true" />
+                {t('tracking.live.mismatchTitle')}
+              </p>
+              <p className="text-sm text-text-primary"><SafetyText k="partnerCheck.dontGetOn" /></p>
+              <Button fullWidth variant="danger" disabled={reportingMismatch} onClick={reportMismatch} data-testid="partner-mismatch-cancel">
+                {reportingMismatch ? t('tracking.live.mismatchCancelling') : t('tracking.live.mismatchCancel')}
+              </Button>
+              {supportPhoneNumber && (
+                <Button fullWidth variant="secondary" icon={<Headphones className="h-5 w-5" />} onClick={() => { window.location.href = `tel:${supportPhoneNumber}`; }}>
+                  {t('tracking.live.mismatchCall')}
+                </Button>
+              )}
+              <button type="button" className="w-full text-center text-sm font-semibold text-primary" onClick={() => setMismatchOpen(false)}>
+                {t('tracking.live.mismatchBack')}
+              </button>
+              {mismatchError && <p className="text-sm text-danger">{mismatchError}</p>}
+            </div>
+          )}
+
+          {partnerArrived && partnerConfirmed && <PickupCodeCard code={pickupCode} />}
+
+          {/* Nearly there: getting off safely is the last thing to get right. */}
+          {nearDrop && (
+            <p className="rounded-input bg-accent-green/10 px-3 py-2 text-sm font-medium text-accent-green-strong" data-testid="near-drop-hint">
+              {isBike ? t('tracking.live.nearDropHintBike') : t('tracking.live.nearDropHint')}
+            </p>
+          )}
+        </Card>
+
+        {/* The two things worth one tap. SOS is on the map. */}
+        <div className="grid grid-cols-2 gap-3">
+          <Button variant="secondary" size="md" icon={<Radio className="h-4 w-4" />} onClick={shareTrip} data-testid="share-trip">
+            {t('tracking.shareTrip')}
+          </Button>
+          {supportPhoneNumber ? (
+            <Button variant="secondary" size="md" icon={<Headphones className="h-4 w-4" />} onClick={() => { window.location.href = `tel:${supportPhoneNumber}`; }}>
+              {t('tracking.support')}
+            </Button>
+          ) : (
+            <Button variant="secondary" size="md" icon={<MessageCircle className="h-4 w-4" />} onClick={() => navigate(`/chat/${bookingId}`)}>
+              {t('chat.title')}
+            </Button>
+          )}
+        </div>
+        {shareNote && <p className="text-center text-xs text-text-secondary" data-testid="share-note">{shareNote}</p>}
+
+        <Card className="flex items-center justify-between py-3">
+          <span className="text-sm text-text-secondary">{t('tracking.live.fare')}</span>
+          <AmountText amount={booking.amountDue ?? booking.finalFare ?? booking.fareEstimate} size="lg" />
+        </Card>
+
+        {/* Somewhere else instead, or "drop me here" - asked for, not in the way. */}
+        {onTrip && (
+          <details className="group rounded-card bg-surface shadow-card" data-testid="trip-more">
+            <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-semibold text-text-primary [&::-webkit-details-marker]:hidden">
+              {t('tracking.live.moreOptions')}
+              <Navigation className="h-4 w-4 text-text-secondary transition-transform group-open:rotate-90" aria-hidden="true" />
+            </summary>
+            <div className="space-y-3 border-t border-border px-4 py-3">
+              <ChangeDestination booking={booking} />
+              <Button variant="secondary" fullWidth disabled={endingHere} onClick={() => { setEndHereError(null); setConfirmEndHere(true); }} data-testid="end-here">
+                {t('tracking.endHere')}
+              </Button>
+              {endHereError && <p className="text-center text-sm text-danger">{endHereError}</p>}
+            </div>
+          </details>
+        )}
+
+        {!onTrip && !mismatchOpen && (
+          <button
+            type="button"
+            disabled={cancelling}
+            onClick={() => { setCancelError(null); setAskingWhy(true); }}
+            className="h-11 w-full rounded-full border border-border bg-surface text-sm font-semibold text-danger"
+            data-testid="cancel-ride"
+          >
+            {t('tracking.cancelRide')}
+          </button>
+        )}
+
+        <ConfirmDialog
+          open={confirmEndHere}
+          title={t('tracking.endHereTitle')}
+          message={t('tracking.endHereBody')}
+          confirmLabel={t('tracking.endHereConfirm')}
+          onCancel={() => setConfirmEndHere(false)}
+          onConfirm={handleEndHere}
+        />
+        <CancelReasonDialog
+          open={askingWhy}
+          options={CUSTOMER_CANCELLATION_REASONS}
+          busy={cancelling}
+          error={cancelError}
+          onConfirm={handleCancel}
+          onCancel={() => setAskingWhy(false)}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <TopHeader
@@ -629,7 +970,7 @@ export function Tracking() {
             </div>
           </div>
         </Card>
-      ) : !hasDriver ? (
+      ) : (
         <Card className="text-center" data-testid="searching-card">
           {/* Something is happening, and it is looking. Gone the moment the
               search ends: a search that found nobody gets the calm card
@@ -677,82 +1018,6 @@ export function Tracking() {
             {bookingStatusLabel(booking.status)}
           </StatusBadge>
         </Card>
-      ) : (
-        <Card className="flex items-center gap-3">
-          {/* Her real photo, or a silhouette. Never a broken image - this is
-              the screen where a rider checks the person in front of her is
-              the one the app sent. */}
-          <Avatar url={driver?.photoUrl} name={driver?.name} size="lg" />
-          <div className="min-w-0 flex-1">
-            {/* All real now, and released by the server only once she has
-                accepted. Nothing here is rendered during MATCHED: the
-                request is not even made - see DRIVER_DETAILS_STATUSES. */}
-            <p className="truncate font-heading text-card-title text-text-primary">
-              {driver?.name || t('tracking.yourPartner')}
-            </p>
-            {/* Rendered only once the server has actually released her
-                details. Showing "New partner" while waiting would assert
-                something about a specific person - that nobody has rated her
-                - on no information at all. */}
-            {driver && (
-              <p className="truncate text-xs text-text-secondary">
-                <AggregateRatingText
-                  averageStars={driver.averageStars}
-                  totalRatings={driver.totalRatings}
-                  emptyLabel={t('tracking.newPartner')}
-                />
-                {driver.vehicleType && <> &middot; {vehicleLabel(driver.vehicleType)}</>}
-              </p>
-            )}
-            {driver?.vehicleRegistrationNumber && (
-              // The number to look for, set apart rather than buried in the
-              // line above: at night, at a kerb, it is the thing she is
-              // actually checking.
-              <p className="mt-1 inline-block rounded bg-background px-2 py-1 font-heading text-card-title tracking-wide text-text-primary">
-                {driver.vehicleRegistrationNumber}
-              </p>
-            )}
-          </div>
-          {/* The one way to reach her. Not a call, and not a number. */}
-          <button
-            aria-label={t('tracking.messagePartner')}
-            className="rounded-full p-3 text-primary hover:bg-background"
-            onClick={() => navigate(`/chat/${bookingId}`)}
-          >
-            <MessageCircle className="h-5 w-5" />
-          </button>
-        </Card>
-      )}
-
-      {/* The one thing on this screen she has to DO, so it sits directly
-          under the partner it belongs to and above the map. It disappears
-          the moment the trip starts, because by then it has been used. */}
-      <PickupCodeCard code={booking?.status === 'ACCEPTED' ? pickupCode : null} />
-
-      {/* Which half of the trip is happening, said plainly. "Partner
-          assigned" and "trip underway" are very different facts to a woman
-          watching a marker move, and the status badge alone was carrying
-          both. */}
-      {(booking?.status === 'ACCEPTED' || booking?.status === 'IN_PROGRESS') && (
-        <Card className="flex items-start gap-3">
-          <IconCircle
-            tone="soft"
-            color={booking?.status === 'IN_PROGRESS' ? 'green' : undefined}
-            icon={booking?.status === 'IN_PROGRESS' ? <Navigation /> : <Radio />}
-          />
-          <div className="min-w-0 flex-1">
-            <p className="font-heading text-card-title text-text-primary">
-              {booking?.status === 'IN_PROGRESS' ? t('tracking.onYourWay') : t('tracking.comingToCollect')}
-            </p>
-            <p className="mt-1 text-sm text-text-secondary">
-              {booking?.status === 'IN_PROGRESS'
-                ? t('tracking.onYourWayBody')
-                : pickupCode
-                  ? <SafetyText k="pickupCode.haveReady" />
-                  : t('tracking.comingToCollectBody')}
-            </p>
-          </div>
-        </Card>
       )}
 
       <div className="space-y-1">
@@ -798,7 +1063,16 @@ export function Tracking() {
           strip - this app has no ETA to show there. */}
       {/* A completed trip shows what is owed and how to pay it; the payment
           card carries the final fare, so the plain fare row would repeat it. */}
-      {booking?.status === 'COMPLETED' && <TripPaymentCard booking={booking} onPaid={() => setTripPaid(true)} />}
+      {booking?.status === 'COMPLETED' && (
+        <TripPaymentCard
+          booking={booking}
+          onPaid={(payment, justNow) => {
+            setTripPaid(true);
+            // Paid while she watched: say so, clearly, before anything else asks for her attention.
+            if (justNow) setPaidFlash(payment);
+          }}
+        />
+      )}
 
       {booking && promoShown && (
         <Card className="space-y-2" data-testid="tracking-promo-fare">
@@ -825,33 +1099,6 @@ export function Tracking() {
           <AmountText amount={booking.finalFare ?? booking.fareEstimate} size="lg" />
         </Card>
       )}
-
-      {/* How far away she is, from her last real position - to the pickup
-          while she is coming, to the drop once the trip has started. This
-          used to be a placeholder reading "-- min (mock)". Straight-line
-          distance and a city-traffic speed: an honest "about", labelled as
-          one, rather than a routed ETA the app does not have. */}
-      {booking && hasDriver && driverLocation && (booking.status === 'ACCEPTED' || booking.status === 'IN_PROGRESS') && (() => {
-        const target = booking.status === 'IN_PROGRESS' ? booking.drop : booking.pickup;
-        const km = straightLineKm(driverLocation, target);
-        const minutes = Math.max(1, Math.round((km / CITY_SPEED_KMH) * 60));
-        return (
-          <Card data-testid="trip-eta">
-            <div className="flex justify-between text-sm">
-              <div>
-                <p className="text-text-secondary">
-                  {booking.status === 'IN_PROGRESS' ? t('tracking.etaToDrop') : t('tracking.etaToPickup')}
-                </p>
-                <p className="font-heading text-card-title text-text-primary">{t('tracking.aboutMinutes', { count: minutes })}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-text-secondary">{t('tracking.distance')}</p>
-                <p className="font-heading text-card-title text-text-primary">{t('fare.approxKm', { km: km.toFixed(1) })}</p>
-              </div>
-            </div>
-          </Card>
-        );
-      })()}
 
       {/* Hidden once the trip is over. Sharing a live location for a
           cancelled trip, or offering to message a driver who was never
@@ -907,29 +1154,6 @@ export function Tracking() {
         </Button>
       )}
 
-      {/* Somewhere else instead - asked, and only once her partner agrees. */}
-      {booking?.status === 'IN_PROGRESS' && <ChangeDestination booking={booking} />}
-
-      {/* "Drop me here, by the gate." Her partner cannot end the trip away
-          from the drop pin, so without this the trip could not be closed at
-          all when she got off early. */}
-      {booking?.status === 'IN_PROGRESS' && (
-        <>
-          <Button variant="secondary" fullWidth disabled={endingHere} onClick={() => { setEndHereError(null); setConfirmEndHere(true); }} data-testid="end-here">
-            {t('tracking.endHere')}
-          </Button>
-          {endHereError && <p className="text-center text-sm text-danger">{endHereError}</p>}
-        </>
-      )}
-      <ConfirmDialog
-        open={confirmEndHere}
-        title={t('tracking.endHereTitle')}
-        message={t('tracking.endHereBody')}
-        confirmLabel={t('tracking.endHereConfirm')}
-        onCancel={() => setConfirmEndHere(false)}
-        onConfirm={handleEndHere}
-      />
-
       <CancelReasonDialog
         open={askingWhy}
         options={CUSTOMER_CANCELLATION_REASONS}
@@ -937,6 +1161,16 @@ export function Tracking() {
         error={cancelError}
         onConfirm={handleCancel}
         onCancel={() => setAskingWhy(false)}
+      />
+
+      {/* The payment has just gone through - said with a moment of its own,
+          then the rating. */}
+      <PaymentSuccessFlash
+        open={paidFlash != null}
+        amount={paidFlash?.amount ?? null}
+        title={t('tracking.paidFlash.title')}
+        message={t('tracking.paidFlash.body', { name: driver?.name?.trim().split(/\s+/)[0] || t('tracking.yourPartner') })}
+        onDone={() => setPaidFlash(null)}
       />
 
       {/* Asked about this trip specifically, and only once it has actually
@@ -948,7 +1182,7 @@ export function Tracking() {
           the rating dialog sat on top of the payment card and the rider had
           to deal with it before she could pay. My Bookings still offers to
           rate a trip that is left unpaid here. */}
-      {booking?.status === 'COMPLETED' && tripPaid && (
+      {booking?.status === 'COMPLETED' && tripPaid && !paidFlash && (
         <RatingPrompt
           bookingId={bookingId}
           counterpartLabel={t('common.yourPartner')}

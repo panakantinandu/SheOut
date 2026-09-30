@@ -501,6 +501,7 @@ export type CancellationReason =
   | 'WRONG_PICKUP_LOCATION'
   | 'CUSTOMER_NOT_AT_PICKUP'
   | 'DRIVER_UNAVAILABLE'
+  | 'IDENTITY_MISMATCH'
   | 'OTHER';
 
 export interface ChatMessage {
@@ -628,6 +629,10 @@ export interface AssignedDriver {
   /** Null when nobody has rated her - not the same as a low score. */
   averageStars: number | null;
   totalRatings: number;
+  /** When her face was matched to her verified selfie at the start of this shift; null if it was not. */
+  faceVerifiedAt?: string | null;
+  /** She took a photo with her helmet on at the start of this shift. */
+  helmetChecked?: boolean;
 }
 
 /** One device signed in to this account - see sessionsApi. */

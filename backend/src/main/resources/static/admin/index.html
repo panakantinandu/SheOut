@@ -599,6 +599,8 @@
 
   .doc { margin-top: 4px; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--bg); }
   .doc img { display: block; width: 100%; max-height: 330px; object-fit: contain; background: var(--panel-soft); }
+  .shift-thumb { display: inline-block; width: 64px; height: 84px; object-fit: cover; border-radius: 8px; margin-right: 6px; vertical-align: top; background: var(--panel-soft); }
+  .shift-none { display: inline-block; width: 64px; margin-right: 6px; vertical-align: top; }
   .doc .fallback { padding: 16px; font-size: 12.5px; color: var(--muted); line-height: 1.5; }
   .doc .doc-pdf { display: block; width: 100%; height: 330px; border: 0; background: var(--panel-soft); }
   .doc .doc-foot { padding: 7px 12px; border-top: 1px solid var(--line); font-size: 12px; background: var(--panel); }
@@ -907,6 +909,10 @@
       <button data-tab="routes" aria-current="false">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M8 19h6a4 4 0 0 0 0-8H10a4 4 0 0 1 0-8h6"/></svg>
         <span class="nl">Route Review</span> <span class="count" id="cRoutes"></span>
+      </button>
+      <button data-tab="shiftchecks" aria-current="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="10" r="3"/><path d="M7.5 17a5 5 0 0 1 9 0"/></svg>
+        <span class="nl">Selfie Checks</span> <span class="count" id="cShift"></span>
       </button>
       <div class="label">Marketplace</div>
       <button data-tab="sellers" aria-current="false">
@@ -2163,6 +2169,39 @@ const VIEWS = {
       if (key === 'ended') return endedCell(t);
       if (key === 'flaggedAt') { const w = waited(t.flaggedAt); return `<span class="subtle">${time(t.flaggedAt)}</span><div class="wait ${w.cls}">${w.text}</div>`; }
       if (key === 'act') return `<button class="btn" data-routereview="${esc(t.bookingId)}" type="button">Mark reviewed</button>`;
+      return '—';
+    },
+  },
+
+  shiftchecks: {
+    title: 'Selfie Checks',
+    desc: 'Partners take a live selfie before each shift (and a photo with their helmet on, for bikes); their phone compares it with the selfie they were verified with. Two kinds of check come here. Held: the faces did not match three times running, and she cannot go online until you decide. Photo only: her phone could not compare (an old phone, or no verified selfie on file), so she went online on the photo alone - glance at it. Nothing here guesses anybody\'s gender; you are checking that it is the same woman.',
+    cardTitle: 'Checks to look at',
+    hint: 'Held partners are waiting on you - they cannot work until you decide',
+    empty: { icon: ICON_EMPTY_QUEUE, title: 'No selfie checks to look at', text: 'A check appears here when a partner\'s selfie did not match three times in a row, or when it passed on the photo alone in the last seven days.' },
+    columns: [
+      { key: 'partner', label: 'Partner', sort: r => r.phoneNumber || '' },
+      { key: 'why', label: 'Why it is here', sort: r => (r.check.status === 'NEEDS_REVIEW' ? 0 : 1) },
+      { key: 'photos', label: 'Verified selfie · today · helmet', sort: null },
+      { key: 'when', label: 'Taken', sort: r => new Date(r.check.submittedAt || 0).getTime() },
+      { key: 'act', label: '', sort: null },
+    ],
+    load: () => api('/admin/shift-checks'),
+    cell: (r, key) => {
+      const c = r.check;
+      if (key === 'partner') return `<span class="num strong">${esc(r.phoneNumber || 'Unknown')}</span>`;
+      if (key === 'why') return c.status === 'NEEDS_REVIEW'
+        ? `<span class="badge b-amber">Held - cannot go online</span><div class="subtle">Did not match three times running${c.faceDistance != null ? ` (last distance ${Number(c.faceDistance).toFixed(2)})` : ''}</div>`
+        : `<span class="badge b-grey">Photo only</span><div class="subtle">${c.referenceSelfieUrl ? 'Her phone could not compare' : 'No verified selfie on file to compare with'}</div>`;
+      if (key === 'photos') {
+        const pic = (url, label) => url
+          ? `<a href="${escValue(url)}" target="_blank" rel="noopener" title="${label}"><img src="${escValue(url)}" alt="${label}" loading="lazy" class="shift-thumb"></a>`
+          : `<span class="subtle shift-none">${label}: none</span>`;
+        return pic(c.referenceSelfieUrl, 'Verified selfie') + pic(c.selfieUrl, 'Today') + pic(c.helmetUrl, 'Helmet');
+      }
+      if (key === 'when') { const w = waited(c.submittedAt); return `<span class="subtle">${time(c.submittedAt)}</span><div class="wait ${w.cls}">${w.text}</div>`; }
+      if (key === 'act') return `<button class="btn" data-shiftclear="${esc(c.checkId)}" type="button">It is her</button>
+        <button class="btn btn-reject" data-shiftreject="${esc(c.checkId)}" type="button">Not her</button>`;
       return '—';
     },
   },
@@ -3621,6 +3660,7 @@ const ROW_ACCENT = {
   accounts: (r) => (r.blocked ? 'red' : r.role === 'DRIVER' ? 'blue' : r.role === 'ADMIN' ? 'grey' : 'brand'),
   trust: (r) => (r.blocked ? 'red' : 'amber'),
   routes: () => 'amber',
+  shiftchecks: (r) => (r.check.status === 'NEEDS_REVIEW' ? 'red' : 'grey'),
   feedback: (r) => (r.averageStars == null ? 'grey' : r.averageStars < 3 ? 'red' : r.averageStars < 4 ? 'amber' : 'green'),
   announcements: () => 'brand',
 };
@@ -3742,7 +3782,7 @@ async function render(opts = {}) {
     paintRows(view, rows, narrowed && view.emptyFiltered ? view.emptyFiltered : view.empty);
     paintPager(paged);
 
-    const counts = { queue: 'cQueue', sos: 'cSos', bookings: 'cBookings', accounts: 'cAccounts', trust: 'cTrust', routes: 'cRoutes', feedback: 'cFeedback' };
+    const counts = { queue: 'cQueue', sos: 'cSos', bookings: 'cBookings', accounts: 'cAccounts', trust: 'cTrust', routes: 'cRoutes', feedback: 'cFeedback', shiftchecks: 'cShift' };
     // The badge counts everything matching, not the rows on this page -
     // "25" beside Bookings when there are 400 would be a lie. Support is
     // not in this map: its badge counts unresolved tickets whatever the
@@ -3905,6 +3945,43 @@ $('rows').addEventListener('click', async e => {
     } catch (err) {
       if (err.message === 'unauthorized') return;
       toast('bad', 'Could not record that review', err.message);
+    }
+    return;
+  }
+
+  const shiftBtn = e.target.closest('[data-shiftclear], [data-shiftreject]');
+  if (shiftBtn) {
+    const row = lastRows[Number(shiftBtn.closest('tr[data-i]').dataset.i)];
+    const clear = shiftBtn.hasAttribute('data-shiftclear');
+    const ok = await confirmAction(clear ? {
+      title: 'Is this the same woman?',
+      message: row.check.status === 'NEEDS_REVIEW'
+        ? 'She will be able to go online straight away, for the next twelve hours.'
+        : 'It comes off this list. Nothing else changes.',
+      confirmLabel: 'Yes, it is her',
+      withReason: true,
+      reasonRequired: false,
+      reasonLabel: 'Note (optional, kept with the check)',
+      reasonPlaceholder: 'e.g. Same person, poor light',
+      reasonMaxLength: 500,
+    } : {
+      title: 'Not the same woman?',
+      message: 'This check stops counting and she has to take a new selfie before she can work. If you believe somebody else is using her account, block the account from Accounts as well.',
+      confirmLabel: 'Not her',
+      withReason: true,
+      reasonRequired: true,
+      reasonLabel: 'What you saw (kept with the check)',
+      reasonPlaceholder: 'e.g. A different person in the selfie',
+      reasonMaxLength: 500,
+    });
+    if (!ok) return;
+    try {
+      await api(`/admin/shift-checks/${row.check.checkId}/review`, { method: 'POST', body: JSON.stringify({ decision: clear ? 'CLEAR' : 'REJECT', note: ok.reason || null }) });
+      toast('ok', clear ? 'Cleared' : 'Rejected', clear ? 'She can go online.' : 'She will be asked for a new selfie.');
+      render();
+    } catch (err) {
+      if (err.message === 'unauthorized') return;
+      toast('bad', 'Could not record that decision', err.message);
     }
     return;
   }
@@ -4208,13 +4285,14 @@ async function refreshBadges() {
   const q = (path) => api(path).catch((err) => { if (err.message === 'unauthorized') throw err; return null; });
   const set = (id, v) => { if (v !== null && v !== undefined) $(id).textContent = v; };
   try {
-    const [queue, sos, payouts, routes, trust, sellers] = await Promise.all([
+    const [queue, sos, payouts, routes, trust, sellers, shift] = await Promise.all([
       q('/admin/verification/review-queue'),
       q('/admin/sos/active'),
       q(`/admin/payouts${filterQuery({}, { pageSize: 1 })}`),
       q('/admin/route-review/queue'),
       q('/admin/trust/review-queue'),
       q('/admin/sellers/awaiting-count'),
+      q('/admin/shift-checks'),
     ]);
     set('cQueue', queue && queue.length);
     set('cSos', sos && sos.length);
@@ -4222,6 +4300,7 @@ async function refreshBadges() {
     set('cRoutes', routes && routes.length);
     set('cTrust', trust && trust.length);
     set('cSellers', sellers);
+    set('cShift', shift && shift.length);
     refreshSupportCounts();
   } catch (e) {
     // Signed out; nothing to count.

@@ -418,7 +418,10 @@
     "REFERRAL_OWN_CODE": "You can't use your own referral code.",
     "REFERRAL_ALREADY_APPLIED": "You have already joined with a referral code.",
     "REFERRAL_NOT_ELIGIBLE": "Referral codes are for new accounts, entered while signing up.",
-    "UPI_QR_UNAVAILABLE": "A UPI QR can't be made right now. Your rider can pay in her SheOut app instead."
+    "UPI_QR_UNAVAILABLE": "A UPI QR can't be made right now. Your rider can pay in her SheOut app instead.",
+    "SHIFT_CHECK_EXPIRED": "That selfie took too long. Please take it again.",
+    "SHIFT_CHECK_UNDER_REVIEW": "Our team is checking your selfie. You can go online once they have.",
+    "SELFIE_REQUIRED": "Take the selfie with the in-app camera."
   },
   "offer": {
     "loadError": "Could not load this request",
@@ -507,7 +510,29 @@
     "etaShort": "{{minutes}} min · {{km}} km",
     "kmShort": "{{km}} km",
     "noNumbersShort": "Message her in the app",
-    "reconnecting": "Weak connection - showing the last update. Retrying…"
+    "reconnecting": "Weak connection - showing the last update. Retrying…",
+    "arrivedDropTitle": "You've reached the drop",
+    "arrivedDropHint": "Let her get off safely and collect your spare helmet. Then end the trip.",
+    "arrivedDropHintParcel": "Hand over the parcel, then end the trip.",
+    "riderCheck": {
+      "title": "Is this your rider?",
+      "samePhoto": "Check her face matches this photo.",
+      "noPhoto": "Check her name before she gets on.",
+      "helmet": "Give her the spare helmet to wear.",
+      "yes": "Yes, it's her",
+      "no": "No, it's someone else"
+    },
+    "mismatch": {
+      "title": "Don't start this trip",
+      "body": "Stay somewhere safe. We'll cancel this trip - it won't count against you - and SheOut's safety team will look into the account.",
+      "confirm": "Cancel trip and report",
+      "cancelling": "Cancelling...",
+      "back": "Go back"
+    },
+    "paidFlash": {
+      "title": "Payment received",
+      "body": "{{name}} has paid. It's in your SheOut wallet."
+    }
   },
   "earnings": {
     "group": {
@@ -650,5 +675,56 @@
     "applyError": "We couldn't check that referral code. Try again.",
     "loadError": "We couldn't load your referral code. Try again.",
     "title": "Refer a Friend"
+  },
+  "shiftCheck": {
+    "title": "Start your shift",
+    "loading": "Getting your safety check ready...",
+    "step": {
+      "selfie": "Selfie",
+      "helmet": "Helmet",
+      "done": "Done"
+    },
+    "selfieTitle": "A quick selfie before you go online",
+    "selfieBody": "So your riders know it's really you. Your phone checks it against the selfie you were verified with.",
+    "tip": {
+      "light": "Face the light - not a window behind you",
+      "face": "No helmet, sunglasses or mask for this one",
+      "time": "About 20 seconds, once every 12 hours",
+      "still": "Hold the phone at face height and keep still"
+    },
+    "why": "Your phone compares this selfie with the one you were verified with. The photo is kept for 30 days so SheOut's safety team can check it if ever needed. Nothing else is read from your face.",
+    "start": "Take my selfie",
+    "matching": "Checking it's you...",
+    "sending": "Saving your check...",
+    "matchingBody": "This takes a few seconds.",
+    "noFace": "We couldn't see your face clearly. Take off your helmet, sunglasses or mask, face the light, and try again.",
+    "sendError": "Could not save your check. Check your connection and try again.",
+    "loadError": "Could not load your safety check.",
+    "noMatchTitle": "That didn't look like the photo on your account",
+    "noMatchBody": "This usually happens in poor light, or when something covers part of your face. Try again:",
+    "triesLeft_one": "1 more try before our team checks it by hand.",
+    "triesLeft_other": "{{count}} more tries before our team checks it by hand.",
+    "tryAgain": "Try again",
+    "retake": "Retake",
+    "reviewTitle": "Our team is checking your selfie",
+    "reviewBody": "Your last few selfies didn't match the photo on your account, so someone at SheOut will look at them. You can go online as soon as they have. If you need to work today, call support.",
+    "backHome": "Back to home",
+    "passedTitle": "You're all set!",
+    "passedTitleName": "You're all set, {{name}}!",
+    "passedUntil": "Your safety check is good until {{time}}.",
+    "passedBody": "Your safety check is done.",
+    "riderSees": "Riders will see \"Face verified today\"",
+    "goOnline": "Go online",
+    "goingOnline": "Going online...",
+    "notYet": "Not now",
+    "cameraBlocked": "The camera could not be opened. Allow camera access for SheOut in your phone settings, then try again.",
+    "helmet": {
+      "title": "Now put your helmet on",
+      "body": "Take a photo wearing it, so riders know you ride safely. Keep your spare helmet ready for your rider too.",
+      "start": "Take helmet photo",
+      "hold": "Helmet on - look at the camera",
+      "previewAlt": "You wearing your helmet",
+      "use": "Use this photo"
+    }
   }
 }

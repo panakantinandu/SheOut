@@ -351,6 +351,15 @@ export function Home() {
         setError(err.message);
         return;
       }
+      // The start-of-shift selfie (and helmet photo). Its own screen, which
+      // goes online by itself once she passes.
+      if (
+        err instanceof ApiError &&
+        (err.body?.error === 'SHIFT_CHECK_REQUIRED' || err.body?.error === 'SHIFT_CHECK_UNDER_REVIEW')
+      ) {
+        navigate('/shift-check', { state: { goOnline: true } });
+        return;
+      }
       // Being in the wrong part of the world is not an error she can retry
       // away, so it gets a standing explanation rather than a red line that
       // reads like something went wrong.

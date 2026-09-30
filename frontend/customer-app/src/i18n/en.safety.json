@@ -136,5 +136,8 @@
     "call": "Call {{number}}",
     "imSafe": "I'm safe - go back to the chat",
     "privacyNote": "Never share OTPs, passwords or ID numbers here."
+  },
+  "partnerCheck": {
+    "dontGetOn": "You don't have to share your code. Stay where there are people around. Cancelling is free, and SheOut's safety team will look into this partner. If you feel unsafe, press SOS at the top of the map."
   }
 }

@@ -14,6 +14,8 @@ interface DriverProfileRepository extends JpaRepository<DriverProfileEntity, UUI
 
     /** The cancellation review queue: oldest crossing first, so nobody waits behind a newer case. */
     List<DriverProfileEntity> findByFlaggedAtIsNotNullOrderByFlaggedAtAsc();
+
+    List<DriverProfileEntity> findByOnlineStatus(com.sheout.users.OnlineStatus status);
     /** Addresses only, for an announcement - see DriverProfileApi.findEmailAddresses. */
     @Query("select p.email from DriverProfileEntity p where p.email is not null and p.email <> '' order by p.accountId")
     List<String> findEmailAddresses(Pageable pageable);

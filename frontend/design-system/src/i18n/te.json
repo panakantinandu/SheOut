@@ -300,7 +300,8 @@
     "WRONG_PICKUP_LOCATION": "పికప్ స్థలం తప్పు",
     "CUSTOMER_NOT_AT_PICKUP": "రైడర్ పికప్ స్థలంలో లేరు",
     "DRIVER_UNAVAILABLE": "నేను ఈ ట్రిప్ పూర్తి చేయలేను",
-    "OTHER": "ఇంకేదైనా"
+    "OTHER": "ఇంకేదైనా",
+    "IDENTITY_MISMATCH": "యాప్‌లో చూపిన వ్యక్తి కాదు"
   },
   "brand": {
     "tagline": "మీ డెలివరీ, మా ప్రాధాన్యత"
@@ -459,5 +460,8 @@
     "done": "పూర్తయింది",
     "current": "ప్రస్తుత దశ",
     "upcoming": "ఇంకా మొదలవలేదు"
+  },
+  "paymentFlash": {
+    "continue": "కొనసాగించండి"
   }
 }

@@ -21,6 +21,7 @@ export type CancellationReason =
   | 'WRONG_PICKUP_LOCATION'
   | 'CUSTOMER_NOT_AT_PICKUP'
   | 'DRIVER_UNAVAILABLE'
+  | 'IDENTITY_MISMATCH'
   | 'OTHER';
 
 const REASON_LABELS: Record<CancellationReason, string> = {
@@ -30,6 +31,7 @@ const REASON_LABELS: Record<CancellationReason, string> = {
   WRONG_PICKUP_LOCATION: 'The pickup point is wrong',
   CUSTOMER_NOT_AT_PICKUP: 'The rider was not at the pickup point',
   DRIVER_UNAVAILABLE: 'I cannot complete this trip',
+  IDENTITY_MISMATCH: 'Not the person shown in the app',
   OTHER: 'Something else',
 };
 

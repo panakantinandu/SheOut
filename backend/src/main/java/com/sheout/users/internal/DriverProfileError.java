@@ -62,5 +62,11 @@ public enum DriverProfileError {
      * The PAN is not a well-formed one. Shape only - see PanNumber for why
      * that is as far as this goes.
      */
-    INVALID_PAN
+    INVALID_PAN,
+
+    /** No start-of-shift selfie in the last twelve hours (or no helmet photo on a bike). */
+    SHIFT_CHECK_REQUIRED,
+
+    /** Her selfie did not match several times; an operator has to look first. */
+    SHIFT_CHECK_UNDER_REVIEW
 }

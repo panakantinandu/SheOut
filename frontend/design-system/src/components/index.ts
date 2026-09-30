@@ -43,6 +43,8 @@ export * from './ProfileCompletionForm';
 export * from './Skeleton';
 export * from './CountdownRing';
 export * from './SuccessCheck';
+export * from './PaymentSuccessFlash';
+export * from './HelmetIcon';
 export * from './PullToRefresh';
 export * from './PageTransition';
 export * from './StatusDot';

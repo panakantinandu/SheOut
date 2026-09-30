@@ -374,7 +374,56 @@ export const verificationApi = {
     form.append('selfieChallengeId', live.challengeId);
     return request('/api/v1/driver-verification/documents', { method: 'POST', body: form });
   },
+
+  /** Her start-of-shift check: where it stands, and what happened last time. */
+  shiftCheckStatus(): Promise<ShiftCheckStatus> {
+    return request('/api/v1/driver-verification/shift-check');
+  },
+
+  /** One prompt, and the address of the selfie she was verified with - to compare against on this phone. */
+  shiftCheckChallenge(): Promise<ShiftCheckChallenge> {
+    return request('/api/v1/driver-verification/shift-check/challenge', { method: 'POST' });
+  },
+
+  submitShiftCheck(submission: ShiftCheckSubmission): Promise<ShiftCheckStatus> {
+    const form = new FormData();
+    form.append('selfie', submission.live.selfie);
+    form.append('livenessFrames', submission.live.livenessFrames);
+    form.append('challengeId', submission.live.challengeId);
+    if (submission.helmet) form.append('helmet', submission.helmet);
+    if (submission.faceDistance != null) form.append('faceDistance', String(submission.faceDistance));
+    if (submission.faceOutcome) form.append('faceOutcome', submission.faceOutcome);
+    return request('/api/v1/driver-verification/shift-check', { method: 'POST', body: form });
+  },
 };
+
+export interface ShiftCheckStatus {
+  /** False when the check is switched off on this server. */
+  required: boolean;
+  valid: boolean;
+  underReview: boolean;
+  checkedAt: string | null;
+  validUntil: string | null;
+  faceMatched: boolean;
+  helmetPhotoOnFile: boolean;
+  /** MATCH, NO_MATCH, NO_FACE, UNAVAILABLE - how her last try went. */
+  lastResult: string | null;
+  /** Tries left before a mismatch is sent to an operator. */
+  missesBeforeReview: number;
+}
+
+export interface ShiftCheckChallenge extends SelfieChallenge {
+  expiresAt: string;
+  /** Null for an account verified before selfies were taken. */
+  referenceSelfieUrl: string | null;
+}
+
+export interface ShiftCheckSubmission {
+  live: LiveSelfieResult;
+  helmet: File | null;
+  faceDistance: number | null;
+  faceOutcome: string | null;
+}
 
 /** What a partner is told about her rider - see the backend's assignedRider. */
 export interface AssignedRider {

@@ -194,3 +194,17 @@ the Hindi and Telugu distress words that send a message straight to SOS without
 asking the model: `backend/.../assistant/internal/EmergencyDetector.java` and
 `frontend/design-system/src/lib/distress.ts`. A native speaker should add common
 ways of saying "help", "I'm scared" and "someone is following me" that are missing.
+
+## Added 2026-09-30: identity checks at the pickup (NOT REVIEWED)
+
+Shown when a partner arrives: the rider is asked to check the partner before her
+code appears, and the partner is asked "Is this your rider?". The two sentences
+below are read at the kerb by somebody deciding whether to get on a bike, so
+they are in the safety namespace and show English beneath until signed off.
+The surrounding buttons and titles (`tracking.live.*`, `trip.riderCheck.*`,
+`trip.mismatch.*`) are ordinary strings but deserve the same native read.
+
+| App | Key | English | Telugu | Hindi | Reviewed |
+|---|---|---|---|---|---|
+| Rider | `partnerCheck.dontGetOn` | You don't have to share your code. Stay where there are people around. Cancelling is free, and SheOut's safety team will look into this partner. If you feel unsafe, press SOS at the top of the map. | మీ కోడ్ చెప్పాల్సిన అవసరం లేదు. చుట్టూ మనుషులు ఉన్న చోట ఉండండి. రద్దు చేయడం ఉచితం, SheOut భద్రతా బృందం ఈ పార్ట్‌నర్‌ని పరిశీలిస్తుంది. అసురక్షితంగా అనిపిస్తే మ్యాప్ పైన ఉన్న SOS నొక్కండి. | आपको अपना कोड बताने की ज़रूरत नहीं है। लोगों के आस-पास रहें। रद्द करना मुफ़्त है, और SheOut की सुरक्षा टीम इस पार्टनर की जाँच करेगी। असुरक्षित लगे तो मैप के ऊपर SOS दबाएँ। | ☐ te ☐ hi |
+| Partner | `riderCheck.womenOnly` | SheOut is for women only. If the person here is a man, or not the rider shown, do not start the trip. | SheOut మహిళల కోసం మాత్రమే. ఇక్కడ ఉన్నది పురుషుడైతే, లేదా చూపిన రైడర్ కాకపోతే, ట్రిప్ మొదలుపెట్టకండి. | SheOut सिर्फ़ महिलाओं के लिए है। अगर यहाँ कोई पुरुष है, या दिखाई गई राइडर नहीं हैं, तो ट्रिप शुरू न करें। | ☐ te ☐ hi |

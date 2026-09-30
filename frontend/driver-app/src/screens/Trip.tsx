@@ -1,4 +1,4 @@
-import { ArrowLeft, CheckCircle2, ChevronDown, MapPin, MessageCircle, Navigation } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, ChevronDown, MapPin, MessageCircle, Navigation, UserX } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
@@ -7,12 +7,15 @@ import {
   Button,
   CancelReasonDialog,
   Card,
+  ConfirmDialog,
   ContactSupportButton,
+  HelmetIcon,
   DRIVER_CANCELLATION_REASONS,
   DROP_OFF_REASONS,
   IconCircle,
   LiveMap,
   OpenInMapsButton,
+  PaymentSuccessFlash,
   PICKUP_CODE_LENGTH,
   PickupCodeField,
   SafetyText,
@@ -25,7 +28,7 @@ import {
 import type { CancellationReason, DropOffReason, MapMarker } from '@sheout/design-system';
 import { ApiError, bookingApi, chatApi, dispatchApi, type AssignedRider } from '../api/client';
 import { apiErrorText } from '../lib/apiErrors';
-import type { BookingSummary, PaymentHold, TripRoute } from '../api/types';
+import type { BookingSummary, PaymentHold, PaymentSummary, TripRoute } from '../api/types';
 import { CollectPaymentCard } from '../components/CollectPaymentCard';
 import { readPositionOnce, useShareLocation } from '../lib/LocationBroadcastContext';
 import { PartnerSos } from '../components/PartnerSos';
@@ -136,6 +139,22 @@ export function Trip() {
   const [paid, setPaid] = useState(false);
   /** The hold keeping new offers away while this trip is unpaid; null once it has lifted. */
   const [hold, setHold] = useState<PaymentHold | null | undefined>(undefined);
+
+  /**
+   * She has looked at her rider and said "yes, it's her" - kept for this
+   * booking across a refresh, so she is not asked twice at the same kerb.
+   */
+  const [riderConfirmed, setRiderConfirmed] = useState(() => {
+    try {
+      return sessionStorage.getItem(`sheout_rider_confirmed_${bookingId}`) === '1';
+    } catch {
+      return false;
+    }
+  });
+  const [askingMismatch, setAskingMismatch] = useState(false);
+  const [mismatchError, setMismatchError] = useState<string | null>(null);
+  /** The fare has just landed - the "payment received" moment, once. */
+  const [paidFlash, setPaidFlash] = useState<PaymentSummary | null>(null);
 
   const [pickupCode, setPickupCode] = useState('');
   const [codeError, setCodeError] = useState<string | null>(null);
@@ -466,6 +485,35 @@ export function Trip() {
    * first tap on Start or End failed with "location too old" for no reason
    * she could see. Best effort: the server still decides.
    */
+  function confirmRider() {
+    setRiderConfirmed(true);
+    try {
+      sessionStorage.setItem(`sheout_rider_confirmed_${bookingId}`, '1');
+    } catch {
+      // Private mode: she may be asked again after a refresh, which is fine.
+    }
+  }
+
+  /**
+   * "This is not my rider." The trip is not started; it is cancelled with a
+   * reason that never counts against her, and the rider's account goes to
+   * SheOut's safety team. See CancellationReason.IDENTITY_MISMATCH.
+   */
+  async function handleMismatch() {
+    if (!bookingId) return;
+    setBusy(true);
+    setMismatchError(null);
+    try {
+      await bookingApi.cancel(bookingId, 'IDENTITY_MISMATCH');
+      setAskingMismatch(false);
+      navigate('/home', { replace: true });
+    } catch (err) {
+      setMismatchError(apiErrorText(err, 'trip.cancelError'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function sendFreshPosition() {
     const here = await readPositionOnce(myPosition);
     if (here) await dispatchApi.recordLocation(here.lat, here.lng).catch(() => undefined);
@@ -586,12 +634,25 @@ export function Trip() {
       : route?.durationMinutes == null ? null : Math.max(1, Math.round(route.durationMinutes));
     const kmLeft = nav ? Math.round(nav.remainingMetres / 100) / 10 : route?.distanceKm ?? null;
     const arrived = phase === 'PICKUP' && pickupArrived;
-    const title = phase === 'DROP' ? t('trip.goToDrop') : arrived ? t('trip.arrivedTitle') : t('trip.goToPickup');
+    // At the drop, told so - the same way arriving at the pickup is. Read
+    // off her GPS; the server checks again when she ends the trip.
+    const atDrop = phase === 'DROP' && atDropOff;
+    const title = phase === 'DROP'
+      ? (atDrop ? t('trip.arrivedDropTitle') : t('trip.goToDrop'))
+      : arrived ? t('trip.arrivedTitle') : t('trip.goToPickup');
+    // A parcel's sender hands it over and stays behind: there is nobody to
+    // check the face of, and no helmet to give.
+    const isRide = booking.type === 'RIDE';
+    const needsRiderCheck = arrived && isRide && !riderConfirmed && !codeLocked;
     return (
       <div className="space-y-4" data-testid="trip-live">
         {/* The map. Back and SOS float on its top edge; its bottom edge,
             where Google's logo and terms sit, is left clear. */}
-        <div className="relative -mx-screen -mt-6 h-[46vh] min-h-[17.5rem] overflow-hidden shadow-lift" data-testid="trip-map">
+        {/* Smaller once she has arrived: the check, the code or End trip is the job now, not the road. */}
+        <div
+          className={`relative -mx-screen -mt-6 overflow-hidden shadow-lift transition-[height] duration-500 ${arrived || atDrop ? 'h-[28vh] min-h-[11rem]' : 'h-[46vh] min-h-[17.5rem]'}`}
+          data-testid="trip-map"
+        >
           {/* One map at a time: while navigation is open it has its own. */}
           {!navigating && <LiveMap markers={markers} route={nav?.remaining ?? route?.points} fill />}
           <div className="pointer-events-none absolute inset-x-3 top-3 z-10 flex items-start justify-between">
@@ -620,7 +681,7 @@ export function Trip() {
         <Card className="space-y-4" data-testid="trip-step">
           <div className="flex items-center justify-between gap-2">
             <StatusBadge tone="primary">{phase === 'PICKUP' ? t('trip.stepPickup') : t('trip.stepDrop')}</StatusBadge>
-            {!arrived && (
+            {!arrived && !atDrop && (
               <span className="text-sm font-semibold text-accent-green-strong" data-testid="trip-eta">
                 {minutes != null && kmLeft != null
                   ? t('trip.etaShort', { minutes, km: kmLeft })
@@ -632,19 +693,28 @@ export function Trip() {
           </div>
 
           <div className="flex items-start gap-3">
-            <span
-              className={`mt-1.5 h-3 w-3 shrink-0 rounded-full ring-4 ${phase === 'PICKUP' ? 'bg-primary ring-primary/15' : 'bg-accent-orange ring-accent-orange/20'}`}
-              aria-hidden="true"
-            />
+            <span className="relative mt-1.5 flex h-3 w-3 shrink-0" aria-hidden="true">
+              {/* Arrived: the dot pulses, so the change is seen at a glance from the handlebar. */}
+              {(arrived || atDrop) && (
+                <span className={`absolute inset-0 rounded-full motion-safe:animate-pulse-ring ${phase === 'PICKUP' ? 'bg-primary' : 'bg-accent-orange'}`} />
+              )}
+              <span className={`relative h-3 w-3 rounded-full ring-4 ${phase === 'PICKUP' ? 'bg-primary ring-primary/15' : 'bg-accent-orange ring-accent-orange/20'}`} />
+            </span>
             <div className="min-w-0 flex-1">
-              <p className="font-heading text-card-title text-text-primary">{title}</p>
+              <p className="font-heading text-card-title text-text-primary" data-testid="trip-step-title">{title}</p>
               <p className="mt-1 line-clamp-2 text-sm text-text-secondary">{destination.label}</p>
+              {atDrop && (
+                <p className="mt-2 text-sm font-medium text-accent-green-strong" data-testid="at-drop-hint">
+                  {isRide ? t('trip.arrivedDropHint') : t('trip.arrivedDropHintParcel')}
+                </p>
+              )}
               {!arrived && !route && <p className="mt-1 text-xs text-text-secondary">{mapCaption()}</p>}
               {routeError && <p className="mt-1 text-xs text-text-secondary">{t('trip.routeError')}</p>}
             </div>
           </div>
 
-          {/* Who she is collecting, with the one way to reach her. */}
+          {/* Who she is collecting, with the one way to reach her - folded into the check while it is up. */}
+          {!needsRiderCheck && (
           <div className="flex items-center gap-3 border-t border-border pt-3" data-testid="trip-rider">
             <Avatar url={rider?.photoUrl} name={rider?.firstName ?? undefined} size="md" />
             <div className="min-w-0 flex-1">
@@ -664,6 +734,7 @@ export function Trip() {
               <MessageCircle className="h-5 w-5" aria-hidden="true" />
             </button>
           </div>
+          )}
 
           {/* The step's one action. */}
           {phase === 'PICKUP' && !arrived && (
@@ -675,7 +746,41 @@ export function Trip() {
             </div>
           )}
 
-          {arrived && (
+          {/* Before the code: is this the woman in the app? A face and a
+              name to check, and a way out that costs her nothing. */}
+          {needsRiderCheck && (
+            <div className="space-y-3 rounded-card border-2 border-primary/25 bg-primary-light/40 p-4 motion-safe:animate-fade-slide-in" data-testid="rider-check">
+              <p className="font-heading text-card-title text-text-primary">{t('trip.riderCheck.title')}</p>
+              <div className="flex items-center gap-3">
+                <Avatar url={rider?.photoUrl} name={rider?.firstName ?? undefined} size="xl" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-heading text-title text-text-primary">{rider?.firstName || t('trip.yourRider')}</p>
+                  <p className="text-sm text-text-secondary">
+                    {rider?.photoUrl ? t('trip.riderCheck.samePhoto') : t('trip.riderCheck.noPhoto')}
+                  </p>
+                </div>
+              </div>
+              <p className="text-sm text-text-primary"><SafetyText k="riderCheck.womenOnly" /></p>
+              {booking.category === 'BIKE' && (
+                <p className="flex items-center gap-2 text-sm font-medium text-text-primary">
+                  <HelmetIcon className="h-4 w-4 shrink-0 text-accent-orange" />
+                  {t('trip.riderCheck.helmet')}
+                </p>
+              )}
+              <Button fullWidth onClick={confirmRider} data-testid="rider-check-yes">{t('trip.riderCheck.yes')}</Button>
+              <Button
+                fullWidth
+                variant="secondary"
+                icon={<UserX className="h-5 w-5" />}
+                onClick={() => { setMismatchError(null); setAskingMismatch(true); }}
+                data-testid="rider-check-no"
+              >
+                {t('trip.riderCheck.no')}
+              </Button>
+            </div>
+          )}
+
+          {arrived && !needsRiderCheck && (
             <div className="space-y-3" data-testid="pickup-code-step">
               <p className="flex items-start gap-2 text-sm text-text-primary">
                 <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
@@ -810,6 +915,16 @@ export function Trip() {
           onConfirm={handleCancel}
           onCancel={() => setAskingWhy(false)}
         />
+        <ConfirmDialog
+          open={askingMismatch}
+          title={t('trip.mismatch.title')}
+          message={mismatchError ?? t('trip.mismatch.body')}
+          confirmLabel={busy ? t('trip.mismatch.cancelling') : t('trip.mismatch.confirm')}
+          cancelLabel={t('trip.mismatch.back')}
+          destructive
+          onConfirm={handleMismatch}
+          onCancel={() => setAskingMismatch(false)}
+        />
       </div>
     );
   }
@@ -837,7 +952,13 @@ export function Trip() {
         <>
           {/* Once the trip is over, getting paid is the job in front of her. */}
           {booking.status === 'COMPLETED' && bookingId && (
-            <CollectPaymentCard bookingId={bookingId} onPaid={() => setPaid(true)} />
+            <CollectPaymentCard
+              bookingId={bookingId}
+              onPaid={(payment, justNow) => {
+                setPaid(true);
+                if (justNow) setPaidFlash(payment);
+              }}
+            />
           )}
 
           {/* Her rider asking to go somewhere else - a dialog while it
@@ -1085,6 +1206,15 @@ export function Trip() {
         error={cancelError}
         onConfirm={handleCancel}
         onCancel={() => setAskingWhy(false)}
+      />
+
+      {/* The fare has landed, while she was watching. */}
+      <PaymentSuccessFlash
+        open={paidFlash != null}
+        amount={paidFlash ? (paidFlash.driverPayout ?? paidFlash.amount) : null}
+        title={t('trip.paidFlash.title')}
+        message={t('trip.paidFlash.body', { name: rider?.firstName || t('trip.yourRider') })}
+        onDone={() => setPaidFlash(null)}
       />
     </div>
   );

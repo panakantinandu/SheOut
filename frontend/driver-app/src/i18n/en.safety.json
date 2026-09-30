@@ -23,5 +23,8 @@
     "call": "Call {{number}}",
     "imSafe": "I'm safe - go back to the chat",
     "privacyNote": "Never share OTPs, passwords or ID numbers here."
+  },
+  "riderCheck": {
+    "womenOnly": "SheOut is for women only. If the person here is a man, or not the rider shown, do not start the trip."
   }
 }

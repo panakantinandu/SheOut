@@ -152,6 +152,16 @@ sheout:
     # operations can stand behind today; lower it when that changes.
     target-turnaround-minutes: ${VERIFICATION_TARGET_TURNAROUND_MINUTES:240}
 
+  # A partner's start-of-shift selfie (and helmet photo on a bike), matched on
+  # her phone against the selfie she was verified with - see ShiftCheckService.
+  # Switch off only for a load test whose partners go online by script.
+  shift-check:
+    enabled: ${SHIFT_CHECK_ENABLED:true}
+    valid-hours: ${SHIFT_CHECK_VALID_HOURS:12}
+    # Face-descriptor distance at or under which the two selfies are one person.
+    match-threshold: ${SHIFT_CHECK_MATCH_THRESHOLD:0.55}
+    review-after-misses: ${SHIFT_CHECK_REVIEW_AFTER_MISSES:3}
+
   users:
     # Where the cancellation review line sits.
     #

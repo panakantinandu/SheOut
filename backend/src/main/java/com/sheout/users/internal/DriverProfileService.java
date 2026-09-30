@@ -2,6 +2,8 @@ package com.sheout.users.internal;
 
 import com.sheout.auth.AccountSummary;
 import com.sheout.auth.AuthApi;
+import com.sheout.driververification.ShiftCheckApi;
+import com.sheout.driververification.ShiftCheckState;
 import com.sheout.driververification.VerificationApi;
 import com.sheout.driververification.VerificationStatus;
 import com.sheout.driververification.VerificationSummary;
@@ -36,6 +38,7 @@ public class DriverProfileService implements DriverProfileApi {
     private final ServiceArea serviceArea;
     private final String verifiedDriverBypassPhone;
     private final DomainEventPublisher eventPublisher;
+    private final ShiftCheckApi shiftCheckApi;
 
     public DriverProfileService(DriverProfileRepository driverProfileRepository,
                                  AuthApi authApi,
@@ -43,10 +46,12 @@ public class DriverProfileService implements DriverProfileApi {
                                  DocumentStorage documentStorage,
                                  ServiceArea serviceArea,
                                  DomainEventPublisher eventPublisher,
+                                 ShiftCheckApi shiftCheckApi,
                                  // The partner verification bypass, only ever set with
                                  // DEV_MODE_ENABLED - see DevMode.
                                  DevMode devMode) {
         this.eventPublisher = eventPublisher;
+        this.shiftCheckApi = shiftCheckApi;
         this.driverProfileRepository = driverProfileRepository;
         this.authApi = authApi;
         this.verificationApi = verificationApi;
@@ -263,6 +268,21 @@ public class DriverProfileService implements DriverProfileApi {
         if (requested == OnlineStatus.ONLINE && profile.getDateOfBirth() == null) {
             return Result.failure(DriverProfileError.DATE_OF_BIRTH_REQUIRED);
         }
+        // Last, because it is the one she does every day: a selfie now, and
+        // on a two-wheeler a photo with her helmet on. Not bypassable, for
+        // the photo's reason - it needs nobody's approval. See ShiftCheckApi.
+        if (requested == OnlineStatus.ONLINE) {
+            ShiftCheckState shift = shiftCheckApi.stateFor(accountId);
+            if (shift.underReview()) {
+                return Result.failure(DriverProfileError.SHIFT_CHECK_UNDER_REVIEW);
+            }
+            if (!shift.valid()) {
+                return Result.failure(DriverProfileError.SHIFT_CHECK_REQUIRED);
+            }
+            if (shift.checkedAt() != null && needsHelmet(profile) && !shift.helmetPhotoOnFile()) {
+                return Result.failure(DriverProfileError.SHIFT_CHECK_REQUIRED);
+            }
+        }
 
         profile.setOnlineStatus(requested);
         driverProfileRepository.save(profile);
@@ -281,6 +301,32 @@ public class DriverProfileService implements DriverProfileApi {
     @Override
     public boolean isCurrentlyVerified(UUID accountId) {
         return isFullyVerified(accountId);
+    }
+
+    /** A rider on the back of a bike needs a helmet, and so does her partner. */
+    private static boolean needsHelmet(DriverProfileEntity profile) {
+        return profile.getVehicleType() == null || profile.getVehicleType() == VehicleType.BIKE;
+    }
+
+    /**
+     * Takes offline every partner whose start-of-shift check has lapsed -
+     * twelve hours on, or held for review. Going online asks for a new one,
+     * with the reason on the screen. See ShiftCheckExpirySweeper.
+     */
+    @Transactional
+    public int takeOfflineWithoutShiftCheck() {
+        int count = 0;
+        for (DriverProfileEntity profile : driverProfileRepository.findByOnlineStatus(OnlineStatus.ONLINE)) {
+            ShiftCheckState shift = shiftCheckApi.stateFor(profile.getAccountId());
+            if (shift.valid() && !shift.underReview()) {
+                continue;
+            }
+            profile.setOnlineStatus(OnlineStatus.OFFLINE);
+            driverProfileRepository.save(profile);
+            eventPublisher.publish(new DriverWentOffline(profile.getAccountId()));
+            count++;
+        }
+        return count;
     }
 
     private boolean isFullyVerified(UUID accountId) {
