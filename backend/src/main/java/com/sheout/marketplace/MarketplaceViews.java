@@ -38,7 +38,13 @@ public final class MarketplaceViews {
      * discount, optional, and above displayPrice when given.
      */
     public record ProductDetails(String title, String description, BigDecimal displayPrice, BigDecimal originalPrice,
-                                 boolean active) {
+                                 boolean active, ProductTerms terms) {
+
+        /** Without the practical terms: in stock, per piece, nothing else said. */
+        public ProductDetails(String title, String description, BigDecimal displayPrice, BigDecimal originalPrice,
+                              boolean active) {
+            this(title, description, displayPrice, originalPrice, active, ProductTerms.defaults());
+        }
     }
 
     // ------------------------------------------------------------ her own shop
@@ -47,7 +53,8 @@ public final class MarketplaceViews {
     }
 
     public record ProductView(UUID id, String code, String title, String description, BigDecimal displayPrice,
-                              BigDecimal originalPrice, boolean active, List<ProductImageView> images) {
+                              BigDecimal originalPrice, boolean active, List<ProductImageView> images,
+                              ProductTerms terms) {
     }
 
     /** Where her listing fee stands. status, method and paidAt are null until she has started paying. */
@@ -92,7 +99,9 @@ public final class MarketplaceViews {
     /** One product in the directory list. */
     public record ListingCard(UUID productId, String code, String title, BigDecimal displayPrice, BigDecimal originalPrice,
                               String imageUrl, UUID sellerId, String businessName, SellerCategory category,
-                              String customCategory, String area) {
+                              String customCategory, String area,
+                              /** So the grid can say "Out of stock" before anybody opens it. */
+                              ProductTerms.Availability availability) {
     }
 
     /**
@@ -129,7 +138,10 @@ public final class MarketplaceViews {
     public record ProductDetail(UUID productId, String code, String title, String description, BigDecimal displayPrice,
                                 BigDecimal originalPrice, List<String> imageUrls, UUID sellerId, String businessName,
                                 SellerCategory category, String customCategory, String area, String websiteUrl, String contactPhone,
-                                String whatsappNumber, List<ListingCard> moreFromSeller) {
+                                String whatsappNumber, List<ListingCard> moreFromSeller,
+                                ProductTerms terms,
+                                /** When she last changed it - "updated 3 days ago" says the stock line is fresh. */
+                                java.time.Instant updatedAt) {
     }
 
     // ------------------------------------------------------------ the console

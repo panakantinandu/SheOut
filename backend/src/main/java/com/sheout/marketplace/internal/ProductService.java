@@ -6,6 +6,7 @@ import com.sheout.marketplace.MarketplaceViews.DirectoryFilter;
 import com.sheout.marketplace.MarketplaceViews.ListingCard;
 import com.sheout.marketplace.MarketplaceViews.ProductDetail;
 import com.sheout.marketplace.MarketplaceViews.ProductDetails;
+import com.sheout.marketplace.ProductTerms;
 import com.sheout.marketplace.MarketplaceViews.SellerView;
 import com.sheout.marketplace.MarketplaceViews.SmartSearchResult;
 import com.sheout.marketplace.ProductApi;
@@ -173,7 +174,8 @@ public class ProductService implements ProductApi {
                 .toList();
         return Optional.of(new ProductDetail(product.getId(), product.getCode(), product.getTitle(), product.getDescription(),
                 product.getDisplayPrice(), product.getOriginalPrice(), photos, s.getId(), s.getBusinessName(), s.getCategory(),
-                s.getCustomCategory(), s.getArea(), s.getWebsiteUrl(), s.getContactPhone(), s.getWhatsappNumber(), views.cards(others, Map.of(s.getId(), s))));
+                s.getCustomCategory(), s.getArea(), s.getWebsiteUrl(), s.getContactPhone(), s.getWhatsappNumber(), views.cards(others, Map.of(s.getId(), s)),
+                product.getTerms(), product.getUpdatedAt()));
     }
 
     /** A code no other product has. Almost always the first one drawn; see ProductCodes. */
@@ -196,6 +198,48 @@ public class ProductService implements ProductApi {
         return details.originalPrice() == null || details.originalPrice().compareTo(details.displayPrice()) > 0;
     }
 
+    /**
+     * Her terms, tidied - or null when a number is out of range. A quantity
+     * belongs only to something in stock, and a stock of 0 is out of stock;
+     * "ready in" belongs only to made to order. Blank text is no text.
+     */
+    static ProductTerms normalise(ProductTerms terms) {
+        if (terms == null) {
+            return ProductTerms.defaults();
+        }
+        ProductTerms.Availability availability = terms.availability() == null ? ProductTerms.Availability.IN_STOCK : terms.availability();
+        Integer quantity = availability == ProductTerms.Availability.IN_STOCK ? terms.quantityAvailable() : null;
+        if (quantity != null && (quantity < 0 || quantity > 100_000)) return null;
+        if (quantity != null && quantity == 0) {
+            availability = ProductTerms.Availability.OUT_OF_STOCK;
+            quantity = null;
+        }
+        Integer ready = availability == ProductTerms.Availability.MADE_TO_ORDER ? terms.readyInDays() : null;
+        if (ready != null && (ready < 1 || ready > 90)) return null;
+        Integer min = terms.minOrderQuantity();
+        if (min != null && (min < 1 || min > 10_000)) return null;
+        if (min != null && min == 1) min = null;
+        String options = blankToNull(terms.options());
+        if (options != null) {
+            // "S, M ,L,," reads as S · M · L.
+            options = java.util.Arrays.stream(options.split(","))
+                    .map(String::trim).filter(o -> !o.isEmpty()).distinct()
+                    .collect(Collectors.joining(", "));
+            if (options.isEmpty()) options = null;
+            else if (options.length() > 200) return null;
+        }
+        String note = blankToNull(terms.deliveryNote());
+        if (note != null && note.length() > 300) return null;
+        return new ProductTerms(availability, quantity, ready,
+                terms.priceUnit() == null ? ProductTerms.PriceUnit.PIECE : terms.priceUnit(),
+                min, options, terms.fulfilment() == null ? java.util.Set.of() : java.util.Set.copyOf(terms.fulfilment()),
+                note, terms.returnPolicy());
+    }
+
+    private static String blankToNull(String text) {
+        return text == null || text.isBlank() ? null : text.trim();
+    }
+
     private Map<UUID, SellerProfileEntity> sellersOf(List<ProductEntity> list) {
         List<UUID> ids = list.stream().map(ProductEntity::getSellerId).distinct().toList();
         return sellers.findAllById(ids).stream().collect(Collectors.toMap(SellerProfileEntity::getId, Function.identity()));
@@ -213,8 +257,14 @@ public class ProductService implements ProductApi {
             if (!discountValid(details)) {
                 return Result.failure(MarketplaceError.INVALID_ORIGINAL_PRICE);
             }
-            products.save(new ProductEntity(seller.getId(), freshCode(), details.title().trim(), details.description().trim(),
-                    details.displayPrice(), details.originalPrice(), details.active()));
+            ProductTerms terms = normalise(details.terms());
+            if (terms == null) {
+                return Result.failure(MarketplaceError.INVALID_PRODUCT_TERMS);
+            }
+            ProductEntity created = new ProductEntity(seller.getId(), freshCode(), details.title().trim(), details.description().trim(),
+                    details.displayPrice(), details.originalPrice(), details.active());
+            created.setTerms(terms);
+            products.save(created);
             return Result.success(null);
         });
     }
@@ -225,9 +275,14 @@ public class ProductService implements ProductApi {
         if (!discountValid(details)) {
             return Result.failure(MarketplaceError.INVALID_ORIGINAL_PRICE);
         }
+        ProductTerms terms = normalise(details.terms());
+        if (terms == null) {
+            return Result.failure(MarketplaceError.INVALID_PRODUCT_TERMS);
+        }
         return withEditableShop(accountId, seller -> ownProduct(seller, productId).map(product -> {
             product.update(details.title().trim(), details.description().trim(), details.displayPrice(), details.originalPrice(),
                     details.active());
+            product.setTerms(terms);
             products.save(product);
             return Result.<Void, MarketplaceError>success(null);
         }).orElse(Result.failure(MarketplaceError.PRODUCT_NOT_FOUND)));

@@ -128,7 +128,8 @@ class ShopViews {
                 p.getId(), p.getCode(), p.getTitle(), p.getDescription(), p.getDisplayPrice(), p.getOriginalPrice(), p.isActive(),
                 byProduct.getOrDefault(p.getId(), List.of()).stream()
                         .map(i -> new ProductImageView(i.getId(), url(i.getStorageKey())))
-                        .toList())).toList();
+                        .toList(),
+                p.getTerms())).toList();
     }
 
     List<ListingCard> cards(List<ProductEntity> list, Map<UUID, SellerProfileEntity> sellers) {
@@ -140,7 +141,8 @@ class ShopViews {
                     List<ProductImageEntity> photos = byProduct.getOrDefault(p.getId(), List.of());
                     return new ListingCard(p.getId(), p.getCode(), p.getTitle(), p.getDisplayPrice(), p.getOriginalPrice(),
                             photos.isEmpty() ? null : url(photos.get(0).getStorageKey()),
-                            s.getId(), s.getBusinessName(), s.getCategory(), s.getCustomCategory(), s.getArea());
+                            s.getId(), s.getBusinessName(), s.getCategory(), s.getCustomCategory(), s.getArea(),
+                            p.getTerms().availability());
                 }).toList();
     }
 

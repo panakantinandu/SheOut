@@ -297,6 +297,32 @@ export type SellerCategory = 'FASHION_SAREE' | 'BEAUTY_SERVICES' | 'TAILORING' |
 
 export type SellerStatus = 'DRAFT' | 'SUBMITTED_FOR_REVIEW' | 'APPROVED_AWAITING_PAYMENT' | 'ACTIVE' | 'REJECTED' | 'SUSPENDED';
 
+export type ProductAvailability = 'IN_STOCK' | 'MADE_TO_ORDER' | 'OUT_OF_STOCK';
+export type PriceUnit = 'PIECE' | 'SET' | 'PAIR' | 'METRE' | 'KG' | 'HOUR' | 'SESSION';
+export type Fulfilment = 'HOME_DELIVERY' | 'PICKUP' | 'AT_YOUR_HOME' | 'AT_SELLER_PLACE';
+export type ReturnPolicy = 'NO_RETURNS' | 'EXCHANGE_ONLY' | 'RETURNS_ACCEPTED';
+
+/**
+ * What a buyer asks before she calls - the seller's own statement, see the
+ * backend's ProductTerms. Absent on a product saved before these existed,
+ * which reads as in stock, per piece.
+ */
+export interface ProductTerms {
+  availability: ProductAvailability;
+  /** How many she has, when in stock and she chose to say. */
+  quantityAvailable: number | null;
+  /** For made to order: days until ready. */
+  readyInDays: number | null;
+  priceUnit: PriceUnit;
+  /** The fewest she sells at once; null for no minimum. */
+  minOrderQuantity: number | null;
+  /** Sizes, colours or variants, comma separated. */
+  options: string | null;
+  fulfilment: Fulfilment[];
+  deliveryNote: string | null;
+  returnPolicy: ReturnPolicy | null;
+}
+
 /** One product in the directory list. */
 export interface ListingCard {
   productId: string;
@@ -314,6 +340,8 @@ export interface ListingCard {
   customCategory: string | null;
   /** The area the seller works from, in her words - null when she has not said. */
   area: string | null;
+  /** So the grid can say "Out of stock" before anybody opens it. */
+  availability?: ProductAvailability;
 }
 
 /**
@@ -356,6 +384,9 @@ export interface ProductDetail {
   contactPhone: string;
   whatsappNumber: string | null;
   moreFromSeller: ListingCard[];
+  terms?: ProductTerms;
+  /** When the seller last changed it. */
+  updatedAt?: string;
 }
 
 export interface SellerProduct {
@@ -367,6 +398,7 @@ export interface SellerProduct {
   originalPrice: number | null;
   active: boolean;
   images: { id: string; url: string | null }[];
+  terms?: ProductTerms;
 }
 
 export interface ListingFee {
@@ -420,6 +452,15 @@ export interface ProductInput {
   displayPrice: number;
   originalPrice?: number | null;
   active: boolean;
+  availability?: ProductAvailability;
+  quantityAvailable?: number | null;
+  readyInDays?: number | null;
+  priceUnit?: PriceUnit;
+  minOrderQuantity?: number | null;
+  options?: string | null;
+  fulfilment?: Fulfilment[];
+  deliveryNote?: string | null;
+  returnPolicy?: ReturnPolicy | null;
 }
 
 /**

@@ -1,4 +1,4 @@
-import { Copy, ExternalLink, Globe, Info, MessageCircle, Phone, Store } from 'lucide-react';
+import { Clock, Copy, ExternalLink, Globe, Info, MessageCircle, Phone, Share2, Store } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Card, ListEmptyState, SkeletonCard, TopHeader, showToast, useTranslation } from '@sheout/design-system';
@@ -8,6 +8,7 @@ import { PriceTag } from '../components/PriceTag';
 import { categoryName, contactLink, websiteLabel } from '../lib/seller';
 import { ListingTile } from './Seller';
 import { useGoBack } from '../lib/useGoBack';
+import { AvailabilityPill, DEFAULT_TERMS, ProductTermsCard, updatedText } from '../components/marketplace/ProductTermsView';
 
 /**
  * One product in the directory: its photos, price and description, who is
@@ -46,6 +47,22 @@ export function SellerProduct() {
     ? contactLink(product, t('seller.product.whatsappMessage', { title: product.title, code: product.code }))
     : null;
 
+  /** Through the phone's share sheet - to a sister, a friend, a family group. */
+  async function share(p: ProductDetail) {
+    const link = `${window.location.origin}/seller/products/${p.productId}`;
+    const text = t('seller.terms.shareText', { title: p.title, code: p.code });
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: p.title, text, url: link });
+        return;
+      }
+      await navigator.clipboard.writeText(`${text} ${link}`);
+      showToast(t('seller.terms.shareCopied'));
+    } catch {
+      // Closed the share sheet, or the clipboard is blocked: nothing to say.
+    }
+  }
+
   async function copyCode(code: string) {
     try {
       await navigator.clipboard.writeText(code);
@@ -70,7 +87,9 @@ export function SellerProduct() {
         />
       )}
 
-      {product && contact && (
+      {product && contact && (() => {
+        const terms = product.terms ?? DEFAULT_TERMS;
+        return (
         <>
           {product.imageUrls.length > 0 && (
             <div
@@ -92,7 +111,18 @@ export function SellerProduct() {
           <div className="space-y-1">
             <h1 className="font-heading text-title text-text-primary" data-testid="product-title">{product.title}</h1>
             <PriceTag price={product.displayPrice} originalPrice={product.originalPrice} size="lg" />
+            {/* What the price is for - a sari, a set, a metre, a mehandi session. */}
+            <p className="-mt-1 text-sm font-medium text-text-secondary" data-testid="product-unit">{t(`seller.terms.unit.${terms.priceUnit}`)}</p>
             <p className="text-caption text-text-secondary">{t('seller.product.priceNote')}</p>
+            <div className="flex flex-wrap items-center gap-2 pt-2">
+              <AvailabilityPill terms={terms} />
+              {product.updatedAt && (
+                <span className="inline-flex items-center gap-1 text-caption text-text-secondary" data-testid="product-updated">
+                  <Clock className="h-3.5 w-3.5" aria-hidden="true" />
+                  {updatedText(product.updatedAt, t)}
+                </span>
+              )}
+            </div>
             {/* The code she quotes to the seller, so both know exactly which product. */}
             <button
               type="button"
@@ -104,7 +134,19 @@ export function SellerProduct() {
               {t('seller.product.code')} <span className="font-mono font-bold tracking-wider">{product.code}</span>
               <Copy className="h-4 w-4 text-text-secondary" aria-hidden="true" />
             </button>
+            <button
+              type="button"
+              onClick={() => share(product)}
+              className="ml-2 mt-2 inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1.5 text-sm font-semibold text-primary"
+              data-testid="product-share"
+            >
+              <Share2 className="h-4 w-4" aria-hidden="true" />
+              {t('seller.terms.share')}
+            </button>
           </div>
+
+          {/* Sizes, minimum, how it reaches her, returns - what she would otherwise have to call to ask. */}
+          <ProductTermsCard terms={terms} />
 
           <Card className="space-y-3">
             <div className="flex items-center gap-3">
@@ -135,7 +177,16 @@ export function SellerProduct() {
             )}
           </Card>
 
-          <p className="whitespace-pre-wrap text-body text-text-primary">{product.description}</p>
+          <section className="space-y-1.5">
+            <h2 className="font-heading text-card-title text-text-primary">{t('seller.terms.about')}</h2>
+            <p className="whitespace-pre-wrap text-body text-text-primary">{product.description}</p>
+          </section>
+
+          {terms.availability === 'OUT_OF_STOCK' && (
+            <p className="rounded-input bg-background px-4 py-3 text-sm text-text-primary" data-testid="out-of-stock-note">
+              {t('seller.terms.outOfStockNote')}
+            </p>
+          )}
 
           {/* The notice every product carries: the sale is theirs, not SheOut's. */}
           <div className="flex gap-3 rounded-input bg-accent-orange-tint px-4 py-3" role="note" data-testid="direct-sale-notice">
@@ -169,7 +220,8 @@ export function SellerProduct() {
             </section>
           )}
         </>
-      )}
+        );
+      })()}
     </div>
   );
 }

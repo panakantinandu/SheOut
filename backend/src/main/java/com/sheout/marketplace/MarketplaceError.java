@@ -12,6 +12,8 @@ public enum MarketplaceError {
     CUSTOM_CATEGORY_REQUIRED,
     /** An original price that is not above the price - there is no discount to show. */
     INVALID_ORIGINAL_PRICE,
+    /** A quantity, "ready in" days or minimum out of range, or text too long. */
+    INVALID_PRODUCT_TERMS,
     /** Her shop cannot be changed while it is under review, awaiting payment or suspended. */
     NOT_EDITABLE,
     /** Only a draft or a rejected application can be sent for review. */

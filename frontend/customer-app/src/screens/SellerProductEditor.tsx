@@ -1,9 +1,9 @@
 import { ImagePlus, Trash2, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { Button, Card, ConfirmDialog, SkeletonCard, TextField, TopHeader, showToast, useTranslation } from '@sheout/design-system';
+import { Button, Card, ConfirmDialog, SelectField, SkeletonCard, TextField, TopHeader, showToast, useTranslation } from '@sheout/design-system';
 import { marketplaceApi } from '../api/client';
-import type { SellerShop } from '../api/types';
+import type { Fulfilment, PriceUnit, ProductAvailability, ReturnPolicy, SellerShop } from '../api/types';
 import { apiErrorText } from '../lib/apiErrors';
 import { discountPercent } from '../lib/seller';
 
@@ -33,6 +33,16 @@ export function SellerProductEditor() {
   /** The price before a discount - optional, and only if she genuinely charged it before. */
   const [originalPrice, setOriginalPrice] = useState('');
   const [active, setActive] = useState(true);
+  // What a buyer asks before she calls - see ProductTerms.
+  const [availability, setAvailability] = useState<ProductAvailability>('IN_STOCK');
+  const [quantity, setQuantity] = useState('');
+  const [readyIn, setReadyIn] = useState('');
+  const [priceUnit, setPriceUnit] = useState<PriceUnit>('PIECE');
+  const [minOrder, setMinOrder] = useState('');
+  const [options, setOptions] = useState('');
+  const [fulfilment, setFulfilment] = useState<Fulfilment[]>([]);
+  const [deliveryNote, setDeliveryNote] = useState('');
+  const [returnPolicy, setReturnPolicy] = useState<ReturnPolicy | ''>('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showErrors, setShowErrors] = useState(false);
@@ -57,6 +67,17 @@ export function SellerProductEditor() {
           setPrice(String(p.displayPrice));
           setOriginalPrice(p.originalPrice != null ? String(p.originalPrice) : '');
           setActive(p.active);
+          if (p.terms) {
+            setAvailability(p.terms.availability);
+            setQuantity(p.terms.quantityAvailable != null ? String(p.terms.quantityAvailable) : '');
+            setReadyIn(p.terms.readyInDays != null ? String(p.terms.readyInDays) : '');
+            setPriceUnit(p.terms.priceUnit);
+            setMinOrder(p.terms.minOrderQuantity != null ? String(p.terms.minOrderQuantity) : '');
+            setOptions(p.terms.options ?? '');
+            setFulfilment(p.terms.fulfilment);
+            setDeliveryNote(p.terms.deliveryNote ?? '');
+            setReturnPolicy(p.terms.returnPolicy ?? '');
+          }
         }
       })
       .catch(() => setError(t('seller.shop.loadError')));
@@ -67,7 +88,11 @@ export function SellerProductEditor() {
   const originalNumber = Number(originalPrice);
   const originalOk = originalPrice.trim() === '' || (Number.isFinite(originalNumber) && priceOk && originalNumber > priceNumber && originalNumber <= 9999999);
   const off = originalPrice.trim() && originalOk ? discountPercent(priceNumber, originalNumber) : null;
-  const valid = title.trim().length > 0 && description.trim().length > 0 && priceOk && originalOk;
+  const whole = (text: string, min: number, max: number) => text.trim() === '' || (/^\d+$/.test(text.trim()) && Number(text) >= min && Number(text) <= max);
+  const quantityOk = availability !== 'IN_STOCK' || whole(quantity, 0, 100000);
+  const readyOk = availability !== 'MADE_TO_ORDER' || whole(readyIn, 1, 90);
+  const minOk = whole(minOrder, 1, 10000);
+  const valid = title.trim().length > 0 && description.trim().length > 0 && priceOk && originalOk && quantityOk && readyOk && minOk;
 
   async function save() {
     setShowErrors(true);
@@ -80,6 +105,15 @@ export function SellerProductEditor() {
       displayPrice: priceNumber,
       originalPrice: originalPrice.trim() ? originalNumber : null,
       active,
+      availability,
+      quantityAvailable: availability === 'IN_STOCK' && quantity.trim() ? Number(quantity) : null,
+      readyInDays: availability === 'MADE_TO_ORDER' && readyIn.trim() ? Number(readyIn) : null,
+      priceUnit,
+      minOrderQuantity: minOrder.trim() ? Number(minOrder) : null,
+      options: options.trim() || null,
+      fulfilment,
+      deliveryNote: deliveryNote.trim() || null,
+      returnPolicy: returnPolicy || null,
     };
     try {
       if (isNew) {
@@ -195,6 +229,13 @@ export function SellerProductEditor() {
               name="displayPrice"
             />
             <p className="-mt-2 text-caption text-text-secondary">{t('seller.editor.priceHelp')}</p>
+            <SelectField
+              label={t('seller.editor.unit')}
+              value={priceUnit}
+              onChange={(e) => setPriceUnit(e.target.value as PriceUnit)}
+              options={(['PIECE', 'SET', 'PAIR', 'METRE', 'KG', 'HOUR', 'SESSION'] as PriceUnit[]).map((u) => ({ value: u, label: t(`seller.terms.unit.${u}`) }))}
+              name="priceUnit"
+            />
             <TextField
               label={t('seller.editor.originalPrice')}
               value={originalPrice}
@@ -213,6 +254,112 @@ export function SellerProductEditor() {
             <p className="-mt-1 rounded-input bg-accent-orange-tint px-3 py-2 text-caption text-text-primary" role="note" data-testid="genuine-price-note">
               {t('seller.legal.genuinePrice')}
             </p>
+            {/* Stock and ordering: can she have it, how many, how soon, the minimum, the sizes. */}
+            <div className="space-y-3 border-t border-border pt-4" data-testid="editor-stock">
+              <p className="font-heading text-card-title text-text-primary">{t('seller.editor.stockTitle')}</p>
+              <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label={t('seller.editor.availability')}>
+                {(['IN_STOCK', 'MADE_TO_ORDER', 'OUT_OF_STOCK'] as ProductAvailability[]).map((a) => (
+                  <button
+                    key={a}
+                    type="button"
+                    role="radio"
+                    aria-checked={availability === a}
+                    onClick={() => setAvailability(a)}
+                    className={`rounded-input border px-2 py-2.5 text-sm font-semibold leading-tight transition-colors ${availability === a ? 'border-primary bg-primary-light text-primary' : 'border-border bg-surface text-text-secondary'}`}
+                    data-testid={`availability-${a}`}
+                  >
+                    {t(`seller.terms.availability.${a}`)}
+                  </button>
+                ))}
+              </div>
+              {availability === 'IN_STOCK' && (
+                <TextField
+                  label={t('seller.editor.quantity')}
+                  value={quantity}
+                  inputMode="numeric"
+                  onChange={(e) => setQuantity(e.target.value.replace(/\D/g, ''))}
+                  placeholder={t('seller.editor.quantityPlaceholder')}
+                  error={showErrors && !quantityOk ? t('seller.editor.numberInvalid', { min: 0, max: 100000 }) : undefined}
+                  name="quantityAvailable"
+                />
+              )}
+              {availability === 'IN_STOCK' && <p className="-mt-2 text-caption text-text-secondary">{t('seller.editor.quantityHelp')}</p>}
+              {availability === 'MADE_TO_ORDER' && (
+                <TextField
+                  label={t('seller.editor.readyIn')}
+                  value={readyIn}
+                  inputMode="numeric"
+                  onChange={(e) => setReadyIn(e.target.value.replace(/\D/g, ''))}
+                  placeholder="5"
+                  error={showErrors && !readyOk ? t('seller.editor.numberInvalid', { min: 1, max: 90 }) : undefined}
+                  name="readyInDays"
+                />
+              )}
+              <TextField
+                label={t('seller.editor.minOrder')}
+                value={minOrder}
+                inputMode="numeric"
+                onChange={(e) => setMinOrder(e.target.value.replace(/\D/g, ''))}
+                placeholder={t('seller.editor.minOrderPlaceholder')}
+                error={showErrors && !minOk ? t('seller.editor.numberInvalid', { min: 1, max: 10000 }) : undefined}
+                name="minOrderQuantity"
+              />
+              <TextField
+                label={t('seller.editor.options')}
+                value={options}
+                maxLength={200}
+                onChange={(e) => setOptions(e.target.value)}
+                placeholder={t('seller.editor.optionsPlaceholder')}
+                name="options"
+              />
+            </div>
+
+            {/* How it reaches the buyer, and whether it can go back. */}
+            <div className="space-y-3 border-t border-border pt-4" data-testid="editor-delivery">
+              <p className="font-heading text-card-title text-text-primary">{t('seller.editor.deliveryTitle')}</p>
+              <p className="-mt-2 text-sm text-text-secondary">{t('seller.editor.fulfilment')}</p>
+              <div className="grid grid-cols-2 gap-2">
+                {(['HOME_DELIVERY', 'PICKUP', 'AT_YOUR_HOME', 'AT_SELLER_PLACE'] as Fulfilment[]).map((way) => {
+                  const on = fulfilment.includes(way);
+                  return (
+                    <label
+                      key={way}
+                      className={`flex cursor-pointer items-center gap-2 rounded-input border px-3 py-2.5 text-sm transition-colors ${on ? 'border-primary bg-primary-light text-primary' : 'border-border bg-surface text-text-primary'}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={on}
+                        onChange={() => setFulfilment((current) => (on ? current.filter((x) => x !== way) : [...current, way]))}
+                        className="h-4 w-4 accent-primary"
+                        data-testid={`fulfilment-${way}`}
+                      />
+                      {t(`seller.terms.fulfilment.${way}`)}
+                    </label>
+                  );
+                })}
+              </div>
+              <label className="block">
+                <span className="mb-1 block text-sm font-medium text-text-primary">{t('seller.editor.deliveryNote')}</span>
+                <textarea
+                  value={deliveryNote}
+                  maxLength={300}
+                  rows={2}
+                  onChange={(e) => setDeliveryNote(e.target.value)}
+                  placeholder={t('seller.editor.deliveryNotePlaceholder')}
+                  className="w-full rounded-input border border-border bg-surface px-4 py-3 text-text-primary placeholder:text-text-secondary"
+                  name="deliveryNote"
+                />
+              </label>
+              <SelectField
+                label={t('seller.terms.returnsTitle')}
+                value={returnPolicy}
+                onChange={(e) => setReturnPolicy(e.target.value as ReturnPolicy | '')}
+                placeholder={t('seller.editor.returnsNotSaid')}
+                options={(['NO_RETURNS', 'EXCHANGE_ONLY', 'RETURNS_ACCEPTED'] as ReturnPolicy[]).map((r) => ({ value: r, label: t(`seller.terms.returns.${r}`) }))}
+                name="returnPolicy"
+              />
+            </div>
+
             <label className="flex cursor-pointer items-start gap-3 text-sm text-text-primary">
               <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} className="mt-0.5 h-5 w-5 accent-primary" />
               <span>

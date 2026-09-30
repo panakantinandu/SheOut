@@ -1,4 +1,5 @@
 import { Check, ImageOff, MapPin, Sparkles, Store, X } from 'lucide-react';
+import { AvailabilityBadge } from '../components/marketplace/ProductTermsView';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
@@ -587,9 +588,10 @@ export function ListingTile({ item, onOpen, index = 0 }: { item: ListingCard; on
       className="flex flex-col overflow-hidden rounded-card border border-border bg-surface text-left shadow-card transition-transform duration-100 motion-safe:animate-fade-slide-in motion-safe:active:scale-[0.98]"
       data-testid="listing-tile"
     >
-      <div className="flex aspect-square w-full items-center justify-center bg-primary-light">
+      <div className="relative flex aspect-square w-full items-center justify-center bg-primary-light">
+        <AvailabilityBadge availability={item.availability} />
         {item.imageUrl ? (
-          <img src={item.imageUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
+          <img src={item.imageUrl} alt="" loading="lazy" className={`h-full w-full object-cover ${item.availability === 'OUT_OF_STOCK' ? 'opacity-60 grayscale-[35%]' : ''}`} />
         ) : (
           <ImageOff className="h-8 w-8 text-text-secondary" aria-hidden="true" />
         )}

@@ -532,7 +532,24 @@
       "originalPrice": "Original price (₹, optional)",
       "originalPricePlaceholder": "Only if you really sold it for more",
       "originalPriceInvalid": "The original price must be more than the price.",
-      "discountPreview": "Customers will see {{percent}}% off"
+      "discountPreview": "Customers will see {{percent}}% off",
+      "unit": "Price is per",
+      "stockTitle": "Stock and ordering",
+      "availability": "Availability",
+      "quantity": "How many do you have? (optional)",
+      "quantityPlaceholder": "e.g. 10",
+      "quantityHelp": "Buyers see \"Only 3 left\" when 5 or fewer are left. Enter 0 to show Out of stock.",
+      "readyIn": "Ready in how many days?",
+      "minOrder": "Minimum order (optional)",
+      "minOrderPlaceholder": "e.g. 10 for return gifts",
+      "options": "Sizes or colours (optional)",
+      "optionsPlaceholder": "e.g. S, M, L or Red, Green, Blue",
+      "deliveryTitle": "Delivery and returns",
+      "fulfilment": "How does the buyer get it? Choose all that apply.",
+      "deliveryNote": "Delivery details (optional)",
+      "deliveryNotePlaceholder": "e.g. Free delivery in Kukatpally, ₹50 elsewhere in Hyderabad",
+      "returnsNotSaid": "Not said",
+      "numberInvalid": "Enter a whole number from {{min}} to {{max}}."
     },
     "browse": {
       "categories": "Category",
@@ -669,6 +686,68 @@
         "ask": "Ask in your own words"
       },
       "heroMore": "Sarees, mehandi, gifts and more"
+    },
+    "terms": {
+      "title": "Product details",
+      "about": "About this product",
+      "availability": {
+        "IN_STOCK": "In stock",
+        "MADE_TO_ORDER": "Made to order",
+        "OUT_OF_STOCK": "Out of stock"
+      },
+      "onlyLeft_one": "Only 1 left",
+      "onlyLeft_other": "Only {{count}} left",
+      "inStockCount_one": "In stock · 1 available",
+      "inStockCount_other": "In stock · {{count}} available",
+      "readyIn_one": "Made to order · ready in 1 day",
+      "readyIn_other": "Made to order · ready in {{count}} days",
+      "unit": {
+        "PIECE": "per piece",
+        "SET": "per set",
+        "PAIR": "per pair",
+        "METRE": "per metre",
+        "KG": "per kg",
+        "HOUR": "per hour",
+        "SESSION": "per session"
+      },
+      "unitName": {
+        "PIECE": "Pieces",
+        "SET": "Sets",
+        "PAIR": "Pairs",
+        "METRE": "Metres",
+        "KG": "Kg",
+        "HOUR": "Hours",
+        "SESSION": "Sessions"
+      },
+      "options": "Available in",
+      "minOrder": "Minimum order",
+      "minOrderValue": "{{count}} {{unit}}",
+      "readyTitle": "Ready in",
+      "readyValue_one": "1 day after you order",
+      "readyValue_other": "{{count}} days after you order",
+      "fulfilmentTitle": "How you get it",
+      "fulfilment": {
+        "HOME_DELIVERY": "Home delivery",
+        "PICKUP": "Pickup from seller",
+        "AT_YOUR_HOME": "At your home",
+        "AT_SELLER_PLACE": "At seller's place"
+      },
+      "deliveryTitle": "Delivery",
+      "returnsTitle": "Returns",
+      "returns": {
+        "NO_RETURNS": "No returns",
+        "EXCHANGE_ONLY": "Exchange only",
+        "RETURNS_ACCEPTED": "Returns accepted"
+      },
+      "updatedToday": "Updated today",
+      "updatedYesterday": "Updated yesterday",
+      "updatedDays_one": "Updated 1 day ago",
+      "updatedDays_other": "Updated {{count}} days ago",
+      "updatedOn": "Updated {{date}}",
+      "share": "Share",
+      "shareText": "{{title}} (code {{code}}) on SheOut Marketplace",
+      "shareCopied": "Link copied",
+      "outOfStockNote": "Out of stock right now. You can still ask the seller when it will be back."
     }
   },
   "refer": {
@@ -751,7 +830,8 @@
     "SELLER_IMAGE_LIMIT_REACHED": "Your shop has used all its photos. Remove one to add another.",
     "UNSUPPORTED_PHOTO_TYPE": "That file is not a photo. Choose a JPEG, PNG or WebP photo.",
     "PHOTO_TOO_LARGE": "That photo is too large. Choose one under 10 MB.",
-    "ALREADY_PAID": "Your listing fee is already paid."
+    "ALREADY_PAID": "Your listing fee is already paid.",
+    "INVALID_PRODUCT_TERMS": "Check the stock, ready-in days and minimum order."
   },
   "picker": {
     "noAddress": "No address found at that point. Move the pin somewhere closer to a road or landmark.",

@@ -532,7 +532,24 @@
       "originalPrice": "असली कीमत (₹, वैकल्पिक)",
       "originalPricePlaceholder": "सिर्फ़ तभी, जब सच में इससे ज़्यादा में बेचा हो",
       "originalPriceInvalid": "असली कीमत, कीमत से ज़्यादा होनी चाहिए।",
-      "discountPreview": "ग्राहकों को {{percent}}% छूट दिखेगी"
+      "discountPreview": "ग्राहकों को {{percent}}% छूट दिखेगी",
+      "unit": "कीमत किसके लिए है",
+      "stockTitle": "स्टॉक और ऑर्डर",
+      "availability": "उपलब्धता",
+      "quantity": "आपके पास कितने हैं? (वैकल्पिक)",
+      "quantityPlaceholder": "जैसे 10",
+      "quantityHelp": "5 या कम बचने पर खरीदारों को \"सिर्फ़ 3 बचे हैं\" दिखता है। स्टॉक खत्म दिखाने के लिए 0 डालें।",
+      "readyIn": "कितने दिनों में तैयार होगा?",
+      "minOrder": "न्यूनतम ऑर्डर (वैकल्पिक)",
+      "minOrderPlaceholder": "जैसे रिटर्न गिफ़्ट के लिए 10",
+      "options": "साइज़ या रंग (वैकल्पिक)",
+      "optionsPlaceholder": "जैसे S, M, L या लाल, हरा, नीला",
+      "deliveryTitle": "डिलीवरी और वापसी",
+      "fulfilment": "खरीदार को यह कैसे मिलेगा? जो भी लागू हों, चुनें।",
+      "deliveryNote": "डिलीवरी की जानकारी (वैकल्पिक)",
+      "deliveryNotePlaceholder": "जैसे कुकटपल्ली में मुफ़्त डिलीवरी, हैदराबाद में बाकी जगह ₹50",
+      "returnsNotSaid": "नहीं बताया",
+      "numberInvalid": "{{min}} से {{max}} तक पूरी संख्या डालें।"
     },
     "browse": {
       "categories": "श्रेणी",
@@ -669,6 +686,68 @@
         "ask": "अपने शब्दों में पूछें"
       },
       "heroMore": "साड़ी, मेहंदी, तोहफ़े और भी बहुत कुछ"
+    },
+    "terms": {
+      "title": "उत्पाद की जानकारी",
+      "about": "इस उत्पाद के बारे में",
+      "availability": {
+        "IN_STOCK": "स्टॉक में",
+        "MADE_TO_ORDER": "ऑर्डर पर बनता है",
+        "OUT_OF_STOCK": "स्टॉक खत्म"
+      },
+      "onlyLeft_one": "सिर्फ़ 1 बचा है",
+      "onlyLeft_other": "सिर्फ़ {{count}} बचे हैं",
+      "inStockCount_one": "स्टॉक में · 1 उपलब्ध",
+      "inStockCount_other": "स्टॉक में · {{count}} उपलब्ध",
+      "readyIn_one": "ऑर्डर पर बनता है · 1 दिन में तैयार",
+      "readyIn_other": "ऑर्डर पर बनता है · {{count}} दिनों में तैयार",
+      "unit": {
+        "PIECE": "प्रति पीस",
+        "SET": "प्रति सेट",
+        "PAIR": "प्रति जोड़ी",
+        "METRE": "प्रति मीटर",
+        "KG": "प्रति किलो",
+        "HOUR": "प्रति घंटा",
+        "SESSION": "प्रति सेशन"
+      },
+      "unitName": {
+        "PIECE": "पीस",
+        "SET": "सेट",
+        "PAIR": "जोड़ी",
+        "METRE": "मीटर",
+        "KG": "किलो",
+        "HOUR": "घंटे",
+        "SESSION": "सेशन"
+      },
+      "options": "उपलब्ध विकल्प",
+      "minOrder": "न्यूनतम ऑर्डर",
+      "minOrderValue": "{{count}} {{unit}}",
+      "readyTitle": "तैयार होने में",
+      "readyValue_one": "ऑर्डर के 1 दिन बाद",
+      "readyValue_other": "ऑर्डर के {{count}} दिन बाद",
+      "fulfilmentTitle": "आपको कैसे मिलेगा",
+      "fulfilment": {
+        "HOME_DELIVERY": "होम डिलीवरी",
+        "PICKUP": "विक्रेता से पिकअप",
+        "AT_YOUR_HOME": "आपके घर पर",
+        "AT_SELLER_PLACE": "विक्रेता की जगह पर"
+      },
+      "deliveryTitle": "डिलीवरी",
+      "returnsTitle": "वापसी",
+      "returns": {
+        "NO_RETURNS": "वापसी नहीं",
+        "EXCHANGE_ONLY": "सिर्फ़ बदलाव",
+        "RETURNS_ACCEPTED": "वापसी स्वीकार"
+      },
+      "updatedToday": "आज अपडेट हुआ",
+      "updatedYesterday": "कल अपडेट हुआ",
+      "updatedDays_one": "1 दिन पहले अपडेट हुआ",
+      "updatedDays_other": "{{count}} दिन पहले अपडेट हुआ",
+      "updatedOn": "{{date}} को अपडेट हुआ",
+      "share": "शेयर करें",
+      "shareText": "{{title}} (कोड {{code}}) SheOut मार्केटप्लेस पर",
+      "shareCopied": "लिंक कॉपी हो गया",
+      "outOfStockNote": "अभी स्टॉक खत्म है। आप विक्रेता से पूछ सकती हैं कि यह कब वापस आएगा।"
     }
   },
   "refer": {
@@ -751,7 +830,8 @@
     "SELLER_IMAGE_LIMIT_REACHED": "आपकी दुकान की सभी फ़ोटो इस्तेमाल हो चुकी हैं। नई जोड़ने के लिए एक हटाएँ।",
     "UNSUPPORTED_PHOTO_TYPE": "यह फ़ाइल फ़ोटो नहीं है। JPEG, PNG या WebP फ़ोटो चुनें।",
     "PHOTO_TOO_LARGE": "यह फ़ोटो बहुत बड़ी है। 10 MB से छोटी फ़ोटो चुनें।",
-    "ALREADY_PAID": "आपकी लिस्टिंग फ़ीस पहले ही दी जा चुकी है।"
+    "ALREADY_PAID": "आपकी लिस्टिंग फ़ीस पहले ही दी जा चुकी है।",
+    "INVALID_PRODUCT_TERMS": "स्टॉक, तैयार होने के दिन और न्यूनतम ऑर्डर जाँचें।"
   },
   "picker": {
     "noAddress": "उस जगह पर कोई पता नहीं मिला। पिन को किसी सड़क या लैंडमार्क के पास ले जाएँ।",

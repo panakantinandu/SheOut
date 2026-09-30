@@ -1,8 +1,11 @@
 package com.sheout.marketplace.internal;
 
 import com.sheout.sharedkernel.BaseEntity;
+import com.sheout.marketplace.ProductTerms;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 
 import java.math.BigDecimal;
@@ -36,6 +39,34 @@ public class ProductEntity extends BaseEntity {
     @Column(nullable = false)
     private boolean active;
 
+    // What a buyer asks before she calls - see ProductTerms.
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private ProductTerms.Availability availability = ProductTerms.Availability.IN_STOCK;
+
+    private Integer quantityAvailable;
+    private Integer readyInDays;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private ProductTerms.PriceUnit priceUnit = ProductTerms.PriceUnit.PIECE;
+
+    private Integer minOrderQuantity;
+
+    @Column(length = 200)
+    private String options;
+
+    /** Comma-separated Fulfilment names; null for none said. */
+    @Column(length = 100)
+    private String fulfilment;
+
+    @Column(length = 300)
+    private String deliveryNote;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private ProductTerms.ReturnPolicy returnPolicy;
+
     protected ProductEntity() {
         // JPA
     }
@@ -61,5 +92,27 @@ public class ProductEntity extends BaseEntity {
     public BigDecimal getDisplayPrice() { return displayPrice; }
     public BigDecimal getOriginalPrice() { return originalPrice; }
     public String getCode() { return code; }
+    /** Already tidied by ProductService.normalise. */
+    void setTerms(ProductTerms terms) {
+        this.availability = terms.availability();
+        this.quantityAvailable = terms.quantityAvailable();
+        this.readyInDays = terms.readyInDays();
+        this.priceUnit = terms.priceUnit();
+        this.minOrderQuantity = terms.minOrderQuantity();
+        this.options = terms.options();
+        this.fulfilment = terms.fulfilment().isEmpty() ? null
+                : terms.fulfilment().stream().map(Enum::name).sorted().collect(java.util.stream.Collectors.joining(","));
+        this.deliveryNote = terms.deliveryNote();
+        this.returnPolicy = terms.returnPolicy();
+    }
+
+    public ProductTerms getTerms() {
+        java.util.Set<ProductTerms.Fulfilment> ways = fulfilment == null || fulfilment.isBlank() ? java.util.Set.of()
+                : java.util.Arrays.stream(fulfilment.split(",")).map(ProductTerms.Fulfilment::valueOf)
+                        .collect(java.util.stream.Collectors.toUnmodifiableSet());
+        return new ProductTerms(availability, quantityAvailable, readyInDays, priceUnit, minOrderQuantity, options, ways,
+                deliveryNote, returnPolicy);
+    }
+
     public boolean isActive() { return active; }
 }

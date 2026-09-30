@@ -234,9 +234,22 @@ public class MarketplaceController {
             @NotBlank @Size(max = 2000) String description,
             @NotNull @DecimalMin("0") @DecimalMax("9999999") BigDecimal displayPrice,
             @DecimalMin("0") @DecimalMax("9999999") BigDecimal originalPrice,
-            Boolean active) {
+            Boolean active,
+            // Optional on the wire: an app from before these fields sends
+            // none, and gets what every product was until now.
+            com.sheout.marketplace.ProductTerms.Availability availability,
+            Integer quantityAvailable,
+            Integer readyInDays,
+            com.sheout.marketplace.ProductTerms.PriceUnit priceUnit,
+            Integer minOrderQuantity,
+            @Size(max = 400) String options,
+            java.util.Set<com.sheout.marketplace.ProductTerms.Fulfilment> fulfilment,
+            @Size(max = 300) String deliveryNote,
+            com.sheout.marketplace.ProductTerms.ReturnPolicy returnPolicy) {
         ProductDetails details() {
-            return new ProductDetails(title, description, displayPrice, originalPrice, active == null || active);
+            return new ProductDetails(title, description, displayPrice, originalPrice, active == null || active,
+                    new com.sheout.marketplace.ProductTerms(availability, quantityAvailable, readyInDays, priceUnit,
+                            minOrderQuantity, options, fulfilment, deliveryNote, returnPolicy));
         }
     }
 
@@ -273,6 +286,8 @@ public class MarketplaceController {
                     "Enter a website address such as www.yourshop.com.");
             case INVALID_ORIGINAL_PRICE -> new ApiException(HttpStatus.BAD_REQUEST, error.name(),
                     "The original price must be more than the price.");
+            case INVALID_PRODUCT_TERMS -> new ApiException(HttpStatus.BAD_REQUEST, error.name(),
+                    "Check the stock, ready-in days and minimum order: stock up to 100000, ready in 1 to 90 days, minimum 1 to 10000.");
             case NOT_EDITABLE -> new ApiException(HttpStatus.CONFLICT, error.name(),
                     "Your shop can't be changed while it is being reviewed, awaiting payment or suspended.");
             case NOT_SUBMITTABLE -> new ApiException(HttpStatus.CONFLICT, error.name(), "Your shop has already been sent for review.");
