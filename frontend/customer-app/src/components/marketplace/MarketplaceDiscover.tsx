@@ -2,6 +2,7 @@ import { ArrowRight, Check, LayoutGrid, MessageCircle, Pencil, Pointer, ShieldCh
 import { marketplaceArt, useTranslation } from '@sheout/design-system';
 import type { SellerCategory } from '../../api/types';
 import { SELLER_CATEGORIES } from '../../lib/seller';
+import { SellHowToVideo } from './SellHowToVideo';
 
 /*
  * What the marketplace shows before she has searched or filtered for
@@ -374,6 +375,9 @@ export function SellCard({ onOpen }: { onOpen: () => void }) {
           {t('seller.discover.sell.cta')}
           <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden="true" />
         </button>
+
+        {/* Not sure how? One minute, start to finish. */}
+        <SellHowToVideo onStart={onOpen} />
       </div>
     </section>
   );

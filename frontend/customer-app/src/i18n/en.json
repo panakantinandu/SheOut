@@ -656,7 +656,11 @@
         "body": "Sarees, mehandi, tailoring, gifts: open your shop and reach women across your city.",
         "point1": "No commission on your sales",
         "point2": "Buyers contact you directly",
-        "cta": "Start selling"
+        "cta": "Start selling",
+        "watch": "Watch how it works",
+        "watchMeta": "1 min · open your shop in 4 easy steps",
+        "videoTitle": "How to sell on SheOut",
+        "videoClose": "Close video"
       },
       "otherPrompt": {
         "title": "Looking for something else?",
