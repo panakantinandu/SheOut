@@ -8,6 +8,8 @@ public enum MarketplaceError {
     INVALID_PHONE,
     /** A website that is not an http(s) address on a real domain. */
     INVALID_WEBSITE,
+    /** OTHER chosen without saying what she sells, or with too much to say (2 to 40 characters). */
+    CUSTOM_CATEGORY_REQUIRED,
     /** An original price that is not above the price - there is no discount to show. */
     INVALID_ORIGINAL_PRICE,
     /** Her shop cannot be changed while it is under review, awaiting payment or suspended. */

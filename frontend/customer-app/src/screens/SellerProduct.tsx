@@ -5,7 +5,7 @@ import { Card, ListEmptyState, SkeletonCard, TopHeader, showToast, useTranslatio
 import { ApiError, marketplaceApi } from '../api/client';
 import type { ProductDetail } from '../api/types';
 import { PriceTag } from '../components/PriceTag';
-import { categoryKey, contactLink, websiteLabel } from '../lib/seller';
+import { categoryName, contactLink, websiteLabel } from '../lib/seller';
 import { ListingTile } from './Seller';
 import { useGoBack } from '../lib/useGoBack';
 
@@ -114,7 +114,7 @@ export function SellerProduct() {
               <div className="min-w-0">
                 <p className="truncate font-semibold text-text-primary" data-testid="product-seller">{product.businessName}</p>
                 <p className="text-caption text-text-secondary">
-                  {t(`seller.categories.${categoryKey(product.category)}`)}
+                  {categoryName(product, t)}
                   {product.area ? ` · ${product.area}` : ''}
                 </p>
               </div>

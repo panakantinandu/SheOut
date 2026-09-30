@@ -37,7 +37,7 @@ import type { SellerCategory, SellerDetailsInput, SellerShop as Shop } from '../
 import { useAuth } from '../auth/AuthContext';
 import { apiErrorText } from '../lib/apiErrors';
 import { openRazorpayCheckout } from '../lib/razorpayCheckout';
-import { SELLER_CATEGORIES, SELLER_STATUS_TONE, categoryKey, priceText, websiteLabel } from '../lib/seller';
+import { SELLER_CATEGORIES, SELLER_STATUS_TONE, categoryKey, categoryName, priceText, websiteLabel } from '../lib/seller';
 import { clearWizardDraft, readWizardDraft, writeWizardDraft, type WizardDraft } from '../lib/sellerWizardDraft';
 
 /**
@@ -130,6 +130,7 @@ function SellerWizard({ shop, onShop, onSubmitted }: { shop: Shop | null; onShop
       ? {
           step: 0,
           category: shop.category,
+          customCategory: shop.customCategory ?? '',
           businessName: shop.businessName,
           contactPhone: shop.contactPhone,
           whatsappNumber: shop.whatsappNumber ?? '',
@@ -247,7 +248,8 @@ function StepIntro({ title, subtitle }: { title: string; subtitle: string }) {
 // ---------------------------------------------------------------- step 1
 
 /**
- * The six categories as large picture cards, two to a row: the picture
+ * The categories as large photo cards, two to a row (Other takes a whole
+ * row, and asks what she sells on the next step): the photo
  * fills most of the card, its name and a chevron sit at the bottom left.
  * One tap chooses and moves on - there is nothing else on this step to do.
  */
@@ -266,13 +268,13 @@ function CategoryStep({ selected, onPick }: { selected?: SellerCategory; onPick:
               role="radio"
               aria-checked={isSelected}
               onClick={() => onPick(c.value)}
-              className={`group relative flex aspect-[4/5] flex-col overflow-hidden rounded-card text-left shadow-card transition-transform duration-100 motion-safe:active:scale-[0.97] ${c.tint} ${
+              className={`group relative flex flex-col overflow-hidden rounded-card text-left shadow-card transition-transform duration-100 motion-safe:active:scale-[0.97] ${c.value === 'OTHER' ? 'col-span-2 aspect-[2/1]' : 'aspect-[4/5]'} ${c.tint} ${
                 isSelected ? 'ring-[3px] ring-primary' : 'ring-1 ring-border'
               }`}
               data-testid={`wizard-category-${c.key}`}
             >
-              <span className="flex min-h-0 flex-1 items-center justify-center p-3 pb-0">
-                <img src={c.art} alt="" aria-hidden="true" className="h-full w-full object-contain drop-shadow-md" />
+              <span className="flex min-h-0 flex-1 items-center justify-center p-2 pb-0">
+                <img src={c.art} alt="" aria-hidden="true" className="h-full w-full rounded-2xl object-cover" />
               </span>
               <span className="flex items-center gap-1 px-3 pb-3 pt-2">
                 <span className="text-sm font-semibold leading-tight text-text-primary">{t(`seller.categories.${c.key}`)}</span>
@@ -316,8 +318,9 @@ function DetailsStep({
     whatsappNumber: draft.whatsappNumber ?? '',
     area: draft.area ?? '',
     websiteUrl: draft.websiteUrl ?? '',
+    customCategory: draft.customCategory ?? '',
   };
-  const valid = businessFieldsValid(values) && understood;
+  const valid = businessFieldsValid(values, draft.category) && understood;
 
   return (
     <section className="space-y-4">
@@ -334,6 +337,9 @@ function DetailsStep({
         data-testid="shop-form"
       >
         <Card className="space-y-4">
+          {draft.category === 'OTHER' && (
+            <CustomCategoryField value={values.customCategory} showErrors={showErrors} onChange={(customCategory) => onChange({ customCategory })} />
+          )}
           <BusinessFields values={values} showErrors={showErrors} onChange={onChange} />
         </Card>
         {isNew && (
@@ -368,6 +374,36 @@ interface BusinessValues {
   whatsappNumber: string;
   area: string;
   websiteUrl: string;
+  /** For OTHER: what she sells. */
+  customCategory: string;
+}
+
+/** What she sells, when she chose Other: 2 to 40 characters, as the server asks. */
+function customCategoryOk(v: string): boolean {
+  const clean = v.trim().replace(/\s+/g, ' ');
+  return clean.length >= 2 && clean.length <= 40;
+}
+
+/**
+ * "What do you sell?" - asked only when she chose Other. Her words are what
+ * buyers see in place of the category, and what their search matches.
+ */
+function CustomCategoryField({ value, showErrors, onChange }: { value: string; showErrors: boolean; onChange: (v: string) => void }) {
+  const { t } = useTranslation();
+  return (
+    <div className="space-y-1" data-testid="custom-category">
+      <TextField
+        label={t('seller.form.customCategory')}
+        value={value}
+        maxLength={40}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={t('seller.form.customCategoryPlaceholder')}
+        error={showErrors && !customCategoryOk(value) ? t('seller.form.customCategoryRequired') : undefined}
+        name="customCategory"
+      />
+      <p className="text-caption text-text-secondary">{t('seller.form.customCategoryHelp')}</p>
+    </div>
+  );
 }
 
 /**
@@ -387,7 +423,8 @@ function websiteOk(v: string): boolean {
   }
 }
 
-function businessFieldsValid(v: BusinessValues): boolean {
+function businessFieldsValid(v: BusinessValues, category?: SellerCategory): boolean {
+  if (category === 'OTHER' && !customCategoryOk(v.customCategory)) return false;
   return v.businessName.trim().length > 0 && mobileOk(v.contactPhone) && (!v.whatsappNumber.trim() || mobileOk(v.whatsappNumber)) && websiteOk(v.websiteUrl);
 }
 
@@ -399,6 +436,7 @@ function toDetailsInput(v: BusinessValues, category: SellerCategory): SellerDeta
     whatsappNumber: v.whatsappNumber.trim() ? digits(v.whatsappNumber) : undefined,
     area: v.area.trim() || undefined,
     websiteUrl: v.websiteUrl.trim() || undefined,
+    customCategory: category === 'OTHER' ? v.customCategory.trim().replace(/\s+/g, ' ') : undefined,
   };
 }
 
@@ -609,10 +647,10 @@ function ReviewStep({ shop, busy, onEdit, onSubmit }: { shop: Shop; busy: boolea
         <div className="flex items-center gap-3">
           {category && (
             <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-input ${category.tint}`}>
-              <img src={category.art} alt="" aria-hidden="true" className="h-10 w-10 object-contain" />
+              <img src={category.art} alt="" aria-hidden="true" className="h-10 w-10 rounded-xl object-cover" />
             </span>
           )}
-          <p className="font-semibold text-text-primary" data-testid="review-category">{t(`seller.categories.${categoryKey(shop.category)}`)}</p>
+          <p className="font-semibold text-text-primary" data-testid="review-category">{categoryName(shop, t)}</p>
         </div>
       </ReviewSection>
 
@@ -807,7 +845,7 @@ function ShopStatusScreen({ shop, onShop, reload, onFix }: { shop: Shop; onShop:
         ) : (
           <Card className="space-y-1 text-sm">
             <p className="font-heading text-card-title text-text-primary">{shop.businessName}</p>
-            <p className="text-text-secondary">{t(`seller.categories.${categoryKey(shop.category)}`)}</p>
+            <p className="text-text-secondary">{categoryName(shop, t)}</p>
             <p className="text-text-secondary">{t('seller.shop.callOn', { number: `+91 ${shop.contactPhone}` })}</p>
             <p className="text-text-secondary">
               {shop.whatsappNumber ? t('seller.shop.whatsappOn', { number: `+91 ${shop.whatsappNumber}` }) : t('seller.shop.noWhatsapp')}
@@ -872,9 +910,10 @@ function ShopFields({
     whatsappNumber: initial.whatsappNumber ?? '',
     area: initial.area ?? '',
     websiteUrl: initial.websiteUrl ?? '',
+    customCategory: initial.customCategory ?? '',
   });
   const [showErrors, setShowErrors] = useState(false);
-  const valid = businessFieldsValid(values);
+  const valid = businessFieldsValid(values, category);
 
   return (
     <form
@@ -896,6 +935,13 @@ function ShopFields({
         options={SELLER_CATEGORIES.map((c) => ({ value: c.value, label: t(`seller.categories.${c.key}`) }))}
         name="category"
       />
+      {category === 'OTHER' && (
+        <CustomCategoryField
+          value={values.customCategory}
+          showErrors={showErrors}
+          onChange={(customCategory) => setValues((v) => ({ ...v, customCategory }))}
+        />
+      )}
       <div className="flex gap-3">
         <Button type="button" variant="secondary" className="flex-1" onClick={onCancel} disabled={busy}>
           {t('common.cancel')}

@@ -27,7 +27,9 @@ public final class MarketplaceViews {
      * directory).
      */
     public record SellerDetails(String businessName, SellerCategory category, String contactPhone, String whatsappNumber,
-                                String area, String websiteUrl) {
+                                String area, String websiteUrl,
+                                /** For OTHER only: what she sells, in her words ("Homemade pickles"). Null otherwise. */
+                                String customCategory) {
     }
 
     /**
@@ -61,6 +63,8 @@ public final class MarketplaceViews {
             UUID id,
             String businessName,
             SellerCategory category,
+            /** What she sells, in her words, when category is OTHER. */
+            String customCategory,
             String contactPhone,
             String whatsappNumber,
             String area,
@@ -87,7 +91,8 @@ public final class MarketplaceViews {
 
     /** One product in the directory list. */
     public record ListingCard(UUID productId, String code, String title, BigDecimal displayPrice, BigDecimal originalPrice,
-                              String imageUrl, UUID sellerId, String businessName, SellerCategory category, String area) {
+                              String imageUrl, UUID sellerId, String businessName, SellerCategory category,
+                              String customCategory, String area) {
     }
 
     /**
@@ -123,7 +128,7 @@ public final class MarketplaceViews {
      */
     public record ProductDetail(UUID productId, String code, String title, String description, BigDecimal displayPrice,
                                 BigDecimal originalPrice, List<String> imageUrls, UUID sellerId, String businessName,
-                                SellerCategory category, String area, String websiteUrl, String contactPhone,
+                                SellerCategory category, String customCategory, String area, String websiteUrl, String contactPhone,
                                 String whatsappNumber, List<ListingCard> moreFromSeller) {
     }
 
@@ -134,6 +139,7 @@ public final class MarketplaceViews {
             UUID accountId,
             String businessName,
             SellerCategory category,
+            String customCategory,
             SellerStatus status,
             String contactPhone,
             String whatsappNumber,

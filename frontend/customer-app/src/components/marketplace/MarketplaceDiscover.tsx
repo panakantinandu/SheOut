@@ -1,4 +1,4 @@
-import { ArrowRight, Check, LayoutGrid, MessageCircle, Pointer, ShieldCheck, Sparkles, Wallet } from 'lucide-react';
+import { ArrowRight, Check, LayoutGrid, MessageCircle, Pencil, Pointer, ShieldCheck, Sparkles, Wallet } from 'lucide-react';
 import { marketplaceArt, useTranslation } from '@sheout/design-system';
 import type { SellerCategory } from '../../api/types';
 import { SELLER_CATEGORIES } from '../../lib/seller';
@@ -19,6 +19,7 @@ import { SELLER_CATEGORIES } from '../../lib/seller';
  */
 export function MarketplaceHero({ opening }: { opening: boolean }) {
   const { t } = useTranslation();
+  const peek = ['fashion', 'mehandi', 'gifts', 'ornaments'].map((key) => SELLER_CATEGORIES.find((c) => c.key === key)!.art);
   return (
     <section
       className="relative isolate overflow-hidden rounded-[1.75rem] p-4 text-white shadow-[0_14px_26px_-12px_rgba(157,23,77,0.6)] motion-safe:animate-rise-in"
@@ -47,7 +48,35 @@ export function MarketplaceHero({ opening }: { opening: boolean }) {
             the title, so however long the title or the words run in her
             language, the picture never sits under the title. */}
         <div className="mt-3 flex items-center gap-2">
-          <p className="min-w-0 flex-1 text-caption opacity-90">{opening ? t('seller.discover.openingBody') : t('seller.discover.body')}</p>
+          <div className="min-w-0 flex-1">
+            <p className="text-caption opacity-90">{opening ? t('seller.discover.openingBody') : t('seller.discover.body')}</p>
+            {/* What is inside, at a glance: a few of the categories as little
+                photos popping in one after another, each floating on its own beat. */}
+            <div className="mt-2.5 flex items-center" aria-hidden="true" data-testid="market-hero-peek">
+              {peek.map((art, i) => (
+                <span
+                  key={art}
+                  className={`${i ? '-ml-2.5' : ''} relative motion-safe:animate-pop-in`}
+                  style={{ animationDelay: `${350 + i * 120}ms`, zIndex: peek.length - i }}
+                >
+                  <img
+                    src={art}
+                    alt=""
+                    draggable={false}
+                    className="h-9 w-9 select-none rounded-full object-cover ring-2 ring-white/90 shadow-lift motion-safe:animate-float"
+                    style={{ animationDelay: `${i * -0.9}s` }}
+                  />
+                </span>
+              ))}
+              <span
+                className="-ml-2.5 flex h-9 w-9 items-center justify-center rounded-full bg-white/25 text-micro font-bold ring-2 ring-white/90 backdrop-blur-sm motion-safe:animate-pop-in"
+                style={{ animationDelay: `${350 + peek.length * 120}ms` }}
+              >
+                +{SELLER_CATEGORIES.length - peek.length}
+              </span>
+            </div>
+            <p className="mt-1.5 text-micro font-semibold opacity-90">{t('seller.discover.heroMore')}</p>
+          </div>
           <img
             src={marketplaceArt}
             alt=""
@@ -62,7 +91,7 @@ export function MarketplaceHero({ opening }: { opening: boolean }) {
 }
 
 /**
- * "What are you looking for?": the six categories as the screen's main
+ * "What are you looking for?": the categories as the screen's main
  * control - big pictures two to a row, each with its name and what is in
  * it, so she can find her way by picture alone. A light sweeps across them
  * one after another, and a tapping finger beside the heading shows what to
@@ -70,6 +99,8 @@ export function MarketplaceHero({ opening }: { opening: boolean }) {
  */
 export function CategoryGrid({ onPick }: { onPick: (value: SellerCategory) => void }) {
   const { t } = useTranslation();
+  const named = SELLER_CATEGORIES.filter((c) => c.value !== 'OTHER');
+  const other = SELLER_CATEGORIES.find((c) => c.value === 'OTHER');
   return (
     <section data-testid="market-categories">
       <div className="mb-3 flex items-end justify-between gap-3">
@@ -82,37 +113,71 @@ export function CategoryGrid({ onPick }: { onPick: (value: SellerCategory) => vo
         </div>
       </div>
       <div className="grid grid-cols-2 gap-3">
-        {SELLER_CATEGORIES.map((c, i) => (
+        {named.map((c, i) => (
           <button
             key={c.value}
             type="button"
             onClick={() => onPick(c.value)}
             style={{ animationDelay: `${140 + i * 70}ms` }}
-            className={`group relative isolate flex min-w-0 flex-col items-center overflow-hidden rounded-[1.5rem] ${c.tint} px-2 pb-3 pt-3 text-center shadow-lift transition-transform duration-150 motion-safe:animate-pop-in motion-safe:active:scale-95`}
+            className="group relative isolate flex min-w-0 flex-col overflow-hidden rounded-[1.5rem] bg-surface text-left shadow-lift ring-1 ring-border transition-transform duration-150 motion-safe:animate-pop-in motion-safe:active:scale-95"
             data-testid={`market-category-${c.key}`}
           >
-            {/* A soft disc of light the picture stands on. */}
-            <span aria-hidden="true" className="absolute left-1/2 top-4 -z-10 h-20 w-20 -translate-x-1/2 rounded-full bg-surface/80 blur-md" />
-            {/* The light passing from tile to tile, in reading order. */}
-            <span
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-y-0 left-0 -z-10 w-1/2 bg-gradient-to-r from-transparent via-white/40 to-transparent motion-safe:animate-sheen"
-              style={{ animationDelay: `${1 + i * 0.45}s` }}
-            />
-            <img
-              src={c.art}
-              alt=""
-              aria-hidden="true"
-              loading="lazy"
-              draggable={false}
-              className="h-24 w-24 select-none object-contain drop-shadow-[0_10px_12px_rgba(74,26,158,0.2)] transition-transform duration-300 ease-out group-hover:-translate-y-1 group-hover:scale-105"
-            />
-            <span className="mt-1.5 font-heading text-card-title leading-tight text-text-primary">{t(`seller.categories.${c.key}`)}</span>
-            <span className="mt-0.5 line-clamp-2 text-caption leading-snug text-text-secondary">{t(`seller.discover.hints.${c.key}`)}</span>
+            <CategoryPhoto art={c.art} index={i} className="aspect-[4/3] w-full" />
+            <span className={`block px-3 pb-3 pt-2 ${c.tint}`}>
+              <span className="block font-heading text-card-title leading-tight text-text-primary">{t(`seller.categories.${c.key}`)}</span>
+              <span className="mt-0.5 block truncate text-caption leading-snug text-text-secondary">{t(`seller.discover.hints.${c.key}`)}</span>
+            </span>
           </button>
         ))}
+        {/* Anything else: the whole row, the photo on one side and, on the other, an invitation to say what. */}
+        {other && (
+          <button
+            type="button"
+            onClick={() => onPick(other.value)}
+            style={{ animationDelay: `${140 + named.length * 70}ms` }}
+            className="group relative isolate col-span-2 flex min-w-0 overflow-hidden rounded-[1.5rem] bg-surface text-left shadow-lift ring-1 ring-border transition-transform duration-150 motion-safe:animate-pop-in motion-safe:active:scale-[0.98]"
+            data-testid={`market-category-${other.key}`}
+          >
+            <CategoryPhoto art={other.art} index={named.length} className="w-[44%] shrink-0" />
+            <span className={`flex min-w-0 flex-1 flex-col justify-center gap-1 px-3 py-3 ${other.tint}`}>
+              <span className="font-heading text-card-title leading-tight text-text-primary">{t(`seller.categories.${other.key}`)}</span>
+              <span className="text-caption leading-snug text-text-secondary">{t(`seller.discover.hints.${other.key}`)}</span>
+              <span className="mt-1 inline-flex items-center gap-1.5 self-start rounded-full bg-surface px-2.5 py-1 text-micro font-semibold text-primary shadow-lift">
+                <Pencil className="h-3 w-3 motion-safe:animate-tap-hint" aria-hidden="true" />
+                {t('seller.discover.otherPrompt.type')}
+              </span>
+            </span>
+          </button>
+        )}
       </div>
     </section>
+  );
+}
+
+/**
+ * A category's photo, alive: drifting slowly closer and back (each on its
+ * own beat, so the grid never moves as one), with a light passing across the
+ * tiles in reading order and a soft shade at its foot.
+ */
+function CategoryPhoto({ art, index, className }: { art: string; index: number; className: string }) {
+  return (
+    <span className={`relative block overflow-hidden ${className}`}>
+      <img
+        src={art}
+        alt=""
+        aria-hidden="true"
+        loading="lazy"
+        draggable={false}
+        className="h-full w-full select-none object-cover motion-safe:animate-ken-burns"
+        style={{ animationDelay: `${index * -2.3}s` }}
+      />
+      <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/20 to-transparent" />
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-y-0 left-0 w-1/2 bg-gradient-to-r from-transparent via-white/35 to-transparent motion-safe:animate-sheen"
+        style={{ animationDelay: `${1 + index * 0.45}s` }}
+      />
+    </span>
   );
 }
 
@@ -159,7 +224,7 @@ export function CategoryRail({ selected, onPick, onAll }: {
             data-testid={`rail-category-${c.key}`}
           >
             <span className={`relative flex h-12 w-12 items-center justify-center rounded-full ${c.tint}`}>
-              <img src={c.art} alt="" aria-hidden="true" loading="lazy" draggable={false} className={`h-11 w-11 object-contain transition-transform duration-300 ${on ? 'scale-110' : ''}`} />
+              <img src={c.art} alt="" aria-hidden="true" loading="lazy" draggable={false} className={`h-12 w-12 rounded-full object-cover transition-transform duration-300 ${on ? 'scale-110' : ''}`} />
               {on && (
                 <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-text-inverse ring-2 ring-surface motion-safe:animate-pop-in">
                   <Check className="h-2.5 w-2.5" strokeWidth={3.5} aria-hidden="true" />
@@ -290,7 +355,7 @@ export function SellCard({ onOpen }: { onOpen: () => void }) {
                   alt=""
                   loading="lazy"
                   draggable={false}
-                  className="h-[3.75rem] w-[3.75rem] rounded-2xl bg-surface object-contain p-1 shadow-float motion-safe:animate-bob"
+                  className="h-[3.75rem] w-[3.75rem] rounded-2xl bg-surface object-cover ring-2 ring-surface shadow-float motion-safe:animate-bob"
                   style={{ animationDelay: `${i * -1.6}s` }}
                 />
               </span>
@@ -308,6 +373,46 @@ export function SellCard({ onOpen }: { onOpen: () => void }) {
           <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-transparent via-white/30 to-transparent motion-safe:animate-sheen" />
           {t('seller.discover.sell.cta')}
           <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden="true" />
+        </button>
+      </div>
+    </section>
+  );
+}
+
+/**
+ * Other, opened by a buyer: there is no fixed list of what is in it, so it
+ * asks her to say. "Type what you need" puts her straight in the search box
+ * (sellers here describe their shops in their own words, and search reads
+ * them); "Ask in your own words" is the assistant's search.
+ */
+export function OtherPrompt({ onType, onAsk }: { onType: () => void; onAsk: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <section
+      className="relative isolate overflow-hidden rounded-[1.5rem] border border-primary/15 bg-gradient-to-br from-primary-light to-accent-green-tint p-4 motion-safe:animate-fade-slide-in"
+      data-testid="market-other-prompt"
+    >
+      <Sparkles aria-hidden="true" className="pointer-events-none absolute right-4 top-4 h-4 w-4 text-primary motion-safe:animate-twinkle" />
+      <p className="pr-6 font-heading text-card-title text-text-primary">{t('seller.discover.otherPrompt.title')}</p>
+      <p className="mt-1 text-caption text-text-secondary">{t('seller.discover.otherPrompt.body')}</p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={onType}
+          className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-2 text-caption font-semibold text-text-inverse shadow-lift transition-transform duration-100 motion-safe:active:scale-95"
+          data-testid="other-type"
+        >
+          <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+          {t('seller.discover.otherPrompt.type')}
+        </button>
+        <button
+          type="button"
+          onClick={onAsk}
+          className="inline-flex items-center gap-1.5 rounded-full bg-surface px-3.5 py-2 text-caption font-semibold text-primary shadow-lift transition-transform duration-100 motion-safe:active:scale-95"
+          data-testid="other-ask"
+        >
+          <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+          {t('seller.discover.otherPrompt.ask')}
         </button>
       </div>
     </section>

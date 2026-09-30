@@ -18,6 +18,8 @@ export interface WizardDraft {
   /** 0 category, 1 business details, 2 products, 3 review. */
   step: number;
   category?: SellerCategory;
+  /** For OTHER: what she sells, in her words. */
+  customCategory?: string;
   businessName?: string;
   contactPhone?: string;
   whatsappNumber?: string;

@@ -55,6 +55,10 @@ html {
 
 :root {
   --c-primary: 74 26 158;
+  /* Screen titles: the brand gradient, vivid and still readable (see TopHeader). */
+  --title-a: #5B21B6;
+  --title-b: #C026D3;
+  --title-c: #EA580C;
   --c-primary-dark: 54 17 111;
   --c-primary-mid: 123 79 214;
   --c-primary-light: 237 229 250;
@@ -98,6 +102,9 @@ html {
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     --c-primary: 182 155 255;
+    --title-a: #C4B5FD;
+    --title-b: #F0ABFC;
+    --title-c: #FDBA74;
     --c-primary-dark: 155 121 255;
     --c-primary-mid: 143 107 240;
     --c-primary-light: 42 33 66;
@@ -139,6 +146,9 @@ html {
 
 :root[data-theme='dark'] {
   --c-primary: 182 155 255;
+  --title-a: #C4B5FD;
+  --title-b: #F0ABFC;
+  --title-c: #FDBA74;
   --c-primary-dark: 155 121 255;
   --c-primary-mid: 143 107 240;
   --c-primary-light: 42 33 66;

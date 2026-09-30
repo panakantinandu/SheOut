@@ -1,4 +1,4 @@
-import { ArrowLeft, Bell, Menu } from 'lucide-react';
+import { ArrowLeft, Bell, Menu, Sparkles } from 'lucide-react';
 import { Fragment, type ReactNode } from 'react';
 import { cn } from '../lib/cn';
 import { useTranslation } from 'react-i18next';
@@ -145,33 +145,54 @@ export function BellBadge({ count }: { count: number }) {
 }
 
 /**
- * A screen's title arriving: word by word, each rising out of a soft blur
- * into place, then a short brand-coloured line drawing itself in beneath -
- * so opening Marketplace, SOS, Wallet or Trip History feels like arriving
- * somewhere. By word, never by letter: Hindi and Telugu letters join, and
- * pulling them apart would break the words. Read as ordinary text; under
- * reduced motion it is simply there.
+ * A screen's title arriving, and staying alive: word by word, each rising out
+ * of a soft blur into place, painted in the brand gradient (purple into
+ * orange and back) that flows slowly through the letters; then a line the
+ * title's full width draws itself in beneath, with a glint travelling along
+ * it, and a small sparkle pops in at the end. By word, never by letter: Hindi
+ * and Telugu letters join, and pulling them apart would break the words.
+ * <p>
+ * The words keep a real colour under the gradient, so they are read and
+ * measured as the primary purple. Under reduced motion it is simply there.
  */
+const TITLE_GRADIENT =
+  'linear-gradient(90deg, var(--title-a), var(--title-b), var(--title-c), var(--title-b), var(--title-a))';
+
 function AnimatedTitle({ text }: { text: string }) {
   const words = text.split(' ').filter(Boolean);
   const step = 70;
+  const settled = words.length * step + 120;
   return (
-    <span className="relative inline-block pb-1.5" data-testid="header-title">
-      {words.map((word, i) => (
-        // An ordinary space between the words, outside each moving word, so
-        // it is kept and read as a space.
-        <Fragment key={i}>
-          {i > 0 && ' '}
-          <span className="inline-block motion-safe:animate-title-word" style={{ animationDelay: `${i * step}ms` }}>
-            {word}
-          </span>
-        </Fragment>
-      ))}
+    <span className="relative inline-flex items-start pb-2" data-testid="header-title">
+      <span>
+        {words.map((word, i) => (
+          // An ordinary space between the words, outside each moving word, so
+          // it is kept and read as a space.
+          <Fragment key={i}>
+            {i > 0 && ' '}
+            <span className="inline-block motion-safe:animate-title-word" style={{ animationDelay: `${i * step}ms` }}>
+              <span
+                className="inline-block bg-[length:200%_auto] bg-clip-text text-primary [-webkit-text-fill-color:transparent] motion-safe:animate-text-shimmer"
+                style={{ backgroundImage: TITLE_GRADIENT, animationDelay: `${i * -0.4}s` }}
+              >
+                {word}
+              </span>
+            </span>
+          </Fragment>
+        ))}
+      </span>
+      {/* A sparkle at the end of the title. */}
+      <span aria-hidden="true" className="ml-1 mt-0.5 inline-flex motion-safe:animate-pop-in" style={{ animationDelay: `${settled}ms` }}>
+        <Sparkles className="h-3.5 w-3.5 text-accent-orange motion-safe:animate-twinkle" />
+      </span>
+      {/* The line beneath, the title's full width: drawn in, then a glint along it. */}
       <span
         aria-hidden="true"
-        className="absolute bottom-0 left-0 h-[3px] w-8 origin-left rounded-full bg-gradient-to-r from-primary to-accent-orange motion-safe:animate-fill-x"
-        style={{ animationDuration: '520ms', animationDelay: `${words.length * step + 120}ms` }}
-      />
+        className="absolute bottom-0 left-0 right-4 h-[3px] origin-left overflow-hidden rounded-full motion-safe:animate-fill-x"
+        style={{ backgroundImage: TITLE_GRADIENT, animationDuration: '600ms', animationDelay: `${settled}ms` }}
+      >
+        <span className="absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-transparent via-white/80 to-transparent motion-safe:animate-sheen" />
+      </span>
     </span>
   );
 }

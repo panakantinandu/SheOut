@@ -15,7 +15,7 @@ import { marketplaceApi } from '../api/client';
 import type { ListingCard, SellerCategory, SmartSearchResult } from '../api/types';
 import { PriceTag } from '../components/PriceTag';
 import { SELLER_CATEGORIES, asProductCode, priceText } from '../lib/seller';
-import { CategoryGrid, CategoryRail, HowItWorks, MarketplaceHero, SellCard } from '../components/marketplace/MarketplaceDiscover';
+import { CategoryGrid, CategoryRail, HowItWorks, MarketplaceHero, OtherPrompt, SellCard } from '../components/marketplace/MarketplaceDiscover';
 import { Reveal } from '../components/Reveal';
 import { useGoBack } from '../lib/useGoBack';
 
@@ -312,7 +312,7 @@ export function Seller() {
                     }`}
                     data-testid={`filter-category-${c.key}`}
                   >
-                    <img src={c.art} alt="" aria-hidden="true" loading="lazy" className="h-12 w-12 object-contain" />
+                    <img src={c.art} alt="" aria-hidden="true" loading="lazy" className="h-12 w-full rounded-lg object-cover" />
                     <span className={`text-caption font-semibold leading-tight ${selected ? 'text-primary' : 'text-text-primary'}`}>
                       {t(`seller.categories.${c.key}`)}
                     </span>
@@ -421,6 +421,17 @@ export function Seller() {
       {/* A category picked: the six stay in reach as pictures. */}
       {!aiMode && categories.length > 0 && (
         <CategoryRail selected={categories} onPick={pickCategory} onAll={() => filters.set({ cat: '' }, true)} />
+      )}
+
+      {/* Other has no fixed list: ask her to say what she needs. */}
+      {!aiMode && categories.length === 1 && categories[0] === 'OTHER' && (
+        <OtherPrompt
+          onType={() => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            document.querySelector<HTMLInputElement>('[data-testid="seller-search"] input')?.focus();
+          }}
+          onAsk={() => switchMode('ai')}
+        />
       )}
 
       {!aiMode && list.loading && <SkeletonList rows={4} label={t('seller.directory.loading')} />}

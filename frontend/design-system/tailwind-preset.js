@@ -282,6 +282,23 @@ export default {
           from: { opacity: '0', transform: 'translateY(0.55em)', filter: 'blur(4px)' },
           to: { opacity: '1', transform: 'none', filter: 'blur(0)' },
         },
+        // The brand gradient flowing through a screen title's letters.
+        'text-shimmer': {
+          '0%': { backgroundPosition: '0% 50%' },
+          '100%': { backgroundPosition: '200% 50%' },
+        },
+        // A field that refused what was typed, shaking its head once.
+        shake: {
+          '0%, 100%': { transform: 'translateX(0)' },
+          '20%, 60%': { transform: 'translateX(-6px)' },
+          '40%, 80%': { transform: 'translateX(6px)' },
+        },
+        // A photo drifting slowly closer and back - the Marketplace's category
+        // photos, each on its own beat, so a still grid feels lived in.
+        'ken-burns': {
+          '0%': { transform: 'scale(1) translate(0, 0)' },
+          '100%': { transform: 'scale(1.1) translate(-2%, -2%)' },
+        },
         // A star in the night sky of the greeting, brightening and dimming.
         twinkle: {
           '0%, 100%': { opacity: '1', transform: 'scale(1)' },
@@ -356,6 +373,9 @@ export default {
         ripple: 'ripple 2.4s ease-out infinite',
         nod: 'nod 3.6s ease-in-out infinite',
         twinkle: 'twinkle 2.2s ease-in-out infinite',
+        'ken-burns': 'ken-burns 9s ease-in-out infinite alternate',
+        'text-shimmer': 'text-shimmer 6s linear infinite',
+        shake: 'shake 420ms ease-in-out',
         'title-word': 'title-word 560ms cubic-bezier(0.22, 1, 0.36, 1) both',
         'coin-flip': 'coin-flip 1.1s cubic-bezier(0.22, 1, 0.36, 1) 300ms both',
         'mic-glow': 'mic-glow 1.6s ease-in-out infinite',

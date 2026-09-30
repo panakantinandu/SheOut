@@ -322,7 +322,8 @@
       "women": "Women drivers only",
       "verified": "ID-checked partners",
       "sos": "SOS on every trip"
-    }
+    },
+    "phoneLabel": "Mobile number"
   },
   "drawer": {
     "language": "Language",
@@ -347,7 +348,8 @@
       "tailoring": "Tailoring",
       "mehandi": "Mehandi",
       "gifts": "Gifts",
-      "ornaments": "Ornaments"
+      "ornaments": "Ornaments",
+      "other": "Other"
     },
     "legal": {
       "applicationNotice": "SheOut is a discovery platform - you handle your own sales, payments, and delivery directly with customers. SheOut charges a flat listing fee only and is not party to your transactions.",
@@ -403,7 +405,11 @@
       "website": "Website (optional)",
       "websitePlaceholder": "e.g. www.yourshop.in",
       "websiteHelp": "Your shop website or Instagram page. It opens in the customer's own browser.",
-      "websiteInvalid": "Enter a website address such as www.yourshop.in."
+      "websiteInvalid": "Enter a website address such as www.yourshop.in.",
+      "customCategory": "What do you sell?",
+      "customCategoryPlaceholder": "For example: homemade pickles",
+      "customCategoryRequired": "Say what you sell, in 2 to 40 characters.",
+      "customCategoryHelp": "Buyers see these words in place of \"Other\", and can search for them."
     },
     "shop": {
       "title": "My SheOut shop",
@@ -640,7 +646,8 @@
         "tailoring": "Blouses, stitching, fitting",
         "mehandi": "Bridal and festival designs",
         "gifts": "Hampers, handmade gifts",
-        "ornaments": "Earrings, bangles, necklaces"
+        "ornaments": "Earrings, bangles, necklaces",
+        "other": "Anything else, in your words"
       },
       "sell": {
         "eyebrow": "For sellers",
@@ -649,7 +656,14 @@
         "point1": "No commission on your sales",
         "point2": "Buyers contact you directly",
         "cta": "Start selling"
-      }
+      },
+      "otherPrompt": {
+        "title": "Looking for something else?",
+        "body": "Type what you need. Sellers who chose Other describe their shop in their own words.",
+        "type": "Type what you need",
+        "ask": "Ask in your own words"
+      },
+      "heroMore": "Sarees, mehandi, gifts and more"
     }
   },
   "refer": {

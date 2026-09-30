@@ -32,6 +32,10 @@ public class SellerProfileEntity extends BaseEntity {
     @Column(nullable = false, length = 30)
     private SellerCategory category;
 
+    /** For OTHER: what she sells, in her words. */
+    @Column(length = 40)
+    private String customCategory;
+
     @Column(nullable = false, length = 15)
     private String contactPhone;
 
@@ -71,11 +75,11 @@ public class SellerProfileEntity extends BaseEntity {
         // JPA
     }
 
-    SellerProfileEntity(UUID accountId, String businessName, SellerCategory category, String contactPhone,
-                        String whatsappNumber, String area, String websiteUrl) {
+    SellerProfileEntity(UUID accountId, String businessName, SellerCategory category, String customCategory,
+                        String contactPhone, String whatsappNumber, String area, String websiteUrl) {
         this.accountId = accountId;
         this.status = SellerStatus.DRAFT;
-        setDetails(businessName, category, contactPhone, whatsappNumber, area, websiteUrl);
+        setDetails(businessName, category, customCategory, contactPhone, whatsappNumber, area, websiteUrl);
     }
 
     /**
@@ -92,11 +96,12 @@ public class SellerProfileEntity extends BaseEntity {
         return status == SellerStatus.DRAFT || status == SellerStatus.REJECTED;
     }
 
-    void setDetails(String businessName, SellerCategory category, String contactPhone, String whatsappNumber,
-                    String area, String websiteUrl) {
+    void setDetails(String businessName, SellerCategory category, String customCategory, String contactPhone,
+                    String whatsappNumber, String area, String websiteUrl) {
         this.websiteUrl = websiteUrl;
         this.businessName = businessName;
         this.category = category;
+        this.customCategory = customCategory;
         this.contactPhone = contactPhone;
         this.whatsappNumber = whatsappNumber;
         this.area = area;
@@ -163,6 +168,7 @@ public class SellerProfileEntity extends BaseEntity {
     public UUID getAccountId() { return accountId; }
     public String getBusinessName() { return businessName; }
     public SellerCategory getCategory() { return category; }
+    public String getCustomCategory() { return customCategory; }
     public String getContactPhone() { return contactPhone; }
     public String getWhatsappNumber() { return whatsappNumber; }
     public String getArea() { return area; }

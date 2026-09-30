@@ -54,7 +54,10 @@ final class MarketplaceSpecs {
                 // A shop-name match brings in all of that shop's products.
                 Subquery<UUID> namedSellers = query.subquery(UUID.class);
                 Root<SellerProfileEntity> named = namedSellers.from(SellerProfileEntity.class);
-                namedSellers.select(named.get("id")).where(cb.like(cb.lower(named.get("businessName")), like, '\\'));
+                // Her shop's name, or what she said she sells under Other.
+                namedSellers.select(named.get("id")).where(cb.or(
+                        cb.like(cb.lower(named.get("businessName")), like, '\\'),
+                        cb.like(cb.lower(named.get("customCategory")), like, '\\')));
                 List<Predicate> matches = new ArrayList<>(List.of(
                         cb.like(cb.lower(root.get("title")), like, '\\'),
                         cb.like(cb.lower(root.get("description")), like, '\\'),
@@ -87,7 +90,9 @@ final class MarketplaceSpecs {
                 String like = likePattern(word);
                 Subquery<UUID> namedSellers = query.subquery(UUID.class);
                 Root<SellerProfileEntity> named = namedSellers.from(SellerProfileEntity.class);
-                namedSellers.select(named.get("id")).where(cb.like(cb.lower(named.get("businessName")), like, '\\'));
+                namedSellers.select(named.get("id")).where(cb.or(
+                        cb.like(cb.lower(named.get("businessName")), like, '\\'),
+                        cb.like(cb.lower(named.get("customCategory")), like, '\\')));
                 matches.add(cb.like(cb.lower(root.get("title")), like, '\\'));
                 matches.add(cb.like(cb.lower(root.get("description")), like, '\\'));
                 matches.add(root.get("sellerId").in(namedSellers));

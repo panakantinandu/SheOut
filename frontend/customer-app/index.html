@@ -15,6 +15,13 @@
         } catch (e) {}
       })();
     </script>
+    <!-- The splash's colour before anything has loaded, so opening the app is one
+         continuous screen - not white, then the splash. -->
+    <style id="sheout-prepaint">
+      html, body { background: #FEF8F8; }
+      @media (prefers-color-scheme: dark) { html:not([data-theme="light"]), html:not([data-theme="light"]) body { background: #1A1330; } }
+      html[data-theme="dark"], html[data-theme="dark"] body { background: #1A1330; }
+    </style>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#ffffff" />

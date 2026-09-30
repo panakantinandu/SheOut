@@ -1,17 +1,10 @@
 import { IndianRupee, Package, ShieldCheck } from 'lucide-react';
-import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { BrandSplash, splashDestination, useTranslation } from '@sheout/design-system';
+import { BrandSplash, SPLASH_DISPLAY_MS, SPLASH_FADE_MS, splashDestination, useSplashTimer, useTranslation } from '@sheout/design-system';
 import { useAuth } from '../auth/AuthContext';
 
-/**
- * Shorter than the rider app's: a partner opening the app wants to get
- * online, and has seen this screen many times. Still long enough to read as
- * a launch rather than a flicker.
- */
-const SPLASH_DISPLAY_MS = 2200;
-const FADE_DURATION_MS = 300;
-const FADE_START_MS = SPLASH_DISPLAY_MS - FADE_DURATION_MS;
+/** Held for the same time in both apps - see useSplashTimer in the design system. */
+const FADE_START_MS = SPLASH_DISPLAY_MS - SPLASH_FADE_MS;
 
 /**
  * The partner app's first screen, on every launch - including from the
@@ -25,18 +18,11 @@ export function Splash() {
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated } = useAuth();
-  const [fading, setFading] = useState(false);
-
-  useEffect(() => {
-    const fadeTimer = setTimeout(() => setFading(true), FADE_START_MS);
-    const navTimer = setTimeout(() => {
-      navigate(splashDestination(location.search, isAuthenticated), { replace: true });
-    }, SPLASH_DISPLAY_MS);
-    return () => {
-      clearTimeout(fadeTimer);
-      clearTimeout(navTimer);
-    };
-  }, [navigate, isAuthenticated, location.search]);
+  // Timed once, and once per launch: a reload mid-splash (an update) goes straight on.
+  const { fading, skipped } = useSplashTimer(() =>
+    navigate(splashDestination(location.search, isAuthenticated), { replace: true })
+  );
+  if (skipped) return null;
 
   return (
     <BrandSplash

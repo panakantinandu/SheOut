@@ -293,7 +293,7 @@ export interface PaymentSummary {
 
 // ---------------------------------------------------------------- SheOut Seller
 
-export type SellerCategory = 'FASHION_SAREE' | 'BEAUTY_SERVICES' | 'TAILORING' | 'MEHANDI' | 'GIFTS' | 'ORNAMENTS';
+export type SellerCategory = 'FASHION_SAREE' | 'BEAUTY_SERVICES' | 'TAILORING' | 'MEHANDI' | 'GIFTS' | 'ORNAMENTS' | 'OTHER';
 
 export type SellerStatus = 'DRAFT' | 'SUBMITTED_FOR_REVIEW' | 'APPROVED_AWAITING_PAYMENT' | 'ACTIVE' | 'REJECTED' | 'SUSPENDED';
 
@@ -310,6 +310,8 @@ export interface ListingCard {
   sellerId: string;
   businessName: string;
   category: SellerCategory;
+  /** For OTHER: what she sells, in her own words ("Homemade pickles"). */
+  customCategory: string | null;
   /** The area the seller works from, in her words - null when she has not said. */
   area: string | null;
 }
@@ -347,6 +349,8 @@ export interface ProductDetail {
   sellerId: string;
   businessName: string;
   category: SellerCategory;
+  /** For OTHER: what she sells, in her own words ("Homemade pickles"). */
+  customCategory: string | null;
   area: string | null;
   websiteUrl: string | null;
   contactPhone: string;
@@ -377,6 +381,8 @@ export interface SellerShop {
   id: string;
   businessName: string;
   category: SellerCategory;
+  /** For OTHER: what she sells, in her own words ("Homemade pickles"). */
+  customCategory: string | null;
   contactPhone: string;
   whatsappNumber: string | null;
   area: string | null;
@@ -404,6 +410,8 @@ export interface SellerDetailsInput {
   whatsappNumber?: string;
   area?: string;
   websiteUrl?: string;
+  /** For OTHER: what she sells, in her own words. */
+  customCategory?: string;
 }
 
 export interface ProductInput {

@@ -40,7 +40,8 @@ export default defineConfig({
         id: '/home',
         start_url: '/',
         scope: '/',
-        background_color: '#ffffff',
+        // The splash's own first colour, so the phone's launch screen runs into it as one.
+        background_color: '#FEF8F8',
         display: 'standalone',
         icons: [
           { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },

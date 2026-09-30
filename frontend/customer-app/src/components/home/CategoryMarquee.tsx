@@ -28,7 +28,7 @@ export function CategoryMarquee({ items, onPick }: { items: MarqueeItem[]; onPic
       data-testid={copy ? undefined : `marquee-${item.value}`}
     >
       <span className={`flex h-9 w-9 items-center justify-center rounded-full ${item.tint}`}>
-        <img src={item.art} alt="" aria-hidden="true" loading="lazy" draggable={false} className="h-8 w-8 object-contain" />
+        <img src={item.art} alt="" aria-hidden="true" loading="lazy" draggable={false} className="h-9 w-9 rounded-full object-cover" />
       </span>
       <span className="whitespace-nowrap text-caption font-semibold text-text-primary">{item.label}</span>
     </button>

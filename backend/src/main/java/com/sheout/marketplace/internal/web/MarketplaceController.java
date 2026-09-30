@@ -221,9 +221,11 @@ public class MarketplaceController {
             @NotBlank @Size(max = 20) String contactPhone,
             @Size(max = 20) String whatsappNumber,
             @Size(max = 80) String area,
-            @Size(max = 200) String websiteUrl) {
+            @Size(max = 200) String websiteUrl,
+            /** For OTHER: what she sells, in her words. */
+            @Size(max = 60) String customCategory) {
         SellerDetails details() {
-            return new SellerDetails(businessName, category, contactPhone, whatsappNumber, area, websiteUrl);
+            return new SellerDetails(businessName, category, contactPhone, whatsappNumber, area, websiteUrl, customCategory);
         }
     }
 
@@ -265,6 +267,8 @@ public class MarketplaceController {
             case NOT_A_SELLER -> new ApiException(HttpStatus.NOT_FOUND, error.name(), "You have not applied to sell on SheOut yet.");
             case ALREADY_A_SELLER -> new ApiException(HttpStatus.CONFLICT, error.name(), "You already have a SheOut Seller shop.");
             case INVALID_PHONE -> new ApiException(HttpStatus.BAD_REQUEST, error.name(), "Enter a 10-digit Indian mobile number.");
+            case CUSTOM_CATEGORY_REQUIRED -> new ApiException(HttpStatus.BAD_REQUEST, error.name(),
+                    "Say what you sell, in 2 to 40 characters.");
             case INVALID_WEBSITE -> new ApiException(HttpStatus.BAD_REQUEST, error.name(),
                     "Enter a website address such as www.yourshop.com.");
             case INVALID_ORIGINAL_PRICE -> new ApiException(HttpStatus.BAD_REQUEST, error.name(),

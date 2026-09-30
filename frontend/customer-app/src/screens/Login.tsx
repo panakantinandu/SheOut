@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { BrandHeader, Button, LANGUAGES, LanguagePicker, LegalConsentNotice, PhoneField, TextField, Trans, isCompletePhone, setAppLanguage, toE164, useAppLanguage, ResendCode, useOtpSender, i18next, AuthBackdrop, Card, OtpCodeField, OTP_CODE_LENGTH } from '@sheout/design-system';
-import { Languages, ShieldCheck, BadgeCheck, Siren } from 'lucide-react';
+import { AuthModeSwitch, BrandHeader, Button, PhoneEntry, LANGUAGES, LanguagePicker, LegalConsentNotice, PhoneField, TextField, Trans, isCompletePhone, setAppLanguage, toE164, useAppLanguage, ResendCode, useOtpSender, i18next, AuthBackdrop, Card, OtpCodeField, OTP_CODE_LENGTH } from '@sheout/design-system';
+import { ArrowRight, Languages, ShieldCheck, BadgeCheck, Siren } from 'lucide-react';
 import { ApiError, authApi, takeSessionEndedReason, usersApi } from '../api/client';
 import type { AuthSession } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
@@ -100,6 +100,8 @@ export function Login() {
   const [phoneDigits, setPhoneDigits] = useState('');
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
+  /** Bumped on each refused submit, so the phone field shakes each time. */
+  const [attempt, setAttempt] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   /** Non-error feedback, e.g. 'that number is already registered'. */
@@ -182,6 +184,7 @@ export function Login() {
     setNotice(null);
     if (!isCompletePhone(phoneDigits)) {
       setError(t('login.invalidPhone'));
+      setAttempt((n) => n + 1);
       return;
     }
     setSubmitting(true);
@@ -261,7 +264,7 @@ export function Login() {
       <div className="relative z-10">
       {/* Language, before anything else - she may not read English, and
           the drawer where it otherwise lives is only there once signed in. */}
-      <div className="-mt-4 mb-2 flex justify-end">
+      <div className="mb-4 flex justify-end">
         <button
           type="button"
           onClick={() => setPickingLanguage(true)}
@@ -283,33 +286,18 @@ export function Login() {
 
       <BrandHeader size="md" float className="mb-5 motion-safe:animate-fade-slide-in" />
 
-      <Card className="space-y-4 p-5 motion-safe:animate-fade-slide-in" style={{ animationDelay: '120ms' }}>
+      <Card className="space-y-4 rounded-[1.75rem] p-6 shadow-float motion-safe:animate-fade-slide-in" style={{ animationDelay: '120ms' }}>
           {/* Only on phone entry: once an OTP is out, the choice is made and
               a live toggle would just invite a mid-flow tab switch that
               changes nothing. Same pill vocabulary as MyBookings' tabs. */}
           {step === 'phone' && (
-            <div className="mb-5 flex gap-2" role="tablist" aria-label={t('login.modeAria')}>
-              {AUTH_MODES.map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  role="tab"
-                  aria-selected={mode === m}
-                  onClick={() => setMode(m)}
-                  className={
-                    mode === m
-                      ? 'flex-1 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-text-inverse'
-                      : 'flex-1 rounded-full border border-border px-4 py-2 text-sm font-medium text-text-secondary'
-                  }
-                >
-                  {t(`login.${m}.tab`)}
-                </button>
-              ))}
+            <div className="mb-5">
+              <AuthModeSwitch modes={AUTH_MODES} value={mode} onChange={setMode} label={t('login.modeAria')} labelFor={(m) => t(`login.${m}.tab`)} />
             </div>
           )}
 
-          <h1 className="font-heading text-title text-text-primary">{t(`login.${mode}.heading`)}</h1>
-          <p className="mb-6 text-sm text-text-secondary">{t(`login.${mode}.subtitle`)}</p>
+          <h1 className="text-center font-heading text-title text-text-primary">{t(`login.${mode}.heading`)}</h1>
+          <p className="mb-6 text-center text-sm text-text-secondary">{t(`login.${mode}.subtitle`)}</p>
 
           {notice && (
             <p className="mb-4 rounded-input bg-primary-light px-4 py-3 text-sm font-medium text-primary">{notice}</p>
@@ -317,7 +305,18 @@ export function Login() {
 
           {step === 'phone' ? (
             <form onSubmit={handleSendOtp} className="space-y-4">
-              <PhoneField value={phoneDigits} onChange={setPhoneDigits} error={error ?? undefined} placeholder={t('login.phonePlaceholder')} />
+              <PhoneEntry
+                value={phoneDigits}
+                onChange={(digits) => {
+                  setPhoneDigits(digits);
+                  if (error) setError(null);
+                }}
+                error={error ?? undefined}
+                attempt={attempt}
+                label={t('login.phoneLabel')}
+                // An example rather than the label again.
+                placeholder="98765 43210"
+              />
               {/* Above the button, so it is read before the decision rather
                   than after it - see LegalConsentNotice. */}
               <LegalConsentNotice
@@ -325,12 +324,25 @@ export function Login() {
                 onOpenTerms={() => navigate('/terms')}
                 onOpenPrivacy={() => navigate('/privacy')}
               />
-              <Button type="submit" fullWidth disabled={submitting}>
-                {submitting ? t('common.sending') : t('login.sendOtp')}
+              <Button
+                type="submit"
+                fullWidth
+                disabled={submitting}
+                // The brand gradient; dimmed until the number is whole, then it glows and a light crosses it.
+                className={`relative overflow-hidden bg-gradient-to-r from-[#5B21B6] via-[#7C3AED] to-[#DB2777] text-white transition-opacity duration-300 ${isCompletePhone(phoneDigits) ? 'motion-safe:animate-glow-brand' : 'opacity-75'}`}
+                data-testid="send-otp"
+              >
+                {isCompletePhone(phoneDigits) && (
+                  <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-transparent via-white/30 to-transparent motion-safe:animate-sheen" />
+                )}
+                <span className="relative inline-flex items-center gap-2">
+                  {submitting ? t('common.sending') : t('login.sendOtp')}
+                  {!submitting && <ArrowRight className="h-4 w-4" aria-hidden="true" />}
+                </span>
               </Button>
             </form>
           ) : (
-            <form onSubmit={handleVerifyOtp} className="space-y-4">
+            <form onSubmit={handleVerifyOtp} className="space-y-4 motion-safe:animate-fade-slide-in">
               <p className="text-center text-sm text-text-secondary">{t('login.codeSentTo', { phone: phoneNumber })}</p>
               <OtpCodeField
                 value={code}

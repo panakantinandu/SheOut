@@ -11,6 +11,7 @@ export * from './lib/photo';
 export * from './lib/errorReporting';
 export * from './lib/motion';
 export * from './lib/dayPart';
+export * from './lib/splashTimer';
 export * from './lib/coldStart';
 export * from './i18n';
 export { SafetyText, useSafetyString } from './i18n/SafetyText';

@@ -102,7 +102,9 @@ public class ProductService implements ProductApi {
             String ref = "p" + (byRef.size() + 1);
             byRef.put(ref, card);
             ProductEntity p = byId.get(card.productId());
-            candidates.add(new ListingSearchApi.Candidate(ref, card.title(), card.category().name(), card.displayPrice(),
+            // Other shops are described by what the seller said she sells, so "pickles" can find "Homemade pickles".
+            String category = card.customCategory() != null ? "OTHER: " + card.customCategory() : card.category().name();
+            candidates.add(new ListingSearchApi.Candidate(ref, card.title(), category, card.displayPrice(),
                     card.originalPrice(), p.getDescription(), card.area(), card.businessName()));
         }
 
@@ -171,7 +173,7 @@ public class ProductService implements ProductApi {
                 .toList();
         return Optional.of(new ProductDetail(product.getId(), product.getCode(), product.getTitle(), product.getDescription(),
                 product.getDisplayPrice(), product.getOriginalPrice(), photos, s.getId(), s.getBusinessName(), s.getCategory(),
-                s.getArea(), s.getWebsiteUrl(), s.getContactPhone(), s.getWhatsappNumber(), views.cards(others, Map.of(s.getId(), s))));
+                s.getCustomCategory(), s.getArea(), s.getWebsiteUrl(), s.getContactPhone(), s.getWhatsappNumber(), views.cards(others, Map.of(s.getId(), s))));
     }
 
     /** A code no other product has. Almost always the first one drawn; see ProductCodes. */

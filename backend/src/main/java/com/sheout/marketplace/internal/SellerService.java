@@ -2,6 +2,7 @@ package com.sheout.marketplace.internal;
 
 import com.sheout.marketplace.MarketplaceAdminApi;
 import com.sheout.marketplace.MarketplaceError;
+import com.sheout.marketplace.SellerCategory;
 import com.sheout.marketplace.MarketplaceViews.SellerAdminDetail;
 import com.sheout.marketplace.MarketplaceViews.SellerAdminRow;
 import com.sheout.marketplace.MarketplaceViews.SellerDetails;
@@ -97,7 +98,7 @@ public class SellerService implements SellerApi, MarketplaceAdminApi {
         }
         SellerDetails d = clean.value();
         SellerProfileEntity seller = sellers.save(new SellerProfileEntity(accountId, d.businessName(), d.category(),
-                d.contactPhone(), d.whatsappNumber(), d.area(), d.websiteUrl()));
+                d.customCategory(), d.contactPhone(), d.whatsappNumber(), d.area(), d.websiteUrl()));
         log.info("Seller application started: {} by account {}", seller.getId(), accountId);
         return Result.success(views.sellerView(seller));
     }
@@ -118,7 +119,7 @@ public class SellerService implements SellerApi, MarketplaceAdminApi {
             return Result.failure(clean.error());
         }
         SellerDetails d = clean.value();
-        seller.setDetails(d.businessName(), d.category(), d.contactPhone(), d.whatsappNumber(), d.area(), d.websiteUrl());
+        seller.setDetails(d.businessName(), d.category(), d.customCategory(), d.contactPhone(), d.whatsappNumber(), d.area(), d.websiteUrl());
         seller.touchedWhileLive(Instant.now());
         return Result.success(views.sellerView(sellers.save(seller)));
     }
@@ -390,6 +391,14 @@ public class SellerService implements SellerApi, MarketplaceAdminApi {
                 return Result.failure(MarketplaceError.INVALID_WEBSITE);
             }
         }
-        return Result.success(new SellerDetails(d.businessName().trim(), d.category(), phone, whatsapp, area, website));
+        // OTHER needs her own words for what she sells; any other category has none.
+        String custom = null;
+        if (d.category() == SellerCategory.OTHER) {
+            custom = d.customCategory() == null ? "" : d.customCategory().trim().replaceAll("\\s+", " ");
+            if (custom.length() < 2 || custom.length() > 40) {
+                return Result.failure(MarketplaceError.CUSTOM_CATEGORY_REQUIRED);
+            }
+        }
+        return Result.success(new SellerDetails(d.businessName().trim(), d.category(), phone, whatsapp, area, website, custom));
     }
 }

@@ -5,10 +5,12 @@ import tailoringArt from '../assets/seller/tailoring.webp';
 import mehandiArt from '../assets/seller/mehandi.webp';
 import giftsArt from '../assets/seller/gifts.webp';
 import ornamentsArt from '../assets/seller/ornaments.webp';
+import otherArt from '../assets/seller/other.webp';
 
 /**
- * The six SheOut Seller categories, each with its own illustration and a
- * tint from the colour depth scale behind it. Order is the order a woman
+ * The SheOut Seller categories, each with its own photo and a tint from the
+ * colour depth scale behind it - the six named ones, then Other, where a
+ * seller names what she sells herself. Order is the order a woman
  * browsing would expect: what to wear first, then what to have done, then
  * what to give. `key` is the i18n key under seller.categories.
  */
@@ -19,7 +21,20 @@ export const SELLER_CATEGORIES: { value: SellerCategory; key: string; art: strin
   { value: 'MEHANDI', key: 'mehandi', art: mehandiArt, tint: 'bg-accent-orange-tint' },
   { value: 'GIFTS', key: 'gifts', art: giftsArt, tint: 'bg-primary-light' },
   { value: 'ORNAMENTS', key: 'ornaments', art: ornamentsArt, tint: 'bg-accent-blue-tint' },
+  { value: 'OTHER', key: 'other', art: otherArt, tint: 'bg-accent-green-tint' },
 ];
+
+/**
+ * What to call a shop's category: her own words for Other ("Homemade
+ * pickles"), the category's name otherwise.
+ */
+export function categoryName(
+  shop: { category: SellerCategory; customCategory?: string | null },
+  t: (key: string) => string
+): string {
+  if (shop.category === 'OTHER' && shop.customCategory) return shop.customCategory;
+  return t(`seller.categories.${categoryKey(shop.category)}`);
+}
 
 export function categoryKey(value: SellerCategory): string {
   return SELLER_CATEGORIES.find((c) => c.value === value)?.key ?? 'fashion';

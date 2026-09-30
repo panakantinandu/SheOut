@@ -65,3 +65,4 @@ export * from './KeyboardAwareScreen';
 export * from './AssistantFab';
 export * from './SkyIcon';
 export * from './RotatingText';
+export * from './PhoneEntry';

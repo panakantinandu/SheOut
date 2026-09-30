@@ -127,7 +127,7 @@ class MarketplaceFlowTest {
         assertThat(sellers.applyAsSeller(asha, details("Asha " + tag, "98765 00001", "abc")).error())
                 .isEqualTo(MarketplaceError.INVALID_PHONE);
         SellerView draft = ok(sellers.applyAsSeller(asha, new SellerDetails("Asha " + tag + " Sarees", SellerCategory.FASHION_SAREE,
-                "+91 98765 00001", "09876500002", "  Kukatpally   " + tag + " ", "lakshmisarees.in/shop")));
+                "+91 98765 00001", "09876500002", "  Kukatpally   " + tag + " ", "lakshmisarees.in/shop", null)));
         assertThat(draft.status()).isEqualTo(SellerStatus.DRAFT);
         assertThat(draft.contactPhone()).isEqualTo("9876500001");
         assertThat(draft.whatsappNumber()).isEqualTo("9876500002");
@@ -136,7 +136,7 @@ class MarketplaceFlowTest {
         for (String bad : List.of("javascript:alert(1)", "mysite", "http://localhost:8080", "ftp://files.example.com",
                 "https://user:pass@example.com", "www.exa mple.com")) {
             assertThat(sellers.updateProfile(asha, new SellerDetails("Asha " + tag + " Sarees", SellerCategory.FASHION_SAREE,
-                    "9876500001", null, null, bad)).error()).as(bad).isEqualTo(MarketplaceError.INVALID_WEBSITE);
+                    "9876500001", null, null, bad, null)).error()).as(bad).isEqualTo(MarketplaceError.INVALID_WEBSITE);
         }
         assertThat(draft.listingFee().amount()).isEqualByComparingTo("299");
         assertThat(sellers.applyAsSeller(asha, details("Again", "9876500001", null)).error())
@@ -307,6 +307,39 @@ class MarketplaceFlowTest {
     }
 
     @Test
+    void otherIsWhatSheSaysSheSellsAndBuyersFindItByThoseWords() throws IOException {
+        // Other without saying what, or saying far too much: refused.
+        assertThat(sellers.applyAsSeller(bina, other("Bina " + tag, null)).error()).isEqualTo(MarketplaceError.CUSTOM_CATEGORY_REQUIRED);
+        assertThat(sellers.applyAsSeller(bina, other("Bina " + tag, " x ")).error()).isEqualTo(MarketplaceError.CUSTOM_CATEGORY_REQUIRED);
+        assertThat(sellers.applyAsSeller(bina, other("Bina " + tag, "x".repeat(41))).error()).isEqualTo(MarketplaceError.CUSTOM_CATEGORY_REQUIRED);
+
+        SellerView shop = ok(sellers.applyAsSeller(bina, other("Bina " + tag + " Kitchen", "  Homemade   pickles " + tag + " ")));
+        assertThat(shop.category()).isEqualTo(SellerCategory.OTHER);
+        assertThat(shop.customCategory()).as("trimmed, spaces folded").isEqualTo("Homemade pickles " + tag);
+
+        UUID p = ok(products.addProduct(bina, product("Mango jar", "500 g, sun-dried", "250"))).products().get(0).id();
+        ok(products.addProductImage(bina, p, photo()));
+        ok(sellers.submitForReview(bina));
+        ok(sellers.approve(shop.id(), admin));
+        jdbc.update("insert into rider_wallets (id, customer_account_id, balance, version, created_at, updated_at) "
+                + "values (gen_random_uuid(), ?, 500, 0, now(), now())", bina);
+        ok(sellers.payListingFeeFromWallet(bina));
+
+        // Under Other, with her words on the card; and found by those words.
+        assertThat(directory(SellerCategory.OTHER, tag)).singleElement().satisfies(c -> {
+            assertThat(c.category()).isEqualTo(SellerCategory.OTHER);
+            assertThat(c.customCategory()).isEqualTo("Homemade pickles " + tag);
+        });
+        assertThat(directory(null, "pickles " + tag)).extracting(ListingCard::title).containsExactly("Mango jar");
+        assertThat(directory(SellerCategory.GIFTS, tag)).isEmpty();
+
+        // A named category has no words of her own: they are cleared.
+        SellerView renamed = ok(sellers.updateProfile(bina, new SellerDetails("Bina " + tag + " Kitchen", SellerCategory.GIFTS,
+                "9876500005", null, null, null, "leftover words")));
+        assertThat(renamed.customCategory()).isNull();
+    }
+
+    @Test
     void anUnverifiedAccountCannotSendHerShopForReview() throws IOException {
         doReturn(Optional.empty()).when(customerProfiles).findByAccountId(any());
         ok(sellers.applyAsSeller(asha, details("Asha " + tag, "9876500001", null)));
@@ -331,7 +364,11 @@ class MarketplaceFlowTest {
 
     private static SellerDetails details(String name, String phone, String whatsapp) {
         return new SellerDetails(name, name.contains("Mehandi") ? SellerCategory.MEHANDI : SellerCategory.FASHION_SAREE, phone, whatsapp,
-                null, null);
+                null, null, null);
+    }
+
+    private static SellerDetails other(String name, String whatSheSells) {
+        return new SellerDetails(name, SellerCategory.OTHER, "9876500005", null, null, null, whatSheSells);
     }
 
     private static ProductDetails product(String title, String description, String price) {

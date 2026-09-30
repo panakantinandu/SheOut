@@ -212,7 +212,8 @@
       "women": "Women-only platform",
       "wallet": "Fares into your wallet",
       "support": "Support you can call"
-    }
+    },
+    "phoneLabel": "Mobile number"
   },
   "verification": {
     "title": "Verification",
