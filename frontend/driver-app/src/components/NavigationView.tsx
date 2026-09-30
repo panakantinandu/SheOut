@@ -147,7 +147,7 @@ export function NavigationView({ phase, bookingId, destination, prepared, nav, p
   return (
     <div className="fixed inset-0 z-40 mx-auto flex max-w-md flex-col bg-surface" data-testid="navigation-view" data-phase={phase}>
       <div className="relative min-h-0 flex-1">
-        <LiveMap markers={markers} route={nav?.remaining ?? prepared?.points} follow={position ?? destination} fill />
+        <LiveMap markers={markers} route={prepared?.points} follow={position ?? destination} fill />
 
         {/* The next turn. */}
         <div className="pointer-events-none absolute inset-x-3 top-3 z-10 space-y-2">

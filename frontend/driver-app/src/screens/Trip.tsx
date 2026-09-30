@@ -654,7 +654,7 @@ export function Trip() {
           data-testid="trip-map"
         >
           {/* One map at a time: while navigation is open it has its own. */}
-          {!navigating && <LiveMap markers={markers} route={nav?.remaining ?? route?.points} fill />}
+          {!navigating && <LiveMap markers={markers} route={route?.points} fill />}
           <div className="pointer-events-none absolute inset-x-3 top-3 z-10 flex items-start justify-between">
             <button
               type="button"

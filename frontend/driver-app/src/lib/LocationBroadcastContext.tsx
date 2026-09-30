@@ -8,6 +8,11 @@ import { dispatchApi } from '../api/client';
 // position is actually SENT, so GPS jitter doesn't spam dispatch.
 export const LOCATION_SEND_MS = 7000;
 
+/** A fix less accurate than this is a network fallback, not GPS. */
+const POOR_FIX_METRES = 50;
+/** How long a good fix outranks a poor one. */
+const TRUST_GOOD_FIX_MS = 15000;
+
 /**
  * A position report older than this, and dispatch may no longer be matching
  * her: three missed sends. The Home status stops saying "looking for
@@ -184,8 +189,18 @@ export function LocationBroadcastProvider({ children }: { children: ReactNode })
     // 7-second tick, so going online does not leave dispatch (and her Home
     // status) waiting on a timer. After that, the interval as before.
     let sentFirst = false;
+    // The last fix good enough to trust, to weigh a poor one against.
+    let lastGood: { at: number; accuracy: number } | null = null;
     let watchId: number | null = navigator.geolocation.watchPosition(
       (pos) => {
+        // A phone briefly falling back to Wi-Fi or cell towers reports a fix
+        // 100-300 m out. Taken as it comes, her marker leaps across a block
+        // on both apps and jumps back with the next GPS fix. While a good fix
+        // is recent, a poor one is dropped; with nothing better, it is used.
+        const accuracy = Number.isFinite(pos.coords.accuracy) ? pos.coords.accuracy : null;
+        const now = Date.now();
+        if (accuracy != null && accuracy > POOR_FIX_METRES && lastGood && now - lastGood.at < TRUST_GOOD_FIX_MS && accuracy > lastGood.accuracy * 2) return;
+        if (accuracy == null || accuracy <= POOR_FIX_METRES) lastGood = { at: now, accuracy: accuracy ?? POOR_FIX_METRES };
         latest.current = { lat: pos.coords.latitude, lng: pos.coords.longitude };
         if (!sentFirst) {
           sentFirst = true;
@@ -195,7 +210,7 @@ export function LocationBroadcastProvider({ children }: { children: ReactNode })
         // above walking pace.
         const { heading, speed } = pos.coords;
         const moving = heading != null && Number.isFinite(heading) && (speed == null || speed > 1);
-        setPosition({ ...latest.current, heading: moving ? heading : null, accuracy: Number.isFinite(pos.coords.accuracy) ? pos.coords.accuracy : null });
+        setPosition({ ...latest.current, heading: moving ? heading : null, accuracy });
         setStatus('sharing');
         setError(null);
         // A fix is proof of access, whatever the Permissions API last said -

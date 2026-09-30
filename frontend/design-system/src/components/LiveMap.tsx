@@ -2,18 +2,18 @@ import {
   APILoadingStatus,
   APIProvider,
   Map as GoogleMap,
-  Polyline,
   useApiLoadingStatus,
   useMap,
 } from '@vis.gl/react-google-maps';
 import { LocateFixed, MapPinOff } from 'lucide-react';
 import { ServiceArt } from './ServiceArt';
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import * as Sentry from '@sentry/react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../lib/cn';
 import { SHEOUT_MAP_STYLE, SHEOUT_MAP_STYLE_DARK } from '../lib/mapStyle';
+import { MarkerMotion, ON_ROUTE_METRES, lineBearingAt, metresBetween, prepareLine, projectOnLine, splitLine, type MotionFrame, type PreparedLine } from '../lib/routeMotion';
 import { useTheme } from '../lib/theme';
 import { tokens } from '../tokens';
 
@@ -152,11 +152,11 @@ const MIN_MOVE_FOR_BEARING_METRES = 8;
  * place picker - all without Google's Advanced Markers, which require a Map ID
  * and would rule out the JSON style below.
  * <p>
- * Positions are never animated or predicted. A marker sits exactly where the
- * caller last said it was, so a partner is only ever drawn somewhere she
- * really reported being. With a polling caller that means the marker steps
- * on each poll; that is honest, and smoothing it would draw her where she has
- * not been.
+ * The partner's marker glides between fixes instead of jumping (see
+ * routeMotion): along the road when she is on the route, so it only passes
+ * through places she has really been, and never runs ahead of her newest
+ * fix. The route is drawn in two colours cut at her position - grey behind
+ * her, brand purple still to go - the way ride-hailing maps show progress.
  * <p>
  * If the map cannot load - no key in this build, the key refused for this
  * site, the network down - the space shows a plain "map unavailable" panel
@@ -179,6 +179,32 @@ function LoadedMap({ markers, route, className, autoFit = true, onPick, center, 
   const [, , theme] = useTheme();
   const [initialCenter] = useState(() => center ?? (markers[0] ? { lat: markers[0].lat, lng: markers[0].lng } : HYDERABAD));
   const [initialZoom] = useState(() => zoom ?? (center || markers[0] ? 14 : 11));
+
+  // Callers rebuild the route array on some renders; the line is prepared
+  // again only when the road itself is different.
+  const routeKey = route && route.length >= 2
+    ? `${route.length}:${route[0].lat},${route[0].lng}:${route[route.length >> 1].lat},${route[route.length >> 1].lng}:${route[route.length - 1].lat},${route[route.length - 1].lng}`
+    : '';
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const line = useMemo(() => prepareLine(route), [routeKey]);
+
+  // The partner: her marker glides, and the route is cut where she is.
+  const driver = markers.find((m) => m.kind === 'driver');
+  const [motion] = useState(() => new MarkerMotion());
+  useEffect(() => () => motion.dispose(), [motion]);
+  // Line first, then the fix: a fix is placed against the route it belongs to.
+  useEffect(() => motion.setLine(line), [motion, line]);
+  useEffect(() => {
+    motion.setTarget(driver ? { lat: driver.lat, lng: driver.lng } : null);
+  }, [motion, driver?.lat, driver?.lng]);
+  // On the route, her pointer follows the road ahead rather than the wobble
+  // between two fixes.
+  const roadHeading = useMemo(() => {
+    if (!line || !driver) return null;
+    const proj = projectOnLine(line, driver);
+    return proj.dist <= ON_ROUTE_METRES && proj.along < line.total - 5 ? lineBearingAt(line, proj.along) : null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [line, driver?.lat, driver?.lng]);
 
   if (authFailed || status === APILoadingStatus.AUTH_FAILURE || status === APILoadingStatus.FAILED) {
     return <MapUnavailable className={className} />;
@@ -213,27 +239,11 @@ function LoadedMap({ markers, route, className, autoFit = true, onPick, center, 
         onClick={onPick ? (e) => e.detail.latLng && onPick(e.detail.latLng.lat, e.detail.latLng.lng) : undefined}
         className="h-full w-full"
       >
-        {route && route.length >= 2 && (
-          // A white casing under the line keeps it crisp where it crosses
-          // roads and labels, the way ride-hailing maps draw theirs.
-          <Polyline path={route} strokeColor="#ffffff" strokeOpacity={0.95} strokeWeight={10} zIndex={0} clickable={false} />
-        )}
-        {route && route.length >= 2 && (
-          <Polyline
-            path={route}
-            strokeColor={colors.primary}
-            strokeOpacity={0.95}
-            strokeWeight={6}
-            // Under the markers: the line is context, the pin it ends at is
-            // the thing being looked for.
-            zIndex={1}
-            clickable={false}
-          />
-        )}
-        <Markers markers={markers} draggable={Boolean(onPick)} onPick={onPick} />
+        {line && <RouteLines line={line} motion={driver ? motion : null} dark={theme === 'dark'} />}
+        <Markers markers={markers} draggable={Boolean(onPick)} onPick={onPick} motion={motion} motionKey={driver?.key} roadHeading={roadHeading} />
         {onMapLoad && <MapLoadReporter onLoad={onMapLoad} />}
         {follow ? (
-          <FollowCamera follow={follow} />
+          <FollowCamera follow={follow} motion={driver ? motion : null} />
         ) : (
           <CameraControl markers={markers} route={route} autoFit={autoFit} center={center} zoom={zoom} fitPadding={fitPadding} showRecentre={interactive} />
         )}
@@ -241,6 +251,51 @@ function LoadedMap({ markers, route, className, autoFit = true, onPick, center, 
       </GoogleMap>
     </div>
   );
+}
+
+/** The road already covered: present, but stepping back behind the part still to go. */
+const ROUTE_DONE = { light: '#A9A3BA', dark: '#5A536F' };
+
+/**
+ * The route, cut where the partner is: grey behind her, purple ahead, on a
+ * white casing that keeps it crisp where it crosses roads and labels.
+ * <p>
+ * Drawn with Google's Polyline directly rather than through React, because
+ * the cut moves on every animation frame of her glide and a React render
+ * per frame would be wasted work. Where she is not on the route (not yet on
+ * it, or detoured off it), the cut stays at the furthest point she reached;
+ * with no partner on the map at all, the whole line is still to go.
+ */
+function RouteLines({ line, motion, dark }: { line: PreparedLine; motion: MarkerMotion | null; dark: boolean }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!map) return;
+    // Under the markers: the line is context, the pin it ends at is the thing being looked for.
+    const base = { clickable: false, map, strokeOpacity: 0.95 };
+    const casing = new google.maps.Polyline({ ...base, path: line.points, strokeColor: '#ffffff', strokeWeight: 10, zIndex: 0 });
+    const done = new google.maps.Polyline({ ...base, path: [], strokeColor: dark ? ROUTE_DONE.dark : ROUTE_DONE.light, strokeWeight: 6, zIndex: 1 });
+    const ahead = new google.maps.Polyline({ ...base, path: line.points, strokeColor: colors.primary, strokeWeight: 6, zIndex: 2 });
+
+    let cut = 0;
+    const apply = (frame: MotionFrame | null) => {
+      const along = frame?.along;
+      // Half a metre is below a pixel at street zoom; no need to redraw for less.
+      if (along == null || Math.abs(along - cut) < 0.5) return;
+      cut = along;
+      const parts = splitLine(line, cut);
+      done.setPath(parts.done);
+      ahead.setPath(parts.ahead);
+    };
+    const unsubscribe = motion?.subscribe(apply);
+    apply(motion?.current() ?? null);
+    return () => {
+      unsubscribe?.();
+      casing.setMap(null);
+      done.setMap(null);
+      ahead.setMap(null);
+    };
+  }, [map, line, motion, dark]);
+  return null;
 }
 
 /**
@@ -302,11 +357,20 @@ function CameraControl({ markers, route, autoFit, center, zoom, fitPadding, show
   const [userMoved, setUserMoved] = useState(false);
   const [fitNonce, setFitNonce] = useState(0);
   const fitPoints = markers.filter((m) => m.kind !== 'nearby');
+  // The partner moves with every fix. Re-fitting the view each time is what
+  // made the map pump in and out every few seconds, so her position is kept
+  // out of the signature: the view is fitted on the places that stay put and
+  // follows her only when she needs it to (below).
+  const fixedPoints = fitPoints.filter((m) => m.kind !== 'driver');
+  const driver = fitPoints.find((m) => m.kind === 'driver');
   // The whole road, not only its ends: a route that bends round a lake runs
   // well outside the box its two pins make, and was drawn off the map.
   const routePoints = route && route.length >= 2 ? route : [];
-  const signature = fitPoints.map((m) => `${m.lat.toFixed(5)},${m.lng.toFixed(5)}`).join('|')
-    + (routePoints.length ? `|route:${routePoints.length}:${routePoints[0].lat.toFixed(5)},${routePoints[routePoints.length - 1].lng.toFixed(5)}` : '');
+  const signature = fixedPoints.map((m) => `${m.lat.toFixed(5)},${m.lng.toFixed(5)}`).join('|')
+    + (routePoints.length ? `|route:${routePoints.length}:${routePoints[0].lat.toFixed(5)},${routePoints[routePoints.length - 1].lng.toFixed(5)}` : '')
+    + (driver ? '|driver' : '');
+  const latest = useRef({ fitPoints, routePoints, fitPadding });
+  latest.current = { fitPoints, routePoints, fitPadding };
 
   useEffect(() => {
     if (!map) return;
@@ -314,26 +378,60 @@ function CameraControl({ markers, route, autoFit, center, zoom, fitPadding, show
     return () => listener.remove();
   }, [map]);
 
-  useEffect(() => {
-    if (!map || !autoFit || userMoved || fitPoints.length === 0) return;
-    if (fitPoints.length === 1 && routePoints.length === 0) {
-      map.panTo(fitPoints[0]);
+  // One fit, capped at street zoom in the same move: fitBounds takes no
+  // maxZoom, and zooming back out after it landed was a visible second step.
+  const fit = useCallback(() => {
+    if (!map) return () => undefined;
+    const { fitPoints: points, routePoints: road, fitPadding: padding } = latest.current;
+    if (points.length === 0) return () => undefined;
+    if (points.length === 1 && road.length === 0) {
+      map.panTo(points[0]);
       if ((map.getZoom() ?? 0) < 14) map.setZoom(15);
-      return;
+      return () => undefined;
     }
     const bounds = new google.maps.LatLngBounds();
-    fitPoints.forEach((p) => bounds.extend(p));
-    routePoints.forEach((p) => bounds.extend(p));
-    map.fitBounds(bounds, fitPadding ?? 48);
-    // fitBounds has no maxZoom; two points a few metres apart would
-    // otherwise zoom to street-furniture level.
-    const once = google.maps.event.addListenerOnce(map, 'idle', () => {
-      if ((map.getZoom() ?? 0) > 16) map.setZoom(16);
-    });
-    return () => once.remove();
+    points.forEach((p) => bounds.extend(p));
+    road.forEach((p) => bounds.extend(p));
+    map.setOptions({ maxZoom: 16 });
+    map.fitBounds(bounds, padding ?? 48);
+    const once = google.maps.event.addListenerOnce(map, 'idle', () => map.setOptions({ maxZoom: null }));
+    return () => {
+      once.remove();
+      map.setOptions({ maxZoom: null });
+    };
+  }, [map]);
+
+  useEffect(() => {
+    if (!map || !autoFit || userMoved || fitPoints.length === 0) return;
+    return fit();
     // signature stands in for fitPoints; see the comment above.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map, autoFit, userMoved, signature, fitNonce]);
+  }, [map, autoFit, userMoved, signature, fitNonce, fit]);
+
+  // Her position moves the view only when it has to: when she is about to
+  // leave it, or when she and the places around her have drawn so close
+  // together that the view is mostly empty map (she is nearly at the
+  // pickup). Otherwise the view holds still and her marker moves across it.
+  useEffect(() => {
+    if (!map || !autoFit || userMoved || !driver) return;
+    const view = map.getBounds();
+    if (!view) return;
+    const ne = view.getNorthEast();
+    const sw = view.getSouthWest();
+    const latSpan = ne.lat() - sw.lat();
+    const lngSpan = ne.lng() - sw.lng();
+    const inner = (p: RoutePoint) =>
+      p.lat < ne.lat() - latSpan * 0.15 && p.lat > sw.lat() + latSpan * 0.15
+      && p.lng < ne.lng() - lngSpan * 0.12 && p.lng > sw.lng() + lngSpan * 0.12;
+    const all = [...fitPoints, ...routePoints];
+    const lats = all.map((p) => p.lat);
+    const lngs = all.map((p) => p.lng);
+    const needLat = Math.max(...lats) - Math.min(...lats);
+    const needLng = Math.max(...lngs) - Math.min(...lngs);
+    const muchTooWide = all.length > 1 && needLat < latSpan * 0.3 && needLng < lngSpan * 0.3 && (map.getZoom() ?? 0) < 16;
+    if (!inner(driver) || muchTooWide) return fit();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map, autoFit, userMoved, driver?.lat, driver?.lng, fit]);
 
   // A picker's opening view. Keyed on the coordinates, so a caller
   // re-rendering with the same place does not yank the view mid-pan.
@@ -382,7 +480,7 @@ const FOLLOW_ZOOM = 17;
  * GPS fix. A drag hands the map to her (to look ahead, or back at a turn);
  * the recentre button hands it back.
  */
-function FollowCamera({ follow }: { follow: RoutePoint }) {
+function FollowCamera({ follow, motion }: { follow: RoutePoint; motion: MarkerMotion | null }) {
   const map = useMap();
   const [userMoved, setUserMoved] = useState(false);
   const zoomed = useRef(false);
@@ -393,8 +491,25 @@ function FollowCamera({ follow }: { follow: RoutePoint }) {
     return () => listener.remove();
   }, [map]);
 
+  // With her marker on the map, the camera rides with it frame by frame, so
+  // the view slides along the road instead of lurching once a second with
+  // each fix, and her marker stays still at the centre as navigation apps do.
   useEffect(() => {
-    if (!map || userMoved) return;
+    if (!map || userMoved || !motion) return;
+    const centre = (frame: MotionFrame | null) => {
+      if (!frame) return;
+      if (!zoomed.current) {
+        map.setZoom(FOLLOW_ZOOM);
+        zoomed.current = true;
+      }
+      map.setCenter(frame.position);
+    };
+    centre(motion.current());
+    return motion.subscribe(centre);
+  }, [map, userMoved, motion]);
+
+  useEffect(() => {
+    if (!map || userMoved || (motion && motion.current())) return;
     if (!zoomed.current) {
       map.setZoom(FOLLOW_ZOOM);
       map.setCenter(follow);
@@ -402,7 +517,7 @@ function FollowCamera({ follow }: { follow: RoutePoint }) {
     } else {
       map.panTo(follow);
     }
-  }, [map, userMoved, follow.lat, follow.lng]);
+  }, [map, userMoved, motion, follow.lat, follow.lng]);
 
   if (!userMoved) return null;
   return (
@@ -431,7 +546,23 @@ function RecentreButton({ onClick }: { onClick: () => void }) {
   );
 }
 
-function Markers({ markers, draggable, onPick }: { markers: MapMarker[]; draggable: boolean; onPick?: (lat: number, lng: number) => void }) {
+function Markers({
+  markers,
+  draggable,
+  onPick,
+  motion,
+  motionKey,
+  roadHeading,
+}: {
+  markers: MapMarker[];
+  draggable: boolean;
+  onPick?: (lat: number, lng: number) => void;
+  /** Moves the marker with this key between fixes. */
+  motion: MarkerMotion;
+  motionKey?: string;
+  /** The road's direction where that marker is, when it is on the route. */
+  roadHeading: number | null;
+}) {
   // Last position and bearing per marker, to point a partner's badge the way
   // she is going when her device does not report a heading itself.
   const last = useRef(new Map<string, { lat: number; lng: number; bearing: number | null }>());
@@ -444,10 +575,12 @@ function Markers({ markers, draggable, onPick }: { markers: MapMarker[]; draggab
       let bearing = prev?.bearing ?? null;
       if (prev && metresBetween(prev, m) >= MIN_MOVE_FOR_BEARING_METRES) bearing = bearingBetween(prev, m);
       if (!prev || metresBetween(prev, m) >= MIN_MOVE_FOR_BEARING_METRES) last.current.set(m.key, { lat: m.lat, lng: m.lng, bearing });
-      out.set(m.key, typeof m.heading === 'number' && Number.isFinite(m.heading) ? m.heading : bearing);
+      // Her own compass first, then the road she is on, then how she has moved.
+      const road = m.key === motionKey ? roadHeading : null;
+      out.set(m.key, typeof m.heading === 'number' && Number.isFinite(m.heading) ? m.heading : road ?? bearing);
     }
     return out;
-  }, [markers]);
+  }, [markers, motionKey, roadHeading]);
 
   return (
     <>
@@ -460,6 +593,7 @@ function Markers({ markers, draggable, onPick }: { markers: MapMarker[]; draggab
           draggable={draggable && m.kind !== 'nearby'}
           onDragEnd={onPick}
           title={m.kind === 'nearby' ? undefined : m.label}
+          motion={m.key === motionKey && !draggable ? motion : undefined}
         >
           <MarkerGlyph kind={m.kind} heading={bearings.get(m.key) ?? null} />
         </HtmlMarker>
@@ -469,6 +603,7 @@ function Markers({ markers, draggable, onPick }: { markers: MapMarker[]; draggab
 }
 
 function MarkerGlyph({ kind, heading }: { kind: MapMarker['kind']; heading: number | null }) {
+  const turned = useRef<number | null>(null);
   if (kind === 'pickup' || kind === 'drop') {
     const fill = kind === 'pickup' ? colors.primary : colors.brandOrange;
     return (
@@ -500,10 +635,16 @@ function MarkerGlyph({ kind, heading }: { kind: MapMarker['kind']; heading: numb
   // The partner: a bike badge, with a small pointer on its rim that turns to
   // face her direction of travel. The bike itself stays upright - a side-on
   // bike rotated to face south would be drawn upside down.
+  // Turned the short way round: 350 to 10 degrees is a 20-degree turn, not a
+  // spin almost all the way back through south.
+  if (heading != null) {
+    const prev = turned.current;
+    turned.current = prev == null ? heading : prev + ((((heading - prev) % 360) + 540) % 360) - 180;
+  }
   return (
     <span className="relative flex h-10 w-10 items-center justify-center" data-testid="driver-marker" data-heading={heading ?? ''}>
       {heading != null && (
-        <span className="absolute inset-0" style={{ transform: `rotate(${heading}deg)`, transition: 'transform 300ms ease-out' }} aria-hidden="true">
+        <span className="absolute inset-0" style={{ transform: `rotate(${turned.current}deg)`, transition: 'transform 600ms ease-out' }} aria-hidden="true">
           <span
             className="absolute left-1/2 top-[-7px] h-0 w-0 -translate-x-1/2"
             style={{ borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderBottom: `9px solid ${colors.primaryDark}` }}
@@ -532,6 +673,7 @@ function HtmlMarker({
   draggable,
   onDragEnd,
   title,
+  motion,
   children,
 }: {
   position: RoutePoint;
@@ -540,6 +682,8 @@ function HtmlMarker({
   draggable: boolean;
   onDragEnd?: (lat: number, lng: number) => void;
   title?: string;
+  /** Where it is drawn comes from here, frame by frame, instead of straight from `position`. */
+  motion?: MarkerMotion;
   children: ReactNode;
 }) {
   const map = useMap();
@@ -547,7 +691,16 @@ function HtmlMarker({
   const overlayRef = useRef<google.maps.OverlayView | null>(null);
   const positionRef = useRef<RoutePoint>(position);
   const dragRef = useRef<RoutePoint | null>(null);
-  positionRef.current = position;
+  positionRef.current = motion?.current()?.position ?? position;
+
+  useEffect(() => {
+    if (!motion) return;
+    return motion.subscribe((frame) => {
+      if (!frame) return;
+      positionRef.current = frame.position;
+      overlayRef.current?.draw();
+    });
+  }, [motion]);
 
   useEffect(() => {
     if (!map) return;
@@ -639,14 +792,6 @@ function MapUnavailable({ className }: { className: string }) {
       <p className="px-6 text-sm text-text-secondary">{t('map.unavailable')}</p>
     </div>
   );
-}
-
-function metresBetween(a: RoutePoint, b: RoutePoint): number {
-  const toRad = (d: number) => (d * Math.PI) / 180;
-  const dLat = toRad(b.lat - a.lat);
-  const dLng = toRad(b.lng - a.lng);
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
-  return 2 * 6371000 * Math.asin(Math.sqrt(h));
 }
 
 /** Initial bearing from a to b, degrees clockwise from north. */
