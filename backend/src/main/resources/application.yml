@@ -165,6 +165,29 @@ sheout:
     match-threshold: ${SHIFT_CHECK_MATCH_THRESHOLD:0.55}
     review-after-misses: ${SHIFT_CHECK_REVIEW_AFTER_MISSES:3}
 
+  # The shift selfie compared on the server too (AWS Rekognition, Mumbai) -
+  # see ServerFaceCheck. Off until FACE_CHECK_ENABLED=true and AWS keys
+  # (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY) are set. The monthly cap keeps
+  # the bill under about $4.50; past it the phone's result stands.
+  face-check:
+    enabled: ${FACE_CHECK_ENABLED:false}
+    region: ${FACE_CHECK_REGION:ap-south-1}
+    monthly-cap: ${FACE_CHECK_MONTHLY_CAP:4500}
+    min-similarity: ${FACE_CHECK_MIN_SIMILARITY:90}
+
+  # Trip watch - see TripWatchService. Raises alerts to operations about live
+  # trips; never cancels one.
+  trip-watch:
+    enabled: ${TRIP_WATCH_ENABLED:true}
+    stuck-accepted-minutes: ${TRIP_WATCH_STUCK_ACCEPTED_MINUTES:45}
+    location-silent-minutes: ${TRIP_WATCH_SILENT_MINUTES:3}
+    stopped-minutes: ${TRIP_WATCH_STOPPED_MINUTES:8}
+    overdue-factor: ${TRIP_WATCH_OVERDUE_FACTOR:1.5}
+    overdue-slack-minutes: ${TRIP_WATCH_OVERDUE_SLACK_MINUTES:15}
+    # After an operator marks an alert checked, the same thing on the same
+    # trip stays quiet this long, then comes back if it still holds.
+    snooze-after-check-minutes: ${TRIP_WATCH_SNOOZE_MINUTES:30}
+
   users:
     # Where the cancellation review line sits.
     #

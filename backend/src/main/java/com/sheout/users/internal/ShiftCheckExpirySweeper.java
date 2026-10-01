@@ -20,12 +20,19 @@ class ShiftCheckExpirySweeper {
 
     private final DriverProfileService driverProfileService;
 
-    ShiftCheckExpirySweeper(DriverProfileService driverProfileService) {
+    private final com.sheout.sharedkernel.cluster.ClusterLock lock;
+
+    ShiftCheckExpirySweeper(DriverProfileService driverProfileService, com.sheout.sharedkernel.cluster.ClusterLock lock) {
+        this.lock = lock;
         this.driverProfileService = driverProfileService;
     }
 
     @Scheduled(fixedDelayString = "${sheout.shift-check.sweep-interval-ms:300000}", initialDelay = 60000)
     void sweep() {
+        lock.runExclusively("shift-check-expiry", java.time.Duration.ofMinutes(5), this::sweepOnce);
+    }
+
+    void sweepOnce() {
         int count = driverProfileService.takeOfflineWithoutShiftCheck();
         if (count > 0) {
             log.info("Took {} partner(s) offline: start-of-shift check lapsed", count);

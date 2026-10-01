@@ -77,7 +77,8 @@ public final class OpsViews {
             String payoutAccountMasked,
             String payoutIfsc,
             String payoutUpi,
-            ShiftCheckState shiftCheck
+            ShiftCheckState shiftCheck,
+            int implausibleJumpsToday
     ) {
     }
 
@@ -126,7 +127,9 @@ public final class OpsViews {
             List<DriverLocation> trail,
             DriverLocation partnerNow,
             Rating riderRating,
-            Rating partnerRating
+            Rating partnerRating,
+            List<com.sheout.booking.TripAlertsApi.TripAlert> alerts,
+            List<com.sheout.booking.BookingEvent> events
     ) {
     }
 
@@ -169,7 +172,8 @@ public final class OpsViews {
             Instant requestedAt,
             Instant statusSince,
             DriverLocation partnerNow,
-            boolean sosActive
+            boolean sosActive,
+            List<com.sheout.booking.TripAlertsApi.TripAlert> alerts
     ) {
     }
 

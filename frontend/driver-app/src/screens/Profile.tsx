@@ -7,6 +7,7 @@ import { ApiError, privacyApi, supportApi, usersApi } from '../api/client';
 import type { DriverProfileSummary, VehicleType } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { VehicleFields } from '../components/VehicleFields';
+import { PendingChangeCard } from '../components/PendingChangeCard';
 import { useTranslation } from '@sheout/design-system';
 
 /**
@@ -139,6 +140,9 @@ export function Profile() {
       )}
 
       {error && <p className="text-sm text-danger">{error}</p>}
+
+      {/* A change to what riders see, waiting for SheOut's team - see PendingChangeCard. */}
+      {profile?.pendingChange && !editing && <PendingChangeCard change={profile.pendingChange} onUpdated={setProfile} />}
 
       {profile && !editing && (
         <Card className="space-y-3">

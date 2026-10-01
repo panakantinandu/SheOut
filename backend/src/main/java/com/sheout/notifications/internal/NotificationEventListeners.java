@@ -97,9 +97,21 @@ class NotificationEventListeners {
         return language -> Map.of();
     }
 
+    /** Her partner dropped the trip and the app is already looking for another: she is told both, at once. */
+    @Async(NotificationDeliveryConfig.EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void onPartnerLeftBooking(com.sheout.booking.PartnerLeftBooking event) {
+        dispatcher.deliver(event.customerId(), NotificationType.PARTNER_LEFT, localized(event.customerId(), "partnerLeft",
+                none(), "/tracking/" + event.bookingId(), "booking-" + event.bookingId(), OutboundMessage.Urgency.NORMAL));
+    }
+
     @Async(NotificationDeliveryConfig.EXECUTOR)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onBookingRequested(BookingRequested event) {
+        // A search starting again is told to her by onPartnerLeftBooking, in its own words.
+        if (event.isRestart()) {
+            return;
+        }
         dispatcher.deliver(event.customerId(), NotificationType.BOOKING_REQUESTED, localized(event.customerId(), "bookingRequested",
                 language -> Map.of("category", copy.categoryName(event.category(), language)),
                 "/tracking/" + event.bookingId()));
@@ -254,6 +266,13 @@ class NotificationEventListeners {
 
     @Async(NotificationDeliveryConfig.EXECUTOR)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void onProfileChangeDecided(com.sheout.users.DriverProfileChangeDecided event) {
+        dispatcher.deliver(event.accountId(), NotificationType.PROFILE_CHANGE_DECIDED, localized(event.accountId(),
+                event.approved() ? "profileChangeApproved" : "profileChangeRejected", none(), "/profile"));
+    }
+
+    @Async(NotificationDeliveryConfig.EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onAccountVerified(AccountVerified event) {
         boolean driver = event.role() == AccountRole.DRIVER;
         dispatcher.deliver(event.accountId(), NotificationType.ACCOUNT_VERIFIED, localized(event.accountId(),
@@ -382,6 +401,34 @@ class NotificationEventListeners {
                 "/admin/index.html",
                 "sos-" + event.alertId(),
                 OutboundMessage.Urgency.ALERT));
+    }
+
+    /**
+     * Trip watch noticed something - see booking's TripWatchService. Every
+     * operator is pushed, with no names on the lock screen. For a long stop
+     * or a trip far over time the rider is asked too, in her language, how
+     * to get help; for the partner's phone going quiet she is not - there is
+     * nothing for her to do, and a message would only alarm her.
+     */
+    @Async(NotificationDeliveryConfig.EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void onTripAlertRaised(com.sheout.booking.TripAlertRaised event) {
+        String what = switch (event.kind()) {
+            case OVERDUE -> "A trip is running far over time";
+            case LOCATION_SILENT -> "A partner's phone has gone quiet mid-trip";
+            case STOPPED -> "A trip has stopped away from the drop";
+            case STUCK_ACCEPTED -> "A trip was accepted and never started";
+            case GPS_JUMP -> "A partner's phone reported an impossible jump";
+        };
+        dispatcher.deliverToRole(AccountRole.ADMIN, NotificationType.TRIP_WATCH_ALERT, new OutboundMessage(
+                what, "Open Live in the console to check on it.", "/admin/index.html#/live",
+                "trip-" + event.bookingId() + "-" + event.kind(), OutboundMessage.Urgency.ALERT));
+        if (event.kind() == com.sheout.booking.TripAlertsApi.Kind.STOPPED
+                || event.kind() == com.sheout.booking.TripAlertsApi.Kind.OVERDUE) {
+            dispatcher.deliver(event.customerId(), NotificationType.TRIP_CHECK_IN, localized(event.customerId(),
+                    "tripCheckIn", none(), "/tracking/" + event.bookingId(), "check-" + event.bookingId(),
+                    OutboundMessage.Urgency.ALERT));
+        }
     }
 
     private Map<String, String> receiptParams(PaymentCaptured event, BookingSummary booking, AppLanguage language) {

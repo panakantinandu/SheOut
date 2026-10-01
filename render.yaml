@@ -1,23 +1,23 @@
 # Render Blueprint - defines how the SheOut backend deploys to Render.
 # https://render.com/docs/blueprint-spec
 #
-# Postgres and Redis are Render's own free-tier resources here (a deliberate
-# choice, not the earlier plan): Render's free Postgres expires after 30
-# days and its free Key Value (Redis) caps at 25MB, but for now ("30 days
-# is fine, I'll move to a paid plan once the app is finished") that's an
-# acceptable trade-off in exchange for zero external accounts to set up.
-# When the paid plan happens, bump both `plan:` fields below to something
-# non-expiring - no other change needed, since the web service reads
-# DATABASE_URL/REDIS_URL from these resources either way.
+# PRODUCTION POSTGRES AND REDIS HAVE NO `plan:` HERE, ON PURPOSE. They were
+# on Render's free plans while the app was being built, and a free Postgres
+# expires 30 days after creation, is deleted 14 days later and has no
+# backups; a free Key Value loses everything on every restart. Their plans
+# are now chosen in the Render dashboard (Postgres: Pro 4 GB, disk 15 GB;
+# Key Value: Starter 256 MB). A Blueprint that names a plan resets the
+# dashboard's choice on every sync, which would quietly put production back
+# on free - so the field is left out, and Render keeps what the dashboard
+# says. Do not add it back as `free`.
 databases:
   - name: sheout-db
     databaseName: sheout
     user: sheout
-    plan: free
+    # plan: set in the dashboard - see the note at the top of this file.
     region: singapore
 
-  # Staging's own database. Render allows one free Postgres per workspace
-  # and production has it, so this is the smallest paid plan.
+  # Staging's own database: the smallest paid plan.
   - name: sheout-db-staging
     databaseName: sheout
     user: sheout
@@ -27,14 +27,13 @@ databases:
 services:
   - type: keyvalue
     name: sheout-redis
-    plan: free
+    # plan: set in the dashboard - see the note at the top of this file.
     region: singapore
     # No external access needed - only sheout-backend (same Render account/
     # private network) ever talks to this. Empty list = internal-only.
     ipAllowList: []
 
-  # Staging's own Redis. One free Key Value per workspace, and production has
-  # it, so this is the smallest paid plan.
+  # Staging's own Redis: the smallest paid plan.
   - type: keyvalue
     name: sheout-redis-staging
     plan: starter
@@ -117,6 +116,17 @@ services:
 
       # Still a secret you set yourself - Render doesn't generate this for you.
       - key: JWT_SECRET
+        sync: false
+
+      # Server-side shift-selfie face check (AWS Rekognition, ap-south-1).
+      # Off until FACE_CHECK_ENABLED is "true" and an AWS IAM user's keys
+      # with only rekognition:CompareFaces are set. Capped at 4,500 calls a
+      # month (about $4.50) in code; see ServerFaceCheck.
+      - key: FACE_CHECK_ENABLED
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
         sync: false
 
       # THE MASTER SWITCH for every dev/test bypass below (fixed-code

@@ -42,11 +42,31 @@ public enum CancellationReason {
      * operator instead. See UserProfileEventListeners.
      */
     IDENTITY_MISMATCH,
+    /** The vehicle or its number is not the one the app showed. Handled like IDENTITY_MISMATCH. */
+    WRONG_VEHICLE,
+    /** She does not feel safe going ahead - either side. Never held against whoever says it. */
+    SAFETY_CONCERN,
 
     /** Anything else. Requires a note. */
     OTHER;
 
     public boolean requiresNote() {
         return this == OTHER;
+    }
+
+    /** Reasons that say the other person or vehicle is not right or not safe. */
+    public boolean isSafetyReport() {
+        return this == IDENTITY_MISMATCH || this == WRONG_VEHICLE || this == SAFETY_CONCERN;
+    }
+
+    /** May a rider give this reason? Never one that is a partner's account of her. */
+    public boolean riderMayGive() {
+        return this != CUSTOMER_NOT_AT_PICKUP && this != DRIVER_UNAVAILABLE;
+    }
+
+    /** May a partner give this reason? Never one that is a rider's account of the partner. */
+    public boolean partnerMayGive() {
+        return this != DRIVER_TAKING_TOO_LONG && this != FOUND_ANOTHER_RIDE && this != CHANGE_OF_PLANS
+                && this != WRONG_VEHICLE;
     }
 }

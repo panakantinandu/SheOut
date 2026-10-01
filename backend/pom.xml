@@ -108,6 +108,14 @@
             <artifactId>s3</artifactId>
         </dependency>
 
+        <!-- Server-side face comparison for the start-of-shift selfie
+             (driververification.internal.ServerFaceCheck). Off unless
+             sheout.face-check.enabled, and capped per month. -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>rekognition</artifactId>
+        </dependency>
+
         <!-- Error reporting (platform.SentryConfig). Inert until SENTRY_DSN is
              set: with no DSN the SDK initialises disabled and sends nothing,
              so local runs and forks of this repo are unaffected. -->

@@ -86,6 +86,7 @@ public class AdminOpsService {
     private final TripTrailApi trails;
     private final RatingsApi ratings;
     private final ServiceHoursApi serviceHours;
+    private final com.sheout.booking.TripAlertsApi tripAlerts;
     private final long staleAfterSeconds;
 
     public AdminOpsService(AdminService adminService, AuthApi authApi, BookingApi bookingApi,
@@ -94,6 +95,7 @@ public class AdminOpsService {
                            ShiftCheckApi shiftChecks, PaymentApi paymentApi, PayoutApi payoutApi, SosApi sosApi,
                            DriverLocationApi locations, TripTrailApi trails, RatingsApi ratings,
                            ServiceHoursApi serviceHours,
+                           com.sheout.booking.TripAlertsApi tripAlerts,
                            // The same age past which dispatch stops trusting a fix.
                            @Value("${sheout.booking.completion.driver-location-max-age-seconds:30}") long fixMaxAge) {
         this.adminService = adminService;
@@ -111,6 +113,7 @@ public class AdminOpsService {
         this.trails = trails;
         this.ratings = ratings;
         this.serviceHours = serviceHours;
+        this.tripAlerts = tripAlerts;
         // A partner whose app has been quiet for a couple of minutes is
         // shown, marked, rather than dropped: "online but not reporting" is
         // itself something an operator may need to ring her about.
@@ -147,7 +150,8 @@ public class AdminOpsService {
                     payout.map(PayoutAccount::maskedAccountNumber).orElse(null),
                     payout.map(PayoutAccount::ifsc).orElse(null),
                     payout.map(PayoutAccount::upiVpa).orElse(null),
-                    shiftChecks.stateFor(accountId));
+                    shiftChecks.stateFor(accountId),
+                    locations.recentImplausibleJumps(accountId));
             return Optional.of(new AccountDetail(account, lastActive,
                     p.map(DriverProfileSummary::dateOfBirth).orElse(null),
                     p.map(DriverProfileSummary::profilePhotoUrl).orElse(null),
@@ -204,7 +208,7 @@ public class AdminOpsService {
                     party(b.customerId(), AccountRole.CUSTOMER),
                     b.driverId() == null ? null : party(b.driverId(), AccountRole.DRIVER),
                     paid, sosApi.findByBookingId(bookingId), trails.trail(bookingId), partnerNow,
-                    byRider, byPartner);
+                    byRider, byPartner, tripAlerts.alertsFor(bookingId), bookingApi.eventsFor(bookingId));
         });
     }
 
@@ -237,6 +241,8 @@ public class AdminOpsService {
                 .map(SosAlertSummary::bookingId)
                 .collect(Collectors.toSet());
         Map<UUID, DriverLocation> fixes = locations.findAllReporting();
+        Map<UUID, List<com.sheout.booking.TripAlertsApi.TripAlert>> alertsByTrip = tripAlerts.openAlerts().stream()
+                .collect(Collectors.groupingBy(com.sheout.booking.TripAlertsApi.TripAlert::bookingId));
         Map<UUID, UUID> tripOfPartner = new HashMap<>();
         trips.forEach(t -> {
             if (t.driverId() != null) {
@@ -251,7 +257,8 @@ public class AdminOpsService {
                 t.driverId() == null ? null : phone(t.driverId()),
                 t.pickup(), t.drop(), t.fareEstimate(), t.requestedAt(), statusSince(t),
                 t.driverId() == null ? null : fixes.get(t.driverId()),
-                sosTrips.contains(t.id()))).toList();
+                sosTrips.contains(t.id()),
+                alertsByTrip.getOrDefault(t.id(), List.of()))).toList();
 
         List<LivePartner> partners = fixes.entrySet().stream().map(e -> {
             Optional<DriverProfileSummary> p = drivers.findByAccountId(e.getKey());
@@ -275,6 +282,10 @@ public class AdminOpsService {
             case MATCHED -> t.matchedAt();
             default -> t.requestedAt();
         };
+    }
+
+    public boolean acknowledgeTripAlert(UUID alertId, UUID adminAccountId, String note) {
+        return tripAlerts.acknowledge(alertId, adminAccountId, note);
     }
 
     // ---- service hours ----------------------------------------------------

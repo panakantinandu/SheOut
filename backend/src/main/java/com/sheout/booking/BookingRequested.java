@@ -28,9 +28,27 @@ public class BookingRequested extends DomainEvent {
     private final BookingCategory category;
     private final GeoAddress pickup;
     private final GeoAddress drop;
+    private final UUID excludedDriverId;
+
+    /** The partner who dropped this trip; null on a first search. */
+    public UUID excludedDriverId() {
+        return excludedDriverId;
+    }
+
+    /** A search started again after a partner dropped the trip, not a new booking. */
+    public boolean isRestart() {
+        return excludedDriverId != null;
+    }
 
     public BookingRequested(UUID bookingId, UUID customerId, BookingType type, BookingCategory category,
                              GeoAddress pickup, GeoAddress drop) {
+        this(bookingId, customerId, type, category, pickup, drop, null);
+    }
+
+    /** excludedDriverId: the partner who dropped this trip, never offered it again. Null on a first search. */
+    public BookingRequested(UUID bookingId, UUID customerId, BookingType type, BookingCategory category,
+                             GeoAddress pickup, GeoAddress drop, UUID excludedDriverId) {
+        this.excludedDriverId = excludedDriverId;
         this.bookingId = bookingId;
         this.customerId = customerId;
         this.type = type;

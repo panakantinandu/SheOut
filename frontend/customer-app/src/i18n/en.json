@@ -831,7 +831,8 @@
     "UNSUPPORTED_PHOTO_TYPE": "That file is not a photo. Choose a JPEG, PNG or WebP photo.",
     "PHOTO_TOO_LARGE": "That photo is too large. Choose one under 10 MB.",
     "ALREADY_PAID": "Your listing fee is already paid.",
-    "INVALID_PRODUCT_TERMS": "Check the stock, ready-in days and minimum order."
+    "INVALID_PRODUCT_TERMS": "Check the stock, ready-in days and minimum order.",
+    "TRIP_ENDS_AFTER_HOURS": "This trip would end well after SheOut's service hours. Choose a nearer drop, or book it when bookings open again."
   },
   "picker": {
     "noAddress": "No address found at that point. Move the pin somewhere closer to a road or landmark.",
@@ -1001,7 +1002,7 @@
     "safetyFeatures": "Safety Features",
     "features": {
       "liveLocation": "Live Location Sharing",
-      "support": "24/7 Support",
+      "support": "Support during service hours",
       "verifiedPartners": "Verified Women Partners",
       "emergencyContacts": "Emergency Contacts"
     }
@@ -1149,7 +1150,12 @@
       "nearDropHint": "Get ready to get out once the vehicle has fully stopped. Your partner will end the trip.",
       "nearDropHintBike": "Get off only once the bike has fully stopped, and hand back the helmet. Your partner will end the trip.",
       "fare": "Fare",
-      "moreOptions": "Change destination or end here"
+      "moreOptions": "Change destination or end here",
+      "mismatchWhat": "What's wrong?",
+      "mismatchPerson": "Not the person in the app",
+      "mismatchVehicle": "Not the vehicle or number in the app",
+      "mismatchUnsafe": "I don't feel safe",
+      "mismatchNoCharge": "Any of these cancels the ride at no charge and never counts against you. SheOut's team will look into it."
     },
     "paidFlash": {
       "title": "Payment successful",

@@ -51,6 +51,15 @@ record DeliveryPolicy(boolean push, boolean emailFallback, boolean smsFallback, 
             // to keep coming back to check. Rare enough that always emailing
             // costs nothing.
             case ACCOUNT_VERIFIED, ACCOUNT_VERIFICATION_REJECTED -> PUSH_AND_EMAIL;
+            // The same kind of answer, about a change to her details: push, and email if that did not reach her.
+            case PROFILE_CHANGE_DECIDED -> PUSH_THEN_EMAIL;
+            // Operators on duty, like an SOS: push, every device.
+            case TRIP_WATCH_ALERT -> PUSH_ONLY;
+            // "Are you all right?" mid-trip. If push cannot reach her phone
+            // - no data - a text is exactly when it matters.
+            case TRIP_CHECK_IN -> PUSH_THEN_SMS;
+            // She is watching the search screen; a push is enough.
+            case PARTNER_LEFT -> PUSH_ONLY;
             // Operations, not a rider: push to whoever is on duty, and an
             // email so it is still visible to somebody who was not.
             case VERIFICATION_SUBMITTED -> PUSH_AND_EMAIL;

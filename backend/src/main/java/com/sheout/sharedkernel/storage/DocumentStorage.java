@@ -31,4 +31,13 @@ public interface DocumentStorage {
      * success with the document still stored.
      */
     void delete(String storageKey);
+
+    /**
+     * The stored bytes, for server-side checks that need the file itself
+     * (comparing a shift selfie with the verified one). Empty when the key
+     * is unknown or the backend cannot read it back.
+     */
+    default java.util.Optional<byte[]> load(String storageKey) {
+        return java.util.Optional.empty();
+    }
 }

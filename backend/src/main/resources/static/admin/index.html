@@ -844,6 +844,11 @@
   .tmap-mark.pickup, .tmap-mark.drop { width: 22px; height: 22px; margin: -11px 0 0 -11px; line-height: 18px; font-size: 11px; cursor: default; }
   .tmap-mark.pickup { background: var(--brand); }
   .tmap-mark.drop { background: #E36414; }
+  .tmap-mark.alert { box-shadow: 0 0 0 3px #E36414, 0 1px 4px rgba(0,0,0,.35); }
+  .watch-list { list-style: none; margin: 0; padding: 4px 16px 12px; }
+  .watch-list li { display: flex; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line-soft); font-size: 13px; }
+  .watch-list li:last-child { border-bottom: 0; }
+  .watch-list .grow { flex: 1; min-width: 0; }
   .tmap-mark.now { background: var(--blue); width: 18px; height: 18px; margin: -9px 0 0 -9px; }
   @keyframes tmap-pulse { 0% { box-shadow: 0 0 0 0 rgba(215,38,27,.6); } 100% { box-shadow: 0 0 0 14px rgba(215,38,27,0); } }
   .tmap-zoom { position: absolute; right: 10px; top: 10px; display: flex; flex-direction: column; border-radius: 8px; overflow: hidden; box-shadow: var(--elev-1); }
@@ -1027,6 +1032,10 @@
       <button data-tab="queue" aria-current="false">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 12l2 2 4-4"/><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
         <span class="nl">Verification Queue</span> <span class="count" id="cQueue"></span>
+      </button>
+      <button data-tab="changes" aria-current="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h11M4 12h7M4 17h9"/><path d="M15 14l3 3 4-5"/></svg>
+        <span class="nl">Profile Changes</span> <span class="count" id="cChanges"></span>
       </button>
       <button data-tab="bookings" aria-current="false">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7h18M3 12h18M3 17h18"/></svg>
@@ -2016,6 +2025,36 @@ const VIEWS = {
   },
 
   /**
+   * A verified partner's change to what riders identify her by. Nothing
+   * reaches riders until it is approved here: a new name has to match her
+   * ID, a new photo has to be her, and a new vehicle needs its RC.
+   */
+  changes: {
+    title: 'Profile Changes',
+    desc: 'Verified partners asking to change what riders identify them by: name, date of birth, photo or vehicle. Riders keep seeing the checked details until you approve. Compare a new name or date of birth with her ID, a new photo with her ID photo and live selfie, and a new registration number with the RC she sent.',
+    cardTitle: 'Waiting for a decision',
+    hint: 'Oldest first · click a row to compare',
+    empty: { icon: ICON_EMPTY_QUEUE, title: 'Nothing waiting', text: 'When a verified partner changes her name, photo or vehicle, it appears here before riders see it.' },
+    columns: [
+      { key: 'who', label: 'Partner', sort: r => (r.currentName || '').toLowerCase() },
+      { key: 'what', label: 'Asks to change' },
+      { key: 'rc', label: 'RC' },
+      { key: 'requestedAt', label: 'Waiting', sort: r => new Date(r.requestedAt).getTime() },
+    ],
+    load: () => api('/admin/profile-changes'),
+    onRowClick: r => openProfileChange(r),
+    cell: (r, key) => {
+      if (key === 'who') return `<span class="strong">${esc(r.currentName || 'Name not set')}</span><div class="subtle num">${esc(r.phoneNumber)}</div>`;
+      if (key === 'what') return changeSummary(r).map(x => `<span class="badge b-amber">${esc(x)}</span>`).join(' ');
+      if (key === 'rc') return (r.requestedVehicleType || r.requestedVehicleRegistrationNumber)
+        ? (r.rcDocumentUrl ? '<span class="badge b-green">Sent</span>' : '<span class="badge b-red">Missing</span>')
+        : '<span class="subtle">Not needed</span>';
+      if (key === 'requestedAt') { const w = waited(r.requestedAt); return `<span class="wait ${w.cls}">${esc(w.text)}</span>`; }
+      return '—';
+    },
+  },
+
+  /**
    * What is happening on the roads right now: partners online and where,
    * riders waiting, trips under way - on a map and in two tables, every
    * row and marker opening the full page for that person or trip.
@@ -2357,6 +2396,7 @@ const VIEWS = {
       if (key === 'partner') return `<span class="num strong">${esc(r.phoneNumber || 'Unknown')}</span>`;
       if (key === 'why') return c.status === 'NEEDS_REVIEW'
         ? `<span class="badge b-amber">Held - cannot go online</span><div class="subtle">Did not match three times running${c.faceDistance != null ? ` (last distance ${Number(c.faceDistance).toFixed(2)})` : ''}</div>`
+          + (c.serverSimilarity != null ? `<div class="subtle">Server face match: <b>${Math.round(c.serverSimilarity)}%</b> (90%+ is the same person)</div>` : '')
         : `<span class="badge b-grey">Photo only</span><div class="subtle">${c.referenceSelfieUrl ? 'Her phone could not compare' : 'No verified selfie on file to compare with'}</div>`;
       if (key === 'photos') {
         const pic = (url, label) => url
@@ -3721,6 +3761,40 @@ function ageFrom(dob) {
   return a;
 }
 const LIVE_STATUSES = ['REQUESTED', 'MATCHED', 'ACCEPTED', 'IN_PROGRESS'];
+const ALERT_TEXT = {
+  OVERDUE: 'Running far over time', LOCATION_SILENT: 'Partner\'s phone gone quiet', STOPPED: 'Stopped away from the drop',
+  STUCK_ACCEPTED: 'Accepted, never started', GPS_JUMP: 'Impossible GPS jump',
+};
+const alertBadge = a => `<span class="badge b-amber" title="${esc(a.detail)}">${esc(ALERT_TEXT[a.kind] || humanize(a.kind))}</span>`;
+
+/** Trip watch alerts are cleared by a person who has checked on the trip; the note says what she found. */
+async function acknowledgeAlert(alertId, after) {
+  const ok = await confirmAction({
+    title: 'Mark this alert as checked?',
+    message: 'Say what you found or did - called the rider, spoke to the partner, all fine. The trip itself is not changed.',
+    confirmLabel: 'Mark checked', withReason: true, reasonRequired: true,
+    reasonLabel: 'What you found or did', reasonPlaceholder: 'e.g. Called the rider: traffic jam at Mehdipatnam, she is fine', reasonMaxLength: 500,
+  });
+  if (!ok) { if (after) after(); return; }
+  try {
+    await api(`/admin/trip-alerts/${alertId}/ack`, { method: 'POST', body: JSON.stringify({ note: ok.reason }) });
+    toast('ok', 'Alert marked as checked', ok.reason);
+  } catch (err) {
+    if (err.message !== 'unauthorized') toast('bad', 'Could not mark it checked', err.message);
+  }
+  if (after) after();
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-ack-alert]');
+  if (!b) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const bookingId = b.dataset.ackBooking;
+  acknowledgeAlert(b.dataset.ackAlert, () => {
+    if (bookingId && $('modalRoot').querySelector('[data-detail]')) openBooking(bookingId, true);
+    else render({ quiet: true });
+  });
+}, true);
 
 /**
  * Every "open this person" / "open this trip" link on the console, wherever
@@ -3840,6 +3914,7 @@ async function loadAccount(accountId) {
         <dt>Now</dt><dd>${partner.onlineStatus === 'ONLINE' ? '<span class="badge b-green">Online</span>' : '<span class="badge b-grey">Offline</span>'}
           ${partner.onTrip ? ' <span class="badge b-blue">On a trip</span>' : ''}</dd>
         <dt>Last position</dt><dd>${loc ? `${fresh ? '' : '<span class="pill warn">stale</span> '}${esc(agoText(loc.recordedAt))} ago &middot; ${mapsLink(loc.lat, loc.lng)}` : '<span class="subtle">Not reporting</span>'}</dd>
+        <dt>GPS today</dt><dd>${partner.implausibleJumpsToday ? `<span class="pill bad">${partner.implausibleJumpsToday} impossible jump${partner.implausibleJumpsToday === 1 ? '' : 's'}</span> <span class="subtle">GPS can jump after a tunnel; many in a day is worth a call</span>` : '<span class="subtle">Nothing unusual</span>'}</dd>
         <dt>Shift selfie</dt><dd>${sc.underReview ? '<span class="badge b-amber">Under review</span>' : sc.valid ? `<span class="badge b-green">Valid</span> <span class="subtle">until ${esc(time(sc.validUntil))}</span>` : '<span class="badge b-grey">Needed before going online</span>'}
           ${sc.checkedAt ? `<div class="subtle">Last checked ${esc(time(sc.checkedAt))}${sc.helmetPhotoOnFile ? ' · helmet photo on file' : ''}</div>` : ''}</dd>
       </dl></div>
@@ -4020,7 +4095,25 @@ async function loadBooking(bookingId) {
       ${d.sosAlerts.map(s => `<li><span class="grow">${s.status === 'ACTIVE' ? '<span class="badge b-red">Active</span>' : '<span class="badge b-green">Resolved</span>'} ${esc(time(s.createdAt))}</span>${mapsLink(s.lat, s.lng, 'where')}</li>`).join('')}
     </ul></div>` : '';
 
-  const root = detailShell(head, `<div class="dx-grid">${party(d.rider, 'Rider')}${party(d.partner, 'Partner')}${routeCard}${timeline}${money}${ratings}${sos}</div>`);
+  const tripAlerts = (d.alerts || []).length ? `<div class="dx-card full"><h4>Trip watch</h4><ul class="contact-list">
+      ${d.alerts.map(a => `<li><span class="grow">${alertBadge(a)} ${esc(a.detail)}
+        <div class="subtle">raised ${esc(time(a.raisedAt))}${a.resolvedAt ? ` &middot; ${a.resolvedBy ? 'checked' : 'cleared'} ${esc(time(a.resolvedAt))}${a.note ? ': “' + esc(a.note) + '”' : ''}` : ''}</div></span>
+        ${a.resolvedAt ? '<span class="badge b-green">Closed</span>' : `<button class="btn btn-primary" type="button" data-ack-alert="${escValue(a.id)}" data-ack-booking="${escValue(b.id)}">Mark checked</button>`}</li>`).join('')}
+    </ul></div>` : '';
+  const EVENT_TEXT = { REQUESTED: 'Booked', MATCHED: 'Partner matched', ACCEPTED: 'Partner accepted', IN_PROGRESS: 'Trip started',
+    COMPLETED: 'Trip ended', CANCELLED: 'Cancelled', CANCELLATION_REASON: 'Reason given', NO_DRIVERS_AVAILABLE: 'No partner found',
+    PARTNER_LEFT: 'Partner dropped it; searching again' };
+  const who = e => e.actorRole === 'SYSTEM' ? 'SheOut (automatic)'
+    : e.actorId && d.rider && e.actorId === d.rider.accountId ? 'Rider'
+    : e.actorId && d.partner && e.actorId === d.partner.accountId ? 'Partner'
+    : humanize(e.actorRole);
+  const audit = (d.events || []).length ? `<div class="dx-card full"><h4>Audit log <span class="right subtle">every change, who made it, from which device</span></h4>
+      <div class="scroll"><table class="mini"><thead><tr><th>When</th><th>What</th><th>By</th><th>Detail</th><th>Request / device</th></tr></thead><tbody>
+      ${d.events.map(e => `<tr><td class="subtle nowrap">${esc(time(e.at))}</td><td>${esc(EVENT_TEXT[e.event] || humanize(e.event))}</td>
+        <td>${esc(who(e))}</td><td class="subtle">${esc(e.detail)}</td>
+        <td class="subtle"><span class="num">${esc(e.requestId ? e.requestId.slice(0, 8) : '')}</span>${e.device ? '<div class="clamp" title="' + esc(e.device) + '">' + esc(e.device) + '</div>' : ''}</td></tr>`).join('')}
+      </tbody></table></div></div>` : '';
+  const root = detailShell(head, `<div class="dx-grid">${tripAlerts}${party(d.rider, 'Rider')}${party(d.partner, 'Partner')}${routeCard}${timeline}${money}${ratings}${sos}${audit}</div>`);
 
   const map = createTileMap(root.querySelector('#tripMap'), { center: b.pickup, zoom: 13 });
   const trail = d.trail || [];
@@ -4033,6 +4126,92 @@ async function loadBooking(bookingId) {
   map.setPaths([{ points: [b.pickup, b.drop], tone: 'planned' }, { points: trail }]);
   map.setMarkers(marks);
   requestAnimationFrame(() => map.fit([b.pickup, b.drop, ...trail, ...(d.partnerNow ? [d.partnerNow] : [])], 40));
+}
+
+// ---- profile changes --------------------------------------------------------
+function changeSummary(r) {
+  const out = [];
+  if (r.requestedName) out.push('Name');
+  if (r.requestedDateOfBirth) out.push('Date of birth');
+  if (r.requestedVehicleType || r.requestedVehicleRegistrationNumber) out.push('Vehicle');
+  if (r.requestedPhotoUrl) out.push('Photo');
+  return out.length ? out : ['Photo'];
+}
+
+function openProfileChange(r) {
+  const vehicle = (t, n) => `${esc(VEHICLE_TEXT[t] || humanize(t) || '—')} <span class="num">${esc(n)}</span>`;
+  const row = (label, now, asked) => asked == null || asked === '' ? '' : `<dt>${label}</dt><dd><span class="subtle">${now}</span> &rarr; <b>${asked}</b></dd>`;
+  const vehicleChanged = r.requestedVehicleType || r.requestedVehicleRegistrationNumber;
+  openModal(`
+    <div class="modal-head"><h3>${esc(r.currentName || 'Name not set')} asks to change her details</h3>
+      <p>${esc(r.phoneNumber)} &middot; waiting ${esc(waited(r.requestedAt).text)}. Riders keep seeing the details on the left until you approve.</p></div>
+    <div class="modal-body">
+      <dl class="kv">
+        ${row('Name', esc(r.currentName), r.requestedName ? esc(r.requestedName) : null)}
+        ${row('Date of birth', esc(r.currentDateOfBirth), r.requestedDateOfBirth ? esc(r.requestedDateOfBirth) : null)}
+        ${vehicleChanged ? row('Vehicle', vehicle(r.currentVehicleType, r.currentVehicleRegistrationNumber),
+            vehicle(r.requestedVehicleType || r.currentVehicleType, r.requestedVehicleRegistrationNumber || r.currentVehicleRegistrationNumber)) : ''}
+      </dl>
+      <div class="docs">
+        ${r.requestedPhotoUrl ? `<div><div class="doc-label">Photo now</div><div class="doc" id="chPhotoNow"></div></div>
+          <div><div class="doc-label">New photo asked for</div><div class="doc" id="chPhotoNew"></div></div>` : ''}
+        ${vehicleChanged ? `<div><div class="doc-label">New vehicle's RC <span class="doc-hint">must show ${esc(r.requestedVehicleRegistrationNumber || r.currentVehicleRegistrationNumber)}</span></div>
+          <div class="doc" id="chRc">${r.rcDocumentUrl ? '' : '<div class="fallback">Not sent yet. She is asked for it in the app; this cannot be approved until it arrives.</div>'}</div></div>` : ''}
+      </div>
+      <p class="subtle">Compare a new name, date of birth or photo with her ID and live selfie: <a href="#" data-ch-docs>open her ID documents</a>.</p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" data-cancel type="button">Close</button>
+      <button class="btn btn-reject" data-ch-reject type="button">Turn down</button>
+      <button class="btn btn-approve" data-ch-approve type="button" ${vehicleChanged && !r.rcDocumentUrl ? 'disabled title="Waiting for the RC"' : ''}>Approve</button>
+    </div>`, { wide: true });
+  const root = $('modalRoot');
+  root.querySelector('[data-cancel]').addEventListener('click', closeModal);
+  if (r.requestedPhotoUrl) {
+    if (r.currentPhotoUrl) renderDocument(root.querySelector('#chPhotoNow'), r.currentPhotoUrl, 'Current profile photo');
+    else root.querySelector('#chPhotoNow').innerHTML = '<div class="fallback">No photo on file.</div>';
+    renderDocument(root.querySelector('#chPhotoNew'), r.requestedPhotoUrl, 'New profile photo');
+  }
+  if (vehicleChanged && r.rcDocumentUrl) renderDocument(root.querySelector('#chRc'), r.rcDocumentUrl, 'New registration certificate');
+  root.querySelector('[data-ch-docs]').addEventListener('click', async e => {
+    e.preventDefault();
+    try {
+      const d = await api(`/admin/accounts/${r.accountId}/detail`);
+      const a = d.account;
+      openDriver({ accountId: a.accountId, name: a.name, role: a.role, phoneNumber: a.phoneNumber,
+        genderVerificationStatus: a.genderVerificationStatus, policeVerificationStatus: a.policeVerificationStatus,
+        documentSubmitted: d.documentSubmitted, vehicleRegistrationNumber: d.partner ? d.partner.vehicleRegistrationNumber : null,
+        submittedAt: d.documentSubmittedAt, updatedAt: d.documentSubmittedAt });
+    } catch (err) {
+      if (err.message !== 'unauthorized') toast('bad', 'Could not open her documents', err.message);
+    }
+  });
+  root.querySelector('[data-ch-approve]').addEventListener('click', async () => {
+    const ok = await confirmAction({ title: 'Approve this change?', message: 'Riders will see the new details from her next trip.', confirmLabel: 'Approve', tone: 'approve' });
+    if (!ok) return;
+    try {
+      await api(`/admin/profile-changes/${r.changeId}/approve`, { method: 'POST' });
+      toast('ok', 'Change approved', r.currentName || r.phoneNumber);
+      render();
+    } catch (err) {
+      if (err.message !== 'unauthorized') toast('bad', 'Could not approve', err.message);
+    }
+  });
+  root.querySelector('[data-ch-reject]').addEventListener('click', async () => {
+    const ok = await confirmAction({
+      title: 'Turn this change down?', message: 'Her current details stay. She is shown your reason.',
+      confirmLabel: 'Turn down', tone: 'reject', withReason: true, reasonRequired: true,
+      reasonLabel: 'Reason (shown to her)', reasonPlaceholder: 'e.g. The RC photo is blurred. Send a clearer one and save again.', reasonMaxLength: 500,
+    });
+    if (!ok) return;
+    try {
+      await api(`/admin/profile-changes/${r.changeId}/reject`, { method: 'POST', body: JSON.stringify({ note: ok.reason }) });
+      toast('ok', 'Change turned down', r.currentName || r.phoneNumber);
+      render();
+    } catch (err) {
+      if (err.message !== 'unauthorized') toast('bad', 'Could not turn it down', err.message);
+    }
+  });
 }
 
 // ---- live -------------------------------------------------------------------
@@ -4071,6 +4250,10 @@ function paintLive(d) {
   if (!panel.querySelector('[data-live]')) {
     panel.innerHTML = `<div data-live>
       <div class="live-status" id="liveStatus"></div>
+      <section class="ov-card" aria-label="Needs attention" id="liveWatch" hidden>
+        <div class="hd"><span class="hico">${OV_EXTRA.bell}</span><h3>Trip watch: needs a look</h3><span class="tag badge b-amber" id="liveWatchCount"></span></div>
+        <ul class="watch-list" id="liveWatchList"></ul>
+      </section>
       <div class="ov-grid" id="liveKpis"></div>
       <section class="ov-card" aria-label="Live map">
         <div class="hd"><span class="hico">${OV_ICON.route}</span><h3>Live map</h3>
@@ -4098,7 +4281,7 @@ function paintLive(d) {
   // that need watching now.
   const STUCK_MS = 3 * 3600 * 1000;
   const isStuck = t => t.statusSince && Date.now() - new Date(t.statusSince).getTime() > STUCK_MS;
-  const rank = t => (t.sosActive ? 0 : isStuck(t) ? 3 : t.status === 'REQUESTED' ? 1 : 2);
+  const rank = t => (t.sosActive ? 0 : (t.alerts || []).length ? 1 : isStuck(t) ? 4 : t.status === 'REQUESTED' ? 2 : 3);
   const trips = (d.trips || []).slice().sort((a, b) => rank(a) - rank(b) || new Date(b.statusSince) - new Date(a.statusSince));
   const stuck = trips.filter(isStuck).length;
   const searching = trips.filter(t => t.status === 'REQUESTED').length;
@@ -4123,9 +4306,20 @@ function paintLive(d) {
     kpi('blue', OV_ICON.route, coming, 'Partner on the way', stuck ? `<b>${stuck} trip${stuck === 1 ? '' : 's'} look stuck</b> (no change for 3+ hours)` : 'Matched or heading to pickup') +
     kpi(sos ? 'red' : 'brand', sos ? OV_ICON.siren : OV_ICON.trip, riding, 'On a trip now', sos ? `<b>${sos} with an active SOS</b>` : 'Rider on board');
 
+  const watched = trips.flatMap(t => (t.alerts || []).map(a => ({ a, t })));
+  $('liveWatch').hidden = watched.length === 0;
+  $('liveWatchCount').textContent = watched.length;
+  $('liveWatchList').innerHTML = watched.map(({ a, t }) => `<li>
+      ${alertBadge(a)}
+      <span class="grow"><b>${esc(t.riderName || 'Rider')}</b> with ${esc(t.partnerName || 'no partner')} &middot; ${esc(a.detail)}
+        <div class="subtle">raised ${esc(agoText(a.raisedAt))} ago &middot; rider ${telLink(t.riderPhone)}${t.partnerPhone ? ' &middot; partner ' + telLink(t.partnerPhone) : ''}</div></span>
+      <button class="btn" type="button" data-open-booking="${escValue(t.bookingId)}">Open trip</button>
+      <button class="btn btn-primary" type="button" data-ack-alert="${escValue(a.id)}">Mark checked</button>
+    </li>`).join('');
+
   $('liveTripCount').textContent = trips.length;
   $('liveTrips').innerHTML = trips.length ? trips.map(t => `<tr data-open-booking="${escValue(t.bookingId)}">
-      <td>${badge(t.status)}${t.sosActive ? ' <span class="badge b-red">SOS</span>' : ''}</td>
+      <td>${badge(t.status)}${t.sosActive ? ' <span class="badge b-red">SOS</span>' : ''}${(t.alerts || []).map(a => ' ' + alertBadge(a)).join('')}</td>
       <td class="num ${t.status === 'REQUESTED' && (Date.now() - new Date(t.statusSince).getTime()) > 120000 ? 'strong' : ''}">${isStuck(t) ? `<span class="pill bad" title="No change for over 3 hours">Looks stuck · ${esc(agoText(t.statusSince))}</span>` : esc(agoText(t.statusSince))}</td>
       <td>${esc(serviceText(t.category))}</td>
       <td>${esc(t.riderName || 'Name not set')}<div class="subtle">${telLink(t.riderPhone)}</div></td>
@@ -4145,7 +4339,8 @@ function paintLive(d) {
     : `<tr><td colspan="5"><div class="subtle">No partners online right now.</div></td></tr>`;
 
   const marks = [];
-  partners.forEach(p => marks.push({ lat: p.lat, lng: p.lng, tone: isStale(p) ? 'stale' : p.tripId ? 'trip' : '',
+  const alertedPartners = new Set(trips.filter(t => (t.alerts || []).length && t.partnerId).map(t => t.partnerId));
+  partners.forEach(p => marks.push({ lat: p.lat, lng: p.lng, tone: (isStale(p) ? 'stale' : p.tripId ? 'trip' : '') + (alertedPartners.has(p.accountId) ? ' alert' : ''),
     title: `${p.name || 'Partner'} · ${p.tripId ? 'on a trip' : 'free'} · ${agoText(p.lastFixAt)} ago`, open: { kind: 'account', id: p.accountId } }));
   trips.forEach(t => {
     if (t.status === 'REQUESTED' && t.pickup) marks.push({ lat: t.pickup.lat, lng: t.pickup.lng, tone: 'search',
@@ -4325,7 +4520,7 @@ async function loadOverview() {
   const q = (path) => api(path).catch((err) => { if (err.message === 'unauthorized') throw err; return null; });
   const shops = (status) => q(`/admin/sellers${filterQuery({ status }, { pageSize: 1 })}`);
   const [queue, sos, support, payouts, bookingsToday, completedToday, noPartnerToday, routes, trust, campaigns,
-    shopsInReview, shopsAwaitingFee, shopsLive, live] = await Promise.all([
+    shopsInReview, shopsAwaitingFee, shopsLive, live, changes] = await Promise.all([
     q('/admin/verification/review-queue'),
     q('/admin/sos/active'),
     q('/admin/support/counts'),
@@ -4340,9 +4535,10 @@ async function loadOverview() {
     shops('APPROVED_AWAITING_PAYMENT'),
     shops('ACTIVE'),
     q('/admin/live'),
+    q('/admin/profile-changes'),
   ]);
   return { queue, sos, support, payouts, bookingsToday, completedToday, noPartnerToday, routes, trust, campaigns,
-    shopsInReview, shopsAwaitingFee, shopsLive, live };
+    shopsInReview, shopsAwaitingFee, shopsLive, live, changes };
 }
 
 const OV_EXTRA = {
@@ -4413,6 +4609,7 @@ function paintOverview(d) {
   if (d.support && d.support.unresolvedHigh > 0) attention.push(['red', `${d.support.unresolvedHigh} high-priority support ticket${d.support.unresolvedHigh === 1 ? '' : 's'} unresolved`, 'support']);
   if (oldest && oldest.mins >= 1440) attention.push(['amber', `Verification waiting ${oldest.text}: people cannot ride or drive until it is decided`, 'queue']);
   else if (queueN > 0) attention.push(['amber', `${queueN} verification${queueN === 1 ? '' : 's'} waiting for a decision`, 'queue']);
+  if (d.changes && d.changes.length) attention.push(['amber', `${d.changes.length} partner${d.changes.length === 1 ? '' : 's'} changed name, photo or vehicle: riders see the old details until you decide`, 'changes']);
   if (inReview > 0) attention.push(['brand', `${inReview} marketplace shop${inReview === 1 ? '' : 's'} waiting for review`, 'sellers', 'SUBMITTED_FOR_REVIEW']);
   if (payoutItems.length) attention.push(['amber', `${payoutItems.length} payout${payoutItems.length === 1 ? '' : 's'} waiting to be paid, ${rupees(payoutSum)} in all`, 'payouts']);
   if (routesN > 0) attention.push(['blue', `${routesN} trip${routesN === 1 ? '' : 's'} flagged for route review`, 'routes']);
@@ -4742,7 +4939,7 @@ async function render(opts = {}) {
     paintRows(view, rows, narrowed && view.emptyFiltered ? view.emptyFiltered : view.empty);
     paintPager(paged);
 
-    const counts = { queue: 'cQueue', sos: 'cSos', bookings: 'cBookings', accounts: 'cAccounts', trust: 'cTrust', routes: 'cRoutes', feedback: 'cFeedback', shiftchecks: 'cShift' };
+    const counts = { changes: 'cChanges', queue: 'cQueue', sos: 'cSos', bookings: 'cBookings', accounts: 'cAccounts', trust: 'cTrust', routes: 'cRoutes', feedback: 'cFeedback', shiftchecks: 'cShift' };
     // The badge counts everything matching, not the rows on this page -
     // "25" beside Bookings when there are 400 would be a lie. Support is
     // not in this map: its badge counts unresolved tickets whatever the
@@ -5263,6 +5460,7 @@ async function refreshBadges() {
     set('cShift', shift && shift.length);
     refreshSupportCounts();
     q('/admin/service-hours').then(v => v && refreshHoursBadge(v.status)).catch(() => {});
+    q('/admin/profile-changes').then(v => { if (v) $('cChanges').textContent = v.length || ''; }).catch(() => {});
   } catch (e) {
     // Signed out; nothing to count.
   }

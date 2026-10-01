@@ -82,6 +82,50 @@ class ShiftCheckServiceTest {
         return new ShiftCheckService(checks, records, storage, events, true, validHours, 0.55, 3);
     }
 
+    /** The same service with the server comparing faces too, answering `similarity` (empty: no opinion). */
+    private ShiftCheckService serviceWithServerCheck(Optional<Double> similarity) {
+        DocumentStorage storage = mock(DocumentStorage.class);
+        when(storage.store(any(), anyString(), any())).thenAnswer(call -> "key-" + UUID.randomUUID());
+        when(storage.resolveUrl(anyString())).thenAnswer(call -> "https://docs/" + call.getArgument(0));
+        when(storage.load("selfie-on-file")).thenReturn(Optional.of(new byte[]{1, 2, 3}));
+        ServerFaceCheck server = mock(ServerFaceCheck.class);
+        when(server.similarity(any(), any())).thenReturn(similarity);
+        return new ShiftCheckService(checks, records, storage, events, true, 12, 0.55, 3, server, 90);
+    }
+
+    /** A tampered phone reporting a match for somebody else is overruled. */
+    @Test
+    void theServersVerdictWinsOverThePhones() {
+        verifiedWithSelfie();
+        ShiftCheckService service = serviceWithServerCheck(Optional.of(40.0));
+
+        ShiftCheckService.Status status = attempt(service, 0.10, null, false);
+
+        assertThat(status.valid()).isFalse();
+        assertThat(rows.get(rows.size() - 1).getFaceResult()).isEqualTo(ShiftCheckEntity.FaceResult.NO_MATCH);
+        assertThat(rows.get(rows.size() - 1).getServerSimilarity()).isEqualTo(40.0);
+    }
+
+    @Test
+    void theServerCanConfirmWhatThePhoneCouldNotCheck() {
+        verifiedWithSelfie();
+        ShiftCheckService service = serviceWithServerCheck(Optional.of(97.0));
+
+        ShiftCheckService.Status status = attempt(service, null, "MODEL_FAILED", false);
+
+        assertThat(status.valid()).isTrue();
+        assertThat(rows.get(rows.size() - 1).getFaceResult()).isEqualTo(ShiftCheckEntity.FaceResult.MATCH);
+    }
+
+    @Test
+    void noServerOpinionLeavesThePhonesResult() {
+        verifiedWithSelfie();
+        ShiftCheckService service = serviceWithServerCheck(Optional.empty());
+
+        assertThat(attempt(service, 0.31, null, false).valid()).isTrue();
+        assertThat(rows.get(rows.size() - 1).getServerSimilarity()).isNull();
+    }
+
     private void verifiedWithSelfie() {
         VerificationRecordEntity record = new VerificationRecordEntity(partner, AccountRole.DRIVER);
         record.setGenderVerificationStatus(VerificationStatus.VERIFIED);

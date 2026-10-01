@@ -66,6 +66,20 @@ public class DriverLocationStore implements DriverLocationApi {
         redisTemplate.opsForValue().set(TS_KEY_PREFIX + driverId, Long.toString(System.currentTimeMillis()), TS_TTL);
     }
 
+    private static final String JUMPS_KEY_PREFIX = "dispatch:gps-jumps:";
+
+    public void recordImplausibleJump(UUID driverId) {
+        String key = JUMPS_KEY_PREFIX + driverId;
+        redisTemplate.opsForValue().increment(key);
+        redisTemplate.expire(key, Duration.ofDays(1));
+    }
+
+    @Override
+    public int recentImplausibleJumps(UUID driverId) {
+        String value = redisTemplate.opsForValue().get(JUMPS_KEY_PREFIX + driverId);
+        return value == null ? 0 : Integer.parseInt(value);
+    }
+
     public void remove(UUID driverId) {
         redisTemplate.opsForGeo().remove(GEO_KEY, driverId.toString());
         redisTemplate.delete(TS_KEY_PREFIX + driverId);

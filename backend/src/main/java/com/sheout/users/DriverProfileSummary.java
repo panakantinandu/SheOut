@@ -53,6 +53,12 @@ public record DriverProfileSummary(
         /** Name, date of birth and photo are all on file - what the apps' completion screen checks. */
         boolean profileComplete,
         TrustStats trustStats,
-        Instant updatedAt
+        Instant updatedAt,
+        /**
+         * Her change to her identity details waiting for an operator, or a
+         * recent refusal - see PendingProfileChange. Filled only on her own
+         * profile; null wherever anybody else reads it.
+         */
+        PendingProfileChange pendingChange
 ) {
 }

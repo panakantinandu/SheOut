@@ -122,11 +122,26 @@ class UserProfileEventListeners {
     @EventListener
     @Transactional
     public void onBookingRequested(BookingRequested event) {
+        // The same booking searching again after a partner dropped it: not a second booking of hers.
+        if (event.isRestart()) {
+            return;
+        }
         customerProfileRepository.findByAccountId(event.customerId())
                 .ifPresent(profile -> {
                     profile.recordBooking();
                     customerProfileRepository.save(profile);
                 });
+    }
+
+    /** A partner dropped a trip she had taken; it went back to searching. Counted against her, like a cancellation. */
+    @EventListener
+    @Transactional
+    public void onPartnerLeftBooking(com.sheout.booking.PartnerLeftBooking event) {
+        driverProfileRepository.findByAccountId(event.driverId()).ifPresent(profile -> {
+            profile.recordCancellation();
+            reviewIfNeeded(profile.getAccountId(), "driver", profile.getTrustStats(), profile::flagForReview);
+            driverProfileRepository.save(profile);
+        });
     }
 
     /** A partner's denominator: every booking she was assigned. */
@@ -141,62 +156,57 @@ class UserProfileEventListeners {
     }
 
     /**
-     * Counts a cancellation against whoever actually made it.
+     * Counts a cancellation against the account booking says it belongs to,
+     * and puts a reported account in front of an operator.
      * <p>
-     * Attributed by cancelledBy, and never to both sides. A booking has
-     * exactly one party who cancelled it; the other is the party it was done
-     * to, and charging her for it would be the opposite of accountability.
-     * This is why BookingCancelled had to start carrying cancelledBy - a
-     * booking id alone cannot say whose cancellation it was.
+     * Never against both sides, and no longer simply against whoever pressed
+     * cancel: a rider who gives up on a partner who never came, or who
+     * refuses the wrong person or vehicle, did the right thing. Booking holds
+     * the evidence (where the partner was, when she accepted) and decides;
+     * see BookingCancelled.countsAgainst.
      */
     @EventListener
     @Transactional
     public void onBookingCancelled(BookingCancelled event) {
-        UUID cancelledBy = event.cancelledBy();
-        if (cancelledBy == null) {
-            // A system-initiated cancellation, which nothing does today. It
-            // is nobody's fault, so it is nobody's number.
-            return;
-        }
-
-        // "This is not the person in the app." Cancelling was the right thing
-        // to do, so it is not counted against whoever did it - a rider who
-        // refuses to get on a stranger's bike must never be nudged toward
-        // getting on it to protect her cancellation rate. The account she
-        // reported is put in front of an operator instead.
-        if (event.reason() == com.sheout.booking.CancellationReason.IDENTITY_MISMATCH) {
-            String reason = "Reported at pickup as not the person shown in the app (trip " + event.bookingId() + ")";
-            if (cancelledBy.equals(event.customerId()) && event.driverId() != null) {
-                driverProfileRepository.findByAccountId(event.driverId()).ifPresent(profile -> {
+        // Booking decided, from where the partner was and how long she had
+        // been coming, whose cancellation this is and who - if anybody - was
+        // reported as the wrong person or vehicle, or not safe. Nothing is
+        // re-judged here; see BookingService.judgeCancellation.
+        if (event.reported() != null) {
+            String reason = switch (event.reason()) {
+                case WRONG_VEHICLE -> "Reported at pickup: not the vehicle shown in the app (trip " + event.bookingId() + ")";
+                case SAFETY_CONCERN -> "Reported as a safety concern at pickup (trip " + event.bookingId() + ")";
+                default -> "Reported at pickup as not the person shown in the app (trip " + event.bookingId() + ")";
+            };
+            if (event.reported().equals(event.driverId())) {
+                driverProfileRepository.findByAccountId(event.reported()).ifPresent(profile -> {
                     profile.flagForReview(reason);
                     driverProfileRepository.save(profile);
                 });
-            } else if (cancelledBy.equals(event.driverId())) {
-                customerProfileRepository.findByAccountId(event.customerId()).ifPresent(profile -> {
+            } else {
+                customerProfileRepository.findByAccountId(event.reported()).ifPresent(profile -> {
                     profile.flagForReview(reason);
                     customerProfileRepository.save(profile);
                 });
             }
-            log.warn("Identity mismatch reported on booking {} by {}", event.bookingId(), cancelledBy);
+            log.warn("{} on booking {} reported by {}", event.reason(), event.bookingId(), event.cancelledBy());
+        }
+        UUID counted = event.countsAgainst();
+        if (counted == null) {
             return;
         }
-
-        if (cancelledBy.equals(event.customerId())) {
-            customerProfileRepository.findByAccountId(cancelledBy).ifPresent(profile -> {
+        if (counted.equals(event.customerId())) {
+            customerProfileRepository.findByAccountId(counted).ifPresent(profile -> {
                 profile.recordCancellation();
                 reviewIfNeeded(profile.getAccountId(), "customer", profile.getTrustStats(), profile::flagForReview);
                 customerProfileRepository.save(profile);
             });
-        } else if (cancelledBy.equals(event.driverId())) {
-            driverProfileRepository.findByAccountId(cancelledBy).ifPresent(profile -> {
+        } else if (counted.equals(event.driverId())) {
+            driverProfileRepository.findByAccountId(counted).ifPresent(profile -> {
                 profile.recordCancellation();
                 reviewIfNeeded(profile.getAccountId(), "driver", profile.getTrustStats(), profile::flagForReview);
                 driverProfileRepository.save(profile);
             });
-        } else {
-            // Somebody other than the two participants cancelled. Not counted
-            // against either of them, because neither of them did it.
-            log.debug("Cancellation of booking {} was not by a participant - not counted", event.bookingId());
         }
     }
 

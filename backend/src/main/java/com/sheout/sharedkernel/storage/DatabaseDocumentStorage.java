@@ -50,6 +50,12 @@ public class DatabaseDocumentStorage implements DocumentStorage {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public java.util.Optional<byte[]> load(String storageKey) {
+        return documents.findByStorageKey(storageKey).map(StoredDocumentEntity::getContent);
+    }
+
+    @Override
     @Transactional
     public void delete(String storageKey) {
         documents.deleteByStorageKey(storageKey);

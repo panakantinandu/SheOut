@@ -52,6 +52,19 @@ public class LocalDiskDocumentStorage implements DocumentStorage {
     }
 
     @Override
+    public java.util.Optional<byte[]> load(String storageKey) {
+        Path target = root.resolve(storageKey).normalize();
+        if (!target.startsWith(root.normalize())) {
+            return java.util.Optional.empty();
+        }
+        try {
+            return java.util.Optional.of(java.nio.file.Files.readAllBytes(target));
+        } catch (java.io.IOException e) {
+            return java.util.Optional.empty();
+        }
+    }
+
+    @Override
     public void delete(String storageKey) {
         try {
             Path target = root.resolve(storageKey).normalize();

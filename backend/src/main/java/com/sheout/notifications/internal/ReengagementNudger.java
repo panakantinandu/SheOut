@@ -49,10 +49,13 @@ class ReengagementNudger {
     private final NotificationCopy copy;
     private final NotificationDispatcher dispatcher;
     private final boolean enabled;
+    private final com.sheout.sharedkernel.cluster.ClusterLock lock;
 
     ReengagementNudger(PushDeviceRepository devices, ReengagementNudgeRepository nudges, AuthApi authApi,
                        DriverProfileApi drivers, NotificationCopy copy, NotificationDispatcher dispatcher,
-                       @Value("${sheout.notifications.reengagement.enabled:true}") boolean enabled) {
+                       @Value("${sheout.notifications.reengagement.enabled:true}") boolean enabled,
+                       com.sheout.sharedkernel.cluster.ClusterLock lock) {
+        this.lock = lock;
         this.devices = devices;
         this.nudges = nudges;
         this.authApi = authApi;
@@ -64,8 +67,9 @@ class ReengagementNudger {
 
     @Scheduled(cron = "${sheout.notifications.reengagement.cron:0 5/30 * * * *}", zone = "Asia/Kolkata")
     public void sweep() {
+        // Once per run across servers, or every lapsed account is nudged twice.
         if (enabled) {
-            run(Instant.now());
+            lock.runExclusively("reengagement", java.time.Duration.ofMinutes(20), () -> run(Instant.now()));
         }
     }
 

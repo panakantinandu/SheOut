@@ -58,6 +58,8 @@ public class BookingService implements BookingApi {
     private static final java.util.Set<BookingStatus> ACTIVE_TRIP_STATUSES = java.util.EnumSet.of(
             BookingStatus.MATCHED, BookingStatus.ACCEPTED, BookingStatus.IN_PROGRESS);
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(BookingService.class);
+
     /** A rider's trip is live from the moment it starts searching. */
     private static final java.util.Set<BookingStatus> LIVE_STATUSES = java.util.EnumSet.of(
             BookingStatus.REQUESTED, BookingStatus.MATCHED, BookingStatus.ACCEPTED, BookingStatus.IN_PROGRESS);
@@ -75,8 +77,23 @@ public class BookingService implements BookingApi {
     private final DropoffGeofence pickupGeofence;
     private final TripRouteChecker routeChecker;
     private final CampaignsApi campaigns;
-    /** Whether new bookings are being taken right now - see ServiceHoursApi. */
-    private final java.util.function.BooleanSupplier bookingsOpen;
+    /** The trip audit log; nothing for a BookingService built by hand in a unit test. */
+    private BookingEventLog eventLog = BookingEventLog.NONE;
+
+    @Autowired
+    void setEventLog(BookingEventLog eventLog) {
+        this.eventLog = eventLog;
+    }
+
+    @Override
+    public List<com.sheout.booking.BookingEvent> eventsFor(UUID bookingId) {
+        return eventLog.forBooking(bookingId);
+    }
+
+    /** Whether new bookings are being taken now, and how late a trip may end - see ServiceHoursApi. */
+    private final BookingWindow bookingWindow;
+    /** Time allowed for a partner to reach the pickup, when judging whether a trip ends in hours. */
+    private static final Duration PICKUP_ALLOWANCE = Duration.ofMinutes(15);
 
     @Autowired
     public BookingService(BookingRepository bookingRepository,
@@ -99,7 +116,7 @@ public class BookingService implements BookingApi {
         this(bookingRepository, verificationApi, fareCalculator, eventPublisher, authApi, serviceArea,
                 devMode.verifiedRiderBypassPhone().orElse(""), partnerPaymentHoldMinutes, locationStore,
                 dropoffRadiusMetres, driverLocationMaxAgeSeconds, pickupRadiusMetres, routeChecker, campaigns,
-                () -> serviceHours.currentStatus().open());
+                BookingWindow.from(serviceHours));
     }
 
     BookingService(BookingRepository bookingRepository,
@@ -116,8 +133,8 @@ public class BookingService implements BookingApi {
                            double pickupRadiusMetres,
                            TripRouteChecker routeChecker,
                            CampaignsApi campaigns,
-                           java.util.function.BooleanSupplier bookingsOpen) {
-        this.bookingsOpen = bookingsOpen;
+                           BookingWindow bookingWindow) {
+        this.bookingWindow = bookingWindow;
         this.routeChecker = routeChecker;
         this.campaigns = campaigns;
         this.partnerPaymentHold = Duration.ofMinutes(partnerPaymentHoldMinutes);
@@ -152,7 +169,7 @@ public class BookingService implements BookingApi {
                            long driverLocationMaxAgeSeconds) {
         this(bookingRepository, verificationApi, fareCalculator, eventPublisher, authApi, serviceArea,
                 verifiedBypassPhone, partnerPaymentHoldMinutes, locationStore, dropoffRadiusMetres,
-                driverLocationMaxAgeSeconds, 300, TripRouteChecker.withoutTrails(), NO_CAMPAIGNS, () -> true);
+                driverLocationMaxAgeSeconds, 300, TripRouteChecker.withoutTrails(), NO_CAMPAIGNS, BookingWindow.alwaysOpen());
     }
 
     /**
@@ -217,7 +234,7 @@ public class BookingService implements BookingApi {
         // bookings, nothing else about the request matters tonight. Only new
         // bookings stop - trips under way and searches already running carry
         // on, because cutting those off would strand her mid-journey.
-        if (!bookingsOpen.getAsBoolean()) {
+        if (!bookingWindow.open()) {
             return Result.failure(BookingError.SERVICE_CLOSED);
         }
         // Before the verification gate on purpose: whether we serve an area
@@ -251,6 +268,15 @@ public class BookingService implements BookingApi {
         // The quote, not just its price: the distance it was priced on is
         // kept, so the trip can later be compared with the road actually driven.
         FareQuote quote = fareCalculator.quote(command.category(), command.pickup(), command.drop());
+        // Near closing time, a trip that would run long after it is refused:
+        // the operations desk closes with the hours, and a woman should not
+        // be on the road at 10:30 pm with nobody watching her trip. Judged
+        // on the routed duration plus time for a partner to arrive.
+        Optional<Instant> finishBy = bookingWindow.finishBy();
+        if (finishBy.isPresent() && Instant.now().plus(PICKUP_ALLOWANCE)
+                .plusSeconds(Math.round(quote.durationMinutes() * 60)).isAfter(finishBy.get())) {
+            return Result.failure(BookingError.TRIP_ENDS_AFTER_HOURS);
+        }
         BigDecimal fareEstimate = quote.amount();
         BookingEntity booking = new BookingEntity(
                 command.type(),
@@ -266,6 +292,7 @@ public class BookingService implements BookingApi {
         // A promotion pays some or all of the fare on her behalf - the fare
         // itself is unchanged. Held now, against the promotion's budget, in
         // this transaction: if the booking does not commit, neither does the hold.
+        eventLog.record(booking.getId(), "REQUESTED", null, BookingStatus.REQUESTED, null);
         PromoApplication promo = campaigns.reserveDiscount(command.customerId(), booking.getId(), fareEstimate);
         if (promo.applies()) {
             booking.applyPromotion(promo.discount(), promo.promotionName());
@@ -295,7 +322,9 @@ public class BookingService implements BookingApi {
         }
 
         booking.setDriverId(driverId);
+        BookingStatus previousStatus = booking.getStatus();
         booking.setStatus(BookingStatus.MATCHED);
+        eventLog.record(booking.getId(), "MATCHED", previousStatus, BookingStatus.MATCHED, null);
         booking.setMatchedAt(Instant.now());
         bookingRepository.save(booking);
 
@@ -318,7 +347,9 @@ public class BookingService implements BookingApi {
             return Result.failure(transition.error());
         }
 
+        BookingStatus previousStatus = booking.getStatus();
         booking.setStatus(BookingStatus.ACCEPTED);
+        eventLog.record(booking.getId(), "ACCEPTED", previousStatus, BookingStatus.ACCEPTED, null);
         booking.setAcceptedAt(Instant.now());
         // Generated here, at the one moment a partner becomes committed to
         // this trip, so the rider's screen has a code to show her from the
@@ -411,7 +442,9 @@ public class BookingService implements BookingApi {
         }
 
         Instant now = Instant.now();
+        BookingStatus previousStatus = booking.getStatus();
         booking.setStatus(BookingStatus.IN_PROGRESS);
+        eventLog.record(booking.getId(), "IN_PROGRESS", previousStatus, BookingStatus.IN_PROGRESS, null);
         booking.setStartedAt(now);
         booking.setPickupVerifiedAt(now);
         bookingRepository.save(booking);
@@ -509,7 +542,9 @@ public class BookingService implements BookingApi {
             }
         }
 
+        BookingStatus previousStatus = booking.getStatus();
         booking.setStatus(BookingStatus.COMPLETED);
+        eventLog.record(booking.getId(), "COMPLETED", previousStatus, BookingStatus.COMPLETED, null);
         booking.setCompletedAt(now);
         booking.setFinalFare(booking.getFareEstimate());
         recordEnding(booking, TripEndedBy.PARTNER, location, geofence == DropoffGeofence.Decision.LOCATION_UNAVAILABLE,
@@ -546,7 +581,9 @@ public class BookingService implements BookingApi {
         }
 
         Instant now = Instant.now();
+        BookingStatus previousStatus = booking.getStatus();
         booking.setStatus(BookingStatus.COMPLETED);
+        eventLog.record(booking.getId(), "COMPLETED", previousStatus, BookingStatus.COMPLETED, null);
         booking.setCompletedAt(now);
         booking.setFinalFare(booking.getFareEstimate());
         DriverLocation partnerAt = booking.getDriverId() == null ? null
@@ -669,7 +706,9 @@ public class BookingService implements BookingApi {
             return Result.failure(transition.error());
         }
 
+        BookingStatus previousStatus = booking.getStatus();
         booking.setStatus(BookingStatus.NO_DRIVERS_AVAILABLE);
+        eventLog.record(booking.getId(), "NO_DRIVERS_AVAILABLE", previousStatus, BookingStatus.NO_DRIVERS_AVAILABLE, null);
         bookingRepository.save(booking);
         eventPublisher.publish(new BookingNoDriversAvailable(booking.getId(), booking.getCustomerId()));
         return Result.success(toSummary(booking));
@@ -697,18 +736,121 @@ public class BookingService implements BookingApi {
         if (transition.isFailure()) {
             return Result.failure(transition.error());
         }
+        Result<CancellationOutcome, BookingError> outcome = judgeCancellation(booking, cancelledBy, reason);
+        if (outcome.isFailure()) {
+            return Result.failure(outcome.error());
+        }
+        if (searchesAgain(booking, cancelledBy, reason)) {
+            return returnToSearch(booking, reason, trimmedNote);
+        }
 
+        BookingStatus previousStatus = booking.getStatus();
         booking.setStatus(BookingStatus.CANCELLED);
+        eventLog.record(booking.getId(), "CANCELLED", previousStatus, BookingStatus.CANCELLED, null);
         booking.setCancelledAt(Instant.now());
         booking.recordCancellation(cancelledBy, reason, trimmedNote);
+        eventLog.record(booking.getId(), "CANCELLATION_REASON", null, null,
+                reason + (trimmedNote == null || trimmedNote.isBlank() ? "" : ": " + trimmedNote));
         bookingRepository.save(booking);
 
         // cancelledBy and the reason travel on the event, because the module
         // that counts cancellations against an account cannot work out
         // whose fault it was from a booking id alone.
         eventPublisher.publish(new BookingCancelled(
-                booking.getId(), booking.getCustomerId(), booking.getDriverId(), cancelledBy, reason));
+                booking.getId(), booking.getCustomerId(), booking.getDriverId(), cancelledBy, reason,
+                outcome.value().countsAgainst(), outcome.value().reported()));
         return Result.success(toSummary(booking));
+    }
+
+    /**
+     * A partner dropping a trip she had taken, for a reason that is about her
+     * ("I cannot complete this trip", or something else): the rider still
+     * needs her ride, so the search starts again without this partner. Not
+     * when the reason is about the rider or the pickup - a no-show, a wrong
+     * pin, a safety concern - where sending another woman to the same place
+     * would be the wrong answer.
+     */
+    private static boolean searchesAgain(BookingEntity booking, UUID by, CancellationReason reason) {
+        return booking.getDriverId() != null && by.equals(booking.getDriverId())
+                && (booking.getStatus() == BookingStatus.MATCHED || booking.getStatus() == BookingStatus.ACCEPTED)
+                && (reason == CancellationReason.DRIVER_UNAVAILABLE || reason == CancellationReason.OTHER);
+    }
+
+    private Result<BookingSummary, BookingError> returnToSearch(BookingEntity booking, CancellationReason reason, String note) {
+        Result<BookingStatus, BookingError> transition =
+                BookingStateMachine.transition(booking.getStatus(), BookingStatus.REQUESTED);
+        if (transition.isFailure()) {
+            return Result.failure(transition.error());
+        }
+        UUID partner = booking.getDriverId();
+        BookingStatus previousStatus = booking.getStatus();
+        booking.returnToSearch();
+        eventLog.record(booking.getId(), "PARTNER_LEFT", previousStatus, BookingStatus.REQUESTED,
+                "Partner " + partner + " dropped it (" + reason + "); searching again without her");
+        bookingRepository.save(booking);
+        log.info("Partner {} dropped booking {} ({}{}); searching again", partner, booking.getId(), reason,
+                note == null ? "" : ": " + note);
+        eventPublisher.publish(new com.sheout.booking.PartnerLeftBooking(booking.getId(), booking.getCustomerId(), partner, reason));
+        eventPublisher.publish(new BookingRequested(booking.getId(), booking.getCustomerId(), booking.getType(),
+                booking.getCategory(), booking.getPickup().toGeoAddress(), booking.getDrop().toGeoAddress(), partner));
+        return Result.success(toSummary(booking));
+    }
+
+    /** Partner accepted this long ago and is still not at the pickup: "taking too long" is her lateness, not the rider's. */
+    private static final Duration PARTNER_LATE_AFTER = Duration.ofMinutes(15);
+
+    private record CancellationOutcome(UUID countsAgainst, UUID reported) {
+    }
+
+    /**
+     * Whose cancellation this is, from the evidence rather than from who
+     * pressed the button - and whether the reason given is one this person
+     * may give at all.
+     * <p>
+     * A rider cancelling a search that never sent anybody costs nobody
+     * anything and counts against nobody. A rider who says it is not the
+     * right person or vehicle, or that she does not feel safe, is never
+     * counted - the other account goes to the review queue instead. A rider
+     * who gives up on a partner still not at the pickup well after accepting
+     * is not counted either: the lateness was not hers. A partner who says
+     * the rider never came has to be at the pickup for the server to believe
+     * it, and then it counts against the rider. Everything else counts
+     * against whoever cancelled, as before.
+     */
+    private Result<CancellationOutcome, BookingError> judgeCancellation(BookingEntity booking, UUID by,
+                                                                       CancellationReason reason) {
+        boolean byRider = by.equals(booking.getCustomerId());
+        boolean byPartner = booking.getDriverId() != null && by.equals(booking.getDriverId());
+        if ((byRider && !reason.riderMayGive()) || (byPartner && !reason.partnerMayGive())) {
+            return Result.failure(BookingError.CANCELLATION_REASON_NOT_ALLOWED);
+        }
+        if (reason.isSafetyReport()) {
+            // There has to be somebody to report.
+            if (booking.getDriverId() == null || booking.getStatus() != BookingStatus.ACCEPTED) {
+                return Result.failure(BookingError.CANCELLATION_REASON_NOT_ALLOWED);
+            }
+            return Result.success(new CancellationOutcome(null, byRider ? booking.getDriverId() : booking.getCustomerId()));
+        }
+        boolean partnerAtPickup = booking.getDriverId() != null && pickupGeofence.check(
+                locationStore.findLocation(booking.getDriverId()).orElse(null),
+                booking.getPickup().getLat(), booking.getPickup().getLng(), Instant.now()) == DropoffGeofence.Decision.AT_DROP_OFF;
+        if (reason == CancellationReason.CUSTOMER_NOT_AT_PICKUP) {
+            if (!partnerAtPickup) {
+                return Result.failure(BookingError.DRIVER_NOT_AT_PICKUP);
+            }
+            return Result.success(new CancellationOutcome(booking.getCustomerId(), null));
+        }
+        if (byRider) {
+            if (booking.getDriverId() == null) {
+                return Result.success(new CancellationOutcome(null, null));
+            }
+            boolean partnerLate = booking.getAcceptedAt() != null
+                    && booking.getAcceptedAt().isBefore(Instant.now().minus(PARTNER_LATE_AFTER)) && !partnerAtPickup;
+            if (reason == CancellationReason.DRIVER_TAKING_TOO_LONG && partnerLate) {
+                return Result.success(new CancellationOutcome(null, null));
+            }
+        }
+        return Result.success(new CancellationOutcome(by, null));
     }
 
     @Override

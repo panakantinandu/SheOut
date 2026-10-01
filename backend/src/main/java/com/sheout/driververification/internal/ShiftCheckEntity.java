@@ -67,6 +67,10 @@ class ShiftCheckEntity extends BaseEntity {
     private FaceResult faceResult;
 
     private Double faceDistance;
+
+    /** Rekognition's 0-100 similarity when the server compared the faces too; null when it did not. See V54. */
+    @jakarta.persistence.Column(name = "server_similarity")
+    private Double serverSimilarity;
     private Instant submittedAt;
     private Instant reviewedAt;
     private UUID reviewedBy;
@@ -156,5 +160,13 @@ class ShiftCheckEntity extends BaseEntity {
 
     String getReviewNote() {
         return reviewNote;
+    }
+
+    void recordServerSimilarity(Double similarity) {
+        this.serverSimilarity = similarity;
+    }
+
+    Double getServerSimilarity() {
+        return serverSimilarity;
     }
 }

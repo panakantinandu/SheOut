@@ -23,4 +23,11 @@ public interface DriverLocationApi {
      * online partners are in the set.
      */
     java.util.Map<UUID, DriverLocation> findAllReporting();
+
+    /**
+     * How many physically impossible jumps (over 200 km/h between two
+     * reports) her phone has sent in the last day. A signal for a person to
+     * look at - GPS waking up after a tunnel jumps too - never a verdict.
+     */
+    int recentImplausibleJumps(UUID driverId);
 }

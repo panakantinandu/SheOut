@@ -43,4 +43,14 @@ public interface DriverProfileApi {
      * this method was added to close.
      */
     boolean isCurrentlyVerified(UUID accountId);
+
+    /** Verified partners' changes to their identity details, waiting for an operator, oldest first. */
+    List<ProfileChangeReview> findPendingProfileChanges();
+
+    /**
+     * An operator's decision on one. Approving applies it; turning it down
+     * needs a note, which she is shown. Failure names why (no such pending
+     * change, a vehicle change without its RC, a refusal without a note).
+     */
+    com.sheout.sharedkernel.Result<Void, ProfileChangeDecisionError> decideProfileChange(UUID changeId, boolean approve, UUID adminAccountId, String note);
 }

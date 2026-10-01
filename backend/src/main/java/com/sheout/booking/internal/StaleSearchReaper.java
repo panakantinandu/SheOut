@@ -43,6 +43,7 @@ class StaleSearchReaper {
     private final BookingRepository bookingRepository;
     private final BookingService bookingService;
     private final Duration staleAfter;
+    private final com.sheout.sharedkernel.cluster.ClusterLock lock;
 
     StaleSearchReaper(
             BookingRepository bookingRepository,
@@ -50,7 +51,9 @@ class StaleSearchReaper {
             // The same property dispatch reads its budget from, so the two
             // cannot drift apart when it is retuned.
             @Value("${sheout.dispatch.search-timeout-seconds:90}") long searchTimeoutSeconds,
-            @Value("${sheout.booking.stale-search-grace-seconds:60}") long graceSeconds) {
+            @Value("${sheout.booking.stale-search-grace-seconds:60}") long graceSeconds,
+            com.sheout.sharedkernel.cluster.ClusterLock lock) {
+        this.lock = lock;
         this.bookingRepository = bookingRepository;
         this.bookingService = bookingService;
         this.staleAfter = Duration.ofSeconds(searchTimeoutSeconds + graceSeconds);
@@ -60,10 +63,14 @@ class StaleSearchReaper {
             initialDelayString = "${sheout.booking.stale-search-initial-delay-ms:15000}",
             fixedDelayString = "${sheout.booking.stale-search-interval-ms:60000}")
     public void reap() {
+        lock.runExclusively("stale-search-reaper", Duration.ofMinutes(5), this::reapOnce);
+    }
+
+    void reapOnce() {
         Instant cutoff = Instant.now().minus(staleAfter);
         List<BookingEntity> stale;
         do {
-            stale = bookingRepository.findTop100ByStatusAndCreatedAtBeforeOrderByCreatedAtAsc(
+            stale = bookingRepository.findTop100ByStatusAndSearchStartedAtBeforeOrderBySearchStartedAtAsc(
                     BookingStatus.REQUESTED, cutoff);
             int ended = 0;
             for (BookingEntity booking : stale) {

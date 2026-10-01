@@ -54,5 +54,13 @@ public enum NotificationType {
      * "We miss you": to a rider or partner who has not opened SheOut for a week
      * or more - see ReengagementNudger. Push only, never a paid text or an email.
      */
-    REENGAGEMENT
+    REENGAGEMENT,
+
+    PROFILE_CHANGE_DECIDED,
+
+    TRIP_WATCH_ALERT,
+
+    TRIP_CHECK_IN,
+
+    PARTNER_LEFT
 }

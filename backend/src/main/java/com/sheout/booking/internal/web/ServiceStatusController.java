@@ -61,6 +61,15 @@ public class ServiceStatusController {
     ) {
     }
 
+    /** Booked close to closing time, this trip would run on long after it. */
+    static String endsAfterHoursMessage(ServiceStatus status) {
+        String closes = status.closesAt() == null ? null
+                : CLOCK.format(status.closesAt().atZone(ZoneId.of(status.timeZone())));
+        return "This trip would end well after SheOut's service hours"
+                + (closes == null ? "" : " (bookings close at " + closes + ")")
+                + ". Choose a nearer drop, or book it when bookings open again.";
+    }
+
     /** What a refused booking says - the hours, and when she can book again. */
     static String closedMessage(ServiceStatus status) {
         if (status.open()) {

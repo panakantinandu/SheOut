@@ -36,19 +36,33 @@ public class ServiceHoursService implements ServiceHoursApi {
     private final ServiceHoursChangeRepository changes;
     private final DomainEventPublisher events;
     private final Clock clock;
+    private final java.time.Duration finishGrace;
 
     @Autowired
     public ServiceHoursService(ServiceHoursRepository repository, ServiceHoursChangeRepository changes,
-                               DomainEventPublisher events) {
-        this(repository, changes, events, Clock.systemUTC());
+                               DomainEventPublisher events,
+                               // How long after closing the last trips may still be running.
+                               @org.springframework.beans.factory.annotation.Value("${sheout.booking.service-hours.finish-grace-minutes:45}") long finishGraceMinutes) {
+        this(repository, changes, events, Clock.systemUTC(), java.time.Duration.ofMinutes(finishGraceMinutes));
     }
 
     ServiceHoursService(ServiceHoursRepository repository, ServiceHoursChangeRepository changes,
-                        DomainEventPublisher events, Clock clock) {
+                        DomainEventPublisher events, Clock clock, java.time.Duration finishGrace) {
         this.repository = repository;
         this.changes = changes;
         this.events = events;
         this.clock = clock;
+        this.finishGrace = finishGrace;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public java.util.Optional<Instant> latestTripFinish() {
+        ServiceStatus status = currentStatus();
+        if (!status.open() || status.closesAt() == null) {
+            return java.util.Optional.empty();
+        }
+        return java.util.Optional.of(status.closesAt().plus(finishGrace));
     }
 
     @Override

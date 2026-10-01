@@ -92,6 +92,16 @@ public class S3DocumentStorage implements DocumentStorage {
         return presigner.presignGetObject(presignRequest).url().toString();
     }
 
+    @Override
+    public java.util.Optional<byte[]> load(String storageKey) {
+        try {
+            return java.util.Optional.of(s3Client.getObjectAsBytes(GetObjectRequest.builder()
+                    .bucket(bucket).key(storageKey).build()).asByteArray());
+        } catch (RuntimeException e) {
+            return java.util.Optional.empty();
+        }
+    }
+
     /** S3 DeleteObject succeeds for a key that does not exist, which is the idempotence DocumentStorage asks for. */
     @Override
     public void delete(String storageKey) {

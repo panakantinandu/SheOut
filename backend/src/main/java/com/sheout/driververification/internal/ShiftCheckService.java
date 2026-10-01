@@ -78,6 +78,34 @@ public class ShiftCheckService implements ShiftCheckApi {
     private final Duration validFor;
     private final double matchThreshold;
     private final int reviewAfterMisses;
+    /** Null when built by hand in a unit test - the phone's result stands. */
+    private final ServerFaceCheck serverFaceCheck;
+    private final double serverMinSimilarity;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public ShiftCheckService(ShiftCheckRepository checks,
+                             VerificationRecordRepository records,
+                             DocumentStorage documentStorage,
+                             DomainEventPublisher eventPublisher,
+                             @Value("${sheout.shift-check.enabled:true}") boolean enabled,
+                             @Value("${sheout.shift-check.valid-hours:12}") long validHours,
+                             @Value("${sheout.shift-check.match-threshold:0.55}") double matchThreshold,
+                             @Value("${sheout.shift-check.review-after-misses:3}") int reviewAfterMisses,
+                             ServerFaceCheck serverFaceCheck,
+                             // Rekognition's 0-100 similarity. 90 is its own recommended
+                             // line for identity checks; below it is not the same woman.
+                             @Value("${sheout.face-check.min-similarity:90}") double serverMinSimilarity) {
+        this.checks = checks;
+        this.records = records;
+        this.documentStorage = documentStorage;
+        this.eventPublisher = eventPublisher;
+        this.enabled = enabled;
+        this.validFor = Duration.ofHours(validHours);
+        this.matchThreshold = matchThreshold;
+        this.reviewAfterMisses = reviewAfterMisses;
+        this.serverFaceCheck = serverFaceCheck;
+        this.serverMinSimilarity = serverMinSimilarity;
+    }
 
     public ShiftCheckService(ShiftCheckRepository checks,
                              VerificationRecordRepository records,
@@ -101,6 +129,8 @@ public class ShiftCheckService implements ShiftCheckApi {
         this.validFor = Duration.ofHours(validHours);
         this.matchThreshold = matchThreshold;
         this.reviewAfterMisses = reviewAfterMisses;
+        this.serverFaceCheck = null;
+        this.serverMinSimilarity = 90;
     }
 
     public boolean enabled() {
@@ -120,7 +150,9 @@ public class ShiftCheckService implements ShiftCheckApi {
     /** What the operator sees for one check. */
     public record ReviewItem(UUID checkId, UUID accountId, String status, String faceResult, Double faceDistance,
                              Instant submittedAt, String selfieUrl, String framesUrl, String helmetUrl,
-                             String referenceSelfieUrl, List<SelfiePrompt> prompts) {
+                             String referenceSelfieUrl, List<SelfiePrompt> prompts,
+                             /** The server's 0-100 face similarity, when it compared too; see ServerFaceCheck. */
+                             Double serverSimilarity) {
     }
 
     /**
@@ -179,6 +211,25 @@ public class ShiftCheckService implements ShiftCheckApi {
             face = ShiftCheckEntity.FaceResult.UNAVAILABLE;
         }
 
+        // The phone's verdict is a claim; when the server can check it, the
+        // server decides. See ServerFaceCheck - empty means no opinion, and
+        // the phone's result stands as before.
+        Double serverSimilarity = null;
+        if (hasReference && serverFaceCheck != null && face != ShiftCheckEntity.FaceResult.NO_FACE) {
+            Optional<byte[]> reference = referenceKey(accountId).flatMap(documentStorage::load);
+            Optional<Double> similarity = reference.flatMap(ref -> serverFaceCheck.similarity(ref, selfie.content()));
+            if (similarity.isPresent()) {
+                serverSimilarity = similarity.get();
+                ShiftCheckEntity.FaceResult serverVerdict = serverSimilarity >= serverMinSimilarity
+                        ? ShiftCheckEntity.FaceResult.MATCH : ShiftCheckEntity.FaceResult.NO_MATCH;
+                if (serverVerdict != face && face != ShiftCheckEntity.FaceResult.UNAVAILABLE) {
+                    log.warn("Shift check for {}: phone said {}, server similarity {} says {}", accountId, face,
+                            Math.round(serverSimilarity), serverVerdict);
+                }
+                face = serverVerdict;
+            }
+        }
+
         if (face == ShiftCheckEntity.FaceResult.NO_FACE) {
             // Nothing worth keeping: a frame with no face in it is evidence of nothing.
             check.recordAnswer(ShiftCheckEntity.Status.RETRY, face, null, null, null, null, now);
@@ -207,6 +258,7 @@ public class ShiftCheckService implements ShiftCheckApi {
             outcome = ShiftCheckEntity.Status.PASSED;
         }
         check.recordAnswer(outcome, face, distance, selfieKey, framesKey, helmetKey, now);
+        check.recordServerSimilarity(serverSimilarity);
         checks.save(check);
 
         if (outcome == ShiftCheckEntity.Status.NEEDS_REVIEW) {
@@ -329,7 +381,8 @@ public class ShiftCheckService implements ShiftCheckApi {
                 c.getFaceResult() == null ? null : c.getFaceResult().name(), c.getFaceDistance(), c.getSubmittedAt(),
                 url(c.getSelfieKey()), url(c.getFramesKey()), url(c.getHelmetKey()),
                 referenceSelfieUrl(c.getAccountId()).orElse(null),
-                c.getPrompts() == null ? List.of() : List.of(SelfiePrompt.valueOf(c.getPrompts())));
+                c.getPrompts() == null ? List.of() : List.of(SelfiePrompt.valueOf(c.getPrompts())),
+                c.getServerSimilarity());
     }
 
     /** Misses since the last check that settled anything. */

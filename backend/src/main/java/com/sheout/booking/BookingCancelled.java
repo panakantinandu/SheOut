@@ -21,14 +21,38 @@ public class BookingCancelled extends DomainEvent {
     private final UUID driverId;
     private final UUID cancelledBy;
     private final CancellationReason reason;
+    private final UUID countsAgainst;
+    private final UUID reported;
 
     public BookingCancelled(UUID bookingId, UUID customerId, UUID driverId,
                             UUID cancelledBy, CancellationReason reason) {
+        this(bookingId, customerId, driverId, cancelledBy, reason, cancelledBy, null);
+    }
+
+    public BookingCancelled(UUID bookingId, UUID customerId, UUID driverId,
+                            UUID cancelledBy, CancellationReason reason, UUID countsAgainst, UUID reported) {
         this.bookingId = bookingId;
         this.customerId = customerId;
         this.driverId = driverId;
         this.cancelledBy = cancelledBy;
         this.reason = reason;
+        this.countsAgainst = countsAgainst;
+        this.reported = reported;
+    }
+
+    /**
+     * Whose cancellation record this goes on - decided by booking from the
+     * evidence it holds (where the partner was, how long she had been
+     * coming), not simply whoever pressed cancel. Null for nobody: a search
+     * that never sent anybody out, a safety report, a partner who never came.
+     */
+    public UUID countsAgainst() {
+        return countsAgainst;
+    }
+
+    /** The account reported as not the right person or vehicle, or not safe; null when nobody was. */
+    public UUID reported() {
+        return reported;
     }
 
     /** The account that cancelled. Null only for a system-initiated cancellation, which nothing does today. */

@@ -543,6 +543,8 @@ export type CancellationReason =
   | 'CUSTOMER_NOT_AT_PICKUP'
   | 'DRIVER_UNAVAILABLE'
   | 'IDENTITY_MISMATCH'
+  | 'WRONG_VEHICLE'
+  | 'SAFETY_CONCERN'
   | 'OTHER';
 
 export interface ChatMessage {

@@ -23,6 +23,13 @@ public interface ServiceHoursApi {
     /** Open or closed right now, and when that changes. */
     ServiceStatus currentStatus();
 
+    /**
+     * While daily hours apply and bookings are open: closing time plus the
+     * grace given to the last trips. A trip booked now should be finished by
+     * then. Empty when open at all hours (or closed - then nothing is booked).
+     */
+    java.util.Optional<Instant> latestTripFinish();
+
     ServiceHoursSettings settings();
 
     /** Sets the daily window and whether it applies. */

@@ -47,9 +47,11 @@ import java.util.UUID;
 public class SosController {
 
     private final SosService sosService;
+    private final com.sheout.booking.BookingApi bookingApi;
 
-    public SosController(SosService sosService) {
+    public SosController(SosService sosService, com.sheout.booking.BookingApi bookingApi) {
         this.sosService = sosService;
+        this.bookingApi = bookingApi;
     }
 
     @PostMapping
@@ -67,7 +69,12 @@ public class SosController {
         if (raisedAt != null && (raisedAt.isAfter(now.plusSeconds(60)) || raisedAt.isBefore(now.minus(Duration.ofDays(1))))) {
             raisedAt = null;
         }
-        SosService.SosOutcome outcome = sosService.trigger(caller.accountId(), request.lat(), request.lng(), request.bookingId(),
+        // The trip it is attached to is the phone's claim. An alert naming a
+        // trip she is not on would send operations to the wrong people, so
+        // that link is dropped - the alert itself always goes through.
+        UUID bookingId = request.bookingId() != null && isParticipant(caller.accountId(), request.bookingId())
+                ? request.bookingId() : null;
+        SosService.SosOutcome outcome = sosService.trigger(caller.accountId(), request.lat(), request.lng(), bookingId,
                 new SosService.Delivery(request.triggerSource(), request.deliveryChannel(), raisedAt, request.clientAlertId(),
                         Boolean.TRUE.equals(request.smsFallbackOpened())));
         return ResponseEntity.ok(SosResponse.from(outcome));
@@ -77,6 +84,12 @@ public class SosController {
     public ResponseEntity<List<SosAlertSummary>> active() {
         requireAdmin();
         return ResponseEntity.ok(sosService.findActiveAlerts());
+    }
+
+    private boolean isParticipant(UUID accountId, UUID bookingId) {
+        var participants = bookingApi.getParticipants(bookingId);
+        return participants.isSuccess() && (accountId.equals(participants.value().customerId())
+                || accountId.equals(participants.value().driverId()));
     }
 
     private CurrentAccount requireRiderOrPartner() {

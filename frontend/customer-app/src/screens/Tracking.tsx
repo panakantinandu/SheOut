@@ -185,12 +185,12 @@ export function Tracking() {
    * Not the partner the app showed. Cancelled with a reason that is never
    * held against her, and the partner's account goes to the safety team.
    */
-  async function reportMismatch() {
+  async function reportMismatch(reason: 'IDENTITY_MISMATCH' | 'WRONG_VEHICLE' | 'SAFETY_CONCERN') {
     if (!bookingId) return;
     setReportingMismatch(true);
     setMismatchError(null);
     try {
-      await bookingApi.cancel(bookingId, 'IDENTITY_MISMATCH');
+      await bookingApi.cancel(bookingId, reason);
       navigate('/home', { replace: true });
     } catch (err) {
       setMismatchError(apiErrorText(err, 'tracking.cancelError'));
@@ -776,9 +776,18 @@ export function Tracking() {
                 {t('tracking.live.mismatchTitle')}
               </p>
               <p className="text-sm text-text-primary"><SafetyText k="partnerCheck.dontGetOn" /></p>
-              <Button fullWidth variant="danger" disabled={reportingMismatch} onClick={reportMismatch} data-testid="partner-mismatch-cancel">
-                {reportingMismatch ? t('tracking.live.mismatchCancelling') : t('tracking.live.mismatchCancel')}
+              {/* What is wrong decides what SheOut's team looks at; none of them is ever held against her. */}
+              <p className="text-sm font-semibold text-text-primary">{t('tracking.live.mismatchWhat')}</p>
+              <Button fullWidth variant="danger" disabled={reportingMismatch} onClick={() => reportMismatch('IDENTITY_MISMATCH')} data-testid="partner-mismatch-cancel">
+                {reportingMismatch ? t('tracking.live.mismatchCancelling') : t('tracking.live.mismatchPerson')}
               </Button>
+              <Button fullWidth variant="danger" disabled={reportingMismatch} onClick={() => reportMismatch('WRONG_VEHICLE')} data-testid="partner-mismatch-vehicle">
+                {t('tracking.live.mismatchVehicle')}
+              </Button>
+              <Button fullWidth variant="danger" disabled={reportingMismatch} onClick={() => reportMismatch('SAFETY_CONCERN')} data-testid="partner-mismatch-unsafe">
+                {t('tracking.live.mismatchUnsafe')}
+              </Button>
+              <p className="text-xs text-text-secondary">{t('tracking.live.mismatchNoCharge')}</p>
               {supportPhoneNumber && (
                 <Button fullWidth variant="secondary" icon={<Headphones className="h-5 w-5" />} onClick={() => { window.location.href = `tel:${supportPhoneNumber}`; }}>
                   {t('tracking.live.mismatchCall')}

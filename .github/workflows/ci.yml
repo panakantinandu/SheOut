@@ -1,0 +1,71 @@
+# Runs on every push to main and every pull request: the backend's tests
+# against a real Postgres and Redis (the same versions of each the app
+# uses), and a production build of both apps. It deploys nothing - Render and
+# Vercel deploy as before - it only says, before a deploy, whether main is
+# sound.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: sheout
+          POSTGRES_USER: sheout
+          POSTGRES_PASSWORD: sheout
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U sheout" --health-interval 5s --health-timeout 5s --health-retries 20
+      redis:
+        image: redis:7
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 5s --health-retries 20
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - name: Test
+        run: mvn -B -ntp test
+        env:
+          SPRING_PROFILES_ACTIVE: local
+      - name: Test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: backend/target/surefire-reports
+          retention-days: 7
+
+  apps:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - name: Rider app
+        run: npm run build --workspace frontend/customer-app
+      - name: Partner app
+        run: npm run build --workspace frontend/driver-app

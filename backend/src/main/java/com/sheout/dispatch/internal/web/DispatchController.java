@@ -146,6 +146,10 @@ public class DispatchController {
     @PostMapping("/api/v1/dispatch/location")
     public ResponseEntity<Void> recordLocation(@Valid @RequestBody LocationRequest request) {
         CurrentAccount caller = requireDriver();
+        // The app reports every 7 seconds; four times that is room for
+        // retries after a dropped connection, and still bounds a script.
+        rateLimiter.tryConsume("location:" + caller.accountId(), 30, Duration.ofMinutes(1))
+                .orThrow("Too many location reports. Please wait a moment.");
         dispatchService.recordLocation(caller.accountId(), request.lat(), request.lng());
         return ResponseEntity.accepted().build();
     }

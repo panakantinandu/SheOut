@@ -102,6 +102,18 @@ setting the pickup and drop themselves.
   can sometimes get through when data cannot.
 - Every alert records how it arrived, so SheOut's operations team can see it.
 
+## Service hours
+
+- SheOut takes new bookings only during its service hours, for everyone's
+  safety. The app shows the hours on Home and on the booking screen, and
+  when bookings open again.
+- A trip that has already started always finishes, even after closing time.
+  Only new bookings stop. Close to closing time, a long trip may be refused
+  if it would end too long after closing.
+- Outside service hours, SOS still reaches your emergency contacts at once,
+  and Call 112 always works. SheOut's own team is on duty during service
+  hours.
+
 ## SheOut SOS or 112?
 
 - Call 112 when you are in danger right now, someone is hurt, or you need

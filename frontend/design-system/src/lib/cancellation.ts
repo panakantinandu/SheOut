@@ -22,6 +22,8 @@ export type CancellationReason =
   | 'CUSTOMER_NOT_AT_PICKUP'
   | 'DRIVER_UNAVAILABLE'
   | 'IDENTITY_MISMATCH'
+  | 'WRONG_VEHICLE'
+  | 'SAFETY_CONCERN'
   | 'OTHER';
 
 const REASON_LABELS: Record<CancellationReason, string> = {
@@ -32,6 +34,8 @@ const REASON_LABELS: Record<CancellationReason, string> = {
   CUSTOMER_NOT_AT_PICKUP: 'The rider was not at the pickup point',
   DRIVER_UNAVAILABLE: 'I cannot complete this trip',
   IDENTITY_MISMATCH: 'Not the person shown in the app',
+  WRONG_VEHICLE: 'Not the vehicle shown in the app',
+  SAFETY_CONCERN: "I don't feel safe",
   OTHER: 'Something else',
 };
 
@@ -76,6 +80,8 @@ export const DRIVER_CANCELLATION_REASONS: CancellationReasonOption[] = optionsFo
   'CUSTOMER_NOT_AT_PICKUP',
   'WRONG_PICKUP_LOCATION',
   'DRIVER_UNAVAILABLE',
+  // Never counted against her; the rider goes to SheOut's team to look at.
+  'SAFETY_CONCERN',
   'OTHER',
 ]);
 

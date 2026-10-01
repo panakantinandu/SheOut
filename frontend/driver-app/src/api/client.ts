@@ -285,6 +285,17 @@ export const usersApi = {
    * one, with its own machine code so this app can send her to the camera
    * rather than showing a refusal she cannot act on.
    */
+  /** A photo of the new vehicle's registration certificate, for a vehicle change waiting for review. */
+  attachVehicleRc(file: File): Promise<DriverProfileSummary> {
+    const form = new FormData();
+    form.append('file', file);
+    return request('/api/v1/users/driver/me/profile-change/rc', { method: 'POST', body: form });
+  },
+
+  withdrawProfileChange(): Promise<DriverProfileSummary> {
+    return request('/api/v1/users/driver/me/profile-change', { method: 'DELETE' });
+  },
+
   uploadMyPhoto(file: File): Promise<DriverProfileSummary> {
     const form = new FormData();
     form.append('file', file);

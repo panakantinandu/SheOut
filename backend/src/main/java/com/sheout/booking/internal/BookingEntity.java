@@ -73,6 +73,10 @@ public class BookingEntity extends BaseEntity {
     private BigDecimal finalFare;
 
     private Instant matchedAt;
+
+    /** When the current search began - see V52. */
+    @Column(name = "search_started_at")
+    private Instant searchStartedAt;
     private Instant acceptedAt;
     private Instant startedAt;
     private Instant completedAt;
@@ -260,6 +264,7 @@ public class BookingEntity extends BaseEntity {
 
     public BookingEntity(BookingType type, BookingCategory category, UUID customerId,
                           GeoAddressEmbeddable pickup, GeoAddressEmbeddable drop, BigDecimal fareEstimate) {
+        this.searchStartedAt = Instant.now();
         this.type = type;
         this.category = category;
         this.status = BookingStatus.REQUESTED;
@@ -416,5 +421,25 @@ public class BookingEntity extends BaseEntity {
      */
     public boolean pickupAttemptsExhausted() {
         return pickupAttempts >= PickupCode.MAX_ATTEMPTS;
+    }
+
+    /**
+     * The partner who took this trip dropped it: back to searching, with no
+     * trace of her on it. A new pickup code is issued when the next partner
+     * accepts, so nothing she was told can be used by somebody else.
+     */
+    void returnToSearch() {
+        this.status = BookingStatus.REQUESTED;
+        this.driverId = null;
+        this.matchedAt = null;
+        this.acceptedAt = null;
+        this.pickupOtp = null;
+        this.pickupVerifiedAt = null;
+        this.pickupAttempts = 0;
+        this.searchStartedAt = Instant.now();
+    }
+
+    public Instant getSearchStartedAt() {
+        return searchStartedAt;
     }
 }

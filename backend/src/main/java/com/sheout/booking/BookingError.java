@@ -19,6 +19,8 @@ public enum BookingError {
     OUTSIDE_SERVICE_AREA,
     /** Outside the operating hours, or paused by an operator - see ServiceHoursApi. */
     SERVICE_CLOSED,
+    /** Booked near closing time, the trip would end too long after it - see ServiceHoursApi.latestTripFinish. */
+    TRIP_ENDS_AFTER_HOURS,
     CATEGORY_TYPE_MISMATCH,
     BOOKING_NOT_FOUND,
 
@@ -27,6 +29,9 @@ public enum BookingError {
 
     /** Reason OTHER with no note - an answer that answers nothing. */
     CANCELLATION_NOTE_REQUIRED,
+
+    /** A reason that is not hers to give (a rider blaming herself, a partner reporting her own vehicle), or not yet possible. */
+    CANCELLATION_REASON_NOT_ALLOWED,
     INVALID_STATE_TRANSITION,
 
     /**

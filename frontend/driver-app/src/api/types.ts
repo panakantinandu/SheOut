@@ -74,6 +74,26 @@ export interface DriverProfileSummary {
   /** Name, date of birth and photo are all on file. Until then the app sends her to /complete-profile. */
   profileComplete: boolean;
   updatedAt: string;
+  /**
+   * Her change to her name, date of birth, photo or vehicle waiting for
+   * SheOut's team, or one just turned down. Riders keep seeing the checked
+   * details until it is approved.
+   */
+  pendingChange?: PendingProfileChange | null;
+}
+
+export interface PendingProfileChange {
+  status: 'PENDING' | 'REJECTED';
+  name: string | null;
+  dateOfBirth: string | null;
+  vehicleType: VehicleType | null;
+  vehicleRegistrationNumber: string | null;
+  photoUrl: string | null;
+  photoChanged: boolean;
+  rcDocumentAttached: boolean;
+  rcDocumentRequired: boolean;
+  requestedAt: string;
+  decisionNote: string | null;
 }
 
 /**
@@ -245,6 +265,8 @@ export type CancellationReason =
   | 'CUSTOMER_NOT_AT_PICKUP'
   | 'DRIVER_UNAVAILABLE'
   | 'IDENTITY_MISMATCH'
+  | 'WRONG_VEHICLE'
+  | 'SAFETY_CONCERN'
   | 'OTHER';
 
 export interface ChatMessage {

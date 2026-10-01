@@ -68,5 +68,20 @@ public enum DriverProfileError {
     SHIFT_CHECK_REQUIRED,
 
     /** Her selfie did not match several times; an operator has to look first. */
-    SHIFT_CHECK_UNDER_REVIEW
+    SHIFT_CHECK_UNDER_REVIEW,
+
+    /** Asked to act on a change to her details, and none is waiting. */
+    NO_PENDING_CHANGE,
+
+    /** A registration certificate sent with a change that does not change the vehicle. */
+    VEHICLE_NOT_CHANGED,
+
+    /** A vehicle change cannot be approved before its new registration certificate is in. */
+    RC_DOCUMENT_REQUIRED,
+
+    /** Turning a change down needs the reason she will be shown. */
+    DECISION_NOTE_REQUIRED,
+
+    /** No pending change with that id. */
+    CHANGE_NOT_FOUND
 }

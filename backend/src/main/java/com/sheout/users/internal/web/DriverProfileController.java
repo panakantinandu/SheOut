@@ -48,9 +48,36 @@ public class DriverProfileController {
     @GetMapping("/api/v1/users/driver/me")
     public ResponseEntity<DriverProfileSummary> getMyProfile() {
         CurrentAccount caller = requireDriver();
-        return driverProfileService.findByAccountId(caller.accountId())
+        return driverProfileService.findOwnProfile(caller.accountId())
                 .map(ResponseEntity::ok)
                 .orElseThrow(() -> ApiException.notFound("No driver profile found for this account"));
+    }
+
+    /**
+     * The new registration certificate for a vehicle change waiting for an
+     * operator - see DriverProfileChangeService. A photo, through the same
+     * checks as the profile photo.
+     */
+    @PostMapping(value = "/api/v1/users/driver/me/profile-change/rc", consumes = "multipart/form-data")
+    public ResponseEntity<DriverProfileSummary> attachVehicleRc(@RequestParam("file") MultipartFile file) {
+        CurrentAccount caller = requireDriver();
+        Result<DriverProfileSummary, DriverProfileError> result =
+                driverProfileService.attachVehicleRc(caller.accountId(), ProfilePhotoUploads.toUpload(file));
+        if (result.isFailure()) {
+            throw toApiException(result.error());
+        }
+        return ResponseEntity.ok(result.value());
+    }
+
+    /** She changed her mind: the approved details stay as they are. */
+    @org.springframework.web.bind.annotation.DeleteMapping("/api/v1/users/driver/me/profile-change")
+    public ResponseEntity<DriverProfileSummary> withdrawProfileChange() {
+        CurrentAccount caller = requireDriver();
+        Result<DriverProfileSummary, DriverProfileError> result = driverProfileService.withdrawProfileChange(caller.accountId());
+        if (result.isFailure()) {
+            throw toApiException(result.error());
+        }
+        return ResponseEntity.ok(result.value());
     }
 
     @PutMapping("/api/v1/users/driver/me")
@@ -206,6 +233,13 @@ public class DriverProfileController {
                     "Take a quick selfie to start your shift.");
             case SHIFT_CHECK_UNDER_REVIEW -> new ApiException(HttpStatus.CONFLICT, "SHIFT_CHECK_UNDER_REVIEW",
                     "Our team is checking your selfie. You can go online once they have.");
+            case NO_PENDING_CHANGE -> new ApiException(HttpStatus.CONFLICT, "NO_PENDING_CHANGE",
+                    "There is no change to your details waiting for review.");
+            case VEHICLE_NOT_CHANGED -> new ApiException(HttpStatus.CONFLICT, "VEHICLE_NOT_CHANGED",
+                    "Your change does not change your vehicle, so no registration certificate is needed.");
+            // Operator-side refusals; the console reaches them through admin.
+            case RC_DOCUMENT_REQUIRED, DECISION_NOTE_REQUIRED, CHANGE_NOT_FOUND -> new ApiException(
+                    HttpStatus.CONFLICT, error.name(), "This change cannot be decided yet.");
         };
     }
 

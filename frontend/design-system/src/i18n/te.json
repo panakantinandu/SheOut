@@ -301,7 +301,9 @@
     "CUSTOMER_NOT_AT_PICKUP": "రైడర్ పికప్ స్థలంలో లేరు",
     "DRIVER_UNAVAILABLE": "నేను ఈ ట్రిప్ పూర్తి చేయలేను",
     "OTHER": "ఇంకేదైనా",
-    "IDENTITY_MISMATCH": "యాప్‌లో చూపిన వ్యక్తి కాదు"
+    "IDENTITY_MISMATCH": "యాప్‌లో చూపిన వ్యక్తి కాదు",
+    "WRONG_VEHICLE": "యాప్‌లో చూపిన వాహనం కాదు",
+    "SAFETY_CONCERN": "నాకు సురక్షితంగా అనిపించడం లేదు"
   },
   "brand": {
     "tagline": "మీ డెలివరీ, మా ప్రాధాన్యత"

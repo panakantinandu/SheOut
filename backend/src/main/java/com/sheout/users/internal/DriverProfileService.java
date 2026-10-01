@@ -39,6 +39,7 @@ public class DriverProfileService implements DriverProfileApi {
     private final String verifiedDriverBypassPhone;
     private final DomainEventPublisher eventPublisher;
     private final ShiftCheckApi shiftCheckApi;
+    private final DriverProfileChangeService changes;
 
     public DriverProfileService(DriverProfileRepository driverProfileRepository,
                                  AuthApi authApi,
@@ -49,7 +50,9 @@ public class DriverProfileService implements DriverProfileApi {
                                  ShiftCheckApi shiftCheckApi,
                                  // The partner verification bypass, only ever set with
                                  // DEV_MODE_ENABLED - see DevMode.
-                                 DevMode devMode) {
+                                 DevMode devMode,
+                                 DriverProfileChangeService changes) {
+        this.changes = changes;
         this.eventPublisher = eventPublisher;
         this.shiftCheckApi = shiftCheckApi;
         this.driverProfileRepository = driverProfileRepository;
@@ -63,6 +66,46 @@ public class DriverProfileService implements DriverProfileApi {
     @Override
     public Optional<DriverProfileSummary> findByAccountId(UUID accountId) {
         return driverProfileRepository.findByAccountId(accountId).map(this::toSummary);
+    }
+
+    /** Her own profile, with any change of hers waiting for an operator. */
+    public Optional<DriverProfileSummary> findOwnProfile(UUID accountId) {
+        return driverProfileRepository.findByAccountId(accountId).map(this::ownSummary);
+    }
+
+    @Override
+    public List<com.sheout.users.ProfileChangeReview> findPendingProfileChanges() {
+        return changes.pendingReviews();
+    }
+
+    @Override
+    public Result<Void, com.sheout.users.ProfileChangeDecisionError> decideProfileChange(
+            UUID changeId, boolean approve, UUID adminAccountId, String note) {
+        Result<Void, DriverProfileError> result = changes.decide(changeId, approve, adminAccountId, note);
+        if (result.isSuccess()) {
+            return Result.success(null);
+        }
+        return Result.failure(switch (result.error()) {
+            case RC_DOCUMENT_REQUIRED -> com.sheout.users.ProfileChangeDecisionError.RC_DOCUMENT_REQUIRED;
+            case DECISION_NOTE_REQUIRED -> com.sheout.users.ProfileChangeDecisionError.DECISION_NOTE_REQUIRED;
+            case PROFILE_NOT_FOUND -> com.sheout.users.ProfileChangeDecisionError.PROFILE_NOT_FOUND;
+            default -> com.sheout.users.ProfileChangeDecisionError.CHANGE_NOT_FOUND;
+        });
+    }
+
+    public Result<DriverProfileSummary, DriverProfileError> attachVehicleRc(UUID accountId, DocumentUpload upload) {
+        Result<Void, DriverProfileError> result = changes.attachRcDocument(accountId, upload);
+        return result.isFailure() ? Result.failure(result.error()) : ownProfileResult(accountId);
+    }
+
+    public Result<DriverProfileSummary, DriverProfileError> withdrawProfileChange(UUID accountId) {
+        Result<Void, DriverProfileError> result = changes.withdraw(accountId);
+        return result.isFailure() ? Result.failure(result.error()) : ownProfileResult(accountId);
+    }
+
+    private Result<DriverProfileSummary, DriverProfileError> ownProfileResult(UUID accountId) {
+        return findOwnProfile(accountId).<Result<DriverProfileSummary, DriverProfileError>>map(Result::success)
+                .orElseGet(() -> Result.failure(DriverProfileError.PROFILE_NOT_FOUND));
     }
 
     @Override
@@ -128,13 +171,21 @@ public class DriverProfileService implements DriverProfileApi {
         if (!profile.hasProfilePhoto()) {
             return Result.failure(DriverProfileError.PROFILE_PHOTO_REQUIRED);
         }
-        profile.setDateOfBirth(dateOfBirth);
         profile.setEmail(normalisedEmail.get().isEmpty() ? null : normalisedEmail.get());
-        profile.setName(name);
-        profile.setVehicleType(vehicleType);
-        profile.setVehicleRegistrationNumber(VehicleRegistrationNumber.normalize(vehicleRegistrationNumber));
+        String registration = VehicleRegistrationNumber.normalize(vehicleRegistrationNumber);
+        if (changes.identityLocked(accountId)) {
+            // Checked against her ID and RC already: a different name, date
+            // of birth or vehicle waits for an operator, and riders keep
+            // seeing what was checked. See DriverProfileChangeService.
+            changes.requestDetails(profile, name, dateOfBirth, vehicleType, registration);
+        } else {
+            profile.setDateOfBirth(dateOfBirth);
+            profile.setName(name);
+            profile.setVehicleType(vehicleType);
+            profile.setVehicleRegistrationNumber(registration);
+        }
         driverProfileRepository.save(profile);
-        return Result.success(toSummary(profile));
+        return Result.success(ownSummary(profile));
     }
 
     /**
@@ -187,9 +238,15 @@ public class DriverProfileService implements DriverProfileApi {
             return Result.failure(DriverProfileError.PHOTO_STORAGE_FAILED);
         }
 
+        if (changes.identityLocked(accountId)) {
+            // The face a rider checks at the kerb. Once she is verified a new
+            // one is looked at by an operator first; the approved one stays.
+            changes.requestPhoto(accountId, key);
+            return Result.success(ownSummary(profile));
+        }
         profile.setProfilePhotoKey(key);
         driverProfileRepository.save(profile);
-        return Result.success(toSummary(profile));
+        return Result.success(ownSummary(profile));
     }
 
     /**
@@ -392,7 +449,16 @@ public class DriverProfileService implements DriverProfileApi {
                 profile.getEmail(),
                 profile.isProfileComplete(),
                 profile.getTrustStats(),
-                profile.getUpdatedAt()
+                profile.getUpdatedAt(),
+                null
         );
+    }
+
+    private DriverProfileSummary ownSummary(DriverProfileEntity profile) {
+        DriverProfileSummary s = toSummary(profile);
+        return new DriverProfileSummary(s.accountId(), s.name(), s.phoneNumber(), s.vehicleType(),
+                s.vehicleRegistrationNumber(), s.panNumber(), s.onlineStatus(), s.verified(), s.profilePhotoUrl(),
+                s.hasProfilePhoto(), s.dateOfBirth(), s.email(), s.profileComplete(), s.trustStats(), s.updatedAt(),
+                changes.viewFor(profile.getAccountId()).orElse(null));
     }
 }

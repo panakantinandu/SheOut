@@ -76,7 +76,21 @@
     "notSet": "Not set",
     "editDetails": "Edit Details",
     "payouts": "Payouts & bank details",
-    "deletedNotice": "Your account has been deleted. Your personal details have been removed."
+    "deletedNotice": "Your account has been deleted. Your personal details have been removed.",
+    "change": {
+      "pendingTitle": "Waiting for SheOut to check",
+      "pendingBody": "Riders keep seeing your current details until our team approves this, so until then use the vehicle shown on your profile.",
+      "name": "Name: {{value}}",
+      "dob": "Date of birth: {{value}}",
+      "vehicle": "Vehicle: {{value}}",
+      "photo": "A new profile photo",
+      "rcNeeded": "Add a photo of the new vehicle's RC. We cannot approve the change without it.",
+      "rcAdd": "Add RC photo",
+      "rcReplace": "Replace RC photo",
+      "withdraw": "Cancel this change",
+      "rejectedTitle": "Your change was not approved",
+      "rejectedBody": "Your earlier details are still in use. Fix this and save again, or contact support."
+    }
   },
   "vehicle": {
     "type": "Vehicle Type",

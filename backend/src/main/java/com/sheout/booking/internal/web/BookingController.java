@@ -570,6 +570,8 @@ public class BookingController {
             // true when the boundary is widened.
             case CANCELLATION_REASON_REQUIRED -> new ApiException(
                     HttpStatus.BAD_REQUEST, "Bad Request", "Please choose a reason for cancelling");
+            case CANCELLATION_REASON_NOT_ALLOWED -> new ApiException(
+                    HttpStatus.BAD_REQUEST, "CANCELLATION_REASON_NOT_ALLOWED", "That reason does not apply here. Please choose another.");
             case CANCELLATION_NOTE_REQUIRED -> new ApiException(
                     HttpStatus.BAD_REQUEST, "Bad Request", "Please say a little more about why you are cancelling");
             case OUTSIDE_SERVICE_AREA -> new ApiException(
@@ -582,6 +584,8 @@ public class BookingController {
             // English fallback; the apps build their own from service-status.
             case SERVICE_CLOSED -> new ApiException(
                     HttpStatus.CONFLICT, "SERVICE_CLOSED", ServiceStatusController.closedMessage(serviceHours.currentStatus()));
+            case TRIP_ENDS_AFTER_HOURS -> new ApiException(
+                    HttpStatus.CONFLICT, "TRIP_ENDS_AFTER_HOURS", ServiceStatusController.endsAfterHoursMessage(serviceHours.currentStatus()));
             case CATEGORY_TYPE_MISMATCH -> new ApiException(
                     HttpStatus.BAD_REQUEST, "Bad Request", "category does not match the requested type");
             case BOOKING_NOT_FOUND -> ApiException.notFound("No such booking");

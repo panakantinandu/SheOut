@@ -22,13 +22,16 @@ import org.springframework.stereotype.Component;
 public class DispatchRetrySweeper {
 
     private final DispatchService dispatchService;
+    private final com.sheout.sharedkernel.cluster.ClusterLock lock;
 
-    public DispatchRetrySweeper(DispatchService dispatchService) {
+    public DispatchRetrySweeper(DispatchService dispatchService, com.sheout.sharedkernel.cluster.ClusterLock lock) {
         this.dispatchService = dispatchService;
+        this.lock = lock;
     }
 
+    /** One server at a time - see ClusterLock. */
     @Scheduled(fixedDelayString = "${sheout.dispatch.sweep-interval-ms:2000}")
     public void sweep() {
-        dispatchService.sweepExpiredRounds();
+        lock.runExclusively("dispatch-sweep", java.time.Duration.ofSeconds(30), dispatchService::sweepExpiredRounds);
     }
 }

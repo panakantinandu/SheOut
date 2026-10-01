@@ -92,6 +92,9 @@ public interface BookingApi {
      */
     List<BookingSummary> findRecentForAccount(UUID accountId, int limit);
 
+    /** The trip's audit log, oldest first - see BookingEvent. */
+    List<BookingEvent> eventsFor(UUID bookingId);
+
     /** The console's extra facts about one trip - see BookingOpsFacts. */
     Optional<BookingOpsFacts> findOpsFacts(UUID bookingId);
 

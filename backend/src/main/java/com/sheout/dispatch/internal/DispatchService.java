@@ -123,7 +123,29 @@ public class DispatchService implements com.sheout.dispatch.NearbyPartnerApi {
                 maxRetries, offerWindowSeconds, searchTimeoutSeconds);
     }
 
+    /** Faster than this between two reports is not a bike or a car in a city - see recordLocation. */
+    private static final double IMPLAUSIBLE_KMH = 200;
+
     public void recordLocation(UUID driverId, double lat, double lng) {
+        // A position cannot be proven from here: the phone reports it, and a
+        // phone can be made to lie. What can be seen is a report that is
+        // physically impossible after the one before it - kilometres in
+        // seconds. That is counted for operations to see (on her live trip
+        // and her page), never used to refuse her: a phone regaining GPS
+        // after a tunnel jumps too, and blocking that would strand an honest
+        // partner mid-trip.
+        Instant now = Instant.now();
+        locationStore.findLocation(driverId)
+                .filter(prev -> prev.recordedAt().isAfter(now.minus(Duration.ofMinutes(10))))
+                .ifPresent(prev -> {
+                    double km = GeoDistance.haversineKm(prev.lat(), prev.lng(), lat, lng);
+                    double hours = Math.max(1, Duration.between(prev.recordedAt(), now).toSeconds()) / 3600.0;
+                    if (km > 0.5 && km / hours > IMPLAUSIBLE_KMH) {
+                        locationStore.recordImplausibleJump(driverId);
+                        log.warn("Implausible location jump for partner {}: {} km in {} s",
+                                driverId, Math.round(km * 10) / 10.0, Math.round(hours * 3600));
+                    }
+                });
         locationStore.recordLocation(driverId, lat, lng);
         // While a trip is under way this report is also its trail - the path
         // compared with the quoted route when the trip ends.
@@ -240,6 +262,14 @@ public class DispatchService implements com.sheout.dispatch.NearbyPartnerApi {
      */
     @EventListener
     public void onBookingRequested(BookingRequested event) {
+        // Searching again after a partner dropped the trip: she is never
+        // offered it again, and her approach to the pickup is over.
+        if (event.excludedDriverId() != null) {
+            offerStore.markTried(event.bookingId(), Set.of(event.excludedDriverId()));
+            approachStore.find(event.excludedDriverId())
+                    .filter(approach -> approach.bookingId().equals(event.bookingId()))
+                    .ifPresent(approach -> approachStore.finish(event.excludedDriverId()));
+        }
         // The deadline for the WHOLE search is fixed here, once, and copied
         // forward through every retry. Not recomputed per round, which would
         // let a search that kept finding rounds to run go on indefinitely -

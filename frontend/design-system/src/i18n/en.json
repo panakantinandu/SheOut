@@ -301,7 +301,9 @@
     "CUSTOMER_NOT_AT_PICKUP": "The rider was not at the pickup point",
     "DRIVER_UNAVAILABLE": "I cannot complete this trip",
     "OTHER": "Something else",
-    "IDENTITY_MISMATCH": "Not the person shown in the app"
+    "IDENTITY_MISMATCH": "Not the person shown in the app",
+    "WRONG_VEHICLE": "Not the vehicle shown in the app",
+    "SAFETY_CONCERN": "I don't feel safe"
   },
   "brand": {
     "tagline": "Your Delivery, Our Priority"

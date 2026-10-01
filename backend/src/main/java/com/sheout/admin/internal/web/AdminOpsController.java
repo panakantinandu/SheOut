@@ -49,10 +49,65 @@ public class AdminOpsController {
 
     private final AdminOpsService ops;
     private final ServiceHoursApi serviceHours;
+    private final com.sheout.users.DriverProfileApi driverProfiles;
 
-    public AdminOpsController(AdminOpsService ops, ServiceHoursApi serviceHours) {
+    public AdminOpsController(AdminOpsService ops, ServiceHoursApi serviceHours,
+                              com.sheout.users.DriverProfileApi driverProfiles) {
         this.ops = ops;
         this.serviceHours = serviceHours;
+        this.driverProfiles = driverProfiles;
+    }
+
+    /**
+     * Verified partners' changes to what riders identify them by - name,
+     * date of birth, photo, vehicle - waiting for a decision. See
+     * DriverProfileChangeService.
+     */
+    @GetMapping("/profile-changes")
+    public ResponseEntity<java.util.List<com.sheout.users.ProfileChangeReview>> profileChanges() {
+        requireAdmin();
+        return noStore(driverProfiles.findPendingProfileChanges());
+    }
+
+    @PostMapping("/profile-changes/{changeId}/approve")
+    public ResponseEntity<Void> approveProfileChange(@PathVariable UUID changeId) {
+        CurrentAccount admin = requireAdmin();
+        decided(driverProfiles.decideProfileChange(changeId, true, admin.accountId(), null));
+        return ResponseEntity.noContent().build();
+    }
+
+    /** The note is shown to her, so it says what to do next ("the RC photo is blurred - send it again"). */
+    @PostMapping("/profile-changes/{changeId}/reject")
+    public ResponseEntity<Void> rejectProfileChange(@PathVariable UUID changeId, @Valid @RequestBody DecisionRequest request) {
+        CurrentAccount admin = requireAdmin();
+        decided(driverProfiles.decideProfileChange(changeId, false, admin.accountId(), request.note()));
+        return ResponseEntity.noContent().build();
+    }
+
+    public record DecisionRequest(@NotBlank @Size(max = 500) String note) {
+    }
+
+    /** "I have checked on this trip" - what was found or done goes in the note. The trip is not touched. */
+    @PostMapping("/trip-alerts/{alertId}/ack")
+    public ResponseEntity<Void> acknowledgeTripAlert(@PathVariable UUID alertId, @Valid @RequestBody DecisionRequest request) {
+        CurrentAccount admin = requireAdmin();
+        if (!ops.acknowledgeTripAlert(alertId, admin.accountId(), request.note().trim())) {
+            throw ApiException.notFound("No open alert with that id");
+        }
+        return ResponseEntity.noContent().build();
+    }
+
+    private static void decided(com.sheout.sharedkernel.Result<Void, com.sheout.users.ProfileChangeDecisionError> result) {
+        if (result.isSuccess()) {
+            return;
+        }
+        throw switch (result.error()) {
+            case CHANGE_NOT_FOUND, PROFILE_NOT_FOUND -> ApiException.notFound("No pending change with that id");
+            case RC_DOCUMENT_REQUIRED -> new ApiException(HttpStatus.CONFLICT, "RC_DOCUMENT_REQUIRED",
+                    "This vehicle change has no registration certificate yet. Ask her to send a photo of it, or turn the change down.");
+            case DECISION_NOTE_REQUIRED -> new ApiException(HttpStatus.BAD_REQUEST, "DECISION_NOTE_REQUIRED",
+                    "Say why, so she knows what to do next.");
+        };
     }
 
     @GetMapping("/accounts/{accountId}/detail")

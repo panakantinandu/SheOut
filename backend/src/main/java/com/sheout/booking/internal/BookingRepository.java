@@ -24,6 +24,9 @@ interface BookingRepository extends JpaRepository<BookingEntity, UUID>, JpaSpeci
 
     List<BookingEntity> findByDriverId(UUID driverId);
 
+    /** Every trip in these states - for trip watch, which looks at the live ones. */
+    List<BookingEntity> findByStatusIn(java.util.Collection<BookingStatus> statuses);
+
     List<BookingEntity> findByCustomerIdOrDriverIdOrderByCreatedAtDesc(UUID customerId, UUID driverId, Pageable pageable);
 
     /** createdAt is the requestedAt the summary exposes - see BookingEntity's Javadoc. */
@@ -61,6 +64,9 @@ interface BookingRepository extends JpaRepository<BookingEntity, UUID>, JpaSpeci
 
     /** Searches that outlived the search budget - see StaleSearchReaper. */
     List<BookingEntity> findTop100ByStatusAndCreatedAtBeforeOrderByCreatedAtAsc(BookingStatus status, Instant cutoff);
+
+    /** Searches begun before the cutoff - a re-opened booking's search began when it was re-opened. */
+    List<BookingEntity> findTop100ByStatusAndSearchStartedAtBeforeOrderBySearchStartedAtAsc(BookingStatus status, Instant cutoff);
 
     /** A rider's oldest ended-and-unpaid trip. Backed by idx_bookings_customer_unsettled. */
     Optional<BookingEntity> findFirstByCustomerIdAndStatusAndPaymentSettledAtIsNullOrderByCompletedAtAsc(

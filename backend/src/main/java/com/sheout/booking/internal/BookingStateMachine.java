@@ -38,8 +38,9 @@ final class BookingStateMachine {
         // refused here, and dispatch releases its claim. The rider is not
         // silently handed a partner she was already told did not exist.
         ALLOWED.put(REQUESTED, EnumSet.of(MATCHED, CANCELLED, NO_DRIVERS_AVAILABLE));
-        ALLOWED.put(MATCHED, EnumSet.of(ACCEPTED, CANCELLED));
-        ALLOWED.put(ACCEPTED, EnumSet.of(IN_PROGRESS, CANCELLED));
+        // Back to REQUESTED only when the partner who took it drops it - see BookingService.cancelBooking.
+        ALLOWED.put(MATCHED, EnumSet.of(ACCEPTED, CANCELLED, REQUESTED));
+        ALLOWED.put(ACCEPTED, EnumSet.of(IN_PROGRESS, CANCELLED, REQUESTED));
         ALLOWED.put(IN_PROGRESS, EnumSet.of(COMPLETED));
         ALLOWED.put(COMPLETED, EnumSet.noneOf(BookingStatus.class));
         ALLOWED.put(CANCELLED, EnumSet.noneOf(BookingStatus.class));
