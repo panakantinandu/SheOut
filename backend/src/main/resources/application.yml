@@ -114,7 +114,10 @@ sheout:
       # kilometres from the centre, not driving distance.
       centre-lat: ${SERVICE_CENTRE_LAT:17.3850}
       centre-lng: ${SERVICE_CENTRE_LNG:78.4867}
-      radius-km: ${SERVICE_RADIUS_KM:150}
+      # 100km reaches Nalgonda (~90km), Siddipet, Medak, Mahbubnagar and
+      # Jangaon. It must stay ~10km inside the road map sheout-osrm holds
+      # (infra/osrm/clip_region.py), or edge trips price on an estimate.
+      radius-km: ${SERVICE_RADIUS_KM:100}
       # Used in the refusal message a customer reads, so it should be the
       # city's name as a person would say it.
       centre-name: ${SERVICE_CENTRE_NAME:Hyderabad}

@@ -10,9 +10,11 @@ import org.springframework.stereotype.Component;
  * configurable.
  * <p>
  * Configurable rather than hardcoded because the boundary is a business
- * decision that will move. Widening to 250km, or re-centring on a second
- * city, is an environment variable and a restart - not a code change, a
- * review and a deploy. See application.yml for the keys.
+ * decision that will move. Widening it, or re-centring on a second city, is
+ * an environment variable and a restart - not a code change, a review and a
+ * deploy. See application.yml for the keys. The one thing that has to move
+ * with it is the road map sheout-osrm holds (infra/osrm/clip_region.py):
+ * past the map's edge a fare is priced on a straight-line estimate.
  * <p>
  * IN SHARED KERNEL BECAUSE IT IS NOT A BOOKING RULE. It reads like one -
  * it started life inside booking, gating pickup and drop - but the boundary
@@ -52,7 +54,7 @@ public class ServiceArea {
     ServiceArea(
             @Value("${sheout.booking.service-area.centre-lat:17.3850}") double centreLat,
             @Value("${sheout.booking.service-area.centre-lng:78.4867}") double centreLng,
-            @Value("${sheout.booking.service-area.radius-km:150}") double radiusKm,
+            @Value("${sheout.booking.service-area.radius-km:100}") double radiusKm,
             @Value("${sheout.booking.service-area.centre-name:Hyderabad}") String centreName) {
         this.centreLat = centreLat;
         this.centreLng = centreLng;
@@ -68,6 +70,14 @@ public class ServiceArea {
 
     public double distanceFromCentreKm(double lat, double lng) {
         return GeoDistance.haversineKm(centreLat, centreLng, lat, lng);
+    }
+
+    public double centreLat() {
+        return centreLat;
+    }
+
+    public double centreLng() {
+        return centreLng;
     }
 
     public double radiusKm() {

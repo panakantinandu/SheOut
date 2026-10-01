@@ -621,6 +621,13 @@ export const promotionsApi = {
   },
 };
 
+/** Where SheOut operates - the boundary the backend enforces. Public; see lib/geocode.ts syncServiceArea. */
+export const serviceAreaApi = {
+  get(): Promise<{ centreLat: number; centreLng: number; radiusKm: number; centreName: string }> {
+    return request('/api/v1/service-area', { auth: false });
+  },
+};
+
 /** The road between two points, from SheOut's own router - for the map's route line. */
 export const routesApi = {
   preview(from: { lat: number; lng: number }, to: { lat: number; lng: number }): Promise<{ points: { lat: number; lng: number }[]; distanceKm: number | null; durationMinutes: number | null }> {

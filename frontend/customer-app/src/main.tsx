@@ -6,6 +6,7 @@ import { AuthProvider } from './auth/AuthContext'
 import './index.css'
 import { initErrorReporting } from '@sheout/design-system'
 import { registerAppUpdates } from './lib/appUpdates'
+import { syncServiceArea } from './lib/geocode'
 import { captureReferralFromUrl, routeColdStartThroughSplash } from '@sheout/design-system'
 import './i18n'
 
@@ -21,6 +22,10 @@ captureReferralFromUrl()
 routeColdStartThroughSplash()
 
 registerAppUpdates()
+
+// The service boundary, from the server, before anyone reaches a booking
+// screen. Not awaited: the app opens on the defaults either way.
+void syncServiceArea()
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

@@ -23,8 +23,14 @@ import { SERVICE_CENTRE, SERVICE_RADIUS_KM } from './geocode';
 const API_KEY: string = import.meta.env.VITE_GOOGLE_MAPS_API_KEY ?? '';
 const PLACES = 'https://places.googleapis.com/v1';
 
-/** Places caps a bias circle at 50 km; the service area is biased to, not bounded by. */
-const BIAS_RADIUS_M = Math.min(SERVICE_RADIUS_KM * 1000, 50_000);
+/**
+ * Places caps a bias circle at 50 km; the service area is biased to, not
+ * bounded by. Worked out per search, because the radius arrives from the
+ * server after this module loads.
+ */
+function biasRadiusMetres(): number {
+  return Math.min(SERVICE_RADIUS_KM * 1000, 50_000);
+}
 
 export function placesAvailable(): boolean {
   return API_KEY.length > 0;
@@ -105,7 +111,7 @@ export async function suggestPlaces(query: string, sessionToken: string, signal?
     includedRegionCodes: ['in'],
     languageCode: 'en',
     locationBias: {
-      circle: { center: { latitude: SERVICE_CENTRE.lat, longitude: SERVICE_CENTRE.lng }, radius: BIAS_RADIUS_M },
+      circle: { center: { latitude: SERVICE_CENTRE.lat, longitude: SERVICE_CENTRE.lng }, radius: biasRadiusMetres() },
     },
     // Measured from the centre so a result outside the area can be labelled
     // before she taps it - the same rule the backend applies on booking.

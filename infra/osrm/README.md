@@ -8,33 +8,40 @@ our own instance, deployed on Render as the private service `sheout-osrm`
 
 ## What it holds
 
-Greater Hyderabad's roads, cut from the day's Telangana extract
-(download.openstreetmap.fr) by `clip_hyderabad.py`: every road with a node
-inside 17.05-17.72 N, 78.13-78.85 E (about 37 km from the city centre on every
-side - the whole Outer Ring Road and the airport), the nodes those roads use,
-and their turn restrictions. Preprocessed with OSRM v6.0.0's car profile -
-the same profile the public server runs, so distances match it.
+Every car road within 110 km of central Hyderabad, cut from the day's
+Telangana extract (download.openstreetmap.fr) by `clip_region.py`: the city,
+Nalgonda (~90 km), Siddipet, Medak, Mahbubnagar, Jangaon, Bhongir and the
+highways between them, the nodes those roads use, and their turn
+restrictions. Preprocessed with OSRM v6.0.0's car profile - the same profile
+the public server runs, so distances match - with its `exclude` classes
+removed (see the Dockerfile).
 
-Measured on 2026-09-26:
+### Why 110 km, and not all of Telangana
 
-| | Hyderabad (this) | All of Telangana |
-|---|---|---|
-| map data | 14.6 MB | 98.8 MB |
-| routing data | 362 MB | 906 MB |
-| router memory when loaded | ~330 MB | ~615 MB |
-| peak memory while building | 663 MB | 1,610 MB |
-| build time (extract + partition + customize) | ~66 s | ~248 s |
+The router holds the whole map in memory on a 512 MB Starter instance, so
+the radius is a memory budget. The stock profile's three exclude classes
+(toll, motorway, ferry) make MLD keep four sets of cell metrics; SheOut never
+sends `exclude=`, so dropping them changes no route and frees the most
+memory of anything. Measured on 2026-09-30 (Windows, OSRM v6.0.0; Render's
+Linux figure for the old map was ~330 MB, about 1.3x these):
 
-Hyderabad-only fits Render's Starter (512 MB); all of Telangana does not.
+| map | profile | routing data | router memory |
+|---|---|---|---|
+| old: 37 km Hyderabad box | stock | 362 MB | 254 MB |
+| **110 km circle (this)** | **lean** | **435 MB** | **266 MB** |
+| 130 km circle | lean | 498 MB | 306 MB |
+| 150 km circle | lean | 578 MB | 356 MB |
+| 150 km circle | stock | 691 MB | 487 MB |
 
-Same routes, compared on 2026-09-26:
+110 km costs about what the old map did, which Starter is proven to hold.
+130 km would likely fit too, at ~400 MB on Render, but with less room than a
+service nobody watches overnight should run with. Going further - Warangal,
+Karimnagar, all of Telangana - means a bigger instance (Standard, 2 GB), not
+a bigger clip on this one.
 
-| route | public demo server | this server |
-|---|---|---|
-| Madhapur → Kondapur | 3.84 km, 5.8 min | 3.84 km, 5.7 min |
-| city centre (Abids) → HITEC City | 16.32 km, 21.9 min | 16.32 km, 21.8 min |
-| Secunderabad → Gachibowli | 21.13 km, 27.9 min | 21.13 km, 27.7 min |
-| centre → airport | 22.73 km, 28.2 min | 22.73 km, 28.1 min |
+Routes inside Hyderabad are identical to the metre between the old map and
+this one (city centre → HITEC City, Charminar → airport, Secunderabad →
+Gachibowli, Madhapur → Kondapur). Hyderabad → Nalgonda is 100.6 km, 88 min.
 
 ## Outside the map
 
@@ -42,9 +49,10 @@ OSRM snaps a point to the nearest road it has, however far away. The backend
 therefore asks with `radiuses=1000;1000`: a pickup or drop more than a
 kilometre from any road in this map gets `NoSegment`, and the fare falls back
 to the straight-line estimate (marked `routed: false`) instead of being priced
-on a road at the edge of the map. `SERVICE_RADIUS_KM` (25 km in render.yaml)
-keeps every bookable point well inside the box. **Widening the service area
-past ~30 km means widening the box in `clip_hyderabad.py` too.**
+on a road at the edge of the map. `SERVICE_RADIUS_KM` (100 km in render.yaml)
+keeps every bookable point 10 km inside the map. **Widening the service area
+means widening `RADIUS_KM` in `clip_region.py` too, and measuring memory
+again.**
 
 ## Refreshing the map
 
@@ -59,10 +67,10 @@ OSRM v6.0.0 publishes Windows binaries
 need `tbb12.dll` and `bz2.dll` beside them (conda-forge `tbb` and `bzip2`;
 rename `libbz2.dll` to `bz2.dll`). Then:
 
-    python clip_hyderabad.py telangana.osm.pbf hyderabad.osm.pbf   # pip install osmium
-    osrm-extract -p car.lua hyderabad.osm.pbf
-    osrm-partition hyderabad.osrm
-    osrm-customize hyderabad.osrm
-    osrm-routed --algorithm mld --port 5000 hyderabad.osrm
+    python clip_region.py telangana.osm.pbf region.osm.pbf   # pip install osmium
+    osrm-extract -p car_sheout.lua region.osm.pbf   # car.lua with the Dockerfile's sed applied
+    osrm-partition region.osrm
+    osrm-customize region.osrm
+    osrm-routed --algorithm mld --port 5000 region.osrm
 
 and start the backend with `OSRM_BASE_URL=http://localhost:5000`.

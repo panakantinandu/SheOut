@@ -1,5 +1,6 @@
 import { i18next } from '@sheout/design-system';
 import type { GeoAddress } from '../api/types';
+import { serviceAreaApi } from '../api/client';
 
 /**
  * Address search and reverse lookup via Nominatim, OpenStreetMap's own
@@ -21,32 +22,59 @@ import type { GeoAddress } from '../api/types';
 const NOMINATIM = 'https://nominatim.openstreetmap.org';
 
 /**
- * Hyderabad, the only city SheOut launches in. Passed as a viewbox so
- * matching places here float to the top, without `bounded=1` - a customer
- * searching for somewhere outside the city should still find it rather than
- * get an empty list.
- */
-const HYDERABAD_VIEWBOX = '78.24,17.20,78.62,17.60';
-
-/**
  * Hyderabad's centre. Where the map picker opens before a pin exists.
  */
 export const CITY_CENTRE = { lat: 17.4483, lng: 78.3915 };
 
 /**
- * The service boundary, mirrored from the backend's
- * sheout.booking.service-area config so a customer is told immediately
- * rather than after filling in both ends.
+ * The service boundary, as the backend enforces it, so a customer is told
+ * immediately rather than after filling in both ends.
  * <p>
  * This is a convenience, NOT the rule. The backend checks the same boundary
  * on both the quote and the booking, because anything decided in a browser
- * can be edited in a browser. If the two ever disagree the backend wins and
- * the customer sees its refusal; keeping these numbers in step is a
- * deployment concern, not a correctness one.
+ * can be edited in a browser.
+ * <p>
+ * READ FROM THE SERVER, NOT KEPT IN STEP BY HAND. These used to be a copy,
+ * and the copy drifted: the app said 150km while production refused past
+ * 25km, so a rider the app called covered filled in a whole trip only to be
+ * refused at the end. syncServiceArea() replaces these with the server's
+ * values at startup. They are `let` so every importer sees the update (ES
+ * modules export live bindings); the values below are only what is used
+ * until then, or if the call fails.
  */
-export const SERVICE_CENTRE = { lat: 17.385, lng: 78.4867 };
-export const SERVICE_RADIUS_KM = 150;
-export const SERVICE_CENTRE_NAME = 'Hyderabad';
+export let SERVICE_CENTRE = { lat: 17.385, lng: 78.4867 };
+export let SERVICE_RADIUS_KM = 100;
+export let SERVICE_CENTRE_NAME = 'Hyderabad';
+
+/** Fetches the boundary once per launch. Never throws: on failure the defaults stand. */
+export async function syncServiceArea(): Promise<void> {
+  try {
+    const area = await serviceAreaApi.get();
+    if (
+      Number.isFinite(area.centreLat) && Number.isFinite(area.centreLng) &&
+      Number.isFinite(area.radiusKm) && area.radiusKm > 0
+    ) {
+      SERVICE_CENTRE = { lat: area.centreLat, lng: area.centreLng };
+      SERVICE_RADIUS_KM = Math.round(area.radiusKm);
+      if (area.centreName) SERVICE_CENTRE_NAME = area.centreName;
+    }
+  } catch {
+    // Offline, or an older backend without the endpoint. The defaults match
+    // production, and the server's own check is the gate either way.
+  }
+}
+
+/**
+ * The box around the service circle, as Nominatim's viewbox, so places in
+ * the area float to the top - without `bounded=1`, so a customer searching
+ * for somewhere outside it still finds it rather than an empty list.
+ */
+function serviceViewbox(): string {
+  const dLat = SERVICE_RADIUS_KM / 111.19;
+  const dLng = SERVICE_RADIUS_KM / (111.19 * Math.cos((SERVICE_CENTRE.lat * Math.PI) / 180));
+  const f = (n: number) => n.toFixed(2);
+  return `${f(SERVICE_CENTRE.lng - dLng)},${f(SERVICE_CENTRE.lat - dLat)},${f(SERVICE_CENTRE.lng + dLng)},${f(SERVICE_CENTRE.lat + dLat)}`;
+}
 
 /** Same haversine the backend prices and gates on, in kilometres. */
 export function distanceKm(
@@ -131,11 +159,11 @@ export async function searchPlaces(query: string, signal?: AbortSignal): Promise
   // empty list and no explanation - indistinguishable from a typo or a
   // broken search. Now that the service boundary is enforced properly, real
   // matches are shown and the ones out of range are labelled. The viewbox
-  // still floats Hyderabad results to the top, which is what actually
-  // matters for the common case.
+  // still floats results inside the service area to the top, which is what
+  // actually matters for the common case.
   const url =
     `${NOMINATIM}/search?format=jsonv2&limit=6&addressdetails=0` +
-    `&viewbox=${HYDERABAD_VIEWBOX}` +
+    `&viewbox=${serviceViewbox()}` +
     `&q=${encodeURIComponent(trimmed)}${contactParam()}`;
 
   const res = await throttled(() => fetch(url, { signal, headers: { Accept: 'application/json' } }));

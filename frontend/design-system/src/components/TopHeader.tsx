@@ -114,7 +114,12 @@ export function TopHeader(props: TopHeaderProps) {
       <div className="min-w-0 flex-1 px-3">
         <p className="flex items-center gap-2 font-heading text-section text-text-primary">
           {props.titleIcon}
-          <span className="min-w-0">{props.title}</span>
+          {/* The same living title every other screen has: the greeting is
+              the first words on Home, and as plain text it was the one title
+              in the app that sat still. Keyed by the text, so it plays when
+              the name arrives; nothing until then, so no sparkle or line
+              stands alone while the profile loads. */}
+          <span className="min-w-0">{props.title && <AnimatedTitle key={props.title} text={props.title} />}</span>
         </p>
         {props.subtitle && <div className="text-sm text-text-secondary">{props.subtitle}</div>}
       </div>

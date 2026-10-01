@@ -41,10 +41,10 @@ services:
     region: singapore
     ipAllowList: []
 
-  # SheOut's own routing server - OSRM with greater Hyderabad's roads, built
-  # from the day's OpenStreetMap extract on every deploy. Private: only
-  # sheout-backend reaches it. Starter (512 MB) holds it: measured at
-  # ~360 MB of routing data and ~330 MB resident. See infra/osrm/README.md.
+  # SheOut's own routing server - OSRM with the roads within 110 km of
+  # Hyderabad, built from the day's OpenStreetMap extract on every deploy.
+  # Private: only sheout-backend reaches it. Sized to fit Starter (512 MB):
+  # about the memory the old Hyderabad-only map used. See infra/osrm/README.md.
   - type: pserv
     name: sheout-osrm
     runtime: docker
@@ -380,12 +380,14 @@ envVarGroups:
       - key: FARE_TIMEZONE
         value: Asia/Kolkata
 
-      # Launch area: central Hyderabad. Must stay well inside the map
-      # sheout-osrm holds (about 37 km from the centre every way - see
-      # infra/osrm/clip_hyderabad.py); outside it, fares fall back to an
-      # estimate. Widening this past ~30 km means widening that box too.
+      # Service area: 100 km around Hyderabad - the city, Nalgonda (~90 km),
+      # Siddipet, Medak, Mahbubnagar, Jangaon. The apps read it from
+      # /api/v1/service-area. Must stay ~10 km inside the map sheout-osrm
+      # holds (110 km - see infra/osrm/clip_region.py); outside it, fares
+      # fall back to an estimate. Widening this means widening the map, and
+      # the map's size is bounded by the router's memory (see its README).
       - key: SERVICE_RADIUS_KM
-        value: "25"
+        value: "100"
       - key: ROUTING_TIMEOUT_MS
         value: "4000"
       # Used only when routing is unavailable, so a rider can still book

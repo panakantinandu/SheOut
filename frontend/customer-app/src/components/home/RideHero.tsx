@@ -1,13 +1,15 @@
-import { MapPin, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 
 /**
  * The top of Home: SheOut is a ride app first, and this says so before
  * anything else on the screen.
  * <p>
  * The scooter rides on the spot - a quick small bounce, wind streaking past
- * behind it and the road's centre line running under it - while a pin drops
- * in where she is going. Under it, "Where are you going?", the bar every
- * ride app opens with, which starts a booking. The title and line come from
+ * behind it and the road's centre line running under it. The art carries
+ * its own glowing destination pin; a second, animated one used to drop in
+ * beside it, and the scene showed two pins for one trip. Under it, "Where
+ * are you going?", the bar every ride app opens with, which starts a
+ * booking. The title and line come from
  * the operator-edited banner copy.
  * <p>
  * Movement is transform and opacity only, so it costs the compositor and
@@ -46,7 +48,7 @@ export function RideHero({ eyebrow, title, body, whereTo, art, onBook }: {
           <p className="mt-1 text-caption opacity-90">{body}</p>
         </div>
 
-        {/* The scene: road, wind, scooter, pin. */}
+        {/* The scene: road, wind, scooter. */}
         <div aria-hidden="true" className="pointer-events-none absolute -right-1 -top-1 bottom-0 w-[48%]">
           {/* The road's centre line running under the wheels. */}
           <div className="absolute -right-4 bottom-1 left-0 h-1 overflow-hidden rounded-full [mask-image:linear-gradient(90deg,transparent,#000_30%,#000)]">
@@ -78,17 +80,6 @@ export function RideHero({ eyebrow, title, body, whereTo, art, onBook }: {
             draggable={false}
             className="absolute bottom-2 right-0 h-[8.75rem] w-[8.75rem] select-none rounded-[1.75rem] object-contain drop-shadow-[0_14px_16px_rgba(0,0,0,0.35)] motion-safe:animate-ride"
           />
-
-          {/* Where she is going: a pin dropping in, with a ring where it lands. */}
-          <span className="absolute -top-0.5 left-[14%] flex flex-col items-center motion-safe:animate-pin-drop" style={{ animationDelay: '450ms' }}>
-            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-primary shadow-float motion-safe:animate-float">
-              <MapPin className="h-4 w-4" strokeWidth={2.5} />
-            </span>
-            <span className="relative mt-1 flex h-1.5 w-3">
-              <span className="absolute inset-0 rounded-full bg-white/60 motion-safe:animate-pulse-ring" />
-              <span className="relative h-1.5 w-3 rounded-full bg-black/25" />
-            </span>
-          </span>
         </div>
       </div>
 

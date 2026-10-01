@@ -42,7 +42,7 @@ public class OsrmRouteProvider implements RouteProvider {
     /**
      * How far, in metres, OSRM may move each end to reach a road. Without a
      * limit OSRM snaps to the nearest road it has, however far away. The
-     * self-hosted instance holds greater Hyderabad only, so a point outside
+     * self-hosted instance holds 110 km around Hyderabad only, so a point outside
      * it would snap to the edge of the map and be priced on a road tens of
      * kilometres off - confidently wrong. With this, OSRM answers NoSegment
      * and the trip is priced by the honest fallback estimate instead. No

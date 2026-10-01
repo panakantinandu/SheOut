@@ -38,6 +38,20 @@ class ServiceAreaTest {
     }
 
     @Test
+    @DisplayName("the launch radius of 100km reaches Nalgonda and the towns around Hyderabad, and stops short of Warangal")
+    void launchRadiusReachesNalgonda() {
+        ServiceArea launch = new ServiceArea(17.3850, 78.4867, 100, "Hyderabad");
+        assertTrue(launch.covers(17.0575, 79.2671), "Nalgonda town, 508001");
+        assertTrue(launch.covers(17.0480, 79.2650), "Nalgonda's southern edge");
+        assertTrue(launch.covers(18.1018, 78.8520), "Siddipet");
+        assertTrue(launch.covers(18.0480, 78.2630), "Medak");
+        assertTrue(launch.covers(16.7488, 78.0035), "Mahbubnagar");
+        assertTrue(launch.covers(17.5127, 78.8900), "Bhongir");
+        assertFalse(launch.covers(17.9689, 79.5941), "Warangal, ~133km");
+        assertFalse(launch.covers(17.1400, 79.6200), "Suryapet, ~123km");
+    }
+
+    @Test
     @DisplayName("far-away places are not covered")
     void refusesFarAway() {
         assertFalse(AREA.covers(32.7767, -96.7970), "Dallas");

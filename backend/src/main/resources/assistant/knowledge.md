@@ -12,6 +12,16 @@ every rider and every partner (driver) is a woman whose ID has been checked
 by a person. Riders book bike taxi, auto, cab, parcel and lunch-box delivery.
 Partners drive and are paid into their SheOut wallet.
 
+## Where SheOut works
+
+Within 100 km of central Hyderabad: the whole city, and towns around it
+including Nalgonda, Bhongir, Siddipet, Medak, Sangareddy, Vikarabad,
+Shadnagar, Mahbubnagar and Jangaon. Both the pickup and the drop of a trip
+must be inside that area; the app says so straight away if one is not.
+Warangal, Suryapet, Karimnagar and places further out are not covered yet.
+Someone outside the area can still book a trip for a person inside it by
+setting the pickup and drop themselves.
+
 ## Verification - what is checked, and by whom
 
 - Every account signs in with a phone number and a one-time code.
