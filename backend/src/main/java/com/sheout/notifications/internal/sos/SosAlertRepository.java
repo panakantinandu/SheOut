@@ -13,6 +13,8 @@ public interface SosAlertRepository extends JpaRepository<SosAlertEntity, UUID> 
 
     List<SosAlertEntity> findByBookingIdOrderByCreatedAtDesc(UUID bookingId);
 
+    List<SosAlertEntity> findTop20ByCustomerAccountIdOrderByCreatedAtDesc(UUID accountId);
+
     /** The alert her phone already sent under this id - a retry, or the offline queue sending again. */
     java.util.Optional<SosAlertEntity> findByClientAlertId(UUID clientAlertId);
 

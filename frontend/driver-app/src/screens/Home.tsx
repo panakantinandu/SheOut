@@ -27,6 +27,7 @@ import { LocationHelpSheet } from '../components/home/LocationHelpSheet';
 import { EarningsCard } from '../components/home/EarningsCard';
 import { RecentTrips } from '../components/home/RecentTrips';
 import { BrandStrip } from '../components/home/BrandStrip';
+import { ServiceClosedStrip } from '../components/home/ServiceClosedStrip';
 import { DRIVER_HOME_MAP_ENABLED, HomeMapCard } from '../components/home/HomeMapCard';
 
 const BOOKINGS_POLL_MS = 5000;
@@ -425,6 +426,9 @@ export function Home() {
           <AggregateRatingText averageStars={rating?.averageStars} totalRatings={rating?.totalRatings} emptyLabel={t('home.notRated')} />
         </span>
       </div>
+
+      {/* Outside the operating hours, or paused: no offers will come, and she should know why. */}
+      <ServiceClosedStrip />
 
       {/* Where she stands, and the one thing to do about it. */}
       {profileError ? (

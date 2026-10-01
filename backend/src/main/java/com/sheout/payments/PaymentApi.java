@@ -21,6 +21,9 @@ public interface PaymentApi {
 
     Result<PaymentSummary, PaymentError> getPaymentStatus(UUID bookingId);
 
+    /** A rider's SheOut wallet balance; zero when she has never topped up. For the console. */
+    java.math.BigDecimal riderWalletBalance(UUID customerAccountId);
+
     // ------------------------------------------------------------ listing fees
 
     /**

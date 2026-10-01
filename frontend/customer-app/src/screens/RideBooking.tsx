@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useGoBack } from '../lib/useGoBack';
+import { useGoBack, handOffSheet } from '../lib/useGoBack';
 import { Button, ServiceArt, useRouteLine } from '@sheout/design-system';
 import type { MapMarker } from '@sheout/design-system';
 import { UnpaidTripBanner } from '../components/UnpaidTripBanner';
@@ -15,6 +15,9 @@ import { currentPosition, describePoint, isInServiceArea } from '../lib/geocode'
 import { apiErrorText } from '../lib/apiErrors';
 import { findLiveTrip } from '../lib/liveTrip';
 import { useFareQuote } from '../lib/useFareQuote';
+import { useBookingPin } from '../lib/useBookingPin';
+import { refreshServiceStatus, useServiceStatus } from '../lib/useServiceStatus';
+import { ServiceHoursNotice } from '../components/ServiceHoursNotice';
 import { useNearbyDrivers } from '../lib/useNearbyDrivers';
 import { useSavedPlaces } from '../lib/useSavedPlaces';
 import type { GeoAddress } from '../api/types';
@@ -48,11 +51,26 @@ export function RideBooking() {
   const [pickup, setPickup] = useState<GeoAddress | null>(null);
   const [pickupError, setPickupError] = useState<string | null>(null);
   const [drop, setDrop] = useState<GeoAddress | null>(null);
+  // Outside the operating hours, or paused by operations: said here, and Book stays off.
+  const service = useServiceStatus();
+  const serviceClosed = service?.open === false;
+  // Pickup or drop chosen by moving the booking map itself under a centre pin.
+  const { pin, startPin } = useBookingPin({
+    pickup,
+    drop,
+    setPickup,
+    setDrop,
+    openSearch: (field) => openPicker(field, 'search'),
+  });
   const [picking, setPicking] = useState<'pickup' | 'drop' | null>(null);
   const [pickerMode, setPickerMode] = useState<PickerMode>('search');
   const chipsRef = useRef<HTMLDivElement>(null);
 
   function openPicker(field: 'pickup' | 'drop', mode: PickerMode) {
+    if (mode === 'map') {
+      startPin(field);
+      return;
+    }
     setPickerMode(mode);
     setPicking(field);
   }
@@ -99,6 +117,11 @@ export function RideBooking() {
       if (err instanceof ApiError && err.body?.error === 'UNPAID_TRIP') setUnpaidCheck((n) => n + 1);
       // A trip already live: the way out is that trip, one tap away.
       setLiveTripId(err instanceof ApiError && err.body?.error === 'ACTIVE_BOOKING_EXISTS' ? await findLiveTrip('RIDE') : null);
+      // Closed between opening this screen and pressing Book: the notice takes over from the error.
+      if (err instanceof ApiError && err.body?.error === 'SERVICE_CLOSED') {
+        setError(null);
+        void refreshServiceStatus();
+      }
     } finally {
       setSubmitting(false);
     }
@@ -131,10 +154,12 @@ export function RideBooking() {
         onEdit={openPicker}
         active={picking}
         chipsRef={chipsRef}
+        pin={pin}
         markers={markers}
         route={route}
         summary={
           <>
+            <ServiceHoursNotice status={service} compact />
             <UnpaidTripBanner refreshKey={unpaidCheck} />
             <QuoteSummary state={servableTrip ? fare : { quote: null, loading: false, error: null }} kind="ride" serviceName={t('home.serviceRide')} pickup={pickup} drop={drop} />
             <ServiceAreaNotice pickup={pickup} drop={drop} />
@@ -150,7 +175,7 @@ export function RideBooking() {
                 {t('booking.verifyNow')}
               </Button>
             )}
-            <Button fullWidth disabled={!pickup || !drop || !servableTrip || submitting} onClick={handleBookNow} data-testid="book-now">
+            <Button fullWidth disabled={!pickup || !drop || !servableTrip || submitting || serviceClosed} onClick={handleBookNow} data-testid="book-now">
               {submitting ? t('booking.booking') : t('booking.bookNow')}
             </Button>
           </>
@@ -179,6 +204,12 @@ export function RideBooking() {
         markerKind={picking === 'pickup' ? 'pickup' : 'drop'}
         startAt={picking === 'pickup' ? pickup : drop}
         below={chipsRef}
+        onPickOnMap={(start, areaHint) => {
+          const field = picking ?? 'drop';
+          handOffSheet();
+          setPicking(null);
+          startPin(field, start, areaHint);
+        }}
         onSelect={(address) => (picking === 'pickup' ? setPickup(address) : setDrop(address))}
         onClose={() => setPicking(null)}
       />

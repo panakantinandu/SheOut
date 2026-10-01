@@ -660,4 +660,9 @@ public class PaymentService implements PaymentApi {
                 payment.getSellerId()
         );
     }
+
+    @Override
+    public BigDecimal riderWalletBalance(UUID customerAccountId) {
+        return riderWalletService.getWallet(customerAccountId).balance();
+    }
 }

@@ -24,6 +24,27 @@ export function useGoBack(fallback = '/home') {
   }, [navigate, fallback]);
 }
 
+let handingOff = false;
+
+/**
+ * Call just before closing one sheet to open another in the same tap - the
+ * search sheet giving way to choosing on the map, and back. The new sheet
+ * takes over the closing one's history entry, so Back still closes exactly
+ * one sheet.
+ * <p>
+ * Without it the two moved history at once: the closing sheet popped its
+ * entry (asynchronously) while the opening one pushed its own, the pop
+ * landed last, and the new sheet read that as Back and shut itself.
+ */
+export function handOffSheet() {
+  handingOff = true;
+  // Both sheets' effects run in the commit this tap causes; after that,
+  // opening and closing move history as usual again.
+  window.setTimeout(() => {
+    handingOff = false;
+  }, 0);
+}
+
 /**
  * A sheet or full-screen picker that the phone's back button closes.
  * <p>
@@ -45,10 +66,13 @@ export function useCloseOnBack(open: boolean, onClose: () => void) {
   useEffect(() => {
     if (open && !holding.current) {
       holding.current = true;
+      // Taking over from a sheet that just closed: its entry is this one's now.
+      if (handingOff && marked) return;
       const state = typeof location.state === 'object' && location.state !== null ? location.state : {};
       navigate(`${location.pathname}${location.search}${location.hash}`, { state: { ...state, sheet: true } });
     } else if (!open && holding.current) {
       holding.current = false;
+      if (handingOff) return;
       if (marked) navigate(-1);
     }
     // Only the sheet opening or closing moves history.

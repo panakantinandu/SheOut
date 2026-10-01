@@ -1,8 +1,33 @@
-import { ArrowLeft, MapPinned, Pencil } from 'lucide-react';
+import { ArrowLeft, LocateFixed, MapPinned, Pencil, Search } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type PointerEvent, type RefObject } from 'react';
-import { LiveMap, useTranslation } from '@sheout/design-system';
+import { Button, LiveMap, useTranslation } from '@sheout/design-system';
 import type { MapMarker, RoutePoint } from '@sheout/design-system';
 import type { GeoAddress } from '../api/types';
+import { CITY_CENTRE, currentPosition, isInServiceArea, outOfAreaMessage } from '../lib/geocode';
+import { useCenterPinAddress } from '../lib/useCenterPinAddress';
+import { useCloseOnBack } from '../lib/useGoBack';
+
+/** Street zoom: gates, lanes and building names readable while she places the pin. */
+const PIN_ZOOM = 17;
+
+/**
+ * Setting one end of the trip by moving the map under a pin fixed at its
+ * centre - on THIS map, the booking screen's own. There used to be a second,
+ * smaller map inside the picker sheet for this, under the first one, and a
+ * pin she had to tap or drag on it: two maps on one screen for one choice.
+ */
+export interface PinMode {
+  field: 'pickup' | 'drop';
+  /** Where the pin starts, with its name. Null starts at `fallbackCentre` and looks the address up. */
+  start: GeoAddress | null;
+  fallbackCentre?: { lat: number; lng: number } | null;
+  /** The place she searched for is an area, not a spot: she is asked to put the pin on the gate. */
+  areaHint?: boolean;
+  onConfirm: (address: GeoAddress) => void;
+  onCancel: () => void;
+  /** Back to typing an address instead. */
+  onSearch: () => void;
+}
 
 /** The draggable handle and the sheet's own padding, above and below the summary. */
 const SHEET_CHROME = 40;
@@ -31,6 +56,8 @@ export interface BookingMapLayoutProps {
   summary: ReactNode;
   /** Shown when the sheet is pulled up: the details. */
   more?: ReactNode;
+  /** Set while she is choosing one end on the map - see PinMode. */
+  pin?: PinMode | null;
 }
 
 /**
@@ -59,10 +86,103 @@ export function BookingMapLayout({
   chipsRef,
   markers,
   route,
-  summary,
-  more,
+  summary: tripSummary,
+  more: tripMore,
+  pin = null,
 }: BookingMapLayoutProps) {
   const { t } = useTranslation();
+  const pinState = useCenterPinAddress(pin?.start ?? null, pin !== null);
+  /** Where the map is sent while choosing on it: the start, then wherever "locate me" found her. */
+  const [pinCentre, setPinCentre] = useState<{ lat: number; lng: number } | null>(null);
+  const [pinNonce, setPinNonce] = useState(0);
+  const [locating, setLocating] = useState(false);
+  const [locateError, setLocateError] = useState<string | null>(null);
+  const pinField = pin?.field ?? null;
+
+  async function locateMe() {
+    setLocating(true);
+    setLocateError(null);
+    try {
+      const here = await currentPosition();
+      setPinCentre(here);
+      setPinNonce((n) => n + 1);
+    } catch (err) {
+      setLocateError((err as Error).message);
+    } finally {
+      setLocating(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!pin) return;
+    setLocateError(null);
+    setExpanded(false);
+    setPinCentre(pin.start ? { lat: pin.start.lat, lng: pin.start.lng } : pin.fallbackCentre ?? CITY_CENTRE);
+    setPinNonce((n) => n + 1);
+    // A pickup with nowhere to start from starts where she is.
+    if (!pin.start && pin.field === 'pickup') void locateMe();
+    // Each opening, not each re-render of the same one.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pinField]);
+
+  // The phone's back button leaves the pin, not the booking.
+  useCloseOnBack(pin !== null, () => pin?.onCancel());
+
+  const pinAddress = pinState.address;
+  const pinBusy = pinState.moving || pinState.resolving;
+  const pinOutside = pinAddress != null && !isInServiceArea(pinAddress);
+  const summary = pin ? (
+    <div className="space-y-3" data-testid="pin-sheet">
+      <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+        {pin.field === 'pickup' ? t('picker.pickupLocation') : t('picker.dropLocation')}
+      </p>
+      <div className="flex items-start gap-3">
+        <span className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${pin.field === 'pickup' ? 'bg-primary' : 'bg-accent-orange'}`} aria-hidden="true" />
+        <p
+          className={`min-h-[2.5rem] flex-1 text-sm font-semibold leading-snug text-text-primary transition-opacity ${pinBusy ? 'opacity-50' : ''}`}
+          aria-live="polite"
+          data-testid="pin-address"
+        >
+          {pinState.moving
+            ? t('picker.movingPin')
+            : pinState.resolving
+              ? t('picker.lookingUp')
+              : pinAddress?.label ?? (pinState.error ? t('picker.cannotName') : t('picker.lookingUp'))}
+        </p>
+      </div>
+      {pin.areaHint && <p className="rounded-input bg-primary-light px-3 py-2 text-xs text-primary" data-testid="picker-area-hint">{t('picker.areaHint')}</p>}
+      {pinState.error && !pinBusy && (
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs text-danger">{pinState.error}</p>
+          <button type="button" onClick={pinState.retry} className="shrink-0 text-xs font-semibold text-primary">
+            {t('common.tryAgain')}
+          </button>
+        </div>
+      )}
+      {pinOutside && !pinBusy && <p className="text-xs font-medium text-danger">{outOfAreaMessage()}</p>}
+      {locateError && <p className="text-xs text-text-secondary">{locateError}</p>}
+      <Button
+        fullWidth
+        disabled={!pinAddress || pinBusy || pinOutside || Boolean(pinState.error)}
+        onClick={() => pinAddress && pin.onConfirm(pinAddress)}
+        data-testid="pin-confirm"
+      >
+        {pin.field === 'pickup' ? t('picker.confirmPickup') : t('picker.confirmDrop')}
+      </Button>
+      <button
+        type="button"
+        onClick={pin.onSearch}
+        className="flex w-full items-center justify-center gap-2 py-1 text-sm font-semibold text-primary"
+        data-testid="pin-search-instead"
+      >
+        <Search className="h-4 w-4" aria-hidden="true" />
+        {t('picker.searchInstead')}
+      </button>
+    </div>
+  ) : (
+    tripSummary
+  );
+  const more = pin ? undefined : tripMore;
   const ownChipsRef = useRef<HTMLDivElement>(null);
   const chips = chipsRef ?? ownChipsRef;
   /** The chips grow to two lines for a long address, so the route clears their real height. */
@@ -141,9 +261,59 @@ export function BookingMapLayout({
     <div className="fixed inset-0 z-10 mx-auto flex max-w-md flex-col bg-surface" data-testid="booking-map-layout">
       {/* The map: everything above the sheet, and nothing below it. */}
       <div className="relative min-h-0 flex-1" data-testid="booking-map-area">
-        <LiveMap markers={markers} route={route} fill fitPadding={{ ...FIT_PADDING, top: chipsBottom + CHIPS_CLEARANCE }} />
+        <LiveMap
+          markers={pin ? markers.filter((m) => m.kind !== pin.field) : markers}
+          route={pin ? undefined : route}
+          fill
+          autoFit={!pin}
+          center={pin ? pinCentre ?? undefined : undefined}
+          zoom={pin ? PIN_ZOOM : undefined}
+          centerNonce={pinNonce}
+          fitPadding={{ ...FIT_PADDING, top: chipsBottom + CHIPS_CLEARANCE }}
+          centerPin={
+            pin
+              ? {
+                  kind: pin.field,
+                  label: pin.field === 'pickup' ? t('picker.pickupHere') : t('picker.dropHere'),
+                  onMoveStart: pinState.onMoveStart,
+                  onIdle: pinState.onIdle,
+                }
+              : undefined
+          }
+        />
 
-        <div className="pointer-events-none absolute inset-x-3 top-3 z-10 flex gap-2">
+        {pin && (
+          <>
+            <div className="pointer-events-none absolute inset-x-3 top-3 z-10 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={pin.onCancel}
+                aria-label={t('booking.back')}
+                className="pointer-events-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-surface text-text-primary shadow-float"
+                data-testid="pin-back"
+              >
+                <ArrowLeft className="h-5 w-5" aria-hidden="true" />
+              </button>
+              <p className="min-w-0 flex-1 rounded-full bg-surface px-4 py-2.5 text-sm font-semibold text-text-primary shadow-float">
+                {pin.field === 'pickup' ? t('picker.movePickup') : t('picker.moveDrop')}
+              </p>
+            </div>
+            {/* Above Google's logo and Terms, which sit along the map's bottom edge. */}
+            <button
+              type="button"
+              onClick={() => void locateMe()}
+              disabled={locating}
+              aria-label={t('picker.locateMe')}
+              title={t('picker.locateMe')}
+              className="absolute bottom-8 right-3 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-surface text-primary shadow-float disabled:opacity-60"
+              data-testid="pin-locate"
+            >
+              <LocateFixed className={`h-5 w-5 ${locating ? 'motion-safe:animate-pulse' : ''}`} aria-hidden="true" />
+            </button>
+          </>
+        )}
+
+        <div className={`pointer-events-none absolute inset-x-3 top-3 z-10 flex gap-2 ${pin ? 'hidden' : ''}`}>
           <button
             type="button"
             onClick={onBack}

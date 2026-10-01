@@ -86,6 +86,16 @@ public interface BookingApi {
     List<BookingSummary> findAllForAccount(UUID accountId);
 
     /**
+     * This account's latest trips, as customer or as driver, newest first,
+     * at most {@code limit}. For the console's person page, which needs the
+     * last few - not a partner's whole history read and sorted in memory.
+     */
+    List<BookingSummary> findRecentForAccount(UUID accountId, int limit);
+
+    /** The console's extra facts about one trip - see BookingOpsFacts. */
+    Optional<BookingOpsFacts> findOpsFacts(UUID bookingId);
+
+    /**
      * A page of every booking, narrowed by {@link BookingQuery}. No owner
      * scope - this is the ops console's view.
      * <p>

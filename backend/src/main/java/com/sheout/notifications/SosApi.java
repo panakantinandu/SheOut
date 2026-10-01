@@ -30,6 +30,9 @@ public interface SosApi {
      */
     List<SosAlertSummary> findByBookingId(UUID bookingId);
 
+    /** The last 20 alerts this account raised, newest first, resolved or not - for the console's person page. */
+    List<SosAlertSummary> findRecentForAccount(UUID accountId);
+
     /**
      * ACTIVE to RESOLVED, recording which admin account closed it and when.
      * Idempotent in the sense that resolving an already-resolved alert is

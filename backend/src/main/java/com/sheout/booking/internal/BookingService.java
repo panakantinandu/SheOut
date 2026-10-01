@@ -75,6 +75,8 @@ public class BookingService implements BookingApi {
     private final DropoffGeofence pickupGeofence;
     private final TripRouteChecker routeChecker;
     private final CampaignsApi campaigns;
+    /** Whether new bookings are being taken right now - see ServiceHoursApi. */
+    private final java.util.function.BooleanSupplier bookingsOpen;
 
     @Autowired
     public BookingService(BookingRepository bookingRepository,
@@ -92,13 +94,15 @@ public class BookingService implements BookingApi {
                            @Value("${sheout.booking.completion.driver-location-max-age-seconds:30}") long driverLocationMaxAgeSeconds,
                            @Value("${sheout.booking.completion.pickup-radius-metres:150}") double pickupRadiusMetres,
                            TripRouteChecker routeChecker,
-                           CampaignsApi campaigns) {
+                           CampaignsApi campaigns,
+                           com.sheout.booking.ServiceHoursApi serviceHours) {
         this(bookingRepository, verificationApi, fareCalculator, eventPublisher, authApi, serviceArea,
                 devMode.verifiedRiderBypassPhone().orElse(""), partnerPaymentHoldMinutes, locationStore,
-                dropoffRadiusMetres, driverLocationMaxAgeSeconds, pickupRadiusMetres, routeChecker, campaigns);
+                dropoffRadiusMetres, driverLocationMaxAgeSeconds, pickupRadiusMetres, routeChecker, campaigns,
+                () -> serviceHours.currentStatus().open());
     }
 
-    private BookingService(BookingRepository bookingRepository,
+    BookingService(BookingRepository bookingRepository,
                            VerificationApi verificationApi,
                            FareCalculator fareCalculator,
                            DomainEventPublisher eventPublisher,
@@ -111,7 +115,9 @@ public class BookingService implements BookingApi {
                            long driverLocationMaxAgeSeconds,
                            double pickupRadiusMetres,
                            TripRouteChecker routeChecker,
-                           CampaignsApi campaigns) {
+                           CampaignsApi campaigns,
+                           java.util.function.BooleanSupplier bookingsOpen) {
+        this.bookingsOpen = bookingsOpen;
         this.routeChecker = routeChecker;
         this.campaigns = campaigns;
         this.partnerPaymentHold = Duration.ofMinutes(partnerPaymentHoldMinutes);
@@ -146,7 +152,7 @@ public class BookingService implements BookingApi {
                            long driverLocationMaxAgeSeconds) {
         this(bookingRepository, verificationApi, fareCalculator, eventPublisher, authApi, serviceArea,
                 verifiedBypassPhone, partnerPaymentHoldMinutes, locationStore, dropoffRadiusMetres,
-                driverLocationMaxAgeSeconds, 300, TripRouteChecker.withoutTrails(), NO_CAMPAIGNS);
+                driverLocationMaxAgeSeconds, 300, TripRouteChecker.withoutTrails(), NO_CAMPAIGNS, () -> true);
     }
 
     /**
@@ -206,6 +212,13 @@ public class BookingService implements BookingApi {
     public Result<BookingSummary, BookingError> requestBooking(RequestBookingCommand command) {
         if (command.category().expectedType() != command.type()) {
             return Result.failure(BookingError.CATEGORY_TYPE_MISMATCH);
+        }
+        // First of all: outside the hours, or while an operator has paused
+        // bookings, nothing else about the request matters tonight. Only new
+        // bookings stop - trips under way and searches already running carry
+        // on, because cutting those off would strand her mid-journey.
+        if (!bookingsOpen.getAsBoolean()) {
+            return Result.failure(BookingError.SERVICE_CLOSED);
         }
         // Before the verification gate on purpose: whether we serve an area
         // is public information, so answering it first tells an unverified
@@ -727,6 +740,25 @@ public class BookingService implements BookingApi {
         return bookingRepository.findByCustomerId(customerId).stream()
                 .map(BookingEntity::getId)
                 .collect(java.util.stream.Collectors.toSet());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<BookingSummary> findRecentForAccount(UUID accountId, int limit) {
+        return bookingRepository.findByCustomerIdOrDriverIdOrderByCreatedAtDesc(
+                        accountId, accountId, PageRequest.of(0, Math.max(1, Math.min(limit, 100))))
+                .stream().map(this::toSummary).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<com.sheout.booking.BookingOpsFacts> findOpsFacts(UUID bookingId) {
+        return bookingRepository.findById(bookingId).map(b -> new com.sheout.booking.BookingOpsFacts(
+                b.getId(), b.getCancellationReason(), b.getCancellationNote(), b.getCancelledBy(),
+                b.getCompletedBy(), b.getCompletionDistanceFromDropM(), b.getDropDeviationReason(),
+                b.getDropDeviationNote(), b.getQuotedDistanceKm(), b.getQuotedDistanceRouted(),
+                b.getActualDistanceKm(), b.getRouteFlaggedAt(), b.getRouteReviewedAt(), b.getRouteReviewNote(),
+                b.getPickupVerifiedAt(), b.getPickupAttempts(), b.getDestinationChangedAt()));
     }
 
     @Override

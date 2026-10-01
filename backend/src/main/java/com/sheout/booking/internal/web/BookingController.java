@@ -74,11 +74,14 @@ public class BookingController {
     private final int pickupAttemptLimit;
     private final DestinationChangeService destinationChanges;
     private final QuoteTimes quoteTimes;
+    private final com.sheout.booking.ServiceHoursApi serviceHours;
 
     public BookingController(BookingService bookingService, ServiceArea serviceArea, RouteProvider routeProvider,
                              RateLimiter rateLimiter,
                              @Value("${sheout.rate-limit.pickup-code-per-driver:10}") int pickupAttemptLimit,
-                             DestinationChangeService destinationChanges, QuoteTimes quoteTimes) {
+                             DestinationChangeService destinationChanges, QuoteTimes quoteTimes,
+                             com.sheout.booking.ServiceHoursApi serviceHours) {
+        this.serviceHours = serviceHours;
         this.destinationChanges = destinationChanges;
         this.quoteTimes = quoteTimes;
         this.bookingService = bookingService;
@@ -574,6 +577,11 @@ public class BookingController {
                     "SheOut currently operates only in and around " + serviceArea.centreName()
                             + ". Pickup and drop must both be within "
                             + Math.round(serviceArea.radiusKm()) + "km of the city.");
+            // Its own code so the app can show the hours and when booking
+            // reopens, rather than a generic failure. The message is the
+            // English fallback; the apps build their own from service-status.
+            case SERVICE_CLOSED -> new ApiException(
+                    HttpStatus.CONFLICT, "SERVICE_CLOSED", ServiceStatusController.closedMessage(serviceHours.currentStatus()));
             case CATEGORY_TYPE_MISMATCH -> new ApiException(
                     HttpStatus.BAD_REQUEST, "Bad Request", "category does not match the requested type");
             case BOOKING_NOT_FOUND -> ApiException.notFound("No such booking");

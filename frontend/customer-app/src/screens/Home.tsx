@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ASSISTANT_NAME, AssistantFab, PushPromptCard, RotatingText, SkyIcon, TopHeader, useDayPart, contentText, useContentSection, useAppLanguage, usePushNotifications, useUnreadNotifications, bikeTaxiArt, parcelArt, marketplaceArt, womenArt } from '@sheout/design-system';
 import { OutOfAreaBanner } from '../components/OutOfAreaBanner';
+import { ServiceHoursNotice } from '../components/ServiceHoursNotice';
+import { useServiceStatus } from '../lib/useServiceStatus';
 import { UnpaidTripBanner } from '../components/UnpaidTripBanner';
 import { useAppDrawer } from '../components/AppDrawer';
 import { Reveal } from '../components/Reveal';
@@ -69,6 +71,7 @@ export function Home() {
   const [profile, setProfile] = useState<CustomerProfileSummary | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [allServices, setAllServices] = useState(false);
+  const service = useServiceStatus();
   const copy = useContentSection('home.', contentApi.getSection);
 
   useEffect(() => {
@@ -122,6 +125,9 @@ export function Home() {
           notice, not a block: the trip's pickup and drop are what decide
           whether it can be booked, not where her phone is. */}
       <OutOfAreaBanner />
+
+      {/* Outside the operating hours, or paused: said on arrival, not after she has planned a trip. */}
+      <ServiceHoursNotice status={service} />
 
       {/* An unpaid trip blocks the next booking - say so before she tries. */}
       <UnpaidTripBanner />

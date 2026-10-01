@@ -98,6 +98,34 @@ public class DriverLocationStore implements DriverLocationApi {
         return Optional.of(new DriverLocation(lat, lng, recordedAt));
     }
 
+    @Override
+    public java.util.Map<UUID, DriverLocation> findAllReporting() {
+        Set<String> members = redisTemplate.opsForZSet().range(GEO_KEY, 0, -1);
+        if (members == null || members.isEmpty()) {
+            return java.util.Map.of();
+        }
+        List<String> ids = List.copyOf(members);
+        List<Point> points = redisTemplate.opsForGeo().position(GEO_KEY, ids.toArray(String[]::new));
+        List<String> stamps = redisTemplate.opsForValue().multiGet(ids.stream().map(id -> TS_KEY_PREFIX + id).toList());
+        java.util.Map<UUID, DriverLocation> out = new java.util.LinkedHashMap<>();
+        for (int i = 0; i < ids.size(); i++) {
+            Point p = points == null || i >= points.size() ? null : points.get(i);
+            if (p == null || !Double.isFinite(p.getX()) || !Double.isFinite(p.getY())) {
+                continue;
+            }
+            String ts = stamps == null || i >= stamps.size() ? null : stamps.get(i);
+            UUID id;
+            try {
+                id = UUID.fromString(ids.get(i));
+            } catch (IllegalArgumentException e) {
+                continue;
+            }
+            // Point(x, y) = Point(longitude, latitude).
+            out.put(id, new DriverLocation(p.getY(), p.getX(), ts == null ? Instant.EPOCH : Instant.ofEpochMilli(Long.parseLong(ts))));
+        }
+        return out;
+    }
+
     /**
      * Nearest drivers within radiusKm, closest first, up to limit. Callers
      * apply their own eligibility filtering (online status, vehicle type,

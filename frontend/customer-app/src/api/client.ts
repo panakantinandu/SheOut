@@ -628,6 +628,26 @@ export const serviceAreaApi = {
   },
 };
 
+/** Whether SheOut is taking bookings now - the operating hours and any operator pause. Public. */
+export interface ServiceStatus {
+  open: boolean;
+  closedReason: 'OUTSIDE_HOURS' | 'PAUSED' | null;
+  pauseReason: string | null;
+  reopensAt: string | null;
+  closesAt: string | null;
+  mode: 'ALWAYS_OPEN' | 'SCHEDULED';
+  /** The daily window, India time, as "06:00:00". */
+  opensAt: string;
+  closesAtLocal: string;
+  timeZone: string;
+}
+
+export const serviceStatusApi = {
+  get(): Promise<ServiceStatus> {
+    return request('/api/v1/service-status', { auth: false });
+  },
+};
+
 /** The road between two points, from SheOut's own router - for the map's route line. */
 export const routesApi = {
   preview(from: { lat: number; lng: number }, to: { lat: number; lng: number }): Promise<{ points: { lat: number; lng: number }[]; distanceKm: number | null; durationMinutes: number | null }> {

@@ -17,6 +17,8 @@ public enum BookingError {
     CUSTOMER_PHONE_REQUIRED,
     /** Pickup or drop is outside the radius SheOut operates in - see ServiceArea. */
     OUTSIDE_SERVICE_AREA,
+    /** Outside the operating hours, or paused by an operator - see ServiceHoursApi. */
+    SERVICE_CLOSED,
     CATEGORY_TYPE_MISMATCH,
     BOOKING_NOT_FOUND,
 

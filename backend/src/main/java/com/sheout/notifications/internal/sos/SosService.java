@@ -218,6 +218,13 @@ public class SosService implements SosApi {
     }
 
     @Override
+    public List<SosAlertSummary> findRecentForAccount(UUID accountId) {
+        return sosAlertRepository.findTop20ByCustomerAccountIdOrderByCreatedAtDesc(accountId).stream()
+                .map(SosService::toSummary)
+                .toList();
+    }
+
+    @Override
     public List<SosAlertSummary> findByBookingId(UUID bookingId) {
         return sosAlertRepository.findByBookingIdOrderByCreatedAtDesc(bookingId).stream()
                 .map(SosService::toSummary)

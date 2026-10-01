@@ -24,6 +24,8 @@ interface BookingRepository extends JpaRepository<BookingEntity, UUID>, JpaSpeci
 
     List<BookingEntity> findByDriverId(UUID driverId);
 
+    List<BookingEntity> findByCustomerIdOrDriverIdOrderByCreatedAtDesc(UUID customerId, UUID driverId, Pageable pageable);
+
     /** createdAt is the requestedAt the summary exposes - see BookingEntity's Javadoc. */
     List<BookingEntity> findAllByOrderByCreatedAtDesc(Pageable pageable);
 

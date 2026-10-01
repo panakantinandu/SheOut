@@ -490,6 +490,7 @@
   .b-green { color: var(--green); background: var(--green-bg); border-color: var(--green-line); }
   .b-red   { color: var(--red);   background: var(--red-bg);   border-color: var(--red-line); }
   .b-grey  { color: var(--muted); background: var(--bg);       border-color: var(--line); }
+  .b-blue  { color: var(--blue);  background: var(--blue-bg);  border-color: var(--blue-line); }
   /* Account type, deliberately not in the amber/green/red status palette -
      a role is not a status and must not read like one. */
   .b-role-driver   { color: var(--blue); background: var(--blue-bg); border-color: var(--blue-line); }
@@ -825,6 +826,127 @@
   .modal select { width: 100%; padding: 9px 11px; border: 1px solid var(--line); border-radius: 8px; font: inherit; background: var(--panel); color: var(--text); }
   .modal .help { font-size: 11.5px; color: var(--muted); margin-top: 4px; }
   @media (max-width: 560px) { .form-grid { grid-template-columns: 1fr; } .camp-grid { grid-template-columns: 1fr; } }
+
+  /* ---- live map (OpenStreetMap tiles, drawn by the console itself) ---- */
+  .tmap { position: relative; overflow: hidden; background: #E8E4DC; border-radius: 10px; touch-action: none; cursor: grab; user-select: none; }
+  .tmap.dragging { cursor: grabbing; }
+  .tmap-tiles, .tmap-marks { position: absolute; inset: 0; }
+  .tmap-tiles img { position: absolute; width: 256px; height: 256px; max-width: none; pointer-events: none; }
+  :root[data-theme="dark"] .tmap-tiles img { filter: invert(.92) hue-rotate(180deg) brightness(.95) contrast(.9); }
+  .tmap-lines { position: absolute; left: 0; top: 0; pointer-events: none; overflow: visible; }
+  .tmap-path { fill: none; stroke: var(--brand); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; opacity: .85; }
+  .tmap-path.planned { stroke: var(--muted); stroke-width: 3; stroke-dasharray: 6 6; opacity: .7; }
+  .tmap-mark { position: absolute; width: 16px; height: 16px; margin: -8px 0 0 -8px; padding: 0; border-radius: 50%; border: 2px solid #fff; background: var(--green); box-shadow: 0 1px 4px rgba(0,0,0,.35); cursor: pointer; font-size: 9px; font-weight: 800; color: #fff; line-height: 12px; text-align: center; }
+  .tmap-mark.trip { background: var(--blue); }
+  .tmap-mark.stale { background: #9A94A8; }
+  .tmap-mark.search { background: #E39B1B; border-radius: 4px; }
+  .tmap-mark.sos { background: #D7261B; animation: tmap-pulse 1.2s ease-out infinite; }
+  .tmap-mark.pickup, .tmap-mark.drop { width: 22px; height: 22px; margin: -11px 0 0 -11px; line-height: 18px; font-size: 11px; cursor: default; }
+  .tmap-mark.pickup { background: var(--brand); }
+  .tmap-mark.drop { background: #E36414; }
+  .tmap-mark.now { background: var(--blue); width: 18px; height: 18px; margin: -9px 0 0 -9px; }
+  @keyframes tmap-pulse { 0% { box-shadow: 0 0 0 0 rgba(215,38,27,.6); } 100% { box-shadow: 0 0 0 14px rgba(215,38,27,0); } }
+  .tmap-zoom { position: absolute; right: 10px; top: 10px; display: flex; flex-direction: column; border-radius: 8px; overflow: hidden; box-shadow: var(--elev-1); }
+  .tmap-zoom button { width: 32px; height: 32px; border: 0; background: var(--panel); color: var(--text); font-size: 18px; cursor: pointer; }
+  .tmap-zoom button + button { border-top: 1px solid var(--line); }
+  .tmap-attr { position: absolute; right: 0; bottom: 0; padding: 2px 6px; font-size: 10.5px; background: rgba(255,255,255,.8); color: #333 !important; border-top-left-radius: 6px; }
+  .live-map { height: 420px; margin: 8px; }
+  @media (max-width: 700px) { .live-map { height: 320px; } }
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: var(--muted); margin-left: auto; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
+  .legend i.free { background: var(--green); } .legend i.trip { background: var(--blue); } .legend i.stale { background: #9A94A8; }
+  .legend i.search { background: #E39B1B; border-radius: 2px; } .legend i.sos { background: #D7261B; }
+
+  /* ---- live page ---- */
+  .live-status { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 16px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel); margin: 12px 0 14px; }
+  .live-status.closed { border-color: var(--amber-line); background: var(--amber-bg); }
+  .live-status .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 4px var(--green-bg); flex: none; }
+  .live-status.closed .dot { background: var(--amber); box-shadow: 0 0 0 4px var(--amber-line); }
+  .live-status b { font-size: 14px; }
+  .live-status .spacer { flex: 1; }
+  .live-pulse { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+  .live-pulse::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: live-pulse 1.6s ease-out infinite; }
+  @keyframes live-pulse { 0% { box-shadow: 0 0 0 0 rgba(18,115,74,.5); } 100% { box-shadow: 0 0 0 8px rgba(18,115,74,0); } }
+  table.mini { font-size: 12.5px; }
+  table.mini th { position: static; }
+  table.mini td { padding: 9px 12px; }
+  table.mini tr[data-open-booking], table.mini tr[data-open-account] { cursor: pointer; }
+  table.mini tr[data-open-booking]:hover td, table.mini tr[data-open-account]:hover td { background: var(--panel-soft); }
+  .route-cell { max-width: 320px; }
+  .route-cell div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 650; background: var(--panel-soft); color: var(--muted); border: 1px solid var(--line-soft); }
+  .pill.warn { background: var(--amber-bg); color: var(--amber); border-color: var(--amber-line); }
+  .pill.bad { background: var(--red-bg); color: var(--red); border-color: var(--red-line); }
+  .pill.ok { background: var(--green-bg); color: var(--green); border-color: var(--green-line); }
+
+  /* ---- person and trip pages ---- */
+  .modal.xwide { max-width: 1000px; }
+  .modal.xwide .modal-body { max-height: 74vh; }
+  .dx-head { display: flex; align-items: flex-start; gap: 14px; }
+  .dx-head .who { flex: 1; min-width: 0; }
+  .dx-head h3 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .dx-photo { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; background: var(--brand-tint); flex: none; }
+  .dx-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .dx-actions a.btn { text-decoration: none; display: inline-flex; align-items: center; }
+  .dx-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 14px; }
+  @media (max-width: 860px) { .dx-grid { grid-template-columns: 1fr; } }
+  .dx-card { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: var(--panel); min-width: 0; }
+  .dx-card.full { grid-column: 1 / -1; }
+  .dx-card h4 { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 10px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+  .dx-card h4 .right { margin-left: auto; text-transform: none; letter-spacing: 0; }
+  .dx-card .kv { grid-template-columns: 140px 1fr; }
+  .dx-money { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
+  .dx-money div { background: var(--panel-soft); border: 1px solid var(--line-soft); border-radius: 8px; padding: 8px 10px; }
+  .dx-money span { display: block; font-size: 11.5px; color: var(--muted); }
+  .dx-money b { font-size: 15px; font-variant-numeric: tabular-nums; }
+  .dx-map { height: 300px; }
+  .timeline { list-style: none; margin: 0; padding: 0; }
+  .timeline li { position: relative; padding: 0 0 12px 22px; font-size: 13px; }
+  .timeline li::before { content: ''; position: absolute; left: 5px; top: 5px; width: 8px; height: 8px; border-radius: 50%; background: var(--brand); }
+  .timeline li::after { content: ''; position: absolute; left: 8px; top: 15px; bottom: -3px; width: 2px; background: var(--line); }
+  .timeline li:last-child::after { display: none; }
+  .timeline li.bad::before { background: var(--red); }
+  .timeline li.ok::before { background: var(--green); }
+  .timeline li.pending::before { background: var(--line); }
+  .timeline .t { color: var(--muted); font-size: 12px; }
+  .contact-list { list-style: none; margin: 0; padding: 0; }
+  .contact-list li { display: flex; gap: 10px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line-soft); font-size: 13px; }
+  .contact-list li:last-child { border-bottom: 0; }
+  .contact-list li .grow { flex: 1; min-width: 0; }
+  .dx-back { border: 0; background: none; color: var(--brand); font: inherit; font-size: 12.5px; font-weight: 650; cursor: pointer; padding: 0; margin-bottom: 6px; }
+  .stars { color: #E39B1B; letter-spacing: 1px; }
+
+  /* ---- service hours page ---- */
+  .hours-wrap .ov-card { margin-top: 0; }
+  .hours-wrap { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 16px; margin-top: 12px; }
+  @media (max-width: 1000px) { .hours-wrap { grid-template-columns: 1fr; } }
+  .hours-state { display: flex; gap: 14px; align-items: flex-start; padding: 18px; border-radius: 14px; border: 1px solid var(--green-line); background: var(--green-bg); margin-top: 12px; }
+  .hours-state.closed { border-color: var(--amber-line); background: var(--amber-bg); }
+  .hours-state.paused { border-color: var(--red-line); background: var(--red-bg); }
+  .hours-state .hico { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: var(--panel); color: var(--brand); flex: none; }
+  .hours-state .hico svg { width: 18px; height: 18px; }
+  .hours-state .big { font-size: 18px; font-weight: 750; }
+  .hours-state p { margin: 4px 0 0; color: var(--text); font-size: 13px; }
+  .hours-form { padding: 14px 16px; }
+  .hours-form label { display: block; font-size: 12px; color: var(--muted); margin: 12px 0 5px; font-weight: 600; }
+  .hours-form input[type="time"], .hours-form select, .hours-form textarea, .hours-form input[type="datetime-local"] { width: 100%; padding: 9px 11px; border: 1px solid var(--line); border-radius: 8px; font: inherit; background: var(--panel); color: var(--text); }
+  .hours-form textarea { min-height: 70px; resize: vertical; }
+  .hours-form .times { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .hours-form .radio { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; margin-top: 8px; cursor: pointer; font-size: 13px; }
+  .hours-form .radio input { margin-top: 3px; }
+  .hours-form .radio b { display: block; }
+  .hours-form .radio span { color: var(--muted); font-size: 12px; }
+  .hours-form .foot { display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px; }
+  .hours-note { font-size: 12px; color: var(--muted); margin-top: 10px; line-height: 1.5; }
+  .history { list-style: none; margin: 0; padding: 0 16px 12px; }
+  .history li { padding: 9px 0; border-bottom: 1px solid var(--line-soft); font-size: 13px; }
+  .history li:last-child { border-bottom: 0; }
+  .ov-live { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; width: 100%; text-align: left; padding: 12px 16px; margin: 0 0 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel); box-shadow: var(--elev-1); cursor: pointer; font: inherit; color: inherit; }
+  .ov-live:hover { border-color: var(--brand); }
+  .ov-live .n { font-size: 20px; font-weight: 750; font-variant-numeric: tabular-nums; }
+  .ov-live .lbl { color: var(--muted); font-size: 12.5px; margin-left: 4px; }
+  .ov-live .sep { width: 1px; height: 22px; background: var(--line); }
+  .ov-live .go { margin-left: auto; color: var(--brand); font-weight: 650; font-size: 13px; }
 </style>
 </head>
 <body>
@@ -884,6 +1006,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
         <span class="nl">Overview</span>
       </button>
+      <button data-tab="live" aria-current="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0119 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>
+        <span class="nl">Live</span> <span class="count" id="cLive" hidden></span>
+      </button>
       <div class="label">Safety</div>
       <button data-tab="sos" aria-current="false">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L14.7 3.9a2 2 0 00-3.4 0z"/></svg>
@@ -892,6 +1018,10 @@
       <button data-tab="support" aria-current="false">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><path d="M8 9h8M8 13h5"/></svg>
         <span class="nl">Support Tickets</span> <span class="count" id="cSupport"></span>
+      </button>
+      <button data-tab="hours" aria-current="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        <span class="nl">Service Hours</span> <span class="count urgent" id="cHours" hidden></span>
       </button>
       <div class="label">Operations</div>
       <button data-tab="queue" aria-current="false">
@@ -1246,7 +1376,7 @@ function toast(kind, title, detail) {
 function closeModal() { $('modalRoot').innerHTML = ''; document.body.style.overflow = ''; }
 function openModal(html, opts = {}) {
   document.body.style.overflow = 'hidden';
-  $('modalRoot').innerHTML = `<div class="overlay" data-overlay><div class="modal ${opts.wide ? 'wide' : ''}">${html}</div></div>`;
+  $('modalRoot').innerHTML = `<div class="overlay" data-overlay><div class="modal ${opts.xwide ? 'xwide' : opts.wide ? 'wide' : ''}">${html}</div></div>`;
   $('modalRoot').querySelector('[data-overlay]').addEventListener('click', e => {
     if (e.target.hasAttribute('data-overlay')) closeModal();
   });
@@ -1885,11 +2015,43 @@ const VIEWS = {
     },
   },
 
+  /**
+   * What is happening on the roads right now: partners online and where,
+   * riders waiting, trips under way - on a map and in two tables, every
+   * row and marker opening the full page for that person or trip.
+   */
+  live: {
+    title: 'Live',
+    desc: 'Partners online and where they are, riders waiting for a partner, and every trip under way, refreshed every 10 seconds. Click any trip, partner or map marker for everything about it. Positions come from the partners\' own phones; one that has not reported for a couple of minutes is shown grey rather than hidden.',
+    cardTitle: 'Live',
+    hint: 'Refreshes every 10 seconds',
+    custom: true,
+    columns: [],
+    load: () => api('/admin/live'),
+    paint: paintLive,
+  },
+
+  /**
+   * When riders can book. Off-hours protect partners and riders alike - a
+   * woman riding alone at 2 AM is the risk SheOut exists to avoid - and a
+   * pause covers what a schedule cannot: rain, unrest, an incident.
+   */
+  hours: {
+    title: 'Service Hours',
+    desc: 'When riders can book. Set daily operating hours, or pause new bookings at once for an incident, heavy rain or unrest. Only new bookings stop: trips already under way always finish. Both apps show riders and partners the hours and when bookings reopen.',
+    cardTitle: 'Service hours',
+    hint: 'Changes take effect immediately',
+    custom: true,
+    columns: [],
+    load: () => api('/admin/service-hours'),
+    paint: paintHours,
+  },
+
   overview: {
     title: 'Overview',
     desc: 'What needs a person right now, and how today is going. Every number and row opens the section it comes from.',
     cardTitle: 'Right now',
-    hint: 'Counts are live when this page loads - press Refresh to update',
+    hint: 'Refreshes every 30 seconds while open',
     custom: true,
     columns: [],
     load: loadOverview,
@@ -1938,9 +2100,10 @@ const VIEWS = {
 
   bookings: {
     title: 'Bookings',
-    desc: 'Every booking, searchable by pickup or drop address and narrowable by status, service and date. Read-only - there are no actions to take from this page.',
+    desc: 'Every booking, searchable by pickup or drop address and narrowable by status, service and date. Click one for the whole trip: both people, the route actually driven, every step with its time, the fare, payment and ratings.',
     cardTitle: 'Bookings',
-    hint: 'Read-only — monitoring view',
+    hint: 'Click a booking for everything about it',
+    onRowClick: r => openBooking(r.bookingId),
     empty: { icon: ICON_EMPTY_LIST, title: 'No bookings yet', text: 'Bookings made in the customer app will be listed here.' },
     emptyFiltered: {
       icon: ICON_EMPTY_SEARCH,
@@ -2000,7 +2163,8 @@ const VIEWS = {
     title: 'Accounts',
     desc: 'Everyone with a SheOut account, searchable by phone or email. Blocking an account stops that person signing in, and immediately stops a partner receiving trips. Operations accounts are not listed and cannot be blocked from here.',
     cardTitle: 'Accounts',
-    hint: 'Blocking takes effect immediately',
+    hint: 'Click anyone for their full profile · blocking takes effect immediately',
+    onRowClick: r => openAccount(r.accountId),
     empty: { icon: ICON_EMPTY_PEOPLE, title: 'No accounts yet', text: 'Riders and partners appear here as they sign up.' },
     emptyFiltered: {
       icon: ICON_EMPTY_SEARCH,
@@ -2142,6 +2306,7 @@ const VIEWS = {
     desc: 'Trips driven measurably shorter than the route the fare was quoted on, measured from the partner\'s own location reports. Nothing has been done because a trip is listed here: the fare stands and neither account is affected. A shorter drive has innocent readings - the rider asked to get out early, a road the quote did not know - and less innocent ones. Read the distances and any reason she gave, decide, and record what you decided.',
     cardTitle: 'Flagged trips',
     hint: 'Nothing here is automatic - every outcome is your decision',
+    onRowClick: r => openBooking(r.trip.bookingId),
     empty: { icon: ICON_EMPTY_QUEUE, title: 'No trips to review', text: 'A trip appears here only when it was driven well short of its quote - by the configured share and by at least half a kilometre - and there were enough location reports to measure it. Trips with too few reports are never flagged.' },
     columns: [
       { key: 'trip', label: 'Trip', sort: r => new Date(r.trip.completedAt || 0).getTime() },
@@ -2211,6 +2376,7 @@ const VIEWS = {
     desc: 'Accounts worth a look, whether because they cancel too often or because they are rated badly. One list, because an account doing both is one case, not two. Being listed here is not a penalty and nothing has been done to these accounts — read the numbers, decide, then either clear the flag or block. Every one of these figures has an innocent reading and a guilty one, and only you can tell them apart.',
     cardTitle: 'Flagged for review',
     hint: 'Nothing here is automatic — every outcome is your decision',
+    onRowClick: r => openAccount(r.accountId),
     empty: { icon: ICON_EMPTY_QUEUE, title: 'Nobody to review', text: 'Accounts appear here only once they have enough history for a figure to mean anything — enough trips for a cancellation rate, enough ratings for an average — and that figure crosses the configured threshold.' },
     columns: [
       { key: 'role', label: 'Account type', sort: r => r.role || '' },
@@ -3383,6 +3549,773 @@ $('panel').addEventListener('click', async e => {
   }
 });
 
+// ---- a small map, drawn from OpenStreetMap tiles ----------------------------
+/**
+ * The console's own map: OpenStreetMap's tiles as plain images, placed by
+ * Web Mercator arithmetic, with markers and lines on top. Drag to pan, the
+ * wheel or +/- to zoom.
+ *
+ * Not a map library, on purpose. This page holds an operator's token, and
+ * its Content-Security-Policy lets no script run here but its own hashed
+ * block (and Firebase's, for push). A map library from a CDN would be a
+ * second, third-party script on the one page that can block accounts and
+ * read every rider's phone number. Tiles are images, which the policy
+ * already allows, and placing images is all a live view needs.
+ *
+ * OpenStreetMap's tile servers are free for light use like this - a handful
+ * of operators - and ask for the attribution in the corner. Heavy use would
+ * need a paid tile provider; the URL is in one place below.
+ */
+const TILE = 256;
+const TILE_URL = (z, x, y) => `https://tile.openstreetmap.org/${z}/${x}/${y}.png`;
+const HYDERABAD = { lat: 17.385, lng: 78.4867 };
+const worldSize = z => TILE * 2 ** z;
+const lngToX = (lng, z) => (lng + 180) / 360 * worldSize(z);
+function latToY(lat, z) {
+  const s = Math.sin(Math.max(-85, Math.min(85, lat)) * Math.PI / 180);
+  return (0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI)) * worldSize(z);
+}
+const xToLng = (x, z) => x / worldSize(z) * 360 - 180;
+function yToLat(y, z) {
+  const n = Math.PI - 2 * Math.PI * y / worldSize(z);
+  return 180 / Math.PI * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)));
+}
+
+function createTileMap(host, { center = HYDERABAD, zoom = 12, minZoom = 8, maxZoom = 18 } = {}) {
+  host.classList.add('tmap');
+  host.innerHTML = `<div class="tmap-tiles"></div><svg class="tmap-lines" aria-hidden="true"></svg><div class="tmap-marks"></div>
+    <div class="tmap-zoom"><button type="button" data-z="1" aria-label="Zoom in">+</button><button type="button" data-z="-1" aria-label="Zoom out">&minus;</button></div>
+    <a class="tmap-attr" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">&copy; OpenStreetMap contributors</a>`;
+  const tiles = host.querySelector('.tmap-tiles');
+  const svg = host.querySelector('.tmap-lines');
+  const marks = host.querySelector('.tmap-marks');
+  const st = { lat: center.lat, lng: center.lng, z: zoom, markers: [], paths: [] };
+  const toPx = (lat, lng) => ({
+    x: lngToX(lng, st.z) - lngToX(st.lng, st.z) + host.clientWidth / 2,
+    y: latToY(lat, st.z) - latToY(st.lat, st.z) + host.clientHeight / 2,
+  });
+
+  function draw() {
+    const w = host.clientWidth, h = host.clientHeight;
+    if (!w || !h) return;
+    const left = lngToX(st.lng, st.z) - w / 2, top = latToY(st.lat, st.z) - h / 2;
+    const n = 2 ** st.z;
+    const imgs = [];
+    for (let tx = Math.floor(left / TILE); tx <= Math.floor((left + w) / TILE); tx++) {
+      for (let ty = Math.floor(top / TILE); ty <= Math.floor((top + h) / TILE); ty++) {
+        if (ty < 0 || ty >= n) continue;
+        const img = document.createElement('img');
+        img.alt = '';
+        img.draggable = false;
+        img.decoding = 'async';
+        img.src = TILE_URL(st.z, ((tx % n) + n) % n, ty);
+        img.style.left = (tx * TILE - left) + 'px';
+        img.style.top = (ty * TILE - top) + 'px';
+        imgs.push(img);
+      }
+    }
+    tiles.replaceChildren(...imgs);
+    svg.setAttribute('width', w);
+    svg.setAttribute('height', h);
+    svg.replaceChildren(...st.paths.filter(p => p.points.length > 1).map(p => {
+      const el = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+      el.setAttribute('points', p.points.map(pt => { const q = toPx(pt.lat, pt.lng); return q.x.toFixed(1) + ',' + q.y.toFixed(1); }).join(' '));
+      el.setAttribute('class', 'tmap-path ' + (p.tone || ''));
+      return el;
+    }));
+    marks.replaceChildren(...st.markers.map(m => {
+      const q = toPx(m.lat, m.lng);
+      const el = document.createElement('button');
+      el.type = 'button';
+      el.className = 'tmap-mark ' + (m.tone || '');
+      el.title = m.title || '';
+      el.setAttribute('aria-label', m.title || 'Marker');
+      el.style.left = q.x + 'px';
+      el.style.top = q.y + 'px';
+      if (m.label) el.textContent = m.label;
+      if (m.open) el.dataset[m.open.kind === 'booking' ? 'openBooking' : 'openAccount'] = m.open.id;
+      else el.tabIndex = -1;
+      return el;
+    }));
+  }
+
+  let drag = null;
+  host.addEventListener('pointerdown', e => {
+    if (e.target.closest('button, a')) return;
+    drag = { x: e.clientX, y: e.clientY, cx: lngToX(st.lng, st.z), cy: latToY(st.lat, st.z) };
+    host.setPointerCapture(e.pointerId);
+    host.classList.add('dragging');
+  });
+  host.addEventListener('pointermove', e => {
+    if (!drag) return;
+    st.lng = xToLng(drag.cx - (e.clientX - drag.x), st.z);
+    st.lat = yToLat(drag.cy - (e.clientY - drag.y), st.z);
+    draw();
+  });
+  const endDrag = () => { drag = null; host.classList.remove('dragging'); };
+  host.addEventListener('pointerup', endDrag);
+  host.addEventListener('pointercancel', endDrag);
+  let wheelAt = 0;
+  host.addEventListener('wheel', e => {
+    e.preventDefault();
+    // One step per flick, not one per wheel event: a trackpad sends dozens.
+    if (Date.now() - wheelAt < 180) return;
+    wheelAt = Date.now();
+    zoomBy(e.deltaY < 0 ? 1 : -1);
+  }, { passive: false });
+  host.querySelector('.tmap-zoom').addEventListener('click', e => {
+    const b = e.target.closest('[data-z]');
+    if (b) zoomBy(Number(b.dataset.z));
+  });
+  function zoomBy(d) {
+    const z = Math.max(minZoom, Math.min(maxZoom, st.z + d));
+    if (z !== st.z) { st.z = z; draw(); }
+  }
+  new ResizeObserver(draw).observe(host);
+  draw();
+
+  return {
+    setMarkers(m) { st.markers = m; draw(); },
+    setPaths(p) { st.paths = p; draw(); },
+    /** Centres on these points at the closest zoom that shows them all. */
+    fit(points, pad = 36, cap = 16) {
+      const pts = points.filter(p => p && Number.isFinite(p.lat) && Number.isFinite(p.lng));
+      if (!pts.length) return;
+      const lats = pts.map(p => p.lat), lngs = pts.map(p => p.lng);
+      const minLat = Math.min(...lats), maxLat = Math.max(...lats), minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
+      const w = Math.max(80, host.clientWidth - pad * 2), h = Math.max(80, host.clientHeight - pad * 2);
+      let z = cap;
+      while (z > minZoom && (lngToX(maxLng, z) - lngToX(minLng, z) > w || latToY(minLat, z) - latToY(maxLat, z) > h)) z--;
+      st.z = z;
+      st.lat = (minLat + maxLat) / 2;
+      st.lng = (minLng + maxLng) / 2;
+      draw();
+    },
+  };
+}
+
+// ---- shared bits for the person, trip and live pages ------------------------
+/** "40 s", "12 min", "3 hr", "2 d" - how long ago, short. */
+function agoText(iso) {
+  if (!iso) return '—';
+  const s = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
+  if (s < 60) return `${s} s`;
+  if (s < 3600) return `${Math.round(s / 60)} min`;
+  if (s < 86400) return `${Math.round(s / 3600)} hr`;
+  return `${Math.round(s / 86400)} d`;
+}
+const telLink = p => p ? `<a href="tel:${escValue(p)}" class="num">${esc(p)}</a>` : '<span class="subtle">—</span>';
+const mapsLink = (lat, lng, text = 'Open in Google Maps') => (Number.isFinite(lat) && Number.isFinite(lng))
+  ? `<a href="https://www.google.com/maps/search/?api=1&amp;query=${lat},${lng}" target="_blank" rel="noopener noreferrer">${esc(text)}</a>` : '';
+const VEHICLE_TEXT = { BIKE: 'Bike / scooter', AUTO: 'Auto', CAB: 'Cab' };
+function stars(n) {
+  if (n == null) return '<span class="subtle">Not rated</span>';
+  const k = Math.round(Number(n));
+  return `<span class="stars" title="${esc(n)} of 5">${'★'.repeat(k)}${'☆'.repeat(Math.max(0, 5 - k))}</span>`;
+}
+function ageFrom(dob) {
+  if (!dob) return null;
+  const d = new Date(dob), now = new Date();
+  let a = now.getFullYear() - d.getFullYear();
+  if (now.getMonth() < d.getMonth() || (now.getMonth() === d.getMonth() && now.getDate() < d.getDate())) a--;
+  return a;
+}
+const LIVE_STATUSES = ['REQUESTED', 'MATCHED', 'ACCEPTED', 'IN_PROGRESS'];
+
+/**
+ * Every "open this person" / "open this trip" link on the console, wherever
+ * it is drawn - a live table, a map marker, a row inside another person's
+ * page. One delegated listener, so nothing needs binding after a repaint.
+ */
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-open-booking], [data-open-account]');
+  if (!b) return;
+  // A phone or map link inside a clickable row does its own thing.
+  const link = e.target.closest('a[href]');
+  if (link && link !== b) return;
+  e.preventDefault();
+  if (b.dataset.openBooking) openBooking(b.dataset.openBooking, true);
+  else openAccount(b.dataset.openAccount, true);
+});
+
+/**
+ * The person and trip pages open from each other - a rider's trip, that
+ * trip's partner - so they keep a short trail and offer Back, instead of
+ * the operator losing the page she came from.
+ */
+let detailTrail = [];
+function openDetail(entry, chained) {
+  if (!chained || !$('modalRoot').querySelector('[data-detail]')) detailTrail = [];
+  detailTrail.push(entry);
+  if (detailTrail.length > 8) detailTrail.shift();
+  entry();
+}
+function detailBack() {
+  detailTrail.pop();
+  const prev = detailTrail[detailTrail.length - 1];
+  if (prev) prev(); else closeModal();
+}
+function detailShell(headHtml, bodyHtml) {
+  const back = detailTrail.length > 1 ? '<button class="dx-back" type="button" data-dx-back>&larr; Back</button>' : '';
+  openModal(`<div data-detail>
+      <div class="modal-head">${back}${headHtml}</div>
+      <div class="modal-body">${bodyHtml}</div>
+      <div class="modal-foot"><button class="btn" data-cancel type="button">Close</button></div>
+    </div>`, { xwide: true });
+  const root = $('modalRoot');
+  root.querySelector('[data-cancel]').addEventListener('click', () => { detailTrail = []; closeModal(); });
+  const b = root.querySelector('[data-dx-back]');
+  if (b) b.addEventListener('click', detailBack);
+  return root;
+}
+function detailLoading(title) {
+  detailShell(`<h3>${esc(title)}</h3>`, '<div class="skel"></div><div class="skel"></div><div class="skel"></div>');
+}
+function detailError(title, err) {
+  detailShell(`<h3>${esc(title)}</h3>`, errorState(err.message));
+}
+
+// ---- one person -------------------------------------------------------------
+function openAccount(accountId, chained = false) {
+  openDetail(() => loadAccount(accountId), chained);
+}
+
+async function loadAccount(accountId) {
+  detailLoading('Loading account…');
+  let d;
+  try {
+    d = await api(`/admin/accounts/${accountId}/detail`);
+  } catch (err) {
+    if (err.message === 'unauthorized') return;
+    detailError('Could not load this account', err);
+    return;
+  }
+  const a = d.account;
+  const partner = d.partner;
+  const t = a.trustStats || {};
+  const age = ageFrom(d.dateOfBirth);
+  const photo = d.profilePhotoUrl && /^(https:|\/)/.test(d.profilePhotoUrl)
+    ? `<img class="dx-photo" src="${escValue(d.profilePhotoUrl)}" alt="">` : '';
+
+  const head = `<div class="dx-head">${photo}<div class="who">
+      <h3>${esc(a.name || 'Name not set')} ${roleBadge(a.role)} ${a.blocked ? '<span class="badge b-blocked">Blocked</span>' : '<span class="badge b-green">Active</span>'}
+        ${t.flagged ? '<span class="badge b-amber">In trust review</span>' : ''}</h3>
+      <p>${telLink(a.phoneNumber)}${a.email ? ' &middot; ' + esc(a.email) : ''} &middot; joined ${esc(time(a.createdAt))} &middot; last active ${d.lastActiveAt ? esc(agoText(d.lastActiveAt)) + ' ago' : '—'}</p>
+      <div class="dx-actions">
+        ${a.phoneNumber ? `<a class="btn" href="tel:${escValue(a.phoneNumber)}">Call</a>` : ''}
+        ${d.documentSubmitted ? '<button class="btn" type="button" data-dx-docs>ID documents</button>' : ''}
+        ${a.blocked
+          ? '<button class="btn" type="button" data-dx-unblock>Unblock</button>'
+          : '<button class="btn btn-reject" type="button" data-dx-block>Block</button>'}
+      </div>
+    </div></div>`;
+
+  const verification = `<div class="dx-card"><h4>Identity &amp; checks</h4><dl class="kv">
+      <dt>ID &amp; gender</dt><dd>${badge(a.genderVerificationStatus)}${d.verificationRejectionReason ? `<div class="subtle">“${esc(d.verificationRejectionReason)}”</div>` : ''}</dd>
+      <dt>Police check</dt><dd>${a.role === 'CUSTOMER' ? '<span class="subtle">Not required for riders</span>' : policeBadge(a)}</dd>
+      <dt>Documents sent</dt><dd>${d.documentSubmitted ? esc(time(d.documentSubmittedAt)) : '<span class="subtle">Not yet</span>'}</dd>
+      <dt>Date of birth</dt><dd>${d.dateOfBirth ? `${esc(d.dateOfBirth)} <span class="subtle">(${age} yrs)</span>` : '—'}</dd>
+      <dt>Profile</dt><dd>${d.profileComplete ? 'Complete' : '<span class="subtle">Incomplete</span>'}</dd>
+      ${a.blocked ? `<dt>Blocked</dt><dd>${esc(time(a.blockedAt))}${a.blockedByPhone ? ' by ' + esc(a.blockedByPhone) : ''}<div class="subtle">“${esc(a.blockReason)}”</div></dd>` : ''}
+    </dl></div>`;
+
+  const record = `<div class="dx-card"><h4>Record</h4><dl class="kv">
+      <dt>Trips</dt><dd class="num">${esc(t.totalBookings ?? 0)}</dd>
+      <dt>Cancellations</dt><dd>${rateCell(t)}</dd>
+      <dt>Rating</dt><dd>${ratingCell(t)}</dd>
+      ${t.flagged ? `<dt>Flagged</dt><dd>${esc(time(t.flaggedAt))}<div class="subtle">${esc(t.flaggedReason)}</div></dd>` : ''}
+      <dt>SOS raised</dt><dd>${(d.sosAlerts || []).length ? `<span class="badge b-red">${d.sosAlerts.length}</span>` : '<span class="subtle">Never</span>'}</dd>
+    </dl></div>`;
+
+  let roleCards = '';
+  if (partner) {
+    const loc = partner.lastLocation;
+    const fresh = loc && loc.recordedAt && (Date.now() - new Date(loc.recordedAt).getTime()) < 120000;
+    const sc = partner.shiftCheck || {};
+    const w = partner.wallet || {};
+    roleCards = `<div class="dx-card"><h4>Vehicle &amp; status</h4><dl class="kv">
+        <dt>Vehicle</dt><dd>${esc(VEHICLE_TEXT[partner.vehicleType] || humanize(partner.vehicleType) || '—')}</dd>
+        <dt>Registration</dt><dd class="num">${esc(partner.vehicleRegistrationNumber)}</dd>
+        <dt>PAN</dt><dd class="num">${esc(partner.panMasked)}</dd>
+        <dt>Now</dt><dd>${partner.onlineStatus === 'ONLINE' ? '<span class="badge b-green">Online</span>' : '<span class="badge b-grey">Offline</span>'}
+          ${partner.onTrip ? ' <span class="badge b-blue">On a trip</span>' : ''}</dd>
+        <dt>Last position</dt><dd>${loc ? `${fresh ? '' : '<span class="pill warn">stale</span> '}${esc(agoText(loc.recordedAt))} ago &middot; ${mapsLink(loc.lat, loc.lng)}` : '<span class="subtle">Not reporting</span>'}</dd>
+        <dt>Shift selfie</dt><dd>${sc.underReview ? '<span class="badge b-amber">Under review</span>' : sc.valid ? `<span class="badge b-green">Valid</span> <span class="subtle">until ${esc(time(sc.validUntil))}</span>` : '<span class="badge b-grey">Needed before going online</span>'}
+          ${sc.checkedAt ? `<div class="subtle">Last checked ${esc(time(sc.checkedAt))}${sc.helmetPhotoOnFile ? ' · helmet photo on file' : ''}</div>` : ''}</dd>
+      </dl></div>
+      <div class="dx-card"><h4>Earnings &amp; payouts</h4>
+        <div class="dx-money">
+          <div><span>Earned</span><b>${rupees(w.totalEarned)}</b></div>
+          <div><span>Cash collected</span><b>${rupees(w.cashCollected)}</b></div>
+          <div><span>Paid out</span><b>${rupees(w.totalPaidOut)}</b></div>
+          <div><span>Payout pending</span><b>${rupees(w.pendingPayouts)}</b></div>
+          <div><span>Available</span><b>${rupees(w.availableBalance)}</b></div>
+        </div>
+        <dl class="kv">
+          <dt>Bank account</dt><dd>${partner.payoutBankOnFile ? `<span class="num">${esc(partner.payoutAccountMasked)}</span> <span class="subtle">IFSC ${esc(partner.payoutIfsc)}</span>` : '<span class="subtle">Not added</span>'}</dd>
+          <dt>UPI</dt><dd>${esc(partner.payoutUpi)}</dd>
+        </dl>
+      </div>`;
+  } else {
+    const contacts = d.emergencyContacts || [];
+    const place = p => p && p.label ? `${esc(p.label)}${p.lat != null ? ' &middot; ' + mapsLink(p.lat, p.lng, 'map') : ''}` : '<span class="subtle">Not saved</span>';
+    roleCards = `<div class="dx-card"><h4>Emergency contacts <span class="right subtle">${contacts.length} saved</span></h4>
+        ${contacts.length ? `<ul class="contact-list">${contacts.map(c => `<li><span class="grow"><b>${esc(c.name)}</b> <span class="subtle">${esc(c.relationship)}</span></span>${telLink(c.phoneNumber)}</li>`).join('')}</ul>`
+          : '<p class="subtle">None saved. Her SOS reaches SheOut operations only.</p>'}
+      </div>
+      <div class="dx-card"><h4>Wallet &amp; places</h4><dl class="kv">
+        <dt>Wallet balance</dt><dd class="num strong">${rupees(d.riderWalletBalance)}</dd>
+        <dt>Home</dt><dd>${place(d.home)}</dd>
+        <dt>Work</dt><dd>${place(d.work)}</dd>
+      </dl></div>`;
+  }
+
+  const trips = d.recentTrips || [];
+  const tripsCard = `<div class="dx-card full"><h4>Recent trips <span class="right subtle">latest ${trips.length}</span></h4>
+      ${trips.length ? `<div class="scroll"><table class="mini"><thead><tr><th>Status</th><th>Service</th><th>${partner ? 'Rider' : 'Partner'}</th><th>Route</th><th>Fare</th><th>When</th></tr></thead><tbody>
+        ${trips.map(r => `<tr data-open-booking="${escValue(r.bookingId)}">
+          <td>${badge(r.status)}</td>
+          <td>${esc(serviceText(r.category))}</td>
+          <td>${esc(r.counterpartName || (r.status === 'NO_DRIVERS_AVAILABLE' || r.status === 'REQUESTED' ? 'Not assigned' : '—'))}</td>
+          <td class="route-cell"><div>${esc(r.pickup)}</div><div class="subtle">&rarr; ${esc(r.drop)}</div></td>
+          <td class="num">${r.finalFare != null ? rupees(r.finalFare) : `<span class="subtle">${rupees(r.fareEstimate)} est.</span>`}</td>
+          <td class="subtle">${esc(time(r.requestedAt))}</td></tr>`).join('')}
+      </tbody></table></div>` : '<p class="subtle">No trips yet.</p>'}
+    </div>`;
+
+  const sos = d.sosAlerts || [];
+  const sosCard = sos.length ? `<div class="dx-card full"><h4>SOS history</h4><ul class="contact-list">
+      ${sos.map(s => `<li><span class="grow">${s.status === 'ACTIVE' ? '<span class="badge b-red">Active</span>' : '<span class="badge b-green">Resolved</span>'}
+        ${esc(time(s.createdAt))} <span class="subtle">${esc(SOS_TRIGGER_TEXT[s.triggerSource] || 'SOS button')} &middot; ${s.contactsNotified} contacts reached</span></span>
+        ${mapsLink(s.lat, s.lng, 'where')}${s.bookingId ? ` &middot; <a href="#" data-open-booking="${escValue(s.bookingId)}">trip</a>` : ''}</li>`).join('')}
+    </ul></div>` : '';
+
+  const root = detailShell(head, `<div class="dx-grid">${verification}${record}${roleCards}${tripsCard}${sosCard}</div>`);
+
+  const docs = root.querySelector('[data-dx-docs]');
+  if (docs) docs.addEventListener('click', () => {
+    detailTrail = [];
+    openDriver({
+      accountId: a.accountId, name: a.name, role: a.role, phoneNumber: a.phoneNumber,
+      genderVerificationStatus: a.genderVerificationStatus, policeVerificationStatus: a.policeVerificationStatus,
+      documentSubmitted: d.documentSubmitted, vehicleRegistrationNumber: partner ? partner.vehicleRegistrationNumber : null,
+      submittedAt: d.documentSubmittedAt, updatedAt: d.documentSubmittedAt,
+    });
+  });
+  const block = root.querySelector('[data-dx-block]');
+  if (block) block.addEventListener('click', async () => {
+    const ok = await confirmAction({
+      title: `Block ${a.name || a.phoneNumber}?`,
+      message: a.role === 'DRIVER'
+        ? 'She is signed out everywhere and stops receiving trips immediately. A trip she is on now is not cancelled.'
+        : 'She is signed out everywhere and cannot book. A trip she is on now is not cancelled.',
+      confirmLabel: 'Block account', tone: 'reject', withReason: true, reasonRequired: true,
+      reasonLabel: 'Reason (kept as the record of this decision)', reasonPlaceholder: 'e.g. Repeated no-shows reported by partners', reasonMaxLength: 500,
+    });
+    if (!ok) { openAccount(accountId); return; }
+    try {
+      await api(`/admin/accounts/${accountId}/block`, { method: 'POST', body: JSON.stringify({ reason: ok.reason }) });
+      toast('ok', 'Account blocked', a.name || a.phoneNumber);
+      openAccount(accountId);
+      render({ quiet: true });
+    } catch (err) {
+      if (err.message === 'unauthorized') return;
+      toast('bad', 'Could not block this account', err.message);
+    }
+  });
+  const unblock = root.querySelector('[data-dx-unblock]');
+  if (unblock) unblock.addEventListener('click', async () => {
+    const ok = await confirmAction({ title: `Unblock ${a.name || a.phoneNumber}?`, message: 'She can sign in again straight away.', confirmLabel: 'Unblock' });
+    if (!ok) { openAccount(accountId); return; }
+    try {
+      await api(`/admin/accounts/${accountId}/unblock`, { method: 'POST' });
+      toast('ok', 'Account unblocked', a.name || a.phoneNumber);
+      openAccount(accountId);
+      render({ quiet: true });
+    } catch (err) {
+      if (err.message === 'unauthorized') return;
+      toast('bad', 'Could not unblock this account', err.message);
+    }
+  });
+}
+
+// ---- one trip ---------------------------------------------------------------
+function openBooking(bookingId, chained = false) {
+  openDetail(() => loadBooking(bookingId), chained);
+}
+
+async function loadBooking(bookingId) {
+  detailLoading('Loading trip…');
+  let d;
+  try {
+    d = await api(`/admin/bookings/${bookingId}`);
+  } catch (err) {
+    if (err.message === 'unauthorized') return;
+    detailError('Could not load this trip', err);
+    return;
+  }
+  const b = d.booking, f = d.facts || {}, pay = d.payment;
+  const live = LIVE_STATUSES.includes(b.status);
+
+  const head = `<h3>${esc(serviceText(b.category))} ${badge(b.status)} ${(d.sosAlerts || []).some(s => s.status === 'ACTIVE') ? '<span class="badge b-red">SOS active</span>' : ''}</h3>
+    <p>Requested ${esc(time(b.requestedAt))} &middot; <span class="num subtle">${esc(b.id)}</span></p>`;
+
+  const party = (p, label) => !p
+    ? `<div class="dx-card"><h4>${label}</h4><p class="subtle">${b.status === 'REQUESTED' ? 'Still looking for a partner.' : 'No partner was assigned.'}</p></div>`
+    : `<div class="dx-card"><h4>${label} <span class="right"><button class="btn" type="button" data-open-account="${escValue(p.accountId)}">Open profile</button></span></h4><dl class="kv">
+        <dt>Name</dt><dd>${esc(p.name || 'Name not set')} ${p.blocked ? '<span class="badge b-blocked">Blocked</span>' : ''}</dd>
+        <dt>Phone</dt><dd>${telLink(p.phone)}</dd>
+        ${p.vehicleType ? `<dt>Vehicle</dt><dd>${esc(VEHICLE_TEXT[p.vehicleType] || humanize(p.vehicleType))} <span class="num">${esc(p.vehicleRegistrationNumber)}</span></dd>` : ''}
+        <dt>Record</dt><dd>${esc(p.trustStats ? p.trustStats.totalBookings : 0)} trips &middot; ${ratingCell(p.trustStats || {})}</dd>
+      </dl></div>`;
+
+  // When each step happened, in order, and how it ended.
+  const steps = [
+    ['Requested', b.requestedAt, 'ok'],
+    ['Partner matched', b.matchedAt, 'ok'],
+    ['Partner accepted and on her way', b.acceptedAt, 'ok'],
+    ['Pickup code checked', f.pickupVerifiedAt, 'ok', f.pickupAttempts > 1 ? `${f.pickupAttempts} attempts` : ''],
+    ['Trip started', b.startedAt, 'ok'],
+  ];
+  if (f.destinationChangedAt) steps.push(['Destination changed', f.destinationChangedAt, 'ok']);
+  if (b.completedAt) steps.push([`Trip ended${f.completedBy ? ' by the ' + humanize(f.completedBy).toLowerCase() : ''}`, b.completedAt, 'ok',
+    f.completionDistanceFromDropM != null ? `${f.completionDistanceFromDropM} m from the drop` + (f.dropDeviationReason ? ` &middot; ${esc(humanize(f.dropDeviationReason))}${f.dropDeviationNote ? ': “' + esc(f.dropDeviationNote) + '”' : ''}` : '') : '']);
+  if (b.cancelledAt) steps.push([b.status === 'NO_DRIVERS_AVAILABLE' ? 'No partner found' : `Cancelled${d.cancelledBySide ? ' by the ' + d.cancelledBySide.toLowerCase() : ''}`, b.cancelledAt, 'bad',
+    f.cancellationReason ? `${esc(humanize(f.cancellationReason))}${f.cancellationNote ? ': “' + esc(f.cancellationNote) + '”' : ''}` : '']);
+  if (b.paymentSettledAt) steps.push(['Paid', b.paymentSettledAt, 'ok']);
+  const timeline = `<div class="dx-card"><h4>Timeline</h4><ul class="timeline">
+      ${steps.filter(s => s[1] || (live && !b.cancelledAt)).map(([label, at, tone, note]) => `<li class="${at ? tone : 'pending'}"><b>${esc(label)}</b>
+        <div class="t">${at ? esc(time(at)) : 'Not yet'}${note ? ' &middot; ' + note : ''}</div></li>`).join('')}
+    </ul></div>`;
+
+  const money = `<div class="dx-card"><h4>Fare &amp; payment</h4>
+      <div class="dx-money">
+        <div><span>Quoted</span><b>${rupees(b.fareEstimate)}</b></div>
+        <div><span>Final fare</span><b>${b.finalFare != null ? rupees(b.finalFare) : '—'}</b></div>
+        <div><span>Promotion</span><b>${Number(b.promoDiscount) > 0 ? '−' + rupees(b.promoDiscount) : '—'}</b></div>
+        <div><span>Rider pays</span><b>${rupees(b.amountDue)}</b></div>
+      </div>
+      <dl class="kv">
+        ${b.promotionName ? `<dt>Promotion</dt><dd>${esc(b.promotionName)}</dd>` : ''}
+        <dt>Payment</dt><dd>${pay ? `${badge(pay.status)} ${esc(payMethodText(pay.method))}${pay.capturedAt ? ` <span class="subtle">${esc(time(pay.capturedAt))}</span>` : ''}` : (b.status === 'COMPLETED' ? '<span class="badge b-amber">Unpaid</span>' : '<span class="subtle">Taken when the trip ends</span>')}</dd>
+        ${pay && pay.driverPayout != null ? `<dt>Partner earns</dt><dd>${rupees(pay.driverPayout)} <span class="subtle">(${esc(pay.commissionPercent)}% commission)</span></dd>` : ''}
+        ${pay && pay.failureReason ? `<dt>Failure</dt><dd>${esc(pay.failureReason)}</dd>` : ''}
+        <dt>Distance quoted</dt><dd>${f.quotedDistanceKm != null ? `${esc(f.quotedDistanceKm)} km` : '—'} ${f.quotedDistanceRouted === false ? '<span class="pill warn">straight-line estimate</span>' : ''}</dd>
+        <dt>Distance driven</dt><dd>${f.actualDistanceKm != null ? `${esc(f.actualDistanceKm)} km` : '—'} ${f.routeFlaggedAt ? `<span class="pill ${f.routeReviewedAt ? '' : 'bad'}">${f.routeReviewedAt ? 'route reviewed' : 'route flagged'}</span>` : ''}</dd>
+        ${f.routeReviewNote ? `<dt>Review note</dt><dd>${esc(f.routeReviewNote)}</dd>` : ''}
+      </dl></div>`;
+
+  const routeCard = `<div class="dx-card full"><h4>Route <span class="right subtle">
+        <a href="https://www.google.com/maps/dir/?api=1&amp;origin=${b.pickup.lat},${b.pickup.lng}&amp;destination=${b.drop.lat},${b.drop.lng}" target="_blank" rel="noopener noreferrer">Directions in Google Maps</a></span></h4>
+      <dl class="kv"><dt>Pickup</dt><dd>${esc(b.pickup.label)}</dd><dt>Drop</dt><dd>${esc(b.drop.label)}</dd>
+      ${d.partnerNow ? `<dt>Partner now</dt><dd>${esc(agoText(d.partnerNow.recordedAt))} ago &middot; ${mapsLink(d.partnerNow.lat, d.partnerNow.lng)}</dd>` : ''}</dl>
+      <div class="tmap dx-map" id="tripMap"></div>
+      <p class="subtle">${(d.trail || []).length > 1 ? 'Purple: the road actually driven, from the partner\'s phone. Grey dashes: pickup to drop.' : 'Grey dashes: pickup to drop. The road driven appears here once a trip has started.'}</p>
+    </div>`;
+
+  const rating = (r, who) => r ? `<dt>${who}</dt><dd>${stars(r.stars)} ${(r.tags || []).map(tg => `<span class="badge b-grey">${esc(humanize(tg.code || tg))}</span>`).join(' ')}${r.comment ? `<div class="subtle">“${esc(r.comment)}”</div>` : ''}</dd>` : '';
+  const ratings = (d.riderRating || d.partnerRating) ? `<div class="dx-card"><h4>Ratings</h4><dl class="kv">
+      ${rating(d.riderRating, 'Rider rated partner')}${rating(d.partnerRating, 'Partner rated rider')}</dl></div>` : '';
+  const sos = (d.sosAlerts || []).length ? `<div class="dx-card"><h4>SOS on this trip</h4><ul class="contact-list">
+      ${d.sosAlerts.map(s => `<li><span class="grow">${s.status === 'ACTIVE' ? '<span class="badge b-red">Active</span>' : '<span class="badge b-green">Resolved</span>'} ${esc(time(s.createdAt))}</span>${mapsLink(s.lat, s.lng, 'where')}</li>`).join('')}
+    </ul></div>` : '';
+
+  const root = detailShell(head, `<div class="dx-grid">${party(d.rider, 'Rider')}${party(d.partner, 'Partner')}${routeCard}${timeline}${money}${ratings}${sos}</div>`);
+
+  const map = createTileMap(root.querySelector('#tripMap'), { center: b.pickup, zoom: 13 });
+  const trail = d.trail || [];
+  const marks = [
+    { lat: b.pickup.lat, lng: b.pickup.lng, tone: 'pickup', label: 'P', title: 'Pickup: ' + b.pickup.label },
+    { lat: b.drop.lat, lng: b.drop.lng, tone: 'drop', label: 'D', title: 'Drop: ' + b.drop.label },
+  ];
+  if (d.partnerNow) marks.push({ lat: d.partnerNow.lat, lng: d.partnerNow.lng, tone: 'now', title: 'Partner, ' + agoText(d.partnerNow.recordedAt) + ' ago' });
+  (d.sosAlerts || []).forEach(s => marks.push({ lat: s.lat, lng: s.lng, tone: 'sos', title: 'SOS ' + time(s.createdAt) }));
+  map.setPaths([{ points: [b.pickup, b.drop], tone: 'planned' }, { points: trail }]);
+  map.setMarkers(marks);
+  requestAnimationFrame(() => map.fit([b.pickup, b.drop, ...trail, ...(d.partnerNow ? [d.partnerNow] : [])], 40));
+}
+
+// ---- live -------------------------------------------------------------------
+let liveMap = null;
+let liveFitted = false;
+
+function liveStatusText(s) {
+  if (!s) return { closed: false, title: 'Status unknown', sub: '' };
+  if (s.open) {
+    return { closed: false, title: 'Taking bookings',
+      sub: s.closesAt ? `Closes at ${istTime(s.closesAt)} (daily hours ${hhmm(s.opensAt)} – ${hhmm(s.closesAtLocal)} IST)` : 'Open at all hours' };
+  }
+  const when = s.reopensAt ? `Reopens ${istTime(s.reopensAt, true)}` : 'Until someone resumes';
+  return s.closedReason === 'PAUSED'
+    ? { closed: true, title: 'New bookings paused', sub: `${s.pauseReason ? '“' + s.pauseReason + '” · ' : ''}${when}` }
+    : { closed: true, title: 'Closed — outside operating hours', sub: `${when} · daily hours ${hhmm(s.opensAt)} – ${hhmm(s.closesAtLocal)} IST` };
+}
+/**
+ * A moment in India time, labelled IST. The hours are India's wherever the
+ * operator's laptop thinks it is, so the console says them in India's clock.
+ */
+function istTime(iso, withDay = false) {
+  return new Date(iso).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour: 'numeric', minute: '2-digit',
+    ...(withDay ? { weekday: 'short', day: 'numeric', month: 'short' } : {}) }) + ' IST';
+}
+/** "06:00:00" -> "6:00 AM". */
+function hhmm(t) {
+  if (!t) return '—';
+  const [h, m] = t.split(':').map(Number);
+  const d = new Date(2000, 0, 1, h, m);
+  return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
+function paintLive(d) {
+  const panel = $('panel');
+  if (!panel.querySelector('[data-live]')) {
+    panel.innerHTML = `<div data-live>
+      <div class="live-status" id="liveStatus"></div>
+      <div class="ov-grid" id="liveKpis"></div>
+      <section class="ov-card" aria-label="Live map">
+        <div class="hd"><span class="hico">${OV_ICON.route}</span><h3>Live map</h3>
+          <span class="legend"><span><i class="free"></i>Partner free</span><span><i class="trip"></i>On a trip</span><span><i class="stale"></i>Not reporting</span><span><i class="search"></i>Rider waiting</span><span><i class="sos"></i>SOS</span></span></div>
+        <div class="live-map" id="liveMap"></div>
+      </section>
+      <section class="ov-card" aria-label="Trips under way">
+        <div class="hd"><span class="hico">${OV_ICON.trip}</span><h3>Trips under way</h3><span class="tag badge b-grey" id="liveTripCount"></span></div>
+        <div class="scroll"><table class="mini"><thead><tr><th>Status</th><th>For</th><th>Service</th><th>Rider</th><th>Partner</th><th>Route</th><th>Fare</th></tr></thead><tbody id="liveTrips"></tbody></table></div>
+      </section>
+      <section class="ov-card" aria-label="Partners online">
+        <div class="hd"><span class="hico">${OV_ICON.scooter}</span><h3>Partners online</h3><span class="tag badge b-grey" id="livePartnerCount"></span></div>
+        <div class="scroll"><table class="mini"><thead><tr><th>Partner</th><th>Phone</th><th>Vehicle</th><th>Last position</th><th>Now</th></tr></thead><tbody id="livePartners"></tbody></table></div>
+      </section>
+    </div>`;
+    liveMap = createTileMap($('liveMap'), { center: HYDERABAD, zoom: 11 });
+    liveFitted = false;
+  }
+
+  const staleMs = (d.staleAfterSeconds || 120) * 1000;
+  const isStale = p => !p.lastFixAt || (Date.now() - new Date(p.lastFixAt).getTime()) > staleMs;
+  const partners = d.partners || [];
+  // No change for hours is not a trip in motion - an app closed mid-trip, or
+  // a test left behind. Kept on the list, marked, and sorted below the trips
+  // that need watching now.
+  const STUCK_MS = 3 * 3600 * 1000;
+  const isStuck = t => t.statusSince && Date.now() - new Date(t.statusSince).getTime() > STUCK_MS;
+  const rank = t => (t.sosActive ? 0 : isStuck(t) ? 3 : t.status === 'REQUESTED' ? 1 : 2);
+  const trips = (d.trips || []).slice().sort((a, b) => rank(a) - rank(b) || new Date(b.statusSince) - new Date(a.statusSince));
+  const stuck = trips.filter(isStuck).length;
+  const searching = trips.filter(t => t.status === 'REQUESTED').length;
+  const coming = trips.filter(t => t.status === 'MATCHED' || t.status === 'ACCEPTED').length;
+  const riding = trips.filter(t => t.status === 'IN_PROGRESS').length;
+  const fresh = partners.filter(p => !isStale(p));
+  const free = fresh.filter(p => !p.tripId).length;
+  const sos = trips.filter(t => t.sosActive).length;
+
+  const st = liveStatusText(d.service);
+  const ls = $('liveStatus');
+  ls.className = 'live-status' + (st.closed ? ' closed' : '');
+  ls.innerHTML = `<span class="dot"></span><div><b>${esc(st.title)}</b><div class="subtle">${esc(st.sub)}</div></div>
+    <span class="spacer"></span><span class="live-pulse">Live &middot; refreshes every 10 s</span>
+    <button class="btn" type="button" data-go-hours>Service hours</button>`;
+  ls.querySelector('[data-go-hours]').addEventListener('click', () => switchTab('hours'));
+
+  const kpi = (tone, icon, num, label, sub) => `<div class="kpi t-${tone}"><div class="top"><span class="ico">${icon}</span><span class="lbl">${esc(label)}</span></div><div class="num">${num}</div><div class="sub">${sub}</div></div>`;
+  $('liveKpis').innerHTML =
+    kpi('green', OV_ICON.scooter, fresh.length, 'Partners online', `${free} free &middot; ${fresh.length - free} on a trip${partners.length > fresh.length ? ` &middot; ${partners.length - fresh.length} not reporting` : ''}`) +
+    kpi('amber', OV_ICON.user, searching, 'Riders waiting for a partner', searching ? 'Searching now' : 'Nobody waiting') +
+    kpi('blue', OV_ICON.route, coming, 'Partner on the way', stuck ? `<b>${stuck} trip${stuck === 1 ? '' : 's'} look stuck</b> (no change for 3+ hours)` : 'Matched or heading to pickup') +
+    kpi(sos ? 'red' : 'brand', sos ? OV_ICON.siren : OV_ICON.trip, riding, 'On a trip now', sos ? `<b>${sos} with an active SOS</b>` : 'Rider on board');
+
+  $('liveTripCount').textContent = trips.length;
+  $('liveTrips').innerHTML = trips.length ? trips.map(t => `<tr data-open-booking="${escValue(t.bookingId)}">
+      <td>${badge(t.status)}${t.sosActive ? ' <span class="badge b-red">SOS</span>' : ''}</td>
+      <td class="num ${t.status === 'REQUESTED' && (Date.now() - new Date(t.statusSince).getTime()) > 120000 ? 'strong' : ''}">${isStuck(t) ? `<span class="pill bad" title="No change for over 3 hours">Looks stuck · ${esc(agoText(t.statusSince))}</span>` : esc(agoText(t.statusSince))}</td>
+      <td>${esc(serviceText(t.category))}</td>
+      <td>${esc(t.riderName || 'Name not set')}<div class="subtle">${telLink(t.riderPhone)}</div></td>
+      <td>${t.partnerName ? `${esc(t.partnerName)}<div class="subtle">${telLink(t.partnerPhone)}</div>` : '<span class="subtle">Searching…</span>'}</td>
+      <td class="route-cell"><div>${esc(t.pickup && t.pickup.label)}</div><div class="subtle">&rarr; ${esc(t.drop && t.drop.label)}</div></td>
+      <td class="num">${rupees(t.fareEstimate)}</td></tr>`).join('')
+    : `<tr><td colspan="7"><div class="subtle">No trips under way right now.</div></td></tr>`;
+
+  $('livePartnerCount').textContent = fresh.length;
+  const sortedPartners = partners.slice().sort((a, b) => (isStale(a) - isStale(b)) || ((b.tripId ? 1 : 0) - (a.tripId ? 1 : 0)));
+  $('livePartners').innerHTML = sortedPartners.length ? sortedPartners.map(p => `<tr data-open-account="${escValue(p.accountId)}">
+      <td class="strong">${esc(p.name || 'Name not set')}</td>
+      <td>${telLink(p.phone)}</td>
+      <td>${esc(VEHICLE_TEXT[p.vehicleType] || humanize(p.vehicleType) || '—')} <span class="subtle num">${esc(p.vehicleRegistrationNumber)}</span></td>
+      <td>${isStale(p) ? `<span class="pill warn">${esc(agoText(p.lastFixAt))} ago</span>` : `<span class="subtle">${esc(agoText(p.lastFixAt))} ago</span>`}</td>
+      <td>${p.tripId ? `<a href="#" data-open-booking="${escValue(p.tripId)}">On a trip</a>` : isStale(p) ? '<span class="subtle">Not reporting</span>' : '<span class="badge b-green">Free</span>'}</td></tr>`).join('')
+    : `<tr><td colspan="5"><div class="subtle">No partners online right now.</div></td></tr>`;
+
+  const marks = [];
+  partners.forEach(p => marks.push({ lat: p.lat, lng: p.lng, tone: isStale(p) ? 'stale' : p.tripId ? 'trip' : '',
+    title: `${p.name || 'Partner'} · ${p.tripId ? 'on a trip' : 'free'} · ${agoText(p.lastFixAt)} ago`, open: { kind: 'account', id: p.accountId } }));
+  trips.forEach(t => {
+    if (t.status === 'REQUESTED' && t.pickup) marks.push({ lat: t.pickup.lat, lng: t.pickup.lng, tone: 'search',
+      title: `${t.riderName || 'Rider'} waiting ${agoText(t.statusSince)} · ${t.pickup.label}`, open: { kind: 'booking', id: t.bookingId } });
+    // A trip whose partner is not reporting would vanish from the map; it is shown at its pickup instead.
+    else if (!t.partnerNow && t.pickup) marks.push({ lat: t.pickup.lat, lng: t.pickup.lng, tone: 'stale',
+      title: `${humanize(t.status)} · ${t.riderName || 'Rider'} · partner not reporting${isStuck(t) ? ' · looks stuck' : ''}`, open: { kind: 'booking', id: t.bookingId } });
+    if (t.sosActive) {
+      const at = t.partnerNow || t.pickup;
+      if (at) marks.push({ lat: at.lat, lng: at.lng, tone: 'sos', label: '!', title: `SOS on ${t.riderName || 'a'} trip`, open: { kind: 'booking', id: t.bookingId } });
+    }
+  });
+  liveMap.setMarkers(marks);
+  // Fitted once, when the page opens: after that the view is the operator's.
+  if (!liveFitted && marks.length) {
+    liveMap.fit(marks, 50, 14);
+    liveFitted = true;
+  }
+  const cLive = $('cLive');
+  if (cLive) { cLive.textContent = trips.length; cLive.hidden = trips.length === 0; }
+}
+
+// ---- service hours ----------------------------------------------------------
+function paintHours(v) {
+  const s = v.settings, status = v.status;
+  const st = liveStatusText(status);
+  const tone = status.open ? '' : status.closedReason === 'PAUSED' ? ' paused' : ' closed';
+  const scheduled = s.mode === 'SCHEDULED';
+  const opens = (s.opensAt || '06:00').slice(0, 5), closes = (s.closesAt || '22:00').slice(0, 5);
+  $('panel').innerHTML = `
+    <div class="hours-state${tone}">
+      <span class="hico">${status.open ? OV_EXTRA.shield : OV_ICON.siren}</span>
+      <div><div class="big">${esc(st.title)}</div><p>${esc(st.sub)}</p>
+        ${s.paused ? `<p class="subtle">Paused ${esc(time(s.pausedAt))}${v.pausedByPhone ? ' by ' + esc(v.pausedByPhone) : ''}</p>` : ''}</div>
+    </div>
+    <div class="hours-wrap">
+      <section class="ov-card"><div class="hd"><span class="hico">${OV_EXTRA.clock}</span><h3>Operating hours</h3></div>
+        <form class="hours-form" id="hoursForm">
+          <label class="radio"><input type="radio" name="mode" value="SCHEDULED" ${scheduled ? 'checked' : ''}>
+            <div><b>Daily hours</b><span>Riders can book only inside these times, every day (India time, IST).</span></div></label>
+          <label class="radio"><input type="radio" name="mode" value="ALWAYS_OPEN" ${scheduled ? '' : 'checked'}>
+            <div><b>Always open</b><span>Bookings at any hour, day and night.</span></div></label>
+          <div class="times">
+            <div><label for="hOpens">Bookings open at</label><input type="time" id="hOpens" value="${escValue(opens)}" required></div>
+            <div><label for="hCloses">Bookings close at</label><input type="time" id="hCloses" value="${escValue(closes)}" required></div>
+          </div>
+          <p class="hours-note">Only <b>new</b> bookings stop at closing time. Trips already under way finish normally, and a search already running is allowed to end. Riders see the hours on their Home screen and on the booking screen; partners see that no new trips will come.<br>A window may cross midnight (e.g. 5:00 AM to 1:00 AM).</p>
+          <div class="foot"><button class="btn btn-primary" type="submit">Save hours</button></div>
+        </form>
+      </section>
+      <section class="ov-card"><div class="hd"><span class="hico">${OV_ICON.siren}</span><h3>Pause bookings now</h3></div>
+        ${s.paused ? `<div class="hours-form"><p><b>Bookings are paused.</b> Riders are told: “${esc(s.pauseReason)}”.</p>
+            <p class="subtle">${s.pausedUntil ? 'Resumes by itself ' + esc(istTime(s.pausedUntil, true)) + '.' : 'Stays paused until someone resumes it.'}</p>
+            <div class="foot"><button class="btn btn-approve" type="button" id="hResume">Resume bookings now</button></div></div>`
+          : `<form class="hours-form" id="pauseForm">
+            <p class="hours-note">For an incident, heavy rain, a curfew or unrest: stops new bookings at once, whatever the hours say. Trips under way are not touched.</p>
+            <label for="pReason">Reason (riders see this)</label>
+            <textarea id="pReason" maxlength="300" placeholder="e.g. Heavy rain across the city. We'll be back as soon as the roads are safe." required></textarea>
+            <label for="pUntil">Resume (your computer's clock for a chosen time)</label>
+            <select id="pUntil">
+              <option value="60">In 1 hour</option><option value="120">In 2 hours</option><option value="240">In 4 hours</option>
+              <option value="" selected>When someone resumes it</option><option value="custom">At a time I choose…</option>
+            </select>
+            <input type="datetime-local" id="pUntilAt" hidden>
+            <div class="foot"><button class="btn btn-reject" type="submit">Pause new bookings</button></div>
+          </form>`}
+      </section>
+    </div>
+    <section class="ov-card"><div class="hd"><span class="hico">${OV_EXTRA.bell}</span><h3>Changes</h3><span class="tag subtle">Who changed what, newest first</span></div>
+      ${(v.changes || []).length ? `<ul class="history">${v.changes.map(c => `<li>${esc(c.summary)}<div class="subtle">${esc(time(c.at))}${c.byPhone ? ' &middot; ' + esc(c.byPhone) : ''}</div></li>`).join('')}</ul>`
+        : '<p class="subtle hours-form">No changes yet. SheOut has taken bookings at all hours since launch.</p>'}
+    </section>`;
+
+  $('hoursForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const mode = $('hoursForm').querySelector('input[name="mode"]:checked').value;
+    const opensAt = $('hOpens').value, closesAt = $('hCloses').value;
+    const ok = await confirmAction({
+      title: mode === 'ALWAYS_OPEN' ? 'Open bookings at all hours?' : `Take bookings only ${hhmm(opensAt)} – ${hhmm(closesAt)}?`,
+      message: mode === 'ALWAYS_OPEN' ? 'Riders will be able to book at any time of day or night.'
+        : 'Outside these times riders cannot book, and both apps say so. Trips already under way are not affected.',
+      confirmLabel: 'Save hours',
+    });
+    if (!ok) return;
+    try {
+      const out = await api('/admin/service-hours/schedule', { method: 'PUT', body: JSON.stringify({ mode, opensAt, closesAt }) });
+      toast('ok', 'Operating hours saved', liveStatusText(out.status).title);
+      paintHours(out);
+    } catch (err) {
+      if (err.message === 'unauthorized') return;
+      toast('bad', 'Could not save the hours', err.message);
+    }
+  });
+
+  const pauseForm = $('pauseForm');
+  if (pauseForm) {
+    $('pUntil').addEventListener('change', () => { $('pUntilAt').hidden = $('pUntil').value !== 'custom'; });
+    pauseForm.addEventListener('submit', async e => {
+      e.preventDefault();
+      const reason = $('pReason').value.trim();
+      if (!reason) { $('pReason').focus(); return; }
+      const choice = $('pUntil').value;
+      let until = null;
+      if (choice === 'custom') {
+        if (!$('pUntilAt').value) { $('pUntilAt').focus(); return; }
+        until = new Date($('pUntilAt').value).toISOString();
+      } else if (choice) {
+        until = new Date(Date.now() + Number(choice) * 60000).toISOString();
+      }
+      const ok = await confirmAction({
+        title: 'Pause all new bookings now?',
+        message: `Riders cannot book until ${until ? istTime(until, true) : 'someone resumes bookings'}. They are shown: “${reason}”. Trips under way carry on.`,
+        confirmLabel: 'Pause bookings', tone: 'reject',
+      });
+      if (!ok) return;
+      try {
+        const out = await api('/admin/service-hours/pause', { method: 'POST', body: JSON.stringify({ reason, until }) });
+        toast('ok', 'New bookings paused', reason);
+        paintHours(out);
+        refreshHoursBadge(out.status);
+      } catch (err) {
+        if (err.message === 'unauthorized') return;
+        toast('bad', 'Could not pause bookings', err.message);
+      }
+    });
+  }
+  const resume = $('hResume');
+  if (resume) resume.addEventListener('click', async () => {
+    const ok = await confirmAction({ title: 'Resume bookings now?', message: 'Riders can book again straight away (within the operating hours, if they are set).', confirmLabel: 'Resume', tone: 'approve' });
+    if (!ok) return;
+    try {
+      const out = await api('/admin/service-hours/resume', { method: 'POST' });
+      toast('ok', 'Bookings resumed', liveStatusText(out.status).title);
+      paintHours(out);
+      refreshHoursBadge(out.status);
+    } catch (err) {
+      if (err.message === 'unauthorized') return;
+      toast('bad', 'Could not resume bookings', err.message);
+    }
+  });
+  refreshHoursBadge(status);
+}
+
+/** The sidebar says "Off" beside Service Hours whenever riders cannot book. */
+function refreshHoursBadge(status) {
+  const el = $('cHours');
+  if (!el || !status) return;
+  el.textContent = status.open ? '' : status.closedReason === 'PAUSED' ? 'Paused' : 'Closed';
+  el.hidden = status.open;
+}
+
+// ---- keeping the live pages live --------------------------------------------
+/**
+ * Live repaints every 10 seconds and Overview every 30, while the console is
+ * the visible tab and no dialog is open (a repaint must not pull a page out
+ * from under an operator reading it). Quiet: no skeleton flash, and Live's
+ * map keeps the view the operator panned to.
+ */
+let liveTimer = null;
+function startLiveRefresh() {
+  if (liveTimer) return;
+  let ticks = 0;
+  liveTimer = setInterval(() => {
+    ticks++;
+    if (!token || document.hidden || $('modalRoot').innerHTML) return;
+    if (tab === 'live') render({ quiet: true });
+    else if (tab === 'overview' && ticks % 3 === 0) render({ quiet: true });
+  }, 10000);
+}
+
 // ---- overview -------------------------------------------------------------
 const OV_ICON = {"check":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M9 12l2 2 4-4\"/><path d=\"M21 12a9 9 0 11-18 0 9 9 0 0118 0z\"/></svg>","siren":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M12 9v4M12 17h.01\"/><path d=\"M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L14.7 3.9a2 2 0 00-3.4 0z\"/></svg>","trip":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"6\" cy=\"17\" r=\"3\"/><circle cx=\"18\" cy=\"17\" r=\"3\"/><path d=\"M9 17h6l-3-8h4M6 17l4-8\"/></svg>","chat":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z\"/></svg>","wallet":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><rect x=\"2\" y=\"6\" width=\"20\" height=\"13\" rx=\"2\"/><path d=\"M2 10h20M6 15h4\"/></svg>","route":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"6\" cy=\"19\" r=\"2\"/><circle cx=\"18\" cy=\"5\" r=\"2\"/><path d=\"M8 19h6a4 4 0 0 0 0-8H10a4 4 0 0 1 0-8h6\"/></svg>","gift":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M20 12v9H4v-9\"/><path d=\"M2 7h20v5H2z\"/><path d=\"M12 21V7\"/></svg>","user":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"12\" cy=\"8\" r=\"4\"/><path d=\"M4 21a8 8 0 0116 0\"/></svg>","scooter":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"5.5\" cy=\"17.5\" r=\"2.5\"/><circle cx=\"18.5\" cy=\"17.5\" r=\"2.5\"/><path d=\"M8 17.5h7l2-6h-4M15 5h2l1.5 6.5\"/></svg>","parcel":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M21 8l-9-5-9 5 9 5 9-5z\"/><path d=\"M3 8v8l9 5 9-5V8M12 13v8\"/></svg>"};
 
@@ -3392,7 +4325,7 @@ async function loadOverview() {
   const q = (path) => api(path).catch((err) => { if (err.message === 'unauthorized') throw err; return null; });
   const shops = (status) => q(`/admin/sellers${filterQuery({ status }, { pageSize: 1 })}`);
   const [queue, sos, support, payouts, bookingsToday, completedToday, noPartnerToday, routes, trust, campaigns,
-    shopsInReview, shopsAwaitingFee, shopsLive] = await Promise.all([
+    shopsInReview, shopsAwaitingFee, shopsLive, live] = await Promise.all([
     q('/admin/verification/review-queue'),
     q('/admin/sos/active'),
     q('/admin/support/counts'),
@@ -3406,9 +4339,10 @@ async function loadOverview() {
     shops('SUBMITTED_FOR_REVIEW'),
     shops('APPROVED_AWAITING_PAYMENT'),
     shops('ACTIVE'),
+    q('/admin/live'),
   ]);
   return { queue, sos, support, payouts, bookingsToday, completedToday, noPartnerToday, routes, trust, campaigns,
-    shopsInReview, shopsAwaitingFee, shopsLive };
+    shopsInReview, shopsAwaitingFee, shopsLive, live };
 }
 
 const OV_EXTRA = {
@@ -3419,6 +4353,27 @@ const OV_EXTRA = {
   bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 00-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>',
   shield: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l7 3v6c0 4.5-3 8-7 9-4-1-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg>',
 };
+
+/** Overview's one line about right now, opening Live; amber when riders cannot book. */
+function liveStrip(live) {
+  if (!live) return '';
+  const trips = live.trips || [], partners = live.partners || [];
+  const stale = (live.staleAfterSeconds || 120) * 1000;
+  const online = partners.filter(p => p.lastFixAt && Date.now() - new Date(p.lastFixAt).getTime() <= stale).length;
+  const waiting = trips.filter(t => t.status === 'REQUESTED').length;
+  const st = liveStatusText(live.service);
+  refreshHoursBadge(live.service);
+  const cLive = $('cLive');
+  if (cLive) { cLive.textContent = trips.length; cLive.hidden = trips.length === 0; }
+  return `<button type="button" class="ov-live" data-go="live">
+      <span class="live-pulse">Live now</span>
+      <span><span class="n">${trips.length}</span><span class="lbl">trips under way</span></span><span class="sep"></span>
+      <span><span class="n">${waiting}</span><span class="lbl">riders waiting</span></span><span class="sep"></span>
+      <span><span class="n">${online}</span><span class="lbl">partners online</span></span><span class="sep"></span>
+      <span class="badge ${st.closed ? 'b-amber' : 'b-green'}">${esc(st.title)}</span>
+      <span class="go">Open live map →</span>
+    </button>`;
+}
 
 function paintOverview(d) {
   const n = (v) => (v === null || v === undefined ? '-' : Number(v).toLocaleString('en-IN'));
@@ -3483,6 +4438,7 @@ function paintOverview(d) {
            <span class="cta">Open SOS alerts →</span></button>`
       : `<div class="ov-calm">${OV_EXTRA.shield}No active SOS alerts. Everyone who raised one has been looked after.</div>`}
 
+    ${liveStrip(d.live)}
     <div class="ov-grid" data-overview>
       ${kpi('bookings', 'brand', OV_ICON.trip, n(bookedToday), "Today's bookings", `${n(doneToday)} completed · ${n(missedToday)} found no partner`, split)}
       ${kpi('queue', 'amber', OV_ICON.check, n(queueN), 'Waiting for verification', oldest ? 'Oldest waiting ' + esc(oldest.text) : 'Nobody waiting')}
@@ -3745,7 +4701,9 @@ async function render(opts = {}) {
   if (view.custom) {
     $('head').innerHTML = '';
     paintPager(null);
-    $('panel').innerHTML = contentSkeleton();
+    // A timed refresh repaints in place; a skeleton flash every 10 seconds
+    // would make the page unreadable, and Live would lose its map.
+    if (!opts.quiet) $('panel').innerHTML = contentSkeleton();
     try {
       const data = await view.load(stateFor(tab));
       if (isStale()) return;
@@ -3758,6 +4716,8 @@ async function render(opts = {}) {
       }
     } catch (err) {
       if (err.message === 'unauthorized' || isStale()) return;
+      // A blip during a quiet refresh keeps the last good picture on screen.
+      if (opts.quiet) return;
       $('panel').innerHTML = errorState(err.message);
     }
     return;
@@ -4302,6 +5262,7 @@ async function refreshBadges() {
     set('cSellers', sellers);
     set('cShift', shift && shift.length);
     refreshSupportCounts();
+    q('/admin/service-hours').then(v => v && refreshHoursBadge(v.status)).catch(() => {});
   } catch (e) {
     // Signed out; nothing to count.
   }
@@ -4324,6 +5285,7 @@ function start() {
   // Counts that mean work waiting stay current while the console is open.
   if (!badgeTimer) badgeTimer = setInterval(() => { if (token && !document.hidden) refreshBadges(); }, 60000);
   setUpPush(false);
+  startLiveRefresh();
 }
 
 if (token) start();

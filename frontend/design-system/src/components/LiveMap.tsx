@@ -71,6 +71,8 @@ export interface LiveMapProps {
   center?: { lat: number; lng: number };
   /** Zoom for `center`. Ignored once markers exist and autoFit is on. */
   zoom?: number;
+  /** Bump to move the view to `center` again even when the coordinates have not changed ("locate me" twice). */
+  centerNonce?: number;
   /**
    * Fill the parent instead of being a 16rem card - for a screen whose main
    * surface is the map. The parent sets the size; Google's logo and Terms
@@ -96,6 +98,21 @@ export interface LiveMapProps {
   interactive?: boolean;
   /** Called once each time Google creates a map for this component - what Google bills as a map load. */
   onMapLoad?: () => void;
+  /**
+   * Centre-pin picking, the way ride apps set a pickup: a pin fixed at the
+   * middle of the map, and she moves the map under it. The pin lifts while
+   * the map moves; when it settles, onIdle reports the point under the tip.
+   * Use with autoFit off and `center` as where to start.
+   */
+  centerPin?: CenterPinOptions;
+}
+
+export interface CenterPinOptions {
+  kind: 'pickup' | 'drop';
+  /** A short label over the pin while it rests ("Pickup here"). */
+  label?: string;
+  onMoveStart?: () => void;
+  onIdle: (lat: number, lng: number) => void;
 }
 
 const API_KEY: string = import.meta.env.VITE_GOOGLE_MAPS_API_KEY ?? '';
@@ -173,7 +190,8 @@ export function LiveMap(props: LiveMapProps) {
   );
 }
 
-function LoadedMap({ markers, route, className, autoFit = true, onPick, center, zoom, fitPadding, follow, interactive = true, onMapLoad }: LiveMapProps & { className: string }) {
+function LoadedMap({ markers, route, className, autoFit = true, onPick, center, zoom, fitPadding, follow, interactive = true, onMapLoad, centerPin, centerNonce }: LiveMapProps & { className: string }) {
+  const [pinMoving, setPinMoving] = useState(false);
   const status = useApiLoadingStatus();
   const authFailed = useMapsAuthFailed();
   const [, , theme] = useTheme();
@@ -245,10 +263,12 @@ function LoadedMap({ markers, route, className, autoFit = true, onPick, center, 
         {follow ? (
           <FollowCamera follow={follow} motion={driver ? motion : null} />
         ) : (
-          <CameraControl markers={markers} route={route} autoFit={autoFit} center={center} zoom={zoom} fitPadding={fitPadding} showRecentre={interactive} />
+          <CameraControl markers={markers} route={route} autoFit={autoFit} center={center} zoom={zoom} centerNonce={centerNonce} fitPadding={fitPadding} showRecentre={interactive} />
         )}
         {theme === 'dark' && <AttributionScrim />}
+        {centerPin && <CenterPinReporter options={centerPin} setMoving={setPinMoving} />}
       </GoogleMap>
+      {centerPin && <CenterPin kind={centerPin.kind} label={centerPin.label} moving={pinMoving} />}
     </div>
   );
 }
@@ -352,10 +372,16 @@ function AttributionScrim() {
   return null;
 }
 
-function CameraControl({ markers, route, autoFit, center, zoom, fitPadding, showRecentre = true }: { markers: MapMarker[]; route?: RoutePoint[]; autoFit: boolean; center?: RoutePoint; zoom?: number; fitPadding?: LiveMapProps['fitPadding']; showRecentre?: boolean }) {
+function CameraControl({ markers, route, autoFit, center, zoom, centerNonce, fitPadding, showRecentre = true }: { markers: MapMarker[]; route?: RoutePoint[]; autoFit: boolean; center?: RoutePoint; zoom?: number; centerNonce?: number; fitPadding?: LiveMapProps['fitPadding']; showRecentre?: boolean }) {
   const map = useMap();
   const [userMoved, setUserMoved] = useState(false);
   const [fitNonce, setFitNonce] = useState(0);
+  // Fitting handed back on (a pin chosen by moving the map, say): the moves
+  // made while it was off were not her taking over the view, so the view
+  // fits again - the new pin and the route both in sight.
+  useEffect(() => {
+    if (autoFit) setUserMoved(false);
+  }, [autoFit]);
   const fitPoints = markers.filter((m) => m.kind !== 'nearby');
   // The partner moves with every fix. Re-fitting the view each time is what
   // made the map pump in and out every few seconds, so her position is kept
@@ -440,7 +466,7 @@ function CameraControl({ markers, route, autoFit, center, zoom, fitPadding, show
     map.setCenter(center);
     map.setZoom(zoom ?? 14);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map, center?.lat, center?.lng, zoom]);
+  }, [map, center?.lat, center?.lng, zoom, centerNonce]);
 
   if (!showRecentre || !autoFit || !userMoved || fitPoints.length === 0) return null;
   return (
@@ -779,6 +805,89 @@ function HtmlMarker({
   }, [map, container, draggable, onDragEnd]);
 
   return createPortal(children, container);
+}
+
+/**
+ * Reports the point under a centre pin: that the map started moving, and
+ * where its centre is once it settles. Google fires 'idle' after every pan,
+ * zoom and programmatic move, so one listener covers a drag, a pinch and the
+ * caller re-centring on her location.
+ */
+function CenterPinReporter({ options, setMoving }: { options: CenterPinOptions; setMoving: (moving: boolean) => void }) {
+  const map = useMap();
+  const latest = useRef(options);
+  latest.current = options;
+  useEffect(() => {
+    if (!map) return;
+    let settled = false;
+    const report = () => {
+      const c = map.getCenter();
+      if (c) latest.current.onIdle(c.lat(), c.lng());
+    };
+    const start = () => {
+      setMoving(true);
+      latest.current.onMoveStart?.();
+    };
+    const listeners = [
+      map.addListener('dragstart', start),
+      map.addListener('zoom_changed', start),
+      map.addListener('idle', () => {
+        settled = true;
+        setMoving(false);
+        report();
+      }),
+    ];
+    // A reused map that is already still fires no idle of its own; report
+    // where it rests unless a move the caller just asked for gets there first.
+    const fallback = window.setTimeout(() => {
+      if (!settled) report();
+    }, 400);
+    return () => {
+      window.clearTimeout(fallback);
+      listeners.forEach((l) => l.remove());
+      setMoving(false);
+    };
+  }, [map, setMoving]);
+  return null;
+}
+
+/**
+ * The pin itself: drawn over the map, not on it, so it stays at the centre
+ * while the map moves under it. Its tip is exactly the map's centre. It
+ * lifts and its shadow shrinks while the map is moving, and drops back when
+ * the map settles - the cue that the address below is about to update.
+ */
+function CenterPin({ kind, label, moving }: { kind: 'pickup' | 'drop'; label?: string; moving: boolean }) {
+  const fill = kind === 'pickup' ? colors.primary : colors.brandOrange;
+  return (
+    <div className="pointer-events-none absolute inset-0 z-[5]" aria-hidden="true" data-testid="center-pin" data-moving={moving}>
+      {/* The spot on the ground the tip points at. */}
+      <span
+        className="absolute left-1/2 top-1/2 h-2 w-4 rounded-[50%] bg-black/30 transition-transform duration-150"
+        style={{ transform: `translate(-50%, -50%) scale(${moving ? 0.6 : 1})` }}
+      />
+      <div
+        className="absolute left-1/2 top-1/2 flex flex-col items-center transition-transform duration-150 ease-out"
+        style={{ transform: `translate(-50%, -100%) translateY(${moving ? -14 : 0}px)` }}
+      >
+        {label && (
+          <span
+            className={cn(
+              'mb-1.5 whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold text-white shadow-float transition-opacity duration-150',
+              moving ? 'opacity-0' : 'opacity-100'
+            )}
+            style={{ background: fill }}
+          >
+            {label}
+          </span>
+        )}
+        <svg width="34" height="44" viewBox="0 0 30 38" style={{ display: 'block', filter: 'drop-shadow(0 3px 4px rgba(36,26,51,.35))' }}>
+          <path d="M15 1C7.3 1 1 7.1 1 14.7 1 25 15 37 15 37s14-12 14-22.3C29 7.1 22.7 1 15 1z" fill={fill} stroke="#fff" strokeWidth="2" />
+          <circle cx="15" cy="14.5" r="5" fill="#fff" />
+        </svg>
+      </div>
+    </div>
+  );
 }
 
 function MapUnavailable({ className }: { className: string }) {

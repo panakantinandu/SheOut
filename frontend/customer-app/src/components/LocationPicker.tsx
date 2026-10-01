@@ -1,8 +1,7 @@
 import { Crosshair, MapPin, MapPinned, Search, X, Home, Briefcase } from 'lucide-react';
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { Button, Card, IconCircle, LiveMap, TextField } from '@sheout/design-system';
-import type { MapMarker } from '@sheout/design-system';
 import type { GeoAddress } from '../api/types';
 import {
   CITY_CENTRE,
@@ -10,9 +9,9 @@ import {
   currentPosition,
   describePoint,
   isInServiceArea,
-  reverseGeocode,
   searchPlaces,
 } from '../lib/geocode';
+import { useCenterPinAddress } from '../lib/useCenterPinAddress';
 import { SERVICE_RADIUS_KM } from '../lib/geocode';
 import {
   newSessionToken,
@@ -54,6 +53,14 @@ export interface LocationPickerProps {
    * it without reaching the map or the chips; so do the close button and Back.
    */
   below?: RefObject<HTMLElement>;
+  /**
+   * Choosing on the map is handed to the caller's own map instead of a map
+   * inside this picker. The booking screen passes it: its whole screen is
+   * already a map, and a second one in the sheet beneath it was two maps for
+   * one choice. Called with where to start the pin, and whether that is an
+   * area she should narrow down to a gate.
+   */
+  onPickOnMap?: (start: GeoAddress | null, areaHint: boolean) => void;
   onSelect: (address: GeoAddress) => void;
   onClose: () => void;
 }
@@ -84,6 +91,7 @@ export function LocationPicker({
   markerKind = 'drop',
   startAt = null,
   below,
+  onPickOnMap,
   onSelect,
   onClose,
 }: LocationPickerProps) {
@@ -105,12 +113,8 @@ export function LocationPicker({
   const [locating, setLocating] = useState(false);
   const inFlight = useRef<AbortController | null>(null);
 
-  /** The pin the customer has dropped, and the address we resolved for it. */
-  const [pin, setPin] = useState<{ lat: number; lng: number } | null>(null);
-  const [pinAddress, setPinAddress] = useState<GeoAddress | null>(null);
-  const [resolving, setResolving] = useState(false);
-  const [pinError, setPinError] = useState<string | null>(null);
-  const pinLookup = useRef<AbortController | null>(null);
+  /** Where the map tab's pin starts: the current choice, or the area she searched for. */
+  const [mapStart, setMapStart] = useState<GeoAddress | null>(null);
   // The phone's back button closes the picker, not the booking behind it.
   useCloseOnBack(open, onClose);
 
@@ -121,10 +125,7 @@ export function LocationPicker({
       setSuggestions([]);
       setAreaHint(false);
       setError(null);
-      setPin(null);
-      setPinAddress(null);
-      setPinError(null);
-      setResolving(false);
+      setMapStart(null);
       return;
     }
     // Each opening starts on whichever tab the caller asked for, and on the
@@ -133,37 +134,9 @@ export function LocationPicker({
     setMode(initialMode);
     // One Places billing session per opening of the picker.
     sessionToken.current = newSessionToken();
-    setPin(startAt ? { lat: startAt.lat, lng: startAt.lng } : null);
-    setPinAddress(startAt);
+    setMapStart(startAt);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
-
-  /**
-   * Resolves a dropped pin to an address. Kept separate from the search
-   * request so a slow lookup for an abandoned pin cannot overwrite the one
-   * the customer is actually looking at.
-   */
-  const resolvePin = useCallback(async (lat: number, lng: number) => {
-    setPin({ lat, lng });
-    setPinAddress(null);
-    setPinError(null);
-    setResolving(true);
-    pinLookup.current?.abort();
-    const controller = new AbortController();
-    pinLookup.current = controller;
-    try {
-      setPinAddress(await reverseGeocode(lat, lng, controller.signal));
-    } catch (err) {
-      if ((err as Error).name === 'AbortError') return;
-      setPinError(
-        (err as Error).message === 'No address found at that point'
-          ? t('picker.noAddress')
-          : t('picker.lookupError')
-      );
-    } finally {
-      if (!controller.signal.aborted) setResolving(false);
-    }
-  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -243,9 +216,11 @@ export function LocationPicker({
         onClose();
         return;
       }
-      setPin({ lat: place.address.lat, lng: place.address.lng });
-      setPinAddress(place.address);
-      setPinError(null);
+      if (onPickOnMap) {
+        onPickOnMap(place.address, true);
+        return;
+      }
+      setMapStart(place.address);
       setAreaHint(true);
       setMode('map');
     } catch {
@@ -328,7 +303,14 @@ export function LocationPicker({
             <button
               key={tab.key}
               type="button"
-              onClick={() => setMode(tab.key)}
+              onClick={() => {
+                // On the booking screen the map is the screen's own; leave the sheet for it.
+                if (tab.key === 'map' && onPickOnMap) {
+                  onPickOnMap(startAt, false);
+                  return;
+                }
+                setMode(tab.key);
+              }}
               aria-pressed={mode === tab.key}
               className={
                 mode === tab.key
@@ -350,15 +332,8 @@ export function LocationPicker({
             </p>
           )}
           <MapPane
-            pin={pin}
-            address={pinAddress}
-            resolving={resolving}
-            error={pinError}
+            start={mapStart}
             markerKind={markerKind}
-            onPick={(lat, lng) => {
-              setAreaHint(false);
-              void resolvePin(lat, lng);
-            }}
             onConfirm={(address) => {
               onSelect(address);
               onClose();
@@ -510,96 +485,81 @@ export function LocationPicker({
 }
 
 /**
- * The map half of the picker. A tap or a dragged pin reports a point, the
- * point is reverse-geocoded, and the resulting address is shown for the
- * customer to read before it is accepted. Nothing is chosen by coordinate
- * alone - a silent lat/lng is not something a person can check.
+ * The map half of the full-screen picker, used where there is no map behind
+ * it (saved places, changing the destination mid-trip). The same centre pin
+ * as the booking screen: she moves the map, the pin stays in the middle, and
+ * the address under it is shown for her to read before it is accepted.
+ * Nothing is chosen by coordinate alone - a silent lat/lng is not something
+ * a person can check.
  */
 function MapPane({
-  pin,
-  address,
-  resolving,
-  error,
+  start,
   markerKind,
-  onPick,
   onConfirm,
 }: {
-  pin: { lat: number; lng: number } | null;
-  address: GeoAddress | null;
-  resolving: boolean;
-  error: string | null;
+  start: GeoAddress | null;
   markerKind: 'pickup' | 'drop';
-  onPick: (lat: number, lng: number) => void;
   onConfirm: (address: GeoAddress) => void;
 }) {
   const { t } = useTranslation();
-  const markers: MapMarker[] = pin
-    ? [{ key: 'pin', lat: pin.lat, lng: pin.lng, label: t('picker.selectedPoint'), kind: markerKind }]
-    : [];
-
-  // Captured once, when the map opens: the pin already set for this field if
-  // there is one, otherwise the city. Recomputing it on every render would
-  // re-centre the map under the user mid-pan, and following the pin would
-  // snap the view on every tap.
-  const [initialCentre] = useState(() => (pin ? { lat: pin.lat, lng: pin.lng } : CITY_CENTRE));
+  const pin = useCenterPinAddress(start, true);
+  // Captured once, when the map opens: recomputing it would re-centre the
+  // map under her mid-pan.
+  const [initialCentre] = useState(() => (start ? { lat: start.lat, lng: start.lng } : CITY_CENTRE));
+  const busy = pin.moving || pin.resolving;
+  const address = pin.address;
 
   return (
     <div className="space-y-3">
       <LiveMap
-        markers={markers}
-        onPick={onPick}
+        markers={[]}
         center={initialCentre}
-        zoom={15}
+        zoom={16}
         autoFit={false}
-        className="h-72"
+        className="h-[48vh] min-h-[16rem]"
+        centerPin={{
+          kind: markerKind,
+          label: markerKind === 'pickup' ? t('picker.pickupHere') : t('picker.dropHere'),
+          onMoveStart: pin.onMoveStart,
+          onIdle: pin.onIdle,
+        }}
       />
-      <p className="text-xs text-text-secondary">
-        {t('picker.mapHint')}
-      </p>
+      <p className="text-xs text-text-secondary">{t('picker.mapHint')}</p>
 
-      {!pin ? (
-        <Card className="text-center">
-          <p className="text-sm text-text-secondary">{t('picker.noPin')}</p>
-        </Card>
-      ) : resolving ? (
-        <Card className="flex items-center gap-3">
-          <IconCircle tone="soft" size="sm" icon={<MapPin />} />
-          <p className="text-sm text-text-secondary">{t('picker.lookingUp')}</p>
-        </Card>
-      ) : error ? (
-        <Card tone="danger" className="space-y-3">
-          <p className="text-sm font-medium text-text-primary">{t('picker.cannotName')}</p>
-          <p className="text-xs text-text-secondary">{error}</p>
-          <Button variant="secondary" fullWidth onClick={() => onPick(pin.lat, pin.lng)}>
-            {t('common.tryAgain')}
-          </Button>
-        </Card>
-      ) : address ? (
-        // The address still gets shown for an out-of-area pin. Refusing to
-        // name the place the customer just tapped would leave them guessing
-        // whether the pin or the boundary was the problem.
-        <Card tone={isInServiceArea(address) ? 'default' : 'danger'} className="space-y-3">
-          <div className="flex items-start gap-3">
-            <IconCircle
-              tone="soft"
-              size="sm"
-              color={!isInServiceArea(address) ? 'red' : markerKind === 'pickup' ? undefined : 'orange'}
-              icon={<MapPin />}
-            />
-            <div className="min-w-0 flex-1">
-              <p className="text-xs text-text-secondary">{t('picker.pinAt')}</p>
-              <p className="text-sm font-medium text-text-primary">{address.label}</p>
-            </div>
+      <Card tone={address && !isInServiceArea(address) ? 'danger' : 'default'} className="space-y-3" data-testid="picker-pin-card">
+        <div className="flex items-start gap-3">
+          <IconCircle
+            tone="soft"
+            size="sm"
+            color={address && !isInServiceArea(address) ? 'red' : markerKind === 'pickup' ? undefined : 'orange'}
+            icon={<MapPin />}
+          />
+          <div className="min-w-0 flex-1">
+            <p className="text-xs text-text-secondary">{t('picker.pinAt')}</p>
+            <p className={`text-sm font-medium text-text-primary transition-opacity ${busy ? 'opacity-50' : ''}`} aria-live="polite">
+              {pin.moving ? t('picker.movingPin') : pin.resolving ? t('picker.lookingUp') : address?.label ?? (pin.error ? t('picker.cannotName') : t('picker.lookingUp'))}
+            </p>
           </div>
-          {isInServiceArea(address) ? (
-            <Button fullWidth onClick={() => onConfirm(address)}>
-              {t('picker.useThis')}
+        </div>
+        {pin.error && !busy && (
+          <>
+            <p className="text-xs text-text-secondary">{pin.error}</p>
+            <Button variant="secondary" fullWidth onClick={pin.retry}>
+              {t('common.tryAgain')}
             </Button>
-          ) : (
-            <p className="text-xs font-medium text-danger">{outOfAreaMessage()}</p>
-          )}
-        </Card>
-      ) : null}
+          </>
+        )}
+        {address && !busy && !isInServiceArea(address) ? (
+          // The address is still shown for an out-of-area pin: refusing to
+          // name the place would leave her guessing whether the pin or the
+          // boundary was the problem.
+          <p className="text-xs font-medium text-danger">{outOfAreaMessage()}</p>
+        ) : (
+          <Button fullWidth disabled={!address || busy || Boolean(pin.error)} onClick={() => address && onConfirm(address)}>
+            {t('picker.useThis')}
+          </Button>
+        )}
+      </Card>
     </div>
   );
 }

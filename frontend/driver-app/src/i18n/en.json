@@ -726,5 +726,13 @@
       "previewAlt": "You wearing your helmet",
       "use": "Use this photo"
     }
+  },
+  "serviceHours": {
+    "noNewTrips": "No new trips right now",
+    "outsideHours": "SheOut is outside its operating hours, so riders can't book.",
+    "paused": "Operations has paused new bookings for a short while.",
+    "reopens": "Bookings open again at {{time}}.",
+    "backSoon": "Bookings will be back soon.",
+    "currentTripSafe": "A trip you are already on is not affected."
   }
 }

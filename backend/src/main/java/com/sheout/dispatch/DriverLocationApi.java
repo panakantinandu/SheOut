@@ -16,4 +16,11 @@ public interface DriverLocationApi {
 
     /** Last reported position, or empty if she has never reported one (or went offline since). */
     Optional<DriverLocation> findLocation(UUID driverId);
+
+    /**
+     * Every partner with a position on the map now - she is online and her
+     * app has reported. For the console's live view. Small by nature: only
+     * online partners are in the set.
+     */
+    java.util.Map<UUID, DriverLocation> findAllReporting();
 }
