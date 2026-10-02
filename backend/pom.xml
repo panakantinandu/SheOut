@@ -21,6 +21,13 @@
         <java.version>21</java.version>
         <jjwt.version>0.13.0</jjwt.version>
         <awssdk.version>2.54.13</awssdk.version>
+        <!-- The AWS SDK's HTTP client (apache5-client) is built against these;
+             Spring Boot 3.3 pins older ones (5.3.1 / 5.2.5), and with those the
+             first Rekognition or S3 call dies with NoClassDefFoundError
+             (TlsSocketStrategy). Move them with awssdk.version - see
+             AwsHttpClientCompatibilityTest. -->
+        <httpclient5.version>5.6.4</httpclient5.version>
+        <httpcore5.version>5.4.3</httpcore5.version>
         <razorpay.version>1.4.10</razorpay.version>
         <anthropic.version>2.34.0</anthropic.version>
     </properties>

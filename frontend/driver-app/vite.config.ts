@@ -42,9 +42,9 @@ export default defineConfig({
         ],
       },
       manifest: {
-        name: 'SheOut Driver',
-        short_name: 'SheOut Driver',
-        description: 'SheOut driver app - Hyderabad',
+        name: 'SheOut Partner',
+        short_name: 'SheOut Partner',
+        description: 'SheOut partner app - Hyderabad',
         theme_color: '#4A1A9E',
         // Splash, not /home: opening at /home skipped the splash on every
         // launch from the icon. id keeps the old start URL so installed copies

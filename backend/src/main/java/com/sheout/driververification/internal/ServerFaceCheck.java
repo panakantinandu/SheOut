@@ -84,8 +84,12 @@ public class ServerFaceCheck {
         } catch (software.amazon.awssdk.services.rekognition.model.InvalidParameterException e) {
             // Rekognition's answer when it finds no face in one of the images.
             return Optional.empty();
-        } catch (RuntimeException e) {
-            log.warn("Server face check unavailable, keeping the phone's result: {}", e.getClass().getSimpleName());
+        } catch (RuntimeException | LinkageError e) {
+            // LinkageError too: a library clash (an HTTP client class missing
+            // at runtime) is an Error, not an exception, and once escaped
+            // here it failed every partner's shift check with a 500 - the
+            // one thing this class promises never to do.
+            log.warn("Server face check unavailable, keeping the phone's result: {}", e.toString());
             return Optional.empty();
         }
     }

@@ -1,5 +1,6 @@
 export * from './BrandHeader';
 export * from './SheOutLogo';
+export * from './BrandStrip';
 export * from './ConfirmDialog';
 export * from './DocumentMasker';
 export * from './LiveSelfieCapture';

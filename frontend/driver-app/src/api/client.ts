@@ -325,6 +325,13 @@ export const usersApi = {
   },
 };
 
+/** Where SheOut operates - the boundary the backend enforces. Public; the maps are held to it (see main.tsx). */
+export const serviceAreaApi = {
+  get(): Promise<{ centreLat: number; centreLng: number; radiusKm: number; centreName: string }> {
+    return request('/api/v1/service-area', { auth: false });
+  },
+};
+
 export const notificationsApi = {
   inbox(page: number): Promise<InboxPage> {
     return request(`/api/v1/notifications/me${buildQuery({ page, pageSize: 20 })}`);

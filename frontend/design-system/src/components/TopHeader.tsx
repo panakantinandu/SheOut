@@ -34,6 +34,8 @@ interface GreetingHeaderProps {
   subtitle?: ReactNode;
   /** A small picture before the title, such as the time of day's SkyIcon. */
   titleIcon?: ReactNode;
+  /** SheOut by name in the app bar (BrandStrip); the greeting then takes its own row below. */
+  brand?: ReactNode;
   onMenuClick?: () => void;
   onBellClick?: () => void;
   /** Unread notifications; the bell shows a count above zero. */
@@ -100,38 +102,69 @@ export function TopHeader(props: TopHeaderProps) {
     );
   }
 
-  return (
-    <header className={cn('flex items-center justify-between', props.className)}>
-      <button
-        type="button"
-        onClick={props.onMenuClick}
-        aria-label={t('header.menu')}
-        className="-m-1 flex h-11 w-11 items-center justify-center rounded-full text-text-primary hover:bg-background"
-        data-testid="menu-button"
-      >
-        <Menu className="h-5 w-5" />
-      </button>
-      <div className="min-w-0 flex-1 px-3">
-        <p className="flex items-center gap-2 font-heading text-section text-text-primary">
-          {props.titleIcon}
+  const menu = (
+    <button
+      type="button"
+      onClick={props.onMenuClick}
+      aria-label={t('header.menu')}
+      className="-m-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-text-primary hover:bg-background"
+      data-testid="menu-button"
+    >
+      <Menu className="h-5 w-5" />
+    </button>
+  );
+  const bell = (
+    <button
+      type="button"
+      onClick={props.onBellClick}
+      aria-label={props.unreadCount ? t('header.notificationsUnread', { count: props.unreadCount }) : t('header.notifications')}
+      className="relative -m-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-text-primary hover:bg-background"
+    >
+      <Bell className="h-5 w-5" />
+      {props.unreadCount ? <BellBadge count={props.unreadCount} /> : null}
+    </button>
+  );
+  const greeting = (
+    <div className="flex min-w-0 flex-1 items-center gap-2">
+      {/* The icon stands in its own column, beside the two lines rather
+          than inside the first: inside it, the line under the greeting
+          started under the sun instead of under "Good morning". */}
+      {props.titleIcon && <span className="flex shrink-0 items-center">{props.titleIcon}</span>}
+      <div className="min-w-0 flex-1">
+        <p className="font-heading text-section text-text-primary">
           {/* The same living title every other screen has: the greeting is
               the first words on Home, and as plain text it was the one title
               in the app that sat still. Keyed by the text, so it plays when
               the name arrives; nothing until then, so no sparkle or line
               stands alone while the profile loads. */}
-          <span className="min-w-0">{props.title && <AnimatedTitle key={props.title} text={props.title} />}</span>
+          {props.title && <AnimatedTitle key={props.title} text={props.title} />}
         </p>
         {props.subtitle && <div className="text-sm text-text-secondary">{props.subtitle}</div>}
       </div>
-      <button
-        type="button"
-        onClick={props.onBellClick}
-        aria-label={props.unreadCount ? t('header.notificationsUnread', { count: props.unreadCount }) : t('header.notifications')}
-        className="relative -m-1 flex h-11 w-11 items-center justify-center rounded-full text-text-primary hover:bg-background"
-      >
-        <Bell className="h-5 w-5" />
-        {props.unreadCount ? <BellBadge count={props.unreadCount} /> : null}
-      </button>
+    </div>
+  );
+
+  // With a brand: the app bar says SheOut between the menu and the bell,
+  // and the greeting has its own full-width row under it - the partner
+  // Home's layout, so both apps open the same way.
+  if (props.brand) {
+    return (
+      <header className={cn('space-y-3', props.className)}>
+        <div className="flex items-center gap-3">
+          {menu}
+          <div className="min-w-0 flex-1">{props.brand}</div>
+          {bell}
+        </div>
+        {greeting}
+      </header>
+    );
+  }
+
+  return (
+    <header className={cn('flex items-center justify-between gap-3', props.className)}>
+      {menu}
+      {greeting}
+      {bell}
     </header>
   );
 }

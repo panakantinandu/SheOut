@@ -415,12 +415,15 @@ export function Home() {
 
       {/* Good morning, with the sky, a line for this time of day, and how riders rate her. */}
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="flex items-center gap-2 break-words font-heading text-section leading-tight text-text-primary" data-testid="home-greeting">
-            <SkyIcon part={dayPart} size={26} />
-            <span className="min-w-0">{t(`home.day.${dayPart}.greeting`, { name: firstName || t('home.there') })}</span>
-          </p>
-          <RotatingText lines={dayLines} className="mt-0.5 text-sm text-text-secondary" />
+        {/* The sky in its own column, so the line under the greeting starts under "Good morning", not under the sun. */}
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <SkyIcon part={dayPart} size={26} className="shrink-0" />
+          <div className="min-w-0 flex-1">
+            <p className="break-words font-heading text-section leading-tight text-text-primary" data-testid="home-greeting">
+              {t(`home.day.${dayPart}.greeting`, { name: firstName || t('home.there') })}
+            </p>
+            <RotatingText lines={dayLines} className="mt-0.5 text-sm text-text-secondary" />
+          </div>
         </div>
         {/* AggregateRatingText draws its own star; an icon here doubled it. */}
         <span className="mt-1 inline-flex shrink-0 items-center gap-1 rounded-full bg-primary-light px-2 py-0.5 text-xs font-semibold text-primary" data-testid="rating-chip">

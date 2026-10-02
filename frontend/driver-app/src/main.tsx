@@ -5,7 +5,8 @@ import App from './App'
 import { AuthProvider } from './auth/AuthContext'
 import { LocationBroadcastProvider } from './lib/LocationBroadcastContext'
 import './index.css'
-import { initErrorReporting } from '@sheout/design-system'
+import { initErrorReporting, setMapServiceArea } from '@sheout/design-system'
+import { serviceAreaApi } from './api/client'
 import { registerAppUpdates } from './lib/appUpdates'
 import { captureReferralFromUrl, routeColdStartThroughSplash } from '@sheout/design-system'
 import './i18n'
@@ -22,6 +23,10 @@ captureReferralFromUrl()
 routeColdStartThroughSplash()
 
 registerAppUpdates()
+
+// The service boundary, from the server, so her maps show where SheOut
+// operates and nothing beyond. Not awaited; on failure the default stands.
+serviceAreaApi.get().then((a) => setMapServiceArea({ lat: a.centreLat, lng: a.centreLng }, a.radiusKm)).catch(() => undefined)
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

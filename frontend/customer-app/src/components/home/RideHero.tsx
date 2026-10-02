@@ -1,4 +1,20 @@
-import { Search } from 'lucide-react';
+import { Check, Search } from 'lucide-react';
+
+/**
+ * The banner line as its points: "Safe rides, verified women partners" is
+ * two promises, and run together they broke wherever the column ran out -
+ * "Safe rides, verified" over "women partners". Split at the comma (the
+ * operator-edited copy and all three languages write it that way), each
+ * starts with a capital and gets its own line. A line with no comma stays
+ * one line.
+ */
+function points(body: string): string[] {
+  return body
+    .split(/[,،]s*/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .map((p) => p.charAt(0).toLocaleUpperCase() + p.slice(1));
+}
 
 /**
  * The top of Home: SheOut is a ride app first, and this says so before
@@ -45,7 +61,14 @@ export function RideHero({ eyebrow, title, body, whereTo, art, onBook }: {
             {eyebrow}
           </span>
           <h2 className="mt-2 font-heading text-[1.5rem] leading-[1.15] [text-shadow:0_1px_2px_rgba(0,0,0,0.2)]">{title}</h2>
-          <p className="mt-1 text-caption opacity-90">{body}</p>
+          <ul className="mt-1.5 space-y-0.5 text-caption">
+            {points(body).map((point) => (
+              <li key={point} className="flex items-center gap-1.5">
+                <Check className="h-3.5 w-3.5 shrink-0 text-emerald-300" strokeWidth={3} aria-hidden="true" />
+                <span className="opacity-95">{point}</span>
+              </li>
+            ))}
+          </ul>
         </div>
 
         {/* The scene: road, wind, scooter. */}

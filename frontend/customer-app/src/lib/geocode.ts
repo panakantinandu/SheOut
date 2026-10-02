@@ -1,4 +1,4 @@
-import { i18next } from '@sheout/design-system';
+import { i18next, setMapServiceArea } from '@sheout/design-system';
 import type { GeoAddress } from '../api/types';
 import { serviceAreaApi } from '../api/client';
 
@@ -57,6 +57,8 @@ export async function syncServiceArea(): Promise<void> {
       SERVICE_CENTRE = { lat: area.centreLat, lng: area.centreLng };
       SERVICE_RADIUS_KM = Math.round(area.radiusKm);
       if (area.centreName) SERVICE_CENTRE_NAME = area.centreName;
+      // Maps show this area and nothing beyond it.
+      setMapServiceArea(SERVICE_CENTRE, area.radiusKm);
     }
   } catch {
     // Offline, or an older backend without the endpoint. The defaults match

@@ -150,6 +150,42 @@ function useMapsAuthFailed(): boolean {
 }
 
 const HYDERABAD = { lat: 17.385, lng: 78.4867 };
+
+/**
+ * Where SheOut operates, so a map shows that and nothing else.
+ * <p>
+ * Nothing used to stop the camera: a pinch out, or one far-away point in a
+ * fit, and the screen was the whole of India or the world - a map of places
+ * nobody can book. Every map is now held to a box around the service circle
+ * (with a little margin, so a pickup on the edge is not pressed against
+ * the frame), the whole view inside it, which also sets how far out a
+ * pinch can go.
+ * <p>
+ * The circle is the server's (GET /api/v1/service-area): each app passes it
+ * in at launch with setMapServiceArea. Until then, or if that call fails,
+ * it is production's - 100 km round Hyderabad.
+ */
+let serviceArea = { centre: HYDERABAD, radiusKm: 100 };
+const AREA_MARGIN = 1.15;
+
+export function setMapServiceArea(centre: { lat: number; lng: number }, radiusKm: number) {
+  if (Number.isFinite(centre.lat) && Number.isFinite(centre.lng) && Number.isFinite(radiusKm) && radiusKm > 0) {
+    serviceArea = { centre, radiusKm };
+  }
+}
+
+function serviceBounds(): google.maps.LatLngBoundsLiteral {
+  const km = serviceArea.radiusKm * AREA_MARGIN;
+  const dLat = km / 111.19;
+  const dLng = km / (111.19 * Math.cos((serviceArea.centre.lat * Math.PI) / 180));
+  return {
+    north: serviceArea.centre.lat + dLat,
+    south: serviceArea.centre.lat - dLat,
+    east: serviceArea.centre.lng + dLng,
+    west: serviceArea.centre.lng - dLng,
+  };
+}
+
 /** Movement below this is GPS jitter, not a direction of travel. */
 const MIN_MOVE_FOR_BEARING_METRES = 8;
 
@@ -197,6 +233,7 @@ function LoadedMap({ markers, route, className, autoFit = true, onPick, center, 
   const [, , theme] = useTheme();
   const [initialCenter] = useState(() => center ?? (markers[0] ? { lat: markers[0].lat, lng: markers[0].lng } : HYDERABAD));
   const [initialZoom] = useState(() => zoom ?? (center || markers[0] ? 14 : 11));
+  const [restriction] = useState(() => ({ latLngBounds: serviceBounds(), strictBounds: true }));
 
   // Callers rebuild the route array on some renders; the line is prepared
   // again only when the road itself is different.
@@ -241,6 +278,10 @@ function LoadedMap({ markers, route, className, autoFit = true, onPick, center, 
         colorScheme={theme === 'dark' ? 'DARK' : 'LIGHT'}
         defaultCenter={initialCenter}
         defaultZoom={initialZoom}
+        // Only where SheOut operates - see serviceArea above. strictBounds
+        // keeps the whole view inside, not just its centre, so it is also
+        // what stops a pinch from zooming out to the world.
+        restriction={restriction}
         mapId={MAP_ID}
         // The map follows the app: a white rectangle in a dark app at 11pm
         // is the brightest thing on the screen and the one thing she is

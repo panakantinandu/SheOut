@@ -1,7 +1,7 @@
 import { ArrowRight, ChevronRight, LayoutGrid, Store } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ASSISTANT_NAME, AssistantFab, PushPromptCard, RotatingText, SkyIcon, TopHeader, useDayPart, contentText, useContentSection, useAppLanguage, usePushNotifications, useUnreadNotifications, bikeTaxiArt, parcelArt, marketplaceArt, womenArt } from '@sheout/design-system';
+import { ASSISTANT_NAME, AssistantFab, BrandStrip, PushPromptCard, RotatingText, SkyIcon, TopHeader, useDayPart, contentText, useContentSection, useAppLanguage, usePushNotifications, useUnreadNotifications, bikeTaxiArt, parcelArt, marketplaceArt, womenArt } from '@sheout/design-system';
 import { OutOfAreaBanner } from '../components/OutOfAreaBanner';
 import { ServiceHoursNotice } from '../components/ServiceHoursNotice';
 import { useServiceStatus } from '../lib/useServiceStatus';
@@ -104,6 +104,9 @@ export function Home() {
     <div className="space-y-6">
       <TopHeader
         variant="greeting"
+        // SheOut by name, as the partner app's Home has it: nothing on this
+        // screen used to say which app she had opened.
+        brand={<BrandStrip app="rider" label={t('home.brandTagline')} />}
         title={greeting}
         titleIcon={<SkyIcon part={dayPart} size={26} />}
         subtitle={<RotatingText lines={dayLines} />}
@@ -190,7 +193,9 @@ export function Home() {
               >
                 <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
               </span>
-              <span className="mt-2.5 block min-w-0">
+              {/* Centred, on the same axis as the picture above it: left-aligned
+                  under a centred picture, the name looked pushed to one side. */}
+              <span className="mt-2.5 block min-w-0 text-center">
                 <span className="block whitespace-nowrap font-heading text-card-title leading-tight text-text-primary" data-testid={`service-${service.key}-label`}>
                   {t(service.labelKey)}
                 </span>
