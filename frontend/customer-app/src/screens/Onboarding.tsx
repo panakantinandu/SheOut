@@ -1,7 +1,7 @@
 import { BadgeCheck, Bike, MapPin, ShieldAlert, Siren, Vibrate, Wallet } from 'lucide-react';
 import { useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, IconCircle, brandIllustration, useSafetyString, useTranslation, ServiceArt } from '@sheout/design-system';
+import { Button, IconCircle, SheOutAppIcon, useSafetyString, useTranslation, ServiceArt } from '@sheout/design-system';
 import { usersApi } from '../api/client';
 import { DiscreetSosToggle } from '../components/DiscreetSosToggle';
 
@@ -132,7 +132,7 @@ export function Onboarding() {
           >
             <div className="relative flex items-center justify-center">
               <span className="absolute h-40 w-40 rounded-full bg-accent-orange/15 blur-2xl" aria-hidden="true" />
-              <img src={brandIllustration} alt="" className="relative h-36 w-36 object-contain motion-safe:animate-float" />
+              <SheOutAppIcon app="rider" className="relative h-28 w-28 shadow-lift motion-safe:animate-float" />
             </div>
             {slide.art ?? <IconCircle tone="soft" size="md" icon={slide.icon} />}
             <h1 className="font-heading text-title text-text-primary">{slide.title}</h1>

@@ -38,8 +38,10 @@ async function handlePush(event) {
 
   const options = {
     body: data.body || '',
-    icon: '/Logo.jpeg',
-    badge: '/Logo.jpeg',
+    icon: '/admin/icon-192.png',
+    // Android paints the badge in one colour in the status bar, so it is a
+    // white silhouette on nothing - a photo here shows as a white square.
+    badge: '/admin/badge-96.png',
     data: { link },
     // Same tag replaces the earlier notification instead of stacking - a
     // booking's status changes collapse into its latest one.

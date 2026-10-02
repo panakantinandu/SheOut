@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SheOut Ops Console</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <script>
   (function () {
     try {
@@ -173,12 +176,17 @@
   }
   :root[data-theme="dark"] .side { --side-bg: linear-gradient(180deg, #1A1330 0%, #120D22 100%); border-right: 1px solid var(--line); }
 
-  .brand { display: flex; align-items: center; gap: 12px; padding: 18px 18px 16px; }
+  /* div.brand, not .brand: "brand" is also a colour tone (.mi.brand, .dot.brand), and this padding used to land on those too. */
+  div.brand { display: flex; align-items: center; gap: 12px; padding: 18px 18px 16px; }
   .brand .logo-tile {
     width: 44px; height: 44px; flex: none; border-radius: 13px; display: grid; place-items: center;
     background: #fff; box-shadow: 0 6px 16px rgba(0,0,0,.25);
   }
-  .brand .logo { width: 36px; height: 26px; flex: none; object-fit: contain; display: block; }
+  /* The app tile itself - the S as her profile, white on SheOut orange. */
+  .brand .logo { width: 40px; height: 40px; flex: none; border-radius: 11px; display: block; box-shadow: 0 6px 16px rgba(0,0,0,.25); }
+  .login .brand .logo { width: 44px; height: 44px; border-radius: 12px; box-shadow: var(--elev-1); }
+  .wordmark-img { display: block; width: 108px; height: auto; }
+  .login .wordmark-img { width: 120px; }
   .wordmark { font-weight: 850; font-size: 19px; line-height: 1; letter-spacing: .04em; color: #fff; white-space: nowrap; }
   .wordmark span { color: #FF8A4C; }
   .brand .sub { display: block; margin-top: 5px; font-size: 11px; font-weight: 600; color: var(--side-muted); letter-spacing: .02em; }
@@ -961,9 +969,9 @@
   <div class="login">
     <div class="card">
       <div class="brand">
-        <span class="logo-tile"><img class="logo" src="sheout-mark.png" alt="" width="40" height="28"></span>
+        <img class="logo" src="sheout-mark.png" alt="" width="44" height="44">
         <div>
-          <div class="wordmark">SHE<span>OUT</span></div>
+          <img class="wordmark-img" src="wordmark-brand.svg" alt="SheOut" width="120" height="40">
           <div class="sub">Ops Console</div>
         </div>
       </div>
@@ -999,9 +1007,9 @@
 <div class="shell" id="app" hidden>
   <aside class="side" id="side" aria-label="Sections">
     <div class="brand">
-      <span class="logo-tile"><img class="logo" src="sheout-mark.png" alt="" width="36" height="26"></span>
+      <img class="logo" src="sheout-mark.png" alt="" width="40" height="40">
       <div>
-        <div class="wordmark" aria-label="SheOut">SHE<span>OUT</span></div>
+        <img class="wordmark-img" src="wordmark-white.svg" alt="SheOut" width="108" height="36">
         <div class="sub">Operations Console</div>
       </div>
     </div>
@@ -1064,7 +1072,7 @@
         <span class="nl">Accounts</span> <span class="count" id="cAccounts" hidden></span>
       </button>
       <button data-tab="trust" aria-current="false">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.5-3 8-7 9-4-1-7-4.5-7-9V6z"/><path d="M12 8v4M12 16h.01"/></svg>
         <span class="nl">Trust Review</span> <span class="count" id="cTrust"></span>
       </button>
       <button data-tab="feedback" aria-current="false">
@@ -4512,7 +4520,7 @@ function startLiveRefresh() {
 }
 
 // ---- overview -------------------------------------------------------------
-const OV_ICON = {"check":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M9 12l2 2 4-4\"/><path d=\"M21 12a9 9 0 11-18 0 9 9 0 0118 0z\"/></svg>","siren":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M12 9v4M12 17h.01\"/><path d=\"M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L14.7 3.9a2 2 0 00-3.4 0z\"/></svg>","trip":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"6\" cy=\"17\" r=\"3\"/><circle cx=\"18\" cy=\"17\" r=\"3\"/><path d=\"M9 17h6l-3-8h4M6 17l4-8\"/></svg>","chat":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z\"/></svg>","wallet":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><rect x=\"2\" y=\"6\" width=\"20\" height=\"13\" rx=\"2\"/><path d=\"M2 10h20M6 15h4\"/></svg>","route":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"6\" cy=\"19\" r=\"2\"/><circle cx=\"18\" cy=\"5\" r=\"2\"/><path d=\"M8 19h6a4 4 0 0 0 0-8H10a4 4 0 0 1 0-8h6\"/></svg>","gift":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M20 12v9H4v-9\"/><path d=\"M2 7h20v5H2z\"/><path d=\"M12 21V7\"/></svg>","user":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"12\" cy=\"8\" r=\"4\"/><path d=\"M4 21a8 8 0 0116 0\"/></svg>","scooter":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"5.5\" cy=\"17.5\" r=\"2.5\"/><circle cx=\"18.5\" cy=\"17.5\" r=\"2.5\"/><path d=\"M8 17.5h7l2-6h-4M15 5h2l1.5 6.5\"/></svg>","parcel":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M21 8l-9-5-9 5 9 5 9-5z\"/><path d=\"M3 8v8l9 5 9-5V8M12 13v8\"/></svg>"};
+const OV_ICON = {"check":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M9 12l2 2 4-4\"/><path d=\"M21 12a9 9 0 11-18 0 9 9 0 0118 0z\"/></svg>","siren":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M12 9v4M12 17h.01\"/><path d=\"M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L14.7 3.9a2 2 0 00-3.4 0z\"/></svg>","trip":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"6\" cy=\"19\" r=\"2\"/><path d=\"M8 19h4.5a3.5 3.5 0 0 0 0-7h-4a3.5 3.5 0 0 1 0-7H13\"/><path d=\"M18 11.5s3.5-3 3.5-6a3.5 3.5 0 0 0-7 0c0 3 3.5 6 3.5 6z\"/><circle cx=\"18\" cy=\"5.5\" r=\"1.1\"/></svg>","chat":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z\"/></svg>","wallet":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><rect x=\"2\" y=\"6\" width=\"20\" height=\"13\" rx=\"2\"/><path d=\"M2 10h20M6 15h4\"/></svg>","route":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"6\" cy=\"19\" r=\"2\"/><circle cx=\"18\" cy=\"5\" r=\"2\"/><path d=\"M8 19h6a4 4 0 0 0 0-8H10a4 4 0 0 1 0-8h6\"/></svg>","gift":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M20 12v9H4v-9\"/><path d=\"M2 7h20v5H2z\"/><path d=\"M12 21V7\"/></svg>","user":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"12\" cy=\"8\" r=\"4\"/><path d=\"M4 21a8 8 0 0116 0\"/></svg>","scooter":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"5.5\" cy=\"17.5\" r=\"2.5\"/><circle cx=\"18.5\" cy=\"17.5\" r=\"2.5\"/><path d=\"M8 17.5h6.5a3 3 0 0 0 2.8-2l1.2-3.5\"/><path d=\"M18.5 15l-2.6-9.5\"/><path d=\"M14 5.5h3.5\"/><path d=\"M3 15.2C3 12.6 4.8 11 7.2 11H11v4.5\"/></svg>","parcel":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M21 8l-9-5-9 5 9 5 9-5z\"/><path d=\"M3 8v8l9 5 9-5V8M12 13v8\"/></svg>"};
 
 /** Each number from the endpoint its own section uses; one that fails shows "-", not an error page. */
 async function loadOverview() {
@@ -4544,8 +4552,10 @@ async function loadOverview() {
 const OV_EXTRA = {
   store: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l1.5-5h15L21 9"/><path d="M3 9h18v2a3 3 0 01-6 0 3 3 0 01-6 0 3 3 0 01-6 0z"/><path d="M5 13v7h14v-7"/></svg>',
   clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
-  rupee: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12M6 8h12M6 13l8.5 8M6 13h3M9 13c6.7 0 6.7-10 0-10"/></svg>',
-  live: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><path d="M12 3l7 3v6c0 4.5-3 8-7 9-4-1-7-4.5-7-9V6z"/></svg>',
+  // A fee still to pay: a receipt, not a bare currency sign.
+  rupee: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14v18l-2.5-1.5L14 21l-2-1.5-2 1.5-2.5-1.5L5 21z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>',
+  // A shop that is open: the storefront, with a tick.
+  live: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l1.5-5h15L21 9"/><path d="M3 9h18v2a3 3 0 01-6 0 3 3 0 01-6 0 3 3 0 01-6 0z"/><path d="M5 13v7h14v-7"/><path d="M9.5 16.5l2 2 3.5-3.5"/></svg>',
   bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 00-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>',
   shield: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l7 3v6c0 4.5-3 8-7 9-4-1-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg>',
 };

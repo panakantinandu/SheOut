@@ -1,6 +1,6 @@
 import { HeartHandshake, IndianRupee, ShieldCheck } from 'lucide-react';
 import { useGoBack } from '../lib/useGoBack';
-import { Card, IconCircle, TopHeader, brandIllustration, useTranslation } from '@sheout/design-system';
+import { Card, IconCircle, SheOutMark, SheOutWordmark, TopHeader, useTranslation } from '@sheout/design-system';
 
 const APP_VERSION = '0.1.0';
 
@@ -20,16 +20,11 @@ export function About() {
 
       <Card variant="primary" className="relative overflow-hidden">
         <div className="relative z-10 max-w-[62%]">
-          <p className="font-heading text-title">SheOut</p>
+          <SheOutWordmark tone="white" className="w-36" />
           <p className="mt-1 text-sm opacity-90">{t('about.tagline')}</p>
           <p className="mt-2 text-xs opacity-80">{t('about.version', { version: APP_VERSION })}</p>
         </div>
-        <img
-          src={brandIllustration}
-          alt=""
-          aria-hidden="true"
-          className="pointer-events-none absolute -bottom-3 -right-3 h-28 w-28 object-contain opacity-95"
-        />
+        <SheOutMark tone="white" className="pointer-events-none absolute -bottom-6 right-2 h-36 w-auto opacity-20" />
       </Card>
 
       <Card className="space-y-4">

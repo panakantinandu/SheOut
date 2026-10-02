@@ -4,7 +4,7 @@ import { Button } from './Button';
 import { Card } from './Card';
 import { IconCircle } from './IconCircle';
 import { Overlay } from './Overlay';
-import brandIllustration from '../assets/sheout-illustration.webp';
+import { SheOutMark } from './SheOutLogo';
 import { showToast } from '../lib/toast';
 import type { ReferralSummary } from '../lib/referral';
 
@@ -60,8 +60,7 @@ export function ReferAFriend({ summary }: { summary: ReferralSummary }) {
           </p>
           <p className="mt-1 text-sm opacity-90">{running ? t(`refer.${who}.subhead`, { mine: rupees(summary.referrerAmount!), theirs: rupees(summary.refereeAmount!) }) : t('refer.pausedBody')}</p>
         </div>
-        <img src={brandIllustration} alt="" aria-hidden="true"
-          className="pointer-events-none absolute -bottom-3 -right-3 h-28 w-28 object-contain opacity-95" />
+        <SheOutMark tone="white" className="pointer-events-none absolute -bottom-6 right-2 h-36 w-auto opacity-20" />
       </Card>
 
       <Card className="space-y-3">

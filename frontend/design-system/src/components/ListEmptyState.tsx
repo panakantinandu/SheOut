@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import brandIllustration from '../assets/sheout-illustration.webp';
+import { SheOutMark } from './SheOutLogo';
 import { Button } from './Button';
 import { Card } from './Card';
 import { IconCircle } from './IconCircle';
@@ -49,7 +49,7 @@ export function ListEmptyState({ icon, title, message, action, illustrated = fal
         // own icon as a badge so an empty inbox still reads as an inbox.
         <span className="relative inline-flex">
           <span className="flex h-24 w-24 items-center justify-center rounded-full bg-primary-light">
-            <img src={brandIllustration} alt="" aria-hidden="true" className="h-16 w-16 object-contain" />
+            <SheOutMark className="h-14 w-auto" />
           </span>
           <IconCircle
             size="sm"

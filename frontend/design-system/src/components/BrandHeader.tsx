@@ -1,4 +1,4 @@
-import illustration from '../assets/sheout-illustration.webp';
+import { SheOutWordmark } from './SheOutLogo';
 import { cn } from '../lib/cn';
 import { useTranslation } from 'react-i18next';
 
@@ -6,9 +6,9 @@ export type BrandHeaderSize = 'md' | 'lg';
 
 export interface BrandHeaderProps {
   /**
-   * 'lg' is the splash treatment: the illustration sized to the viewport
-   * with a soft orange glow behind it. 'md' is the entry-screen treatment:
-   * a fixed 112px mark, no glow, tighter spacing.
+   * 'lg' is the splash treatment: the wordmark sized to the viewport with a
+   * soft orange glow behind it. 'md' is the entry-screen treatment: a fixed
+   * width, no glow, tighter spacing.
    */
   size?: BrandHeaderSize;
   /** Optional line under the wordmark, e.g. "Empowering Women Partners". */
@@ -26,8 +26,8 @@ export interface BrandHeaderProps {
 }
 
 /**
- * The SheOut brand lockup: illustration, SHEOUT wordmark with the orange
- * O, and the tagline.
+ * The SheOut brand lockup: the wordmark from the logo sheet and the brand
+ * line, "By women · For women".
  * <p>
  * This was duplicated as inline JSX in customer-app's Splash and Login,
  * and driver-app's Login had none of it - a small square Logo.jpeg and a
@@ -47,39 +47,22 @@ export function BrandHeader({ size = 'md', footer, tagline: taglineProp, float =
   const large = size === 'lg';
 
   return (
-    <div className={cn('flex flex-col items-center', large ? 'gap-3' : 'mx-auto gap-2', className)}>
-      {large ? (
-        <div className={cn('relative flex w-full items-center justify-center', float && 'motion-safe:animate-float')}>
+    <div className={cn('flex flex-col items-center', large ? 'gap-4' : 'mx-auto gap-2.5', className)}>
+      <div className={cn('relative flex w-full items-center justify-center', float && 'motion-safe:animate-float')}>
+        {large && (
           <span
             className="absolute h-56 w-56 max-h-[70vw] max-w-[70vw] rounded-full bg-accent-orange/20 blur-3xl"
             aria-hidden="true"
           />
-          <img src={illustration} alt="SheOut" className="relative w-[58%] max-w-xs object-contain" />
-        </div>
-      ) : (
-        <img
-          src={illustration}
-          alt="SheOut"
-          className={cn('h-28 w-28 object-contain', float && 'motion-safe:animate-float')}
-        />
-      )}
+        )}
+        {/* The logo itself - the S as her profile, the O as the pin - not an illustration beside a typed word. */}
+        <SheOutWordmark className={cn('relative', large ? 'w-[72%] max-w-[18rem]' : 'w-52')} />
+      </div>
 
-      {/* "SHE" purple, "OUT" orange - both sampled from the mockup. The
-          previous version coloured only the O and left the rest near-black,
-          which is not the wordmark. */}
-      <p
-        className={`font-heading font-extrabold tracking-tight text-primary ${
-          large ? 'text-5xl' : 'text-4xl'
-        }`}
-      >
-        SHE<span className="text-accent-brand-orange">OUT</span>
-      </p>
-
-      {/* Orange rules either side, as the mockup draws them - not em-dashes
-          in italic grey, which is what this used to be. */}
+      {/* The logo's own line, spaced as the logo sheet sets it, between the orange rules. */}
       <div className="flex items-center gap-2">
         <span className="h-0.5 w-5 rounded-full bg-accent-orange" aria-hidden="true" />
-        <p className={`font-heading font-bold text-primary-dark ${large ? 'text-sm' : 'text-xs'}`}>
+        <p className={`font-heading font-bold uppercase tracking-[0.22em] text-primary-dark ${large ? 'text-xs' : 'text-[0.6875rem]'}`}>
           {tagline}
         </p>
         <span className="h-0.5 w-5 rounded-full bg-accent-orange" aria-hidden="true" />
