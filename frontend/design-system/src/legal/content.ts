@@ -44,7 +44,7 @@ export interface LegalDocument {
 }
 
 /** Bumped whenever the substance changes, not the wording. */
-export const LEGAL_VERSION = '2026-09-12';
+export const LEGAL_VERSION = '2026-10-02';
 
 export const PRIVACY_POLICY: LegalDocument = {
   title: 'Privacy Policy',
@@ -66,6 +66,7 @@ export const PRIVACY_POLICY: LegalDocument = {
         'Your emergency contacts. Names, numbers and relationships you enter yourself. These are only used when you raise an SOS. Please read "About your emergency contacts" - you are giving us someone else\'s phone number.',
         'Your trips and payments. Pickup, drop, time, fare, and how it was paid. Needed to run the trip, settle with drivers, answer disputes and meet tax obligations.',
         'For drivers only: vehicle type and registration number, your online and offline periods, and the outcome of a police verification check.',
+        'For drivers only: selfies. A live selfie when you verify, which our team compares with your ID, and a selfie at the start of each shift, compared with that verified selfie to confirm it is really you before you can take trips. A change to your name, photo or vehicle after you are verified is checked by our team before riders see it.',
       ],
     },
     {
@@ -107,6 +108,7 @@ export const PRIVACY_POLICY: LegalDocument = {
         'OpenStreetMap\'s Nominatim geocoder, for turning what you type into a place and a pin into an address. Receives the search text or the coordinates. It does not receive your name, number or account.',
         'Google, only if you choose Sign in with Google. Receives nothing from us; we receive your email address and name from them.',
         'Razorpay, for online payments, when a trip is paid that way. Receives the payment amount and reference, and handles the instrument itself so we never hold it.',
+        'Amazon Web Services (Mumbai, India), for drivers only: your start-of-shift selfie and your verified selfie are compared there to confirm it is really you. The images are used only for that comparison and are not kept by AWS.',
         'Our hosting providers, which store the database and the uploaded documents in order to run the service at all.',
       ],
     },
