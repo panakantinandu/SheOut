@@ -41,7 +41,7 @@ import static org.mockito.Mockito.when;
  * <p>
  * Like SheOutApplicationTests, this needs the local Postgres and Redis.
  */
-@SpringBootTest(properties = {"REDIS_PORT=6380", "sheout.warm-up.enabled=false",
+@SpringBootTest(properties = {"sheout.warm-up.enabled=false",
         "spring.datasource.hikari.maximum-pool-size=3"})
 @ActiveProfiles("local")
 @RecordApplicationEvents

@@ -68,7 +68,7 @@ import static org.mockito.Mockito.when;
  * Like SheOutApplicationTests, this needs the local Postgres and Redis.
  */
 @SpringBootTest(properties = {
-        "REDIS_PORT=6380", "sheout.warm-up.enabled=false",
+        "sheout.warm-up.enabled=false",
         "sheout.marketplace.listing-fee=299",
         "sheout.marketplace.max-images-per-product=2",
         "sheout.marketplace.max-images-per-seller=3",

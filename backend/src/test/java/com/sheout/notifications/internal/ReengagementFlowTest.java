@@ -32,7 +32,7 @@ import static org.mockito.Mockito.doReturn;
  * Like the other flow tests, this needs the local Postgres and Redis.
  */
 @SpringBootTest(properties = {
-        "REDIS_PORT=6380", "sheout.warm-up.enabled=false",
+        "sheout.warm-up.enabled=false",
         // The sweep is driven by hand here, never by the clock.
         "sheout.notifications.reengagement.cron=-",
         "spring.datasource.hikari.maximum-pool-size=3"})

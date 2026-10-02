@@ -25,7 +25,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Like SheOutApplicationTests, this needs the local Postgres and Redis.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {"REDIS_PORT=6380", "sheout.warm-up.enabled=false"})
+        properties = {"sheout.warm-up.enabled=false"})
 @ActiveProfiles("local")
 @RecordApplicationEvents
 class WarmUpLeavesNoTraceTest {

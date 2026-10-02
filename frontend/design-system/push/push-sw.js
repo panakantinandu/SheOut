@@ -36,12 +36,15 @@ async function handlePush(event) {
   const alert = data.urgency === 'ALERT';
   const link = safeLink(data.link);
 
+  // Icons sit under the worker's own scope - /icons/ in the apps, /admin/icons/
+  // in the console - so this one file serves both without an edit.
+  const icons = new URL('icons/', self.registration.scope).href;
   const options = {
     body: data.body || '',
-    icon: '/icons/icon-192.png',
+    icon: icons + 'icon-192.png',
     // Android paints the badge in one colour in the status bar, so it is a
     // white silhouette on nothing - a photo here shows as a white square.
-    badge: '/icons/badge-96.png',
+    badge: icons + 'badge-96.png',
     data: { link },
     // Same tag replaces the earlier notification instead of stacking - a
     // booking's status changes collapse into its latest one.
