@@ -59,6 +59,9 @@ html {
   --title-a: #5B21B6;
   --title-b: #C026D3;
   --title-c: #EA580C;
+  /* Her name in the Home greeting: a warm flow of its own, so it stands apart from the words around it. */
+  --name-a: #E11D48;
+  --name-b: #F97316;
   --c-primary-dark: 54 17 111;
   --c-primary-mid: 123 79 214;
   --c-primary-light: 237 229 250;
@@ -105,6 +108,10 @@ html {
     --title-a: #C4B5FD;
     --title-b: #F0ABFC;
     --title-c: #FDBA74;
+  --name-a: #FDA4AF;
+  --name-b: #FDBA74;
+    --name-a: #FDA4AF;
+    --name-b: #FDBA74;
     --c-primary-dark: 155 121 255;
     --c-primary-mid: 143 107 240;
     --c-primary-light: 42 33 66;

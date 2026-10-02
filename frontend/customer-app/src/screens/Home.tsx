@@ -108,6 +108,8 @@ export function Home() {
         // screen used to say which app she had opened.
         brand={<BrandStrip app="rider" label={t('home.brandTagline')} />}
         title={greeting}
+        // Her name in its own colour, apart from "Good morning,".
+        titleHighlight={firstName}
         titleIcon={<SkyIcon part={dayPart} size={26} />}
         subtitle={<RotatingText lines={dayLines} />}
         // No side-drawer/menu screen exists - "Open menu" goes to the

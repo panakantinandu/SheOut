@@ -1,7 +1,7 @@
 import { Bell, CloudOff, Hourglass, Menu, RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ASSISTANT_NAME, AggregateRatingText, AssistantFab, BellBadge, Button, Card, IconCircle, PushPromptCard, RotatingText, SkeletonList, SkyIcon, bookingStatusLabel, useDayPart, usePushMessages, usePushNotifications, useUnreadNotifications, ServiceArt, serviceArtFor } from '@sheout/design-system';
+import { ASSISTANT_NAME, AggregateRatingText, AssistantFab, BellBadge, FlowingTitle, Button, Card, IconCircle, PushPromptCard, RotatingText, SkeletonList, SkyIcon, bookingStatusLabel, useDayPart, usePushMessages, usePushNotifications, useUnreadNotifications, ServiceArt, serviceArtFor } from '@sheout/design-system';
 import {
   ApiError,
   PUSH_TOKEN_KEY,
@@ -419,8 +419,9 @@ export function Home() {
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <SkyIcon part={dayPart} size={26} className="shrink-0" />
           <div className="min-w-0 flex-1">
+            {/* The rider app's greeting: the brand flow the logo above is in, her name in its own colour. */}
             <p className="break-words font-heading text-section leading-tight text-text-primary" data-testid="home-greeting">
-              {t(`home.day.${dayPart}.greeting`, { name: firstName || t('home.there') })}
+              <FlowingTitle text={t(`home.day.${dayPart}.greeting`, { name: firstName || t('home.there') })} highlight={firstName} />
             </p>
             <RotatingText lines={dayLines} className="mt-0.5 text-sm text-text-secondary" />
           </div>

@@ -1,6 +1,7 @@
 import { ArrowLeft, Bell, Menu, Sparkles } from 'lucide-react';
 import { Fragment, type ReactNode } from 'react';
 import { cn } from '../lib/cn';
+import { BRAND_FLOW_GRADIENT } from './SheOutLogo';
 import { useTranslation } from 'react-i18next';
 
 interface BackHeaderProps {
@@ -36,6 +37,8 @@ interface GreetingHeaderProps {
   titleIcon?: ReactNode;
   /** SheOut by name in the app bar (BrandStrip); the greeting then takes its own row below. */
   brand?: ReactNode;
+  /** Words of the title to set apart in their own colour - her name in "Good morning, Priya". */
+  titleHighlight?: string;
   onMenuClick?: () => void;
   onBellClick?: () => void;
   /** Unread notifications; the bell shows a count above zero. */
@@ -137,7 +140,7 @@ export function TopHeader(props: TopHeaderProps) {
               in the app that sat still. Keyed by the text, so it plays when
               the name arrives; nothing until then, so no sparkle or line
               stands alone while the profile loads. */}
-          {props.title && <AnimatedTitle key={props.title} text={props.title} />}
+          {props.title && <AnimatedTitle key={props.title} text={props.title} highlight={props.titleHighlight} />}
         </p>
         {props.subtitle && <div className="text-sm text-text-secondary">{props.subtitle}</div>}
       </div>
@@ -193,11 +196,27 @@ export function BellBadge({ count }: { count: number }) {
  * The words keep a real colour under the gradient, so they are read and
  * measured as the primary purple. Under reduced motion it is simply there.
  */
-const TITLE_GRADIENT =
-  'linear-gradient(90deg, var(--title-a), var(--title-b), var(--title-c), var(--title-b), var(--title-a))';
+// The same constant the Home logo flows in, so the two are one colour.
+const TITLE_GRADIENT = BRAND_FLOW_GRADIENT;
 
-function AnimatedTitle({ text }: { text: string }) {
+/**
+ * Her name, inside the greeting: a warm flow of its own (rose into orange),
+ * a step heavier, so "Good morning," reads as the greeting and the name as
+ * hers - not one run of words in one colour.
+ */
+const NAME_GRADIENT = 'linear-gradient(90deg, var(--name-a), var(--name-b), var(--name-a))';
+
+/** Letters only, so "Priya," or "Priya!" still matches the name "Priya". */
+const bare = (word: string) => word.replace(/[^\p{L}\p{M}\p{N}]/gu, '').toLocaleLowerCase();
+
+/** The living title on its own, for a screen that draws its own header (the partner Home greeting). */
+export function FlowingTitle({ text, highlight }: { text: string; highlight?: string }) {
+  return text ? <AnimatedTitle key={text} text={text} highlight={highlight} /> : null;
+}
+
+function AnimatedTitle({ text, highlight }: { text: string; highlight?: string }) {
   const words = text.split(' ').filter(Boolean);
+  const named = new Set((highlight ?? '').split(' ').map(bare).filter(Boolean));
   const step = 70;
   const settled = words.length * step + 120;
   return (
@@ -210,18 +229,26 @@ function AnimatedTitle({ text }: { text: string }) {
             {i > 0 && ' '}
             <span className="inline-block motion-safe:animate-title-word" style={{ animationDelay: `${i * step}ms` }}>
               <span
-                className="inline-block bg-[length:200%_auto] bg-clip-text text-primary [-webkit-text-fill-color:transparent] motion-safe:animate-text-shimmer"
-                style={{ backgroundImage: TITLE_GRADIENT, animationDelay: `${i * -0.4}s` }}
+                className={cn(
+                  'inline-block bg-[length:200%_auto] bg-clip-text text-primary [-webkit-text-fill-color:transparent] motion-safe:animate-text-shimmer',
+                  named.has(bare(word)) && 'font-bold'
+                )}
+                style={{ backgroundImage: named.has(bare(word)) ? NAME_GRADIENT : TITLE_GRADIENT, animationDelay: `${i * -0.4}s` }}
+                data-name={named.has(bare(word)) || undefined}
               >
                 {word}
               </span>
+              {/* A sparkle at the end of the title, inside the last word's
+                  box: a long title that wraps carries it down with the last
+                  word, and it is never left on a line of its own. */}
+              {i === words.length - 1 && (
+                <span aria-hidden="true" className="ml-1 inline-block align-top motion-safe:animate-pop-in" style={{ animationDelay: `${settled - i * step}ms` }}>
+                  <Sparkles className="h-3.5 w-3.5 text-accent-orange motion-safe:animate-twinkle" />
+                </span>
+              )}
             </span>
           </Fragment>
         ))}
-      </span>
-      {/* A sparkle at the end of the title. */}
-      <span aria-hidden="true" className="ml-1 mt-0.5 inline-flex motion-safe:animate-pop-in" style={{ animationDelay: `${settled}ms` }}>
-        <Sparkles className="h-3.5 w-3.5 text-accent-orange motion-safe:animate-twinkle" />
       </span>
       {/* The line beneath, the title's full width: drawn in, then a glint along it. */}
       <span

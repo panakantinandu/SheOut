@@ -17,7 +17,7 @@ export function BrandStrip({ app, label }: { app: 'rider' | 'partner'; label: st
   return (
     <div className="flex min-w-0 flex-col items-start motion-safe:animate-fade-slide-in" data-testid="brand-strip" data-app={app}>
       {/* The wordmark from the logo sheet, not the name typed in a font. */}
-      <SheOutWordmark className="w-[7rem]" />
+      <SheOutWordmark tone="flow" className="w-[7rem]" />
       <span className="mt-0.5 inline-flex min-w-0 max-w-full items-center gap-1 text-micro font-bold uppercase tracking-[0.12em] text-primary">
         <span className="relative flex h-1.5 w-1.5 shrink-0">
           <span className="absolute inset-0 rounded-full bg-accent-orange motion-safe:animate-pulse-ring" />

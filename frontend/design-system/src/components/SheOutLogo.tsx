@@ -12,9 +12,23 @@ export type LogoTone =
   /** All white - on orange, purple or a photo. */
   | 'white'
   /** The surrounding text colour - for monochrome places. */
-  | 'current';
+  | 'current'
+  /**
+   * The brand gradient flowing through the letters - the same colours and
+   * movement as the screen titles and the Home greeting - for the Home app
+   * bar, where the logo sits directly above the greeting.
+   */
+  | 'flow';
 
-function colours(tone: LogoTone): { ink: string; ring: string; ringOpacity: number } {
+/**
+ * The gradient every screen title flows in (purple, magenta, orange and
+ * back), from the theme's --title-* colours. Shared so the logo and the
+ * greeting are exactly one colour, not two that look alike.
+ */
+export const BRAND_FLOW_GRADIENT =
+  'linear-gradient(90deg, var(--title-a), var(--title-b), var(--title-c), var(--title-b), var(--title-a))';
+
+function colours(tone: Exclude<LogoTone, 'flow'>): { ink: string; ring: string; ringOpacity: number } {
   if (tone === 'white') return { ink: '#fff', ring: '#fff', ringOpacity: 0.5 };
   if (tone === 'current') return { ink: 'currentColor', ring: 'currentColor', ringOpacity: 0.45 };
   return { ink: BRAND_ORANGE, ring: RING_TINT, ringOpacity: 1 };
@@ -36,6 +50,7 @@ function box(parts: (keyof typeof LOGO_BOUNDS)[], pad = 4): string {
  * Sized by its width: set a width class and the height follows.
  */
 export function SheOutWordmark({ tone = 'brand', className, title = 'SheOut' }: { tone?: LogoTone; className?: string; title?: string }) {
+  if (tone === 'flow') return <FlowingWordmark className={className} title={title} />;
   const c = colours(tone);
   return (
     <svg viewBox={box(['s', 'he', 'pin', 'ring', 'ut'])} className={cn('block h-auto', className)} role="img" aria-label={title}>
@@ -49,7 +64,7 @@ export function SheOutWordmark({ tone = 'brand', className, title = 'SheOut' }: 
 }
 
 /** The S alone - the woman's profile - for small places where the whole word will not fit. */
-export function SheOutMark({ tone = 'brand', className, title }: { tone?: LogoTone; className?: string; title?: string }) {
+export function SheOutMark({ tone = 'brand', className, title }: { tone?: Exclude<LogoTone, 'flow'>; className?: string; title?: string }) {
   const c = colours(tone);
   return (
     <svg viewBox={box(['s'])} className={cn('block', className)} role={title ? 'img' : undefined}
@@ -81,5 +96,47 @@ export function SheOutAppIcon({ app, className }: { app: 'rider' | 'partner'; cl
         </span>
       )}
     </span>
+  );
+}
+
+const WORDMARK_BOX = box(['s', 'he', 'pin', 'ring', 'ut']);
+let wordmarkMask: string | null = null;
+
+/** The wordmark as an alpha mask (the ring at the pale weight it has in the logo), built once. */
+function wordmarkMaskUrl(): string {
+  if (!wordmarkMask) {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${WORDMARK_BOX}">`
+      + `<path fill-opacity="0.45" fill-rule="evenodd" d="${LOGO_RING}"/>`
+      + [LOGO_S, LOGO_HE, LOGO_PIN, LOGO_UT].map((d) => `<path fill-rule="evenodd" d="${d}"/>`).join('')
+      + '</svg>';
+    wordmarkMask = `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+  }
+  return wordmarkMask;
+}
+
+/**
+ * The wordmark cut out of the moving title gradient: the logo's own shape
+ * is the mask, the gradient is the same one the greeting's words are clipped
+ * from, drifting at the same speed. Still under reduced motion, like the titles.
+ */
+function FlowingWordmark({ className, title }: { className?: string; title: string }) {
+  const [, , w, h] = WORDMARK_BOX.split(' ').map(Number);
+  const mask = wordmarkMaskUrl();
+  return (
+    <span
+      role="img"
+      aria-label={title}
+      className={cn('block h-auto bg-[length:200%_auto] motion-safe:animate-text-shimmer', className)}
+      style={{
+        aspectRatio: `${w} / ${h}`,
+        backgroundImage: BRAND_FLOW_GRADIENT,
+        WebkitMaskImage: mask,
+        maskImage: mask,
+        WebkitMaskSize: '100% 100%',
+        maskSize: '100% 100%',
+        WebkitMaskRepeat: 'no-repeat',
+        maskRepeat: 'no-repeat',
+      }}
+    />
   );
 }
