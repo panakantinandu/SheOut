@@ -60,19 +60,26 @@ export function SheOutMark({ tone = 'brand', className, title }: { tone?: LogoTo
 }
 
 /**
- * The app icon as a tile, drawn rather than loaded: the rider app's is the
- * white S on SheOut orange, the partner app's the orange S on night - the
- * same family, told apart the way a driver app is from its rider app.
+ * The app icon as a tile, drawn rather than loaded, and the same as the one
+ * on her phone's home screen: the full wordmark - white on SheOut orange for
+ * the rider app, orange on night with "PARTNER" under it for the partner
+ * app - so a screen that shows "the app" shows the icon she just tapped.
+ * Sized by its width and height classes (keep them square).
  */
 export function SheOutAppIcon({ app, className }: { app: 'rider' | 'partner'; className?: string }) {
   const rider = app === 'rider';
   return (
     <span
-      className={cn('flex items-center justify-center overflow-hidden rounded-[22%]', className)}
+      className={cn('flex flex-col items-center justify-center overflow-hidden rounded-[22%] [container-type:inline-size]', className)}
       style={{ background: rider ? BRAND_ORANGE : NIGHT }}
       aria-hidden="true"
     >
-      <SheOutMark tone={rider ? 'white' : 'brand'} className="h-[66%] w-auto" />
+      <SheOutWordmark tone={rider ? 'white' : 'brand'} className={rider ? 'w-[78%]' : 'w-[74%]'} title="" />
+      {!rider && (
+        <span className="mt-[4%] font-heading font-bold uppercase leading-none text-white/90" style={{ fontSize: '8cqw', letterSpacing: '0.32em', marginRight: '-0.32em' }}>
+          Partner
+        </span>
+      )}
     </span>
   );
 }

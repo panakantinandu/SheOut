@@ -1,6 +1,6 @@
 import { HeartHandshake, IndianRupee, ShieldCheck } from 'lucide-react';
 import { useGoBack } from '../lib/useGoBack';
-import { Card, IconCircle, SheOutMark, SheOutWordmark, TopHeader, useTranslation } from '@sheout/design-system';
+import { Card, IconCircle, SheOutWordmark, TopHeader, useTranslation } from '@sheout/design-system';
 
 const APP_VERSION = '0.1.0';
 
@@ -19,12 +19,11 @@ export function About() {
       <TopHeader variant="back" title={t('about.title')} onBack={goBack} />
 
       <Card variant="primary" className="relative overflow-hidden">
-        <div className="relative z-10 max-w-[62%]">
+        <div className="relative z-10">
           <SheOutWordmark tone="white" className="w-36" />
           <p className="mt-1 text-sm opacity-90">{t('about.tagline')}</p>
           <p className="mt-2 text-xs opacity-80">{t('about.version', { version: APP_VERSION })}</p>
         </div>
-        <SheOutMark tone="white" className="pointer-events-none absolute -bottom-6 right-2 h-36 w-auto opacity-20" />
       </Card>
 
       <Card className="space-y-4">
