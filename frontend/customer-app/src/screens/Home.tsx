@@ -6,6 +6,7 @@ import { OutOfAreaBanner } from '../components/OutOfAreaBanner';
 import { ServiceHoursNotice } from '../components/ServiceHoursNotice';
 import { useServiceStatus } from '../lib/useServiceStatus';
 import { UnpaidTripBanner } from '../components/UnpaidTripBanner';
+import { LiveTripBanner } from '../components/LiveTripBanner';
 import { useAppDrawer } from '../components/AppDrawer';
 import { Reveal } from '../components/Reveal';
 import { RideHero } from '../components/home/RideHero';
@@ -128,6 +129,9 @@ export function Home() {
 
       {/* Outside the operating hours, or paused: said on arrival, not after she has planned a trip. */}
       <ServiceHoursNotice status={service} />
+
+      {/* A trip under way, found from the server - after a crash or a restart this is how she gets back to it. */}
+      <LiveTripBanner />
 
       {/* An unpaid trip blocks the next booking - say so before she tries. */}
       <UnpaidTripBanner />

@@ -15,6 +15,8 @@ import java.util.UUID;
 public record ReviewQueueRow(
         UUID accountId,
         String name,
+        /** Her profile photo, for the row's avatar - null shows her initials. */
+        String photoUrl,
         String phoneNumber,
         AccountRole role,
         VerificationStatus genderVerificationStatus,

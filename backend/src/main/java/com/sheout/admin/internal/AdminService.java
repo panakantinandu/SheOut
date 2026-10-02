@@ -23,6 +23,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import com.sheout.users.CustomerProfileSummary;
+import com.sheout.users.DriverProfileSummary;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -112,23 +114,24 @@ public class AdminService {
     }
 
     private ReviewQueueRow toReviewRow(VerificationSummary summary) {
+        // Her name from her own kind of profile. This read the partner
+        // profile for everyone, so every rider in the queue was "Name not
+        // set" - the one name a reviewer has to check the ID against.
+        Optional<DriverProfileSummary> partner = summary.role() == AccountRole.DRIVER
+                ? driverProfileApi.findByAccountId(summary.accountId()) : Optional.empty();
+        Optional<CustomerProfileSummary> rider = summary.role() == AccountRole.DRIVER
+                ? Optional.empty() : customerProfileApi.findByAccountId(summary.accountId());
         return new ReviewQueueRow(
                 summary.accountId(),
-                // Her name from her own kind of profile. This read the partner
-                // profile for everyone, so every rider in the queue was "Name
-                // not set" - the one name a reviewer has to check the ID against.
-                summary.role() == AccountRole.DRIVER
-                        ? driverProfileApi.findByAccountId(summary.accountId()).map(p -> p.name()).orElse(null)
-                        : customerProfileApi.findByAccountId(summary.accountId()).map(p -> p.name()).orElse(null),
+                partner.map(DriverProfileSummary::name).or(() -> rider.map(CustomerProfileSummary::name)).orElse(null),
+                partner.map(DriverProfileSummary::profilePhotoUrl)
+                        .or(() -> rider.map(CustomerProfileSummary::profilePhotoUrl)).orElse(null),
                 phoneFor(summary.accountId()),
                 summary.role(),
                 summary.genderVerificationStatus(),
                 summary.policeVerificationStatus(),
                 summary.documentSubmitted(),
-                summary.role() == AccountRole.DRIVER
-                        ? driverProfileApi.findByAccountId(summary.accountId())
-                                .map(p -> p.vehicleRegistrationNumber()).orElse(null)
-                        : null,
+                partner.map(DriverProfileSummary::vehicleRegistrationNumber).orElse(null),
                 summary.updatedAt(),
                 summary.documentSubmittedAt(),
                 isBlocked(summary.accountId())
@@ -168,15 +171,18 @@ public class AdminService {
         // A booking with no payment row yet is normal, not an error: payments
         // are only created once a trip completes.
         PaymentStatus paymentStatus = payment.isSuccess() ? payment.value().status() : null;
+        Optional<CustomerProfileSummary> rider = customerProfileApi.findByAccountId(booking.customerId());
+        Optional<DriverProfileSummary> partner = booking.driverId() == null
+                ? Optional.empty() : driverProfileApi.findByAccountId(booking.driverId());
         return new BookingOpsRow(
                 booking.id(),
                 booking.status(),
                 booking.type(),
                 booking.category(),
-                customerProfileApi.findByAccountId(booking.customerId()).map(p -> p.name()).orElse(null),
-                booking.driverId() == null
-                        ? null
-                        : driverProfileApi.findByAccountId(booking.driverId()).map(p -> p.name()).orElse(null),
+                rider.map(CustomerProfileSummary::name).orElse(null),
+                partner.map(DriverProfileSummary::name).orElse(null),
+                rider.map(CustomerProfileSummary::profilePhotoUrl).orElse(null),
+                partner.map(DriverProfileSummary::profilePhotoUrl).orElse(null),
                 booking.fareEstimate(),
                 booking.finalFare(),
                 paymentStatus,
@@ -334,6 +340,7 @@ public class AdminService {
         return new AccountOpsRow(
                 account.id(),
                 profile.name(),
+                profile.photoUrl(),
                 account.phoneNumber(),
                 account.email(),
                 account.role(),
@@ -348,7 +355,7 @@ public class AdminService {
     }
 
     /** The two things a row needs from a profile, read together - see profileFactsFor. */
-    private record ProfileFacts(String name, TrustStats trustStats) {
+    private record ProfileFacts(String name, String photoUrl, TrustStats trustStats) {
     }
 
     /**
@@ -368,10 +375,10 @@ public class AdminService {
     private ProfileFacts profileFactsFor(AccountSummary account) {
         Optional<ProfileFacts> facts = account.role() == AccountRole.DRIVER
                 ? driverProfileApi.findByAccountId(account.id())
-                        .map(p -> new ProfileFacts(p.name(), p.trustStats()))
+                        .map(p -> new ProfileFacts(p.name(), p.profilePhotoUrl(), p.trustStats()))
                 : customerProfileApi.findByAccountId(account.id())
-                        .map(p -> new ProfileFacts(p.name(), p.trustStats()));
-        return facts.orElseGet(() -> new ProfileFacts(null, TrustStats.empty()));
+                        .map(p -> new ProfileFacts(p.name(), p.profilePhotoUrl(), p.trustStats()));
+        return facts.orElseGet(() -> new ProfileFacts(null, null, TrustStats.empty()));
     }
 
 }

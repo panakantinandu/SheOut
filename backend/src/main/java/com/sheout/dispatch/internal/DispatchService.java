@@ -219,7 +219,7 @@ public class DispatchService implements com.sheout.dispatch.NearbyPartnerApi {
         List<ApproximatePosition> shown = new java.util.ArrayList<>(locationStore
                 .findNearby(lat, lng, PREVIEW_RADIUS_KM, PREVIEW_MAX_SHOWN * 2)
                 .stream()
-                .filter(candidate -> isEligible(candidate.driverId(), category))
+                .filter(candidate -> isEligibleForPreview(candidate.driverId(), category))
                 .flatMap(candidate -> locationStore.findLocation(candidate.driverId())
                         .filter(location -> location.recordedAt().isAfter(freshSince))
                         .map(location -> nearbyPreview.blur(candidate.driverId(), location.lat(), location.lng()))
@@ -238,7 +238,7 @@ public class DispatchService implements com.sheout.dispatch.NearbyPartnerApi {
     public Optional<NearbyPartner> nearestAvailable(double lat, double lng, BookingCategory category) {
         Instant freshSince = Instant.now().minus(PREVIEW_FRESH_FOR);
         for (CandidateDriver candidate : locationStore.findNearby(lat, lng, PREVIEW_RADIUS_KM, PREVIEW_MAX_SHOWN * 2)) {
-            if (!isEligible(candidate.driverId(), category)) {
+            if (!isEligibleForPreview(candidate.driverId(), category)) {
                 continue;
             }
             Optional<DriverLocation> location = locationStore.findLocation(candidate.driverId())
@@ -526,6 +526,51 @@ public class DispatchService implements com.sheout.dispatch.NearbyPartnerApi {
             return false;
         }
         return driverProfileApi.isCurrentlyVerified(driverId);
+    }
+
+    /** How long a partner's "could be shown near a rider" answer is reused - see isEligibleForPreview. */
+    private static final Duration PREVIEW_ELIGIBILITY_FOR = Duration.ofSeconds(15);
+    /** Past this many partners the remembered answers are simply dropped; they are only a shortcut. */
+    private static final int PREVIEW_ELIGIBILITY_MAX = 20_000;
+    private final java.util.concurrent.ConcurrentHashMap<UUID, PreviewEligibility> previewEligibility =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
+    private record PreviewEligibility(boolean available, VehicleType vehicleType, Instant until) {
+    }
+
+    /**
+     * isEligible, remembered for 15 s per partner - for what a rider is SHOWN
+     * before she books (the blurred partners on her map, and the pickup ETA
+     * on her quote), never for who is OFFERED a trip: the offer path and
+     * accepting one still call isEligible and isAvailableNow fresh.
+     * <p>
+     * Measured, not guessed: each isEligible is about seven database reads
+     * (profile, account, unpaid hold, live trip, shift selfie, verification),
+     * a preview checks up to sixteen partners, and every rider on the booking
+     * screen asks every ten seconds. With 300 riders booking within a minute
+     * on one CPU this was the first thing to saturate it - the partners-near-
+     * you call reached 20 s at p95 and dragged quotes and bookings with it.
+     * A marker that is 15 s out of date is harmless; she sees partners move
+     * on the next poll anyway.
+     * <p>
+     * Per server, not shared: it decides nothing, so two servers holding
+     * slightly different answers for 15 s changes nothing a rider can act on.
+     */
+    private boolean isEligibleForPreview(UUID driverId, BookingCategory category) {
+        Instant now = Instant.now();
+        PreviewEligibility known = previewEligibility.get(driverId);
+        if (known == null || known.until().isBefore(now)) {
+            if (previewEligibility.size() >= PREVIEW_ELIGIBILITY_MAX) {
+                previewEligibility.clear();
+            }
+            boolean available = isAvailableNow(driverId);
+            VehicleType vehicleType = available
+                    ? driverProfileApi.findByAccountId(driverId).map(DriverProfileSummary::vehicleType).orElse(null)
+                    : null;
+            known = new PreviewEligibility(available, vehicleType, now.plus(PREVIEW_ELIGIBILITY_FOR));
+            previewEligibility.put(driverId, known);
+        }
+        return known.available() && known.vehicleType() != null && vehicleMatches(known.vehicleType(), category);
     }
 
     private boolean isEligible(UUID driverId, BookingCategory category) {

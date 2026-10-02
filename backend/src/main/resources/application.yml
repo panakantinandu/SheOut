@@ -2,10 +2,21 @@ server:
   # Render (and platforms like it) inject PORT at runtime - default here is
   # only for running the jar directly with no PORT set.
   port: ${PORT:8080}
+  # A deploy replaces the running instance: Render starts the new one, moves
+  # traffic to it once its readiness check passes, then sends the old one
+  # SIGTERM and kills it 30 s later. Without this (Boot 3.3's default is
+  # immediate) the old instance dropped whatever it was in the middle of -
+  # a trip being completed, a payment being confirmed - and the phone saw a
+  # failed request. Graceful: stop taking new requests, finish the ones in
+  # flight, then stop. The phase timeout stays inside Render's 30 s.
+  shutdown: graceful
 
 spring:
   application:
     name: sheout-backend
+
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
 
   # Spring Security is here for response headers only (SecurityHeadersConfig).
   # Without this exclusion Boot would also create an in-memory user with a
@@ -50,6 +61,15 @@ spring:
       #   rediss://default:<password>@<host>:<port>
       # Local dev overrides this - see application-local.yml.
       url: ${REDIS_URL}
+      # How long one Redis command may take before it fails. The client's
+      # default is 60 s, and while Redis was down every request touching it
+      # waited that long, holding a server thread: a partner's location
+      # report took 120 s to fail and a sign-in 300 s, until the threads ran
+      # out and requests that never touch Redis queued behind them. Redis
+      # answers in a millisecond or two on the private network; 2 s is a
+      # fault, so fail fast and let the app say so.
+      timeout: ${REDIS_COMMAND_TIMEOUT:2s}
+      connect-timeout: ${REDIS_CONNECT_TIMEOUT:2s}
 
   servlet:
     multipart:

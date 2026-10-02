@@ -369,6 +369,25 @@
     background: var(--acc-bg, var(--bg)); color: var(--acc, var(--muted));
   }
   .row-ico svg { width: 15px; height: 15px; }
+  /* Rows about people lead with the person: her profile photo, or her
+     initials in her app's colour - riders purple, partners orange. */
+  .av {
+    width: 30px; height: 30px; flex: none; border-radius: 50%; display: grid; place-items: center; overflow: hidden;
+    font-size: 11px; font-weight: 700; letter-spacing: .02em; color: #fff; background: var(--av-bg);
+    box-shadow: 0 0 0 2px var(--panel);
+  }
+  .av img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .av.rider { --av-bg: var(--brand); }
+  .av.partner { --av-bg: #FF6B1A; }
+  .av.none { background: var(--bg); color: var(--muted); box-shadow: 0 0 0 2px var(--panel), inset 0 0 0 1px var(--line); }
+  .av-pair { display: flex; gap: 3px; }
+  /* What clicking a row does, written on the row: nothing else said it. */
+  td.open-cell, th.open-cell { width: 1%; white-space: nowrap; text-align: right; }
+  .open-cta {
+    display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px; border-radius: 8px;
+    font-size: 12px; font-weight: 600; color: var(--brand); background: var(--brand-tint); border: 1px solid var(--brand-line);
+  }
+  tbody tr.clickable:hover .open-cta { background: var(--brand); border-color: var(--brand); color: #fff; }
   .btn:active { box-shadow: var(--elev-pressed); transform: translateY(1px); }
   .btn-primary { box-shadow: var(--elev-1); }
 
@@ -1710,6 +1729,7 @@ const VIEWS = {
       return '—';
     },
     onRowClick: r => openDriver(r),
+    openLabel: 'Review',
   },
 
   /**
@@ -1762,6 +1782,7 @@ const VIEWS = {
       return '—';
     },
     onRowClick: r => openSeller(r),
+    openLabel: 'Review shop',
   },
 
   /**
@@ -1901,6 +1922,7 @@ const VIEWS = {
       return '—';
     },
     onRowClick: r => openTicket(r.id),
+    openLabel: 'Open ticket',
   },
 
   /**
@@ -2051,6 +2073,7 @@ const VIEWS = {
     ],
     load: () => api('/admin/profile-changes'),
     onRowClick: r => openProfileChange(r),
+    openLabel: 'Review change',
     cell: (r, key) => {
       if (key === 'who') return `<span class="strong">${esc(r.currentName || 'Name not set')}</span><div class="subtle num">${esc(r.phoneNumber)}</div>`;
       if (key === 'what') return changeSummary(r).map(x => `<span class="badge b-amber">${esc(x)}</span>`).join(' ');
@@ -2151,6 +2174,7 @@ const VIEWS = {
     cardTitle: 'Bookings',
     hint: 'Click a booking for everything about it',
     onRowClick: r => openBooking(r.bookingId),
+    openLabel: 'View booking',
     empty: { icon: ICON_EMPTY_LIST, title: 'No bookings yet', text: 'Bookings made in the customer app will be listed here.' },
     emptyFiltered: {
       icon: ICON_EMPTY_SEARCH,
@@ -2212,6 +2236,7 @@ const VIEWS = {
     cardTitle: 'Accounts',
     hint: 'Click anyone for their full profile · blocking takes effect immediately',
     onRowClick: r => openAccount(r.accountId),
+    openLabel: 'View profile',
     empty: { icon: ICON_EMPTY_PEOPLE, title: 'No accounts yet', text: 'Riders and partners appear here as they sign up.' },
     emptyFiltered: {
       icon: ICON_EMPTY_SEARCH,
@@ -2354,6 +2379,7 @@ const VIEWS = {
     cardTitle: 'Flagged trips',
     hint: 'Nothing here is automatic - every outcome is your decision',
     onRowClick: r => openBooking(r.trip.bookingId),
+    openLabel: 'View trip',
     empty: { icon: ICON_EMPTY_QUEUE, title: 'No trips to review', text: 'A trip appears here only when it was driven well short of its quote - by the configured share and by at least half a kilometre - and there were enough location reports to measure it. Trips with too few reports are never flagged.' },
     columns: [
       { key: 'trip', label: 'Trip', sort: r => new Date(r.trip.completedAt || 0).getTime() },
@@ -2425,6 +2451,7 @@ const VIEWS = {
     cardTitle: 'Flagged for review',
     hint: 'Nothing here is automatic — every outcome is your decision',
     onRowClick: r => openAccount(r.accountId),
+    openLabel: 'View profile',
     empty: { icon: ICON_EMPTY_QUEUE, title: 'Nobody to review', text: 'Accounts appear here only once they have enough history for a figure to mean anything — enough trips for a cancellation rate, enough ratings for an average — and that figure crosses the configured threshold.' },
     columns: [
       { key: 'role', label: 'Account type', sort: r => r.role || '' },
@@ -4273,7 +4300,7 @@ function paintLive(d) {
         <div class="scroll"><table class="mini"><thead><tr><th>Status</th><th>For</th><th>Service</th><th>Rider</th><th>Partner</th><th>Route</th><th>Fare</th></tr></thead><tbody id="liveTrips"></tbody></table></div>
       </section>
       <section class="ov-card" aria-label="Partners online">
-        <div class="hd"><span class="hico">${OV_ICON.scooter}</span><h3>Partners online</h3><span class="tag badge b-grey" id="livePartnerCount"></span></div>
+        <div class="hd"><span class="hico">${OV_ICON.partner}</span><h3>Partners online</h3><span class="tag badge b-grey" id="livePartnerCount"></span></div>
         <div class="scroll"><table class="mini"><thead><tr><th>Partner</th><th>Phone</th><th>Vehicle</th><th>Last position</th><th>Now</th></tr></thead><tbody id="livePartners"></tbody></table></div>
       </section>
     </div>`;
@@ -4309,7 +4336,7 @@ function paintLive(d) {
 
   const kpi = (tone, icon, num, label, sub) => `<div class="kpi t-${tone}"><div class="top"><span class="ico">${icon}</span><span class="lbl">${esc(label)}</span></div><div class="num">${num}</div><div class="sub">${sub}</div></div>`;
   $('liveKpis').innerHTML =
-    kpi('green', OV_ICON.scooter, fresh.length, 'Partners online', `${free} free &middot; ${fresh.length - free} on a trip${partners.length > fresh.length ? ` &middot; ${partners.length - fresh.length} not reporting` : ''}`) +
+    kpi('green', OV_ICON.partner, fresh.length, 'Partners online', `${free} free &middot; ${fresh.length - free} on a trip${partners.length > fresh.length ? ` &middot; ${partners.length - fresh.length} not reporting` : ''}`) +
     kpi('amber', OV_ICON.user, searching, 'Riders waiting for a partner', searching ? 'Searching now' : 'Nobody waiting') +
     kpi('blue', OV_ICON.route, coming, 'Partner on the way', stuck ? `<b>${stuck} trip${stuck === 1 ? '' : 's'} look stuck</b> (no change for 3+ hours)` : 'Matched or heading to pickup') +
     kpi(sos ? 'red' : 'brand', sos ? OV_ICON.siren : OV_ICON.trip, riding, 'On a trip now', sos ? `<b>${sos} with an active SOS</b>` : 'Rider on board');
@@ -4520,7 +4547,7 @@ function startLiveRefresh() {
 }
 
 // ---- overview -------------------------------------------------------------
-const OV_ICON = {"check":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M9 12l2 2 4-4\"/><path d=\"M21 12a9 9 0 11-18 0 9 9 0 0118 0z\"/></svg>","siren":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M12 9v4M12 17h.01\"/><path d=\"M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L14.7 3.9a2 2 0 00-3.4 0z\"/></svg>","trip":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"6\" cy=\"19\" r=\"2\"/><path d=\"M8 19h4.5a3.5 3.5 0 0 0 0-7h-4a3.5 3.5 0 0 1 0-7H13\"/><path d=\"M18 11.5s3.5-3 3.5-6a3.5 3.5 0 0 0-7 0c0 3 3.5 6 3.5 6z\"/><circle cx=\"18\" cy=\"5.5\" r=\"1.1\"/></svg>","chat":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z\"/></svg>","wallet":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><rect x=\"2\" y=\"6\" width=\"20\" height=\"13\" rx=\"2\"/><path d=\"M2 10h20M6 15h4\"/></svg>","route":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"6\" cy=\"19\" r=\"2\"/><circle cx=\"18\" cy=\"5\" r=\"2\"/><path d=\"M8 19h6a4 4 0 0 0 0-8H10a4 4 0 0 1 0-8h6\"/></svg>","gift":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M20 12v9H4v-9\"/><path d=\"M2 7h20v5H2z\"/><path d=\"M12 21V7\"/></svg>","user":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"12\" cy=\"8\" r=\"4\"/><path d=\"M4 21a8 8 0 0116 0\"/></svg>","scooter":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"5.5\" cy=\"17.5\" r=\"2.5\"/><circle cx=\"18.5\" cy=\"17.5\" r=\"2.5\"/><path d=\"M8 17.5h6.5a3 3 0 0 0 2.8-2l1.2-3.5\"/><path d=\"M18.5 15l-2.6-9.5\"/><path d=\"M14 5.5h3.5\"/><path d=\"M3 15.2C3 12.6 4.8 11 7.2 11H11v4.5\"/></svg>","parcel":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M21 8l-9-5-9 5 9 5 9-5z\"/><path d=\"M3 8v8l9 5 9-5V8M12 13v8\"/></svg>"};
+const OV_ICON = {"check":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M9 12l2 2 4-4\"/><path d=\"M21 12a9 9 0 11-18 0 9 9 0 0118 0z\"/></svg>","siren":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M12 9v4M12 17h.01\"/><path d=\"M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L14.7 3.9a2 2 0 00-3.4 0z\"/></svg>","trip":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"6\" cy=\"19\" r=\"2\"/><path d=\"M8 19h4.5a3.5 3.5 0 0 0 0-7h-4a3.5 3.5 0 0 1 0-7H13\"/><path d=\"M18 11.5s3.5-3 3.5-6a3.5 3.5 0 0 0-7 0c0 3 3.5 6 3.5 6z\"/><circle cx=\"18\" cy=\"5.5\" r=\"1.1\"/></svg>","chat":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z\"/></svg>","wallet":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><rect x=\"2\" y=\"6\" width=\"20\" height=\"13\" rx=\"2\"/><path d=\"M2 10h20M6 15h4\"/></svg>","route":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"6\" cy=\"19\" r=\"2\"/><circle cx=\"18\" cy=\"5\" r=\"2\"/><path d=\"M8 19h6a4 4 0 0 0 0-8H10a4 4 0 0 1 0-8h6\"/></svg>","gift":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M20 12v9H4v-9\"/><path d=\"M2 7h20v5H2z\"/><path d=\"M12 21V7\"/></svg>","user":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"12\" cy=\"8\" r=\"4\"/><path d=\"M4 21a8 8 0 0116 0\"/></svg>","scooter":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"5.5\" cy=\"17.5\" r=\"2.5\"/><circle cx=\"18.5\" cy=\"17.5\" r=\"2.5\"/><path d=\"M8 17.5h6.5a3 3 0 0 0 2.8-2l1.2-3.5\"/><path d=\"M18.5 15l-2.6-9.5\"/><path d=\"M14 5.5h3.5\"/><path d=\"M3 15.2C3 12.6 4.8 11 7.2 11H11v4.5\"/></svg>","parcel":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M21 8l-9-5-9 5 9 5 9-5z\"/><path d=\"M3 8v8l9 5 9-5V8M12 13v8\"/></svg>","partner":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"9\" cy=\"7\" r=\"3.5\"/><path d=\"M2.5 20v-.5A5.5 5.5 0 018 14h2.5\"/><path d=\"M18 21.5s-4-3.4-4-6.6a4 4 0 018 0c0 3.2-4 6.6-4 6.6z\"/><circle cx=\"18\" cy=\"14.9\" r=\"1.2\"/></svg>"};
 
 /** Each number from the endpoint its own section uses; one that fails shows "-", not an error page. */
 async function loadOverview() {
@@ -4783,7 +4810,7 @@ function paintRows(view, data, emptyState) {
   const cols = view.columns;
   const state = emptyState || view.empty;
   if (!data.length) {
-    $('rows').innerHTML = `<tr><td colspan="${cols.length}">${stateBlock(state)}</td></tr>`;
+    $('rows').innerHTML = `<tr><td colspan="${cols.length + (view.onRowClick ? 1 : 0)}">${stateBlock(state)}</td></tr>`;
     return;
   }
   const sorted = data.slice();
@@ -4797,14 +4824,18 @@ function paintRows(view, data, emptyState) {
       });
     }
   }
+  const open = view.onRowClick
+    ? `<td class="open-cell"><span class="open-cta">${esc(view.openLabel || 'Open')} <span aria-hidden="true">›</span></span></td>` : '';
   $('rows').innerHTML = sorted.map((r, i) => {
     const acc = ROW_ACCENT[tab] ? ROW_ACCENT[tab](r) : null;
-    const icon = acc && ROW_ICON[tab] ? ROW_ICON[tab](r) : null;
+    const lead = ROW_LEAD[tab] ? ROW_LEAD[tab](r)
+      : acc && ROW_ICON[tab] ? `<span class="row-ico">${ROW_ICON[tab](r)}</span>` : null;
     return `<tr class="${view.onRowClick ? 'clickable' : ''}" data-i="${i}"${acc ? ` data-acc="${acc}"` : ''}>` +
-      cols.map((c, ci) => ci === 0 && icon
-        ? `<td><div class="row-lead"><span class="row-ico">${icon}</span><div>${view.cell(r, c.key)}</div></div></td>`
-        : `<td>${view.cell(r, c.key)}</td>`).join('') + '</tr>';
+      cols.map((c, ci) => ci === 0 && lead
+        ? `<td><div class="row-lead">${lead}<div>${view.cell(r, c.key)}</div></div></td>`
+        : `<td>${view.cell(r, c.key)}</td>`).join('') + open + '</tr>';
   }).join('');
+  avatarFallbacks($('rows'));
   lastRows = sorted;
 }
 
@@ -4828,11 +4859,43 @@ const ROW_ACCENT = {
   announcements: () => 'brand',
 };
 const ROW_ICON = {
-  queue: (r) => (r.role === 'DRIVER' ? OV_ICON.scooter : OV_ICON.user),
-  accounts: (r) => (r.role === 'DRIVER' ? OV_ICON.scooter : OV_ICON.user),
-  bookings: (r) => (r.type === 'DELIVERY' || r.category === 'PARCEL' || r.category === 'LUNCHBOX' ? OV_ICON.parcel : OV_ICON.scooter),
   sos: () => OV_ICON.siren,
 };
+
+/**
+ * Rows about people start with the people: the account's own photo, and on
+ * a booking the rider's and her partner's side by side (an empty circle
+ * until a partner has taken it). These replaced a bike or a person glyph,
+ * which said only what kind of row it was - the badge beside it says that.
+ */
+const ROW_LEAD = {
+  queue: (r) => avatar(r.name, r.photoUrl, r.role),
+  accounts: (r) => avatar(r.name, r.photoUrl, r.role),
+  bookings: (r) => `<span class="av-pair">${avatar(r.customerName, r.customerPhotoUrl, 'CUSTOMER')}${r.driverName || r.driverPhotoUrl
+    ? avatar(r.driverName, r.driverPhotoUrl, 'DRIVER') : '<span class="av none" title="No partner yet">–</span>'}</span>`,
+};
+
+function initialsOf(name) {
+  const words = String(name || '').trim().split(/\s+/).filter(Boolean);
+  return words.length ? words.slice(0, 2).map(w => w[0]).join('').toUpperCase() : '?';
+}
+
+/** Her photo if there is one the console can show, otherwise her initials. */
+function avatar(name, photoUrl, role) {
+  const kind = role === 'DRIVER' ? 'partner' : 'rider';
+  const title = `${name || 'Name not set'} · ${kind === 'partner' ? 'Partner' : 'Rider'}`;
+  const initials = initialsOf(name);
+  return photoUrl && /^(https:|\/)/.test(photoUrl)
+    ? `<span class="av ${kind}" title="${escValue(title)}"><img src="${escValue(photoUrl)}" alt="" loading="lazy" data-initials="${escValue(initials)}"></span>`
+    : `<span class="av ${kind}" title="${escValue(title)}">${esc(initials)}</span>`;
+}
+
+/** A photo that will not load (an expired link, a deleted file) falls back to her initials. Wired here: the page's CSP refuses inline handlers. */
+function avatarFallbacks(root) {
+  root.querySelectorAll('.av img').forEach(img => img.addEventListener('error', () => {
+    img.parentElement.textContent = img.dataset.initials;
+  }, { once: true }));
+}
 
 function paintHead(view) {
   $('head').innerHTML = '<tr>' + view.columns.map(c => {
@@ -4847,7 +4910,7 @@ function paintHead(view) {
     const arrow = active ? (sort.dir === 'asc' ? '▲' : '▼') : '↕';
     return `<th class="sortable" data-sort="${c.key}" ${active ? `aria-sort="${sort.dir === 'asc' ? 'ascending' : 'descending'}"` : ''}>
       ${esc(c.label)} <span class="arrow">${arrow}</span></th>`;
-  }).join('') + '</tr>';
+  }).join('') + (view.onRowClick ? '<th class="open-cell"></th>' : '') + '</tr>';
 
   $('head').querySelectorAll('[data-sort]').forEach(th => th.addEventListener('click', () => {
     const key = th.dataset.sort;
@@ -4961,7 +5024,7 @@ async function render(opts = {}) {
   } catch (err) {
     if (err.message === 'unauthorized' || isStale()) return;
     paintPager(null);
-    $('rows').innerHTML = `<tr><td colspan="${view.columns.length}">${errorState(err.message)}</td></tr>`;
+    $('rows').innerHTML = `<tr><td colspan="${view.columns.length + (view.onRowClick ? 1 : 0)}">${errorState(err.message)}</td></tr>`;
     $('err').textContent = err.message;
     $('err').hidden = false;
   }

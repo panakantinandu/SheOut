@@ -22,6 +22,9 @@ public record BookingOpsRow(
         BookingCategory category,
         String customerName,
         String driverName,
+        /** Profile photos, for the row's avatars - null shows initials. */
+        String customerPhotoUrl,
+        String driverPhotoUrl,
         BigDecimal fareEstimate,
         BigDecimal finalFare,
         PaymentStatus paymentStatus,

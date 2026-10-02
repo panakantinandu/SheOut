@@ -542,6 +542,11 @@ export const bookingApi = {
     return request('/api/v1/bookings/me');
   },
 
+  /** Only the newest trips (at most 100) - for screens that poll, where the whole history is wasted data. */
+  listRecent(count: number): Promise<BookingSummary[]> {
+    return request(`/api/v1/bookings/me?recent=${count}`);
+  },
+
   getById(bookingId: string): Promise<BookingSummary> {
     return request(`/api/v1/bookings/${bookingId}`);
   },

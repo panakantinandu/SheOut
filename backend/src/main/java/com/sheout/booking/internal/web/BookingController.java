@@ -189,9 +189,22 @@ public class BookingController {
      * showing a different total depending on how far someone had scrolled.
      * See /search below for the list a person actually reads.
      */
+    /**
+     * recent: only the newest trips, at most 100. The partner app's Home
+     * polls this every 5 s for her live trip and today's numbers, and without
+     * it the answer was her whole history - 1.4 MB for a partner with 2,000
+     * trips, about a gigabyte of her mobile data an hour, and a database read
+     * that grew with every trip she took. A live trip is always among the
+     * newest (a search ends within minutes, and one ride is live at a time).
+     * Without it, the whole list, as before - Earnings needs it, and so do
+     * app versions already installed.
+     */
     @GetMapping("/api/v1/bookings/me")
-    public ResponseEntity<List<BookingSummary>> listMyBookings() {
+    public ResponseEntity<List<BookingSummary>> listMyBookings(@RequestParam(required = false) Integer recent) {
         CurrentAccount caller = requireAuthenticated();
+        if (recent != null) {
+            return ResponseEntity.ok(bookingService.findRecentForAccount(caller.accountId(), recent));
+        }
         List<BookingSummary> bookings = caller.role() == AccountRole.DRIVER
                 ? bookingService.listForDriver(caller.accountId())
                 : bookingService.listForCustomer(caller.accountId());

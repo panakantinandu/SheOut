@@ -34,6 +34,12 @@ class NotificationDeliveryConfig {
         executor.setQueueCapacity(500);
         executor.setThreadNamePrefix("notify-");
         executor.setRejectedExecutionHandler(new java.util.concurrent.ThreadPoolExecutor.CallerRunsPolicy());
+        // On shutdown (every deploy), send what is already queued instead of
+        // dropping it - a trip's "partner is arriving" would otherwise vanish
+        // whenever a release went out mid-trip. Bounded, so a provider that
+        // is down cannot hold the old instance past Render's 30 s.
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(15);
         executor.initialize();
         return executor;
     }

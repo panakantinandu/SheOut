@@ -990,6 +990,12 @@
     "title": "Pay ₹{{amount}} for your last trip",
     "body": "You can book your next ride once it is paid."
   },
+  "liveTrip": {
+    "riding": "You are on your trip",
+    "coming": "Your partner is on her way",
+    "searching": "Finding you a partner",
+    "open": "Tap to open your trip"
+  },
   "sos": {
     "shareTitle": "My location",
     "shareText": "I am here:",

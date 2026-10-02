@@ -10,7 +10,7 @@ const LIVE = new Set(['REQUESTED', 'MATCHED', 'ACCEPTED', 'IN_PROGRESS']);
  */
 export async function findLiveTrip(type: BookingSummary['type']): Promise<string | null> {
   try {
-    const mine = await bookingApi.listMine();
+    const mine = await bookingApi.listRecent(20);
     return mine.find((b) => b.type === type && LIVE.has(b.status))?.id ?? null;
   } catch {
     return null;

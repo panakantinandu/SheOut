@@ -260,7 +260,10 @@ public class BookingService implements BookingApi {
             return Result.failure(BookingError.UNPAID_TRIP);
         }
         // One live trip of each kind: a ride and a parcel together is
-        // ordinary, two rides at once is not a thing a person does.
+        // ordinary, two rides at once is not a thing a person does. Her
+        // requests are taken one at a time first, or two arriving together
+        // both pass this check - see lockNewBookingsFor.
+        bookingRepository.lockNewBookingsFor(command.customerId());
         if (bookingRepository.existsByCustomerIdAndTypeAndStatusIn(command.customerId(), command.type(), LIVE_STATUSES)) {
             return Result.failure(BookingError.ACTIVE_BOOKING_EXISTS);
         }
@@ -289,19 +292,28 @@ public class BookingService implements BookingApi {
         booking.recordQuotedDistance(
                 BigDecimal.valueOf(quote.distanceKm()).setScale(2, java.math.RoundingMode.HALF_UP), quote.routed());
         bookingRepository.save(booking);
-        // A promotion pays some or all of the fare on her behalf - the fare
-        // itself is unchanged. Held now, against the promotion's budget, in
-        // this transaction: if the booking does not commit, neither does the hold.
         eventLog.record(booking.getId(), "REQUESTED", null, BookingStatus.REQUESTED, null);
+
+        eventPublisher.publish(new BookingRequested(
+                booking.getId(), booking.getCustomerId(), booking.getType(), booking.getCategory(),
+                command.pickup(), command.drop()));
+
+        // A promotion pays some or all of the fare on her behalf - the fare
+        // itself is unchanged. Held against the promotion's budget in this
+        // transaction: if the booking does not commit, neither does the hold.
+        //
+        // Last, after the search has started, on purpose. Holding means
+        // locking the promotion's row until this transaction commits, and
+        // every rider with that promotion books against the same row. Taken
+        // before the search, the lock lasted the whole first dispatch round,
+        // so bookings queued single file behind it: in a load test of 1,000
+        // riders, connections waited up to 30 s on this one row and most
+        // bookings timed out. Taken here, it is held only until the commit.
         PromoApplication promo = campaigns.reserveDiscount(command.customerId(), booking.getId(), fareEstimate);
         if (promo.applies()) {
             booking.applyPromotion(promo.discount(), promo.promotionName());
             bookingRepository.save(booking);
         }
-
-        eventPublisher.publish(new BookingRequested(
-                booking.getId(), booking.getCustomerId(), booking.getType(), booking.getCategory(),
-                command.pickup(), command.drop()));
 
         return Result.success(toSummary(booking));
     }

@@ -113,8 +113,10 @@ async function call(route, method, path, token, body) {
 const outcome = { booked: 0, matched: 0, noDrivers: 0, started: 0, completedByPartner: 0, paid: 0, bookRefused: {}, matchSeconds: [] };
 
 // ---------------------------------------------------------------- setup
-const sql = (q) => execFileSync(PSQL, DB_URL ? [DB_URL, '-tAc', q] : ['-h', 'localhost', '-U', 'sheout', '-d', 'sheout', '-tAc', q],
-  { env: { ...process.env, PGPASSWORD: 'sheout' } }).toString().trim();
+// The statement goes in on stdin: with a few hundred accounts the id lists
+// passed Windows' 32 KB command-line limit (ENAMETOOLONG at 600 riders).
+const sql = (q) => execFileSync(PSQL, DB_URL ? [DB_URL, '-tA', '-f', '-'] : ['-h', 'localhost', '-U', 'sheout', '-d', 'sheout', '-tA', '-f', '-'],
+  { input: q, env: { ...process.env, PGPASSWORD: 'sheout' } }).toString().trim();
 const redis = (...a) => execFileSync(REDIS_CLI, ['-p', REDIS_PORT, ...a]).toString().trim();
 // +91 and ten digits: the prefix, then the counter zero-padded to fill it.
 const phoneFor = (prefix, i) => prefix + String(i).padStart(13 - prefix.length, '0');

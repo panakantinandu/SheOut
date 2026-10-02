@@ -170,7 +170,8 @@ export function Home() {
         // The hold is extra information; a failure fetching it must never
         // stop the trip list itself from refreshing.
         const [result, hold] = await Promise.all([
-          bookingApi.listMine(),
+          // The newest 50: her live trip and today's trips are always among them - see the endpoint.
+          bookingApi.listRecent(50),
           bookingApi.getPaymentHold().catch(() => null),
         ]);
         if (!cancelled) {

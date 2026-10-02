@@ -7,6 +7,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
 import java.util.List;
@@ -44,6 +46,22 @@ interface BookingRepository extends JpaRepository<BookingEntity, UUID>, JpaSpeci
      */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<BookingEntity> findLockedById(UUID id);
+
+    /**
+     * Holds this rider's "new booking" lock until the calling transaction
+     * ends, so her booking requests are taken one at a time.
+     * <p>
+     * requestBooking checks that she has no live trip and then inserts one.
+     * Two requests at the same moment - a double tap, a retry after a slow
+     * answer, or two servers each taking one - both passed the check, and
+     * eight parallel requests from one rider made eight live bookings, each
+     * sent to a different partner. A Postgres advisory lock (not a row: there
+     * is no row yet to lock) makes the second wait for the first to commit,
+     * and then see it. It lives in the database, so it holds across servers.
+     */
+    @Query(value = "select 1 from (select pg_advisory_xact_lock(hashtext('booking-request:' || cast(:customerId as text)))) held",
+            nativeQuery = true)
+    Integer lockNewBookingsFor(@Param("customerId") UUID customerId);
 
     /** The route-review queue: flagged by the route check, not yet looked at. */
     List<BookingEntity> findByRouteFlaggedAtIsNotNullAndRouteReviewedAtIsNullOrderByRouteFlaggedAtAsc();
