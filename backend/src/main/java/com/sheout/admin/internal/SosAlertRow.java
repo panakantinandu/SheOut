@@ -10,6 +10,8 @@ public record SosAlertRow(
         UUID id,
         UUID customerAccountId,
         String customerName,
+        /** Her profile photo, for the row's avatar - null shows her initials. */
+        String photoUrl,
         /** RIDER or PARTNER - whoever pressed it. */
         String raisedBy,
         String customerPhone,

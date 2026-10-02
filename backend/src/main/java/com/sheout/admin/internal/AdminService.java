@@ -143,12 +143,16 @@ public class AdminService {
         // raised it is read from the account, and her name from her profile.
         boolean partner = authApi.findAccount(alert.customerAccountId())
                 .map(a -> a.role() == com.sheout.auth.AccountRole.DRIVER).orElse(false);
+        Optional<DriverProfileSummary> partnerProfile = partner
+                ? driverProfileApi.findByAccountId(alert.customerAccountId()) : Optional.empty();
+        Optional<CustomerProfileSummary> riderProfile = partner
+                ? Optional.empty() : customerProfileApi.findByAccountId(alert.customerAccountId());
         return new SosAlertRow(
                 alert.id(),
                 alert.customerAccountId(),
-                partner
-                        ? driverProfileApi.findByAccountId(alert.customerAccountId()).map(p -> p.name()).orElse(null)
-                        : customerProfileApi.findByAccountId(alert.customerAccountId()).map(p -> p.name()).orElse(null),
+                partnerProfile.map(DriverProfileSummary::name).or(() -> riderProfile.map(CustomerProfileSummary::name)).orElse(null),
+                partnerProfile.map(DriverProfileSummary::profilePhotoUrl)
+                        .or(() -> riderProfile.map(CustomerProfileSummary::profilePhotoUrl)).orElse(null),
                 partner ? "PARTNER" : "RIDER",
                 phoneFor(alert.customerAccountId()),
                 alert.bookingId(),
@@ -256,13 +260,13 @@ public class AdminService {
     public List<TrustReviewRow> trustReviewQueue() {
         List<TrustReviewRow> customers = customerProfileApi.findFlaggedForReview().stream()
                 .map(p -> new TrustReviewRow(
-                        p.accountId(), p.name(), p.phoneNumber(), AccountRole.CUSTOMER,
+                        p.accountId(), p.name(), p.profilePhotoUrl(), p.phoneNumber(), AccountRole.CUSTOMER,
                         p.trustStats(), p.trustStats().flaggedAt(),
                         p.trustStats().flaggedReason(), isBlocked(p.accountId())))
                 .toList();
         List<TrustReviewRow> drivers = driverProfileApi.findFlaggedForReview().stream()
                 .map(p -> new TrustReviewRow(
-                        p.accountId(), p.name(), p.phoneNumber(), AccountRole.DRIVER,
+                        p.accountId(), p.name(), p.profilePhotoUrl(), p.phoneNumber(), AccountRole.DRIVER,
                         p.trustStats(), p.trustStats().flaggedAt(),
                         p.trustStats().flaggedReason(), isBlocked(p.accountId())))
                 .toList();
