@@ -36,7 +36,7 @@ export function InsuredTripChip({ cover, onOpen }: { cover: TripCoverInfo; onOpe
     <button
       type="button"
       onClick={onOpen}
-      className="inline-flex items-center gap-1.5 rounded-chip border border-success/30 bg-success/10 px-3 py-1 text-xs font-semibold text-success"
+      className="inline-flex items-center gap-1.5 rounded-chip border border-accent-green/30 bg-accent-green-tint px-3 py-1 text-xs font-semibold text-accent-green-strong"
       data-testid="insured-trip-chip"
     >
       <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
@@ -64,7 +64,7 @@ export function TripCoverSheet({
       {cover && (
         <div className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-t-card bg-surface p-5 shadow-overlay motion-safe:animate-sheet-up" data-testid="trip-cover-sheet">
           <div className="flex items-center gap-2">
-            <ShieldCheck className="h-5 w-5 text-success" aria-hidden="true" />
+            <ShieldCheck className="h-5 w-5 text-accent-green-strong" aria-hidden="true" />
             <p className="font-heading text-section text-text-primary">{t('insurance.sheetTitle')}</p>
           </div>
           <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">

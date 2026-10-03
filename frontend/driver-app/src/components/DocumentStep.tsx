@@ -124,7 +124,7 @@ export function DocumentStep({
         <p className="text-xs text-danger">{t('docs.rejectedBecause', { reason: state.rejectionReason })}</p>
       )}
       {state?.validUntil && state.status === 'VERIFIED' && (
-        <p className={`text-xs ${days !== null && days <= 30 ? 'text-warning' : 'text-text-secondary'}`}>
+        <p className={`text-xs ${days !== null && days <= 30 ? 'text-accent-orange-strong' : 'text-text-secondary'}`}>
           {days !== null && days <= 30
             ? t('docs.expiresSoon', { date: formatDay(state.validUntil), count: Math.max(days, 0) })
             : t('docs.validUntil', { date: formatDay(state.validUntil) })}
@@ -171,7 +171,7 @@ export function DocumentStep({
             icon={file ? <Check className="h-4 w-4" /> : <Upload className="h-4 w-4" />}
             onClick={() => input.current?.click()}
           >
-            {file ? file.name : t('docs.chooseFile', { document: name })}
+            {file ? file.name : t('docs.chooseFile', { document: t(`docs.typeInSentence.${type}`) })}
           </Button>
           <p className="text-xs text-text-secondary">{t('verification.fileHint')}</p>
           <TextField label={t('docs.number')} value={number} maxLength={64} onChange={(e) => setNumber(e.target.value)} />

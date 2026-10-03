@@ -32,7 +32,7 @@ export function ReadinessBanner({ reloadKey }: { reloadKey?: unknown }) {
 
   return (
     <Card tone={blocker ? 'danger' : 'warning'} className="flex items-start gap-3" data-testid="readiness-banner">
-      {blocker ? <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-danger" /> : <Clock className="mt-0.5 h-5 w-5 shrink-0 text-warning" />}
+      {blocker ? <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-danger" /> : <Clock className="mt-0.5 h-5 w-5 shrink-0 text-accent-orange-strong" />}
       <div className="flex-1">
         <p className="text-sm font-semibold text-text-primary">{blocker ? t('docs.home.blockedTitle') : t('docs.home.soonTitle')}</p>
         <p className="mt-1 text-xs text-text-secondary">{blockerText(t, blocker ?? warning)}</p>

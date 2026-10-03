@@ -576,6 +576,30 @@ shows "Your cover" only for group covers she is `ENROLLED` in.
   native-speaker review. The consent itself is shown in English, as the other
   legal documents are.
 
+### How the documents, police, insurance and GST work was checked
+
+- **Tests**: a unit test for each rule (evidence required for a police
+  VERIFIED, a background check alone refused by default, expiry blocking,
+  the commission ceiling, the insured chip only with an active policy, the
+  premium never touching fare or payout, GST off by default and refusing to
+  start half-configured, gapless invoice numbers) and integration tests on
+  the local Postgres and Redis. `MigrationPathTest` runs every migration from
+  an empty schema, and from production's shape today (V54) with an RC photo
+  and an unevidenced police check in it, to the latest.
+- **A run of the apps** (backend, both apps and the console on this
+  machine's Postgres and Redis - not docker compose, which this machine does
+  not have): a new partner consents and sends her documents in the partner
+  app; an operator approves them and records the police check with evidence
+  in the console; she goes online; a ride is refused with no passenger
+  policy and taken with one; the rider sees "Insured trip" on the live trip;
+  the trip completes and is paid; the receipt shows the fare details and no
+  insurance line; the coverage row is in the day's bordereau; an accident
+  report becomes a HIGH ticket; and when her PUC expires she is taken offline
+  and told why. Two steps were set in the database rather than driven
+  through a camera: her ID and live selfie, and the start-of-shift selfie
+  (the backend ran with `SHIFT_CHECK_ENABLED=false`). The script is outside
+  the repository (`D:\sheout-work\qa\full_e2e.mjs` on the test machine).
+
 ## Users
 
 Customer and driver profiles - `com.sheout.users`. Deliberately ignorant of

@@ -9,7 +9,7 @@ import { formatDay } from './documentDates';
  */
 export function blockerText(t: (key: string, options?: Record<string, unknown>) => string, blocker: ReadinessBlocker): string {
   return t(`docs.blocker.${blocker.code}`, {
-    document: blocker.documentType ? t(`docs.type.${blocker.documentType}`) : '',
+    document: blocker.documentType ? t(`docs.typeInSentence.${blocker.documentType}`) : '',
     date: formatDay(blocker.date),
     defaultValue: blocker.message,
   });

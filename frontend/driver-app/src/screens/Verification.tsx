@@ -212,7 +212,7 @@ export function Verification() {
                 </Button>
               )}
               {(readiness?.warnings ?? []).map((w, i) => (
-                <p key={i} className="mt-2 text-xs text-warning">{blockerText(t, w)}</p>
+                <p key={i} className="mt-2 text-xs text-accent-orange-strong">{blockerText(t, w)}</p>
               ))}
             </div>
           </Card>
@@ -368,10 +368,12 @@ export function Verification() {
                         ? t('docs.police.verified')
                         : summary.policeVerificationStatus === 'REJECTED'
                           ? t('docs.police.rejected')
-                          : t('docs.police.pending')}
+                          : docState('POLICE_CERTIFICATE')?.status && docState('POLICE_CERTIFICATE')?.status !== 'REJECTED'
+                            ? t('docs.police.beingRecorded')
+                            : t('docs.police.pending')}
                     </StatusBadge>
                   </div>
-                  {policeDue?.date && <p className="text-warning">{t('docs.police.dueOn', { date: formatDay(policeDue.date) })}</p>}
+                  {policeDue?.date && <p className="text-accent-orange-strong">{t('docs.police.dueOn', { date: formatDay(policeDue.date) })}</p>}
                   <p>{t('docs.police.intro')}</p>
                   <ol className="list-decimal space-y-1 pl-4">
                     <li>{t('docs.police.step1')}</li>
@@ -419,7 +421,7 @@ export function Verification() {
               }}
               error={panError ?? undefined}
             />
-            {panSaved && !panChanged && <p className="text-xs text-success">{t('common.saved')}</p>}
+            {panSaved && !panChanged && <p className="text-xs text-accent-green-strong">{t('common.saved')}</p>}
             <Button fullWidth variant="secondary" disabled={savingPan || !panChanged || !panUsable} onClick={savePan}>
               {savingPan
                 ? t('common.saving')

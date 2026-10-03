@@ -827,7 +827,8 @@
       "step2": "Apply for a Police Verification Certificate for employment, and pay the fee.",
       "step3": "When the certificate is ready, download it and upload it here.",
       "openPortal": "Open Telangana Police portal",
-      "orSheOut": "If SheOut gets the certificate for you, our team adds it and you will see it here."
+      "orSheOut": "If SheOut gets the certificate for you, our team adds it and you will see it here.",
+      "beingRecorded": "Being recorded by SheOut"
     },
     "blocker": {
       "ID_CHECK": "Finish your ID check to start.",
@@ -847,6 +848,15 @@
       "fix": "Open your checklist",
       "more_one": "And {{count}} more thing on your checklist.",
       "more_other": "And {{count}} more things on your checklist."
+    },
+    "typeInSentence": {
+      "DRIVING_LICENCE": "driving licence",
+      "VEHICLE_RC": "vehicle RC",
+      "VEHICLE_INSURANCE": "vehicle insurance",
+      "PUC": "PUC certificate",
+      "FITNESS_CERTIFICATE": "fitness certificate",
+      "POLICE_CERTIFICATE": "police certificate",
+      "BACKGROUND_CHECK_REPORT": "background check report"
     }
   },
   "cover": {
