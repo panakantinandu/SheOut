@@ -905,6 +905,11 @@ export const payoutsApi = {
     return request('/api/v1/payouts/me');
   },
 
+  /** Her share of each paid trip - the amount her wallet was credited, not the fare. */
+  earnings(): Promise<{ bookingId: string; share: number }[]> {
+    return request('/api/v1/payouts/me/earnings');
+  },
+
   /** 400 INVALID_DETAILS for a malformed IFSC, account number or UPI ID, or a half-filled bank account. */
   saveAccount(account: SavePayoutAccount): Promise<PayoutAccountView> {
     return request('/api/v1/payouts/me/account', { method: 'PUT', body: account });

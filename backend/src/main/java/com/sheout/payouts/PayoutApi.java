@@ -22,6 +22,13 @@ public interface PayoutApi {
     /** A partner with no captured trips yet has a zero wallet, not an empty one. */
     WalletSummary getWallet(UUID driverAccountId);
 
+    /**
+     * Her share of each trip she was paid for, by booking - what her wallet
+     * was credited with, not the fare the rider paid. What "earnings" means
+     * on her screens: the fare less SheOut's commission.
+     */
+    java.util.List<TripEarning> earningsByTrip(UUID driverAccountId);
+
     Optional<PayoutAccount> getPayoutAccount(UUID driverAccountId);
 
     /** Replaces the partner's payout details. At least a complete bank account or a UPI VPA. */

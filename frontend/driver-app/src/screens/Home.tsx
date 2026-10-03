@@ -29,6 +29,7 @@ import { RecentTrips } from '../components/home/RecentTrips';
 import { BrandStrip } from '../components/home/BrandStrip';
 import { ServiceClosedStrip } from '../components/home/ServiceClosedStrip';
 import { ReadinessBanner } from '../components/home/ReadinessBanner';
+import { shareOf, useTripShares } from '../lib/tripShares';
 import { DRIVER_HOME_MAP_ENABLED, HomeMapCard } from '../components/home/HomeMapCard';
 
 const BOOKINGS_POLL_MS = 5000;
@@ -197,13 +198,16 @@ export function Home() {
     [bookings]
   );
 
+  const shares = useTripShares(bookings.filter((b) => b.status === 'COMPLETED' && b.paymentSettledAt).length);
+
   const { todayEarnings, completedRides, activeTripsCount, recentTrips } = useMemo(() => {
     const today = startOfDay();
     // Paid trips only. A fare still waiting for the rider is not earned yet,
     // and counting it would show her money that may never arrive.
     const completed = bookings.filter((b) => b.status === 'COMPLETED' && b.completedAt && b.paymentSettledAt);
     const completedToday = completed.filter((b) => new Date(b.completedAt!) >= today);
-    const todaySum = completedToday.reduce((sum, b) => sum + (b.finalFare ?? b.fareEstimate), 0);
+    // Her share, as her wallet was credited - not the fare the rider paid.
+    const todaySum = completedToday.reduce((sum, b) => sum + shareOf(shares, b.id), 0);
     const active = bookings.filter((b) => b.status === 'MATCHED' || b.status === 'ACCEPTED' || b.status === 'IN_PROGRESS').length;
     return {
       todayEarnings: todaySum,
@@ -220,7 +224,7 @@ export function Home() {
         .sort((a, b2) => finishedAt(b2) - finishedAt(a))
         .slice(0, RECENT_TRIPS),
     };
-  }, [bookings]);
+  }, [bookings, shares]);
 
   // Offer polling - only while online and with no active trip already in
   // hand. Navigates to the dedicated Offer screen rather than showing an

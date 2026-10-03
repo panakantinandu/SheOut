@@ -45,6 +45,13 @@ public class DriverPayoutController {
         this.payoutApi = payoutApi;
     }
 
+    /** Her share of each paid trip - what Earnings and Home add up, rather than the fares riders paid. */
+    @GetMapping("/earnings")
+    public ResponseEntity<java.util.List<com.sheout.payouts.TripEarning>> earnings() {
+        CurrentAccount driver = requireDriver();
+        return ResponseEntity.ok(payoutApi.earningsByTrip(driver.accountId()));
+    }
+
     @GetMapping
     public ResponseEntity<PayoutOverview> overview() {
         CurrentAccount driver = requireDriver();

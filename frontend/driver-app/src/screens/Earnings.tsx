@@ -5,6 +5,7 @@ import { AmountText, PullToRefresh, SkeletonCard, Button, Card, DateRangeFields,
 import type { DateRangeValue } from '@sheout/design-system';
 import { ApiError, bookingApi, insuranceApi } from '../api/client';
 import { TripPayoutBreakdown } from '../components/TripPayoutBreakdown';
+import { shareOf, useTripShares } from '../lib/tripShares';
 import type { BookingCategory, BookingSummary } from '../api/types';
 import { useTranslation } from '@sheout/design-system';
 
@@ -57,9 +58,10 @@ function periodStart(period: Period): Date | null {
 }
 
 /**
- * REAL, but derived rather than fetched directly: there's no payments/
- * earnings module on the backend, so this sums finalFare across the
- * driver's own COMPLETED bookings from GET /api/v1/bookings/me.
+ * REAL: her COMPLETED, paid bookings from GET /api/v1/bookings/me, each
+ * counted at her share - the amount her wallet was credited, from
+ * GET /api/v1/payouts/me/earnings - never the fare the rider paid. It used
+ * to sum finalFare, so "Total Earnings" showed SheOut's commission as hers.
  * <p>
  * DELIBERATELY NOT PAGED, unlike every other history list in this app, and
  * this is the one place that trade-off goes the other way. The point of
@@ -98,6 +100,9 @@ export function Earnings() {
   /** How many detail rows are on screen. See DETAIL_PAGE_SIZE. */
   const [detailShown, setDetailShown] = useState(DETAIL_PAGE_SIZE);
 
+  const paidTrips = (bookings ?? []).filter((b) => b.status === 'COMPLETED' && b.paymentSettledAt).length;
+  const shares = useTripShares(paidTrips);
+
   const load = useCallback(
     () =>
       bookingApi
@@ -129,7 +134,8 @@ export function Earnings() {
       return true;
     });
     const inPeriod = group ? byDate.filter((b) => groupOf(b.category) === group) : byDate;
-    const fareOf = (b: BookingSummary) => b.finalFare ?? b.fareEstimate;
+    // Her share, as her wallet was credited - not the fare the rider paid.
+    const fareOf = (b: BookingSummary) => shareOf(shares, b.id);
 
     const groupTotals = new Map<EarningsGroup, { amount: number; count: number }>();
     for (const b of inPeriod) {
@@ -147,7 +153,7 @@ export function Earnings() {
       byGroup: Array.from(groupTotals.entries()),
       trips: inPeriod.slice().sort((a, b) => new Date(b.completedAt!).getTime() - new Date(a.completedAt!).getTime()),
     };
-  }, [bookings, period, dates.from, dates.to, group]);
+  }, [bookings, shares, period, dates.from, dates.to, group]);
 
   const periodLabel = t(`earnings.period.${period}`);
 
@@ -308,7 +314,7 @@ export function Earnings() {
                           <p className="truncate text-sm font-medium text-text-primary">{b.drop.label}</p>
                           <p className="text-xs text-text-secondary">{new Date(b.completedAt!).toLocaleString()}</p>
                         </div>
-                        <AmountText amount={b.finalFare ?? b.fareEstimate} />
+                        <AmountText amount={shareOf(shares, b.id)} />
                       </button>
                       {openTrip === b.id && <TripPayoutBreakdown bookingId={b.id} />}
                     </div>

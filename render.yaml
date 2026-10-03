@@ -456,11 +456,13 @@ envVarGroups:
       - key: VERIFICATION_PROVIDER_WEBHOOK_SECRET
         sync: false
 
-      # Insurance. With this true and no passenger policy switched on in the
-      # console, EVERY RIDE REQUEST IS REFUSED - enter the policy first (see
-      # the README's Insurance section). Policies are never configured here.
+      # Insurance. false while SheOut is pre-launch and has no insurer, so
+      # internal test rides are not refused. With no active policy no trip is
+      # covered and no app shows "Insured trip". Set to "true" once a real
+      # passenger policy is switched on in the console - see
+      # docs/PENDING_DECISIONS.md. Policies are never configured here.
       - key: INSURANCE_REQUIRED_FOR_RIDES
-        value: "true"
+        value: "false"
       - key: INSURANCE_REPORTER
         value: csv
       - key: INSURANCE_BADGE_REQUIRES_REPORTED

@@ -418,9 +418,11 @@ passenger cover on every trip.)
    `GET /api/v1/insurance/passenger-cover`; with nothing in force they say
    nothing about insurance, and the console shows a red "Trips are NOT
    insured: no active passenger policy" banner. With
-   **`INSURANCE_REQUIRED_FOR_RIDES=true`** (false locally, **true in
-   `render.yaml`**) ride requests are refused with `RIDE_INSURANCE_NOT_ACTIVE`
-   until one is switched on. Deliveries are never refused for this.
+   **`INSURANCE_REQUIRED_FOR_RIDES=true`** ride requests are refused with
+   `RIDE_INSURANCE_NOT_ACTIVE` until one is switched on. It is **false
+   everywhere while SheOut is pre-launch** and has no insurer (so internal
+   test rides are not refused); turn it on once a real passenger policy is
+   active - see `docs/PENDING_DECISIONS.md`. Deliveries are never refused for this.
 4. **Reporting** goes through `InsurerReporter`. The default
    `CsvBordereauReporter` produces the day's file - booking id, insurer,
    policy number, start and end (IST), category, pickup and drop *area*,
@@ -451,7 +453,7 @@ passenger cover on every trip.)
 
 ### Configuration
 
-`INSURANCE_REQUIRED_FOR_RIDES` (false; true in production),
+`INSURANCE_REQUIRED_FOR_RIDES` (false until a real passenger policy exists),
 `INSURANCE_REPORTER` (`csv`), `INSURANCE_BADGE_REQUIRES_REPORTED` (false).
 
 ### Flagged assumptions
@@ -467,9 +469,9 @@ passenger cover on every trip.)
   at the trip or at the declaration**, and set this to match.
 - **`REPORTED` means "in a bordereau an operator downloaded"** for the CSV
   reporter. Whether it was actually sent is outside SheOut's records.
-- **Deploying with `INSURANCE_REQUIRED_FOR_RIDES=true` refuses every ride**
-  until a passenger policy is entered and switched on in the console. Do that
-  first, or deploy with it false and switch it on after.
+- **Switching `INSURANCE_REQUIRED_FOR_RIDES` on refuses every ride** until a
+  passenger policy is entered and switched on in the console. Enter the
+  policy first, then switch it on.
 - **Pickup and drop areas** are the last two comma-separated parts of the
   address with anything containing a digit dropped ("Jubilee Hills,
   Hyderabad") - enough to place a claim, never a house number. A heuristic.
@@ -917,6 +919,30 @@ cd backend
 mvn spring-boot:run
 ```
 
+### Reset the local database
+
+The local database collects test accounts (load-test riders and partners,
+QA partners, test trips). To start again from nothing:
+
+```bash
+# Postgres: an empty database, owned by the app's role.
+psql -h localhost -U postgres -c "drop database if exists sheout with (force)" \
+                              -c "create database sheout owner sheout"
+# Redis: OTP codes, rate limits, dispatch state.
+redis-cli -p 6379 flushall          # or memurai-cli
+# Start the backend: Flyway builds the schema from V1.
+cd backend && mvn spring-boot:run
+```
+
+Then sign in once with each test number you use, and make the operator
+account an admin by starting the backend once with
+`ADMIN_BOOTSTRAP_PHONE=<that number>` (see `AdminBootstrap`). There are no
+insurance policies after a reset - add one in the console's Insurance page
+only for local testing, and never on a shared environment. The load test
+(`loadtest/sheout-load.mjs`) seeds its own partners' consent, police check
+and documents each run (`--consent-version` must match the server's
+`VERIFICATION_CONSENT_VERSION`).
+
 ### Run a frontend app
 
 ```bash
@@ -1278,6 +1304,11 @@ women's home addresses, live locations and identity documents.
 accepted, and what is genuinely welcome instead.
 
 ### Still outstanding before launch
+
+Every decision waiting on the company's registration - insurer, police
+re-check period, GST, required documents, consent wording - is in
+[docs/PENDING_DECISIONS.md](docs/PENDING_DECISIONS.md), with who must answer
+it and which setting changes when they do.
 
 The in-app privacy policy and terms
 (`frontend/design-system/src/legal/content.ts`) are written against what

@@ -117,6 +117,12 @@ public class PayoutService implements PayoutApi {
     }
 
     @Override
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public java.util.List<com.sheout.payouts.TripEarning> earningsByTrip(UUID driverAccountId) {
+        return entries.earningsByTrip(driverAccountId, WalletEntryEntity.Type.EARNING);
+    }
+
+    @Override
     public WalletSummary getWallet(UUID driverAccountId) {
         return wallets.findByDriverAccountId(driverAccountId)
                 .map(PayoutService::toWallet)

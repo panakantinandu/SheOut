@@ -31,6 +31,8 @@ const RIDERS = Number(arg('riders', '100'));
 const PARTNERS = Number(arg('partners', '40'));
 const OUT = arg('out', './load-results');
 const PSQL = arg('psql', 'C:/Program Files/PostgreSQL/18/bin/psql.exe');
+// Must equal VERIFICATION_CONSENT_VERSION on the server under test, or seeded partners cannot go online.
+const CONSENT_VERSION = arg('consent-version', '2026-10-03-draft');
 // A remote staging database: its external connection URL. Without it, psql
 // connects to a local database as sheout/sheout.
 const DB_URL = arg('db-url', process.env.LOAD_DB_URL ?? '');
@@ -152,7 +154,19 @@ async function setup() {
   sql(`update bookings set status='CANCELLED', cancelled_at=now() where status in ('REQUESTED','MATCHED','ACCEPTED','IN_PROGRESS') and (customer_id in (${rIds}) or driver_id in (${pIds}))`);
   sql(`update bookings set payment_settled_at=now() where status='COMPLETED' and payment_settled_at is null and (customer_id in (${rIds}) or driver_id in (${pIds}))`);
   sql(`update verification_records set gender_verification_status='VERIFIED' where account_id in (${rIds})`);
-  sql(`update verification_records set gender_verification_status='VERIFIED', police_verification_status='VERIFIED' where account_id in (${pIds})`);
+  // Partners need, since V55/V56: the current consent, a police check not
+  // yet due, and every document their bike requires approved and in date.
+  // Seeded directly - load-test accounts are not reviewed by anybody.
+  sql(`update verification_records set gender_verification_status='VERIFIED', police_verification_status='VERIFIED', police_reverify_due_on=null, consent_version='${CONSENT_VERSION}', consent_accepted_at=now() where account_id in (${pIds})`);
+  sql(`update partner_documents set superseded_at=now() where account_id in (${pIds}) and superseded_at is null and not (status='VERIFIED' and valid_until >= current_date)`);
+  sql(`insert into partner_documents (id, account_id, type, document_number, valid_until, document_key, status, source, metadata_json, submitted_at, reviewed_at, created_at, updated_at)
+       select gen_random_uuid(), a.id, t.type, 'LOADTEST', current_date + 365, 'loadtest/document', 'VERIFIED', 'OPERATOR_UPLOAD',
+              case when t.type = 'VEHICLE_INSURANCE' then '{"insuranceUseType":"COMMERCIAL"}' end, now(), now(), now(), now()
+       from accounts a cross join (values ('DRIVING_LICENCE'), ('VEHICLE_RC'), ('VEHICLE_INSURANCE'), ('PUC')) as t(type)
+       where a.id in (${pIds})
+         and not exists (select 1 from partner_documents d where d.account_id = a.id and d.type = t.type and d.superseded_at is null
+                          and d.status = 'VERIFIED' and d.valid_until >= current_date)
+       on conflict do nothing`);
   sql(`update customer_profiles set name='Load Rider' where account_id in (${rIds})`);
   sql(`update driver_profiles set name='Load Partner', date_of_birth='1990-01-01', vehicle_type='BIKE', vehicle_registration_number='TS09LT' || lpad((random()*9999)::int::text,4,'0'), profile_photo_key='loadtest/photo', online_status='OFFLINE' where account_id in (${pIds})`);
   sql(`insert into rider_wallets (id, customer_account_id, balance, version, created_at, updated_at) select gen_random_uuid(), id, 100000, 0, now(), now() from accounts where id in (${rIds}) on conflict (customer_account_id) do update set balance = 100000`);
