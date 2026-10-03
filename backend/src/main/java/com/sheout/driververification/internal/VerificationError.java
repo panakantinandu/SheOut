@@ -46,5 +46,42 @@ public enum VerificationError {
     ID_CHECK_NOT_PASSED,
 
     /** A decision other than VERIFIED/REJECTED was passed to a review call. */
-    INVALID_DECISION
+    INVALID_DECISION,
+
+    // ---- partner documents (licence, vehicle papers, police evidence)
+
+    /** She tried to upload something only an operator or a provider puts on file - a background report. */
+    DOCUMENT_TYPE_NOT_UPLOADABLE,
+
+    /** No file came with the document. Nothing is approved without the evidence itself. */
+    DOCUMENT_FILE_MISSING,
+
+    /** A licence, RC, policy, certificate: its number is what an operator checks against the image. */
+    DOCUMENT_NUMBER_REQUIRED,
+
+    /** A document that expires was sent, or approved, without the date it expires on. */
+    VALID_UNTIL_REQUIRED,
+
+    /** The valid-until date has already passed, or comes before the issue date. */
+    DOCUMENT_ALREADY_EXPIRED,
+
+    /** An issue date in the future. */
+    ISSUE_DATE_IN_FUTURE,
+
+    /** A policy sent without saying whether it is for commercial or private use ("not sure" is an answer). */
+    INSURANCE_USE_TYPE_REQUIRED,
+
+    /** An operator tried to approve a private or unknown-use policy for a partner who carries passengers. */
+    INSURANCE_NOT_COMMERCIAL,
+
+    DOCUMENT_NOT_FOUND,
+
+    /** A decision on a document that is not waiting for one - already decided, or replaced. */
+    DOCUMENT_NOT_UNDER_REVIEW,
+
+    /** Turning something down needs the reason she will be shown. */
+    REASON_REQUIRED,
+
+    /** Partner documents were sent from an account that is not a partner's. */
+    NOT_A_PARTNER
 }

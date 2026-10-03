@@ -48,7 +48,7 @@ the build on a cross-module `internal` import - not a rewrite.
 | `shared-kernel`         | `com.sheout.sharedkernel`         | Cross-cutting types every module may depend on: `BaseEntity`, `Result`, `DomainEvent` / `DomainEventPublisher`, `ApiErrorResponse` / `ApiException` / `GlobalExceptionHandler`. Nothing domain-specific. |
 | `auth` **(implemented)** | `com.sheout.auth`                 | Phone + OTP signup/login for customers, drivers, and admins; issues the access token; owns `CurrentAccountContext` (who's calling). See "Auth & driver-verification" below. |
 | `users` **(implemented)** | `com.sheout.users`                 | Customer/driver profile data: name, emergency contacts, home/work addresses (customer); vehicle details, online status (driver). Not identity/verification. See "Users" below. |
-| `driver-verification` **(implemented)** | `com.sheout.driververification`   | Gender verification (all accounts) + police verification (drivers only): document submission, admin review queue, `AccountVerified` event. See "Auth & driver-verification" below. |
+| `driver-verification` **(implemented)** | `com.sheout.driververification`   | Gender verification (all accounts) + police verification (drivers only): document submission, admin review queue, `AccountVerified` event. A partner's licence, vehicle papers and their expiry, and the one "may she take trips now" answer (`partnerReadiness`). See "Auth & driver-verification" and "Partner documents and expiry" below. |
 | `booking` **(implemented)** | `com.sheout.booking`               | The RIDE/DELIVERY state machine, fare estimate, `GeoAddress` (pickup/drop coordinates). See "Booking" below. |
 | `dispatch` **(implemented)** | `com.sheout.dispatch`              | Matches a REQUESTED booking to a nearby ONLINE driver via Redis geo + an offer/accept race. No public API (nothing calls into it yet) - only `com.sheout.dispatch.internal`, no Postgres tables. See "Dispatch" below. |
 | `payments` **(implemented)** | `com.sheout.payments`              | Charging a trip's fare: Razorpay order at completion, Checkout verification, webhook capture, cash confirmed by the partner. The single capture path publishes `PaymentCaptured`. |
@@ -181,6 +181,94 @@ they're easy to revisit rather than discovered later:
   lives in booking/dispatch, which don't exist yet** - `VerificationApi`
   exposes the status for them to check once built; nothing enforces it end
   to end today.
+
+## Partner documents and expiry
+
+A partner's driving licence, vehicle RC, vehicle insurance, PUC and (for
+autos and cabs) fitness certificate - `driververification`'s
+`PartnerDocumentService`, table `partner_documents` (V55).
+
+### Flow
+
+1. She sends each document from her checklist, one at a time:
+   **`POST /api/v1/driver-verification/partner-documents/{type}`**
+   (multipart: `file`, `documentNumber`, `issuedOn`, `validUntil`, and for
+   insurance `insuranceUseType` = `COMMERCIAL`/`PRIVATE`/`UNKNOWN`). What she
+   reads off the document is required, so the operator checks her answer
+   against the image rather than transcribing it. A new upload supersedes
+   the old row; it never overwrites it.
+2. An operator decides each one:
+   **`POST /api/v1/admin/verification/documents/{documentId}/review`**
+   `{ decision, reason, documentNumber, issuedOn, validUntil, insuranceUseType }`
+   - the fields are corrections. Approving needs the file, the number, the
+   valid-until date (not already past) and, for insurance, a commercial-use
+   policy. Rejecting needs a reason, which she is sent.
+   An operator can also put a document on file for her
+   (`POST /api/v1/admin/verification/{accountId}/documents/{type}`), and it
+   goes through the same review.
+3. Opening a file goes through
+   **`GET /api/v1/admin/verification/documents/{documentId}/link`**, which
+   writes "who opened which document, when" to `verification_audit_events`
+   before handing out the signed, expiring link.
+4. **The gate.** `VerificationApi.partnerReadiness(accountId, vehicleType)`
+   answers "may she take trips now": ID check, every required document
+   approved and in date, police check. `users`' online gate asks it live, and
+   so does dispatch through `DriverProfileApi.isCurrentlyVerified` before
+   every offer. Going online with something missing answers `409 NOT_READY`
+   with the first reason ("Your vehicle insurance expired on 12 Nov 2026.
+   Upload the new one to go online."). Her app reads the whole picture from
+   **`GET /api/v1/users/driver/me/readiness`**.
+5. **Expiry** (`PartnerDocumentExpirySweeper`, hourly, behind `ClusterLock`):
+   a document past its valid-until date becomes `EXPIRED` and
+   `VerificationLapsed` is published. `users` takes her offline - a trip
+   she is on is not touched by that, so she finishes it - and dispatch
+   offers her nothing more. She is reminded 30, 7 and 1 days before, once
+   each, in her language.
+6. **Renewals.** A renewal sent before the old document runs out does not
+   take her off the road while it waits; if it is turned down, the earlier
+   approved one becomes current again.
+
+### Configuration
+
+All in `.env.example`: `PARTNER_SERVICES_<VEHICLE>` (which services a
+vehicle is sent on), `PARTNER_DOCS_<SERVICE>` (what each service needs),
+`COMMERCIAL_INSURANCE_SERVICES`, `DOCUMENT_REMINDER_DAYS`,
+`PARTNER_DOCUMENT_SWEEP_INTERVAL_MS` and
+`PARTNER_DOCUMENTS_REQUIRED_TO_GO_ONLINE`. An unknown document name stops
+the server starting.
+
+### Flagged assumptions
+
+- **Deploying this takes every existing partner offline** until her
+  licence, RC, insurance and PUC are uploaded and approved.
+  `PARTNER_DOCUMENTS_REQUIRED_TO_GO_ONLINE=false` is the rollout switch for
+  those days: she is shown what is missing but can still work. It is not a
+  bypass - set it back to `true` once the console's "Documents to review"
+  queue is empty.
+- **Existing RC photos were moved, not re-collected.** V55 copies every
+  `verification_records.rc_document_key` into `partner_documents` as an
+  `UNDER_REVIEW` `VEHICLE_RC`, sharing the stored file: the old review read
+  the RC beside the ID, but never recorded its number or how long it is
+  valid, so an operator reads those off and approves it again. The old
+  column is no longer written or read for review, and is kept only so the
+  release that is still serving while this one starts does not break.
+  **Drop `verification_records.rc_document_key` in a migration in the
+  release after this one is live.**
+- **The ID submission no longer requires the RC.** The RC is its own
+  checklist step now. An RC that an older app still sends with the ID is
+  filed as her `VEHICLE_RC` for review.
+- **Commercial insurance at review time is checked strictly.** The
+  operator's approval does not know her vehicle, so it requires a
+  commercial policy whenever any vehicle SheOut takes carries passengers -
+  which is all of them today. The gate itself checks per vehicle.
+- **The services-per-vehicle map repeats dispatch's matching rule**
+  (parcels go to bikes) rather than importing it, to avoid a module cycle.
+  Change both together.
+- **A vehicle change approved in Profile Changes does not touch her
+  documents.** The new vehicle's insurance and PUC have to be uploaded as
+  renewals; nothing yet asks for them automatically.
+- **Every operator view of any partner document is logged**, not only
+  police certificates - the cost is a row per view.
 
 ## Users
 

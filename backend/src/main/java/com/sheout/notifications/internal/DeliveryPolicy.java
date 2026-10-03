@@ -53,6 +53,12 @@ record DeliveryPolicy(boolean push, boolean emailFallback, boolean smsFallback, 
             case ACCOUNT_VERIFIED, ACCOUNT_VERIFICATION_REJECTED -> PUSH_AND_EMAIL;
             // The same kind of answer, about a change to her details: push, and email if that did not reach her.
             case PROFILE_CHANGE_DECIDED -> PUSH_THEN_EMAIL;
+            // Her documents: whether she can work tomorrow. A reminder weeks
+            // ahead is worth an email if push missed her; an expiry or a
+            // rejection stops her earning, so it is pushed and emailed both,
+            // like the verification answer itself.
+            case PARTNER_DOCUMENT_EXPIRING -> PUSH_THEN_EMAIL;
+            case PARTNER_DOCUMENT_EXPIRED, PARTNER_DOCUMENT_REJECTED -> PUSH_AND_EMAIL;
             // Operators on duty, like an SOS: push, every device.
             case TRIP_WATCH_ALERT -> PUSH_ONLY;
             // "Are you all right?" mid-trip. If push cannot reach her phone

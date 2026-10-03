@@ -264,6 +264,47 @@ class NotificationEventListeners {
                 "/verification"));
     }
 
+    /**
+     * 30, 7 and 1 day before one of her documents runs out. The date is in
+     * her language's own month names, because "12 Nov" is not how a Telugu
+     * reader writes a date.
+     */
+    @Async(NotificationDeliveryConfig.EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void onPartnerDocumentExpiring(com.sheout.driververification.PartnerDocumentExpiring event) {
+        dispatcher.deliver(event.accountId(), NotificationType.PARTNER_DOCUMENT_EXPIRING, localized(event.accountId(),
+                "documentExpiring", language -> Map.of(
+                        "document", copy.one(language, "document." + event.type().name()),
+                        "date", copy.date(event.validUntil(), language)),
+                "/verification"));
+    }
+
+    /**
+     * A document expired, or her police check came due again. Said with what
+     * it means for tonight - a trip she is on carries on, the next one waits
+     * - and what to do.
+     */
+    @Async(NotificationDeliveryConfig.EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void onVerificationLapsed(com.sheout.driververification.VerificationLapsed event) {
+        boolean police = event.cause() == com.sheout.driververification.VerificationLapsed.Cause.POLICE_REVERIFICATION_DUE;
+        dispatcher.deliver(event.accountId(), NotificationType.PARTNER_DOCUMENT_EXPIRED, localized(event.accountId(),
+                police ? "policeReverifyDue" : "documentExpired",
+                language -> police ? Map.of() : Map.of("document", copy.one(language, "document." + event.documentType().name())),
+                "/verification"));
+    }
+
+    @Async(NotificationDeliveryConfig.EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void onPartnerDocumentRejected(com.sheout.driververification.PartnerDocumentRejected event) {
+        // The reason is the operator's own words, as with her ID.
+        dispatcher.deliver(event.accountId(), NotificationType.PARTNER_DOCUMENT_REJECTED, localized(event.accountId(),
+                "documentRejected", language -> Map.of(
+                        "document", copy.one(language, "document." + event.type().name()),
+                        "reason", event.reason() == null ? "" : event.reason()),
+                "/verification"));
+    }
+
     @Async(NotificationDeliveryConfig.EXECUTOR)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onProfileChangeDecided(com.sheout.users.DriverProfileChangeDecided event) {

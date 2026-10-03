@@ -91,4 +91,40 @@ public interface VerificationApi {
 
     /** Empty when no live selfie is on file - every submission before it was required. */
     Optional<LiveSelfie> findLiveSelfie(UUID accountId);
+
+    // ------------------------------------------------------- partner documents
+
+    /**
+     * Whether this partner may take trips right now: her ID check, her police
+     * check, and every document her vehicle requires approved and in date.
+     * The one answer users' online gate, dispatch (through users), her
+     * checklist and the console all use.
+     * <p>
+     * vehicleType is users' VehicleType by name (BIKE, AUTO, CAB) - a string
+     * so this module does not depend on users, which depends on it. Null
+     * means not known yet, and gets the strictest list.
+     */
+    PartnerReadiness partnerReadiness(UUID accountId, String vehicleType);
+
+    /** Every version of every document she has sent, newest first, superseded ones included. */
+    List<PartnerDocumentSummary> findPartnerDocuments(UUID accountId);
+
+    /** Current documents waiting for an operator, oldest first. */
+    List<PartnerDocumentSummary> findDocumentsAwaitingReview();
+
+    /** Current approved documents whose validity ends within this many days (or already has, before the sweep runs). */
+    List<PartnerDocumentSummary> findDocumentsExpiringWithin(int days);
+
+    /** Current documents the sweep has expired. */
+    List<PartnerDocumentSummary> findExpiredDocuments();
+
+    /**
+     * A short-lived link to one document's file for this operator, and a
+     * record in her audit trail that they opened it. Empty when there is no
+     * such document or no file.
+     */
+    Optional<String> openPartnerDocument(UUID documentId, UUID operatorAccountId);
+
+    /** Who did what to her verification, newest first - including every time a document was opened. */
+    List<VerificationAuditEntry> auditTrail(UUID accountId);
 }

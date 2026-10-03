@@ -175,6 +175,13 @@ sheout:
     # operations can stand behind today; lower it when that changes.
     target-turnaround-minutes: ${VERIFICATION_TARGET_TURNAROUND_MINUTES:240}
 
+  # A partner's licence, vehicle papers and police evidence - see
+  # PartnerDocumentService. What each vehicle needs is read as flat env vars
+  # (PARTNER_DOCS_BIKE and so on) in DocumentRequirements; see .env.example.
+  # The sweep expires documents and sends the 30/7/1-day reminders.
+  partner-documents:
+    sweep-interval-ms: ${PARTNER_DOCUMENT_SWEEP_INTERVAL_MS:3600000}
+
   # A partner's start-of-shift selfie (and helmet photo on a bike), matched on
   # her phone against the selfie she was verified with - see ShiftCheckService.
   # Switch off only for a load test whose partners go online by script.

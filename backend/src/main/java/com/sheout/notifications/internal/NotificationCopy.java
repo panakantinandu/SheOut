@@ -64,6 +64,16 @@ public class NotificationCopy {
         return one(language, key);
     }
 
+    /** "12 November 2026", "12 नवंबर 2026", "12 నవంబర్ 2026" - her language's month names. */
+    public String date(java.time.LocalDate date, AppLanguage language) {
+        java.util.Locale locale = switch (language) {
+            case HI -> java.util.Locale.forLanguageTag("hi-IN");
+            case TE -> java.util.Locale.forLanguageTag("te-IN");
+            default -> java.util.Locale.forLanguageTag("en-IN");
+        };
+        return java.time.format.DateTimeFormatter.ofPattern("d MMMM yyyy", locale).format(date);
+    }
+
     public String one(AppLanguage language, String key) {
         String value = TEXT.get(language).get(key);
         return value != null ? value : TEXT.get(AppLanguage.EN).getOrDefault(key, key);
@@ -142,6 +152,21 @@ public class NotificationCopy {
                     Map.entry("tripCheckIn.body", "Your trip has stopped or is taking much longer than expected. If you need help, open SheOut and press SOS, or call 112."),
                     Map.entry("partnerLeft.title", "Your partner had to cancel"),
                     Map.entry("partnerLeft.body", "We are finding you another partner now. You do not need to book again."),
+                    Map.entry("documentExpiring.title", "Your {document} expires on {date}"),
+                    Map.entry("documentExpiring.body", "Upload the renewed one from Verification before then, so you can keep going online."),
+                    Map.entry("documentExpired.title", "Your {document} has expired"),
+                    Map.entry("documentExpired.body", "You can finish the trip you are on. To go online again, upload the new one from Verification."),
+                    Map.entry("documentRejected.title", "We could not accept your {document}"),
+                    Map.entry("documentRejected.body", "{reason} Upload it again from Verification."),
+                    Map.entry("policeReverifyDue.title", "Your police verification is due again"),
+                    Map.entry("policeReverifyDue.body", "You can finish the trip you are on. Upload a new police certificate from Verification to go online again."),
+                    Map.entry("document.DRIVING_LICENCE", "driving licence"),
+                    Map.entry("document.VEHICLE_RC", "vehicle RC"),
+                    Map.entry("document.VEHICLE_INSURANCE", "vehicle insurance"),
+                    Map.entry("document.PUC", "PUC certificate"),
+                    Map.entry("document.FITNESS_CERTIFICATE", "fitness certificate"),
+                    Map.entry("document.POLICE_CERTIFICATE", "police certificate"),
+                    Map.entry("document.BACKGROUND_CHECK_REPORT", "background check report"),
                     Map.entry("verifiedPartner.title", "Your account is verified"),
                     Map.entry("verifiedPartner.body", "You can go online and accept trips."),
                     Map.entry("verifiedRider.title", "Your account is verified"),
@@ -242,6 +267,21 @@ public class NotificationCopy {
                     Map.entry("tripCheckIn.body", "आपकी यात्रा रुकी हुई है या उम्मीद से काफ़ी लंबी चल रही है। मदद चाहिए तो SheOut खोलकर SOS दबाएँ, या 112 पर कॉल करें।"),
                     Map.entry("partnerLeft.title", "आपकी पार्टनर को रद्द करना पड़ा"),
                     Map.entry("partnerLeft.body", "हम अभी आपके लिए दूसरी पार्टनर ढूँढ रहे हैं। आपको फिर से बुक करने की ज़रूरत नहीं है।"),
+                    Map.entry("documentExpiring.title", "आपका {document} {date} को समाप्त हो रहा है"),
+                    Map.entry("documentExpiring.body", "उससे पहले सत्यापन में जाकर नया अपलोड करें, ताकि आप ऑनलाइन जाती रहें।"),
+                    Map.entry("documentExpired.title", "आपका {document} समाप्त हो गया है"),
+                    Map.entry("documentExpired.body", "आप अभी की यात्रा पूरी कर सकती हैं। फिर से ऑनलाइन जाने के लिए सत्यापन में जाकर नया अपलोड करें।"),
+                    Map.entry("documentRejected.title", "हम आपका {document} स्वीकार नहीं कर सके"),
+                    Map.entry("documentRejected.body", "{reason} सत्यापन में जाकर इसे फिर से अपलोड करें।"),
+                    Map.entry("policeReverifyDue.title", "आपका पुलिस सत्यापन फिर से होना है"),
+                    Map.entry("policeReverifyDue.body", "आप अभी की यात्रा पूरी कर सकती हैं। फिर से ऑनलाइन जाने के लिए सत्यापन में नया पुलिस प्रमाणपत्र अपलोड करें।"),
+                    Map.entry("document.DRIVING_LICENCE", "ड्राइविंग लाइसेंस"),
+                    Map.entry("document.VEHICLE_RC", "वाहन RC"),
+                    Map.entry("document.VEHICLE_INSURANCE", "वाहन बीमा"),
+                    Map.entry("document.PUC", "PUC प्रमाणपत्र"),
+                    Map.entry("document.FITNESS_CERTIFICATE", "फ़िटनेस प्रमाणपत्र"),
+                    Map.entry("document.POLICE_CERTIFICATE", "पुलिस प्रमाणपत्र"),
+                    Map.entry("document.BACKGROUND_CHECK_REPORT", "बैकग्राउंड जाँच रिपोर्ट"),
                     Map.entry("verifiedPartner.title", "आपका अकाउंट सत्यापित हो गया है"),
                     Map.entry("verifiedPartner.body", "अब आप ऑनलाइन जाकर ट्रिप स्वीकार कर सकती हैं।"),
                     Map.entry("verifiedRider.title", "आपका अकाउंट सत्यापित हो गया है"),
@@ -342,6 +382,21 @@ public class NotificationCopy {
                     Map.entry("tripCheckIn.body", "మీ ప్రయాణం ఆగిపోయింది లేదా అనుకున్నదానికంటే చాలా ఎక్కువ సమయం పడుతోంది. సహాయం కావాలంటే SheOut తెరిచి SOS నొక్కండి, లేదా 112కి కాల్ చేయండి."),
                     Map.entry("partnerLeft.title", "మీ పార్ట్‌నర్ రద్దు చేయాల్సి వచ్చింది"),
                     Map.entry("partnerLeft.body", "మేము ఇప్పుడే మీకు మరో పార్ట్‌నర్‌ను వెతుకుతున్నాం. మళ్లీ బుక్ చేయాల్సిన అవసరం లేదు."),
+                    Map.entry("documentExpiring.title", "మీ {document} {date} న గడువు ముగుస్తుంది"),
+                    Map.entry("documentExpiring.body", "ఆన్‌లైన్‌కి వెళ్తూ ఉండటానికి, అంతకు ముందే ధృవీకరణ నుండి కొత్తది అప్‌లోడ్ చేయండి."),
+                    Map.entry("documentExpired.title", "మీ {document} గడువు ముగిసింది"),
+                    Map.entry("documentExpired.body", "మీరు ఇప్పుడున్న ప్రయాణాన్ని పూర్తి చేయవచ్చు. మళ్లీ ఆన్‌లైన్‌కి వెళ్లడానికి ధృవీకరణ నుండి కొత్తది అప్‌లోడ్ చేయండి."),
+                    Map.entry("documentRejected.title", "మీ {document} ని అంగీకరించలేకపోయాం"),
+                    Map.entry("documentRejected.body", "{reason} ధృవీకరణ నుండి దాన్ని మళ్లీ అప్‌లోడ్ చేయండి."),
+                    Map.entry("policeReverifyDue.title", "మీ పోలీస్ ధృవీకరణ మళ్లీ చేయించాలి"),
+                    Map.entry("policeReverifyDue.body", "మీరు ఇప్పుడున్న ప్రయాణాన్ని పూర్తి చేయవచ్చు. మళ్లీ ఆన్‌లైన్‌కి వెళ్లడానికి ధృవీకరణ నుండి కొత్త పోలీస్ సర్టిఫికేట్ అప్‌లోడ్ చేయండి."),
+                    Map.entry("document.DRIVING_LICENCE", "డ్రైవింగ్ లైసెన్స్"),
+                    Map.entry("document.VEHICLE_RC", "వాహన RC"),
+                    Map.entry("document.VEHICLE_INSURANCE", "వాహన బీమా"),
+                    Map.entry("document.PUC", "PUC సర్టిఫికేట్"),
+                    Map.entry("document.FITNESS_CERTIFICATE", "ఫిట్‌నెస్ సర్టిఫికేట్"),
+                    Map.entry("document.POLICE_CERTIFICATE", "పోలీస్ సర్టిఫికేట్"),
+                    Map.entry("document.BACKGROUND_CHECK_REPORT", "బ్యాక్‌గ్రౌండ్ చెక్ రిపోర్ట్"),
                     Map.entry("verifiedPartner.title", "మీ ఖాతా ధృవీకరించబడింది"),
                     Map.entry("verifiedPartner.body", "మీరు ఇప్పుడు ఆన్‌లైన్‌కి వెళ్లి ట్రిప్‌లు అంగీకరించవచ్చు."),
                     Map.entry("verifiedRider.title", "మీ ఖాతా ధృవీకరించబడింది"),

@@ -30,7 +30,8 @@ class PoliceCheckOrderTest {
     @BeforeEach
     void setUp() {
         service = new VerificationService(repository, mock(VerificationFunnelRepository.class),
-                mock(DocumentStorage.class), mock(DomainEventPublisher.class), 240);
+                mock(DocumentStorage.class), mock(DomainEventPublisher.class), 240,
+                mock(PartnerDocumentService.class), mock(VerificationAudit.class));
         record = new VerificationRecordEntity(partner, AccountRole.DRIVER);
         when(repository.findByAccountId(partner)).thenReturn(Optional.of(record));
     }

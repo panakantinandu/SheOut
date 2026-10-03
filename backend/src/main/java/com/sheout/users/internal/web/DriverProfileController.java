@@ -3,6 +3,7 @@ package com.sheout.users.internal.web;
 import com.sheout.auth.AccountRole;
 import com.sheout.auth.CurrentAccount;
 import com.sheout.auth.CurrentAccountContext;
+import com.sheout.driververification.PartnerReadiness;
 import com.sheout.sharedkernel.Result;
 import com.sheout.sharedkernel.storage.DocumentUpload;
 import com.sheout.sharedkernel.geo.ServiceArea;
@@ -49,6 +50,20 @@ public class DriverProfileController {
     public ResponseEntity<DriverProfileSummary> getMyProfile() {
         CurrentAccount caller = requireDriver();
         return driverProfileService.findOwnProfile(caller.accountId())
+                .map(ResponseEntity::ok)
+                .orElseThrow(() -> ApiException.notFound("No driver profile found for this account"));
+    }
+
+    /**
+     * Everything between her and her next trip, in the order to fix it - her
+     * ID, each document her vehicle needs, her police check - with every
+     * document's state for her checklist, and what will run out soon. The
+     * same answer going online is decided on.
+     */
+    @GetMapping("/api/v1/users/driver/me/readiness")
+    public ResponseEntity<PartnerReadiness> getMyReadiness() {
+        CurrentAccount caller = requireDriver();
+        return driverProfileService.readinessFor(caller.accountId())
                 .map(ResponseEntity::ok)
                 .orElseThrow(() -> ApiException.notFound("No driver profile found for this account"));
     }
@@ -160,6 +175,17 @@ public class DriverProfileController {
         CurrentAccount caller = requireDriver();
         Result<DriverProfileSummary, DriverProfileError> result =
                 driverProfileService.setOnlineStatus(caller.accountId(), request.status(), request.lat(), request.lng());
+        if (result.isFailure() && result.error() == DriverProfileError.NOT_VERIFIED) {
+            // Says which thing, rather than "verification incomplete": "Your
+            // vehicle insurance expired on 12 Nov. Upload the new one to go
+            // online." The app shows the same reason in her language from the
+            // readiness endpoint.
+            String reason = driverProfileService.readinessFor(caller.accountId())
+                    .map(PartnerReadiness::firstBlocker)
+                    .map(PartnerReadiness.Blocker::message)
+                    .orElse("Your verification is not complete yet.");
+            throw new ApiException(HttpStatus.CONFLICT, "NOT_READY", reason);
+        }
         if (result.isFailure()) {
             throw toApiException(result.error());
         }

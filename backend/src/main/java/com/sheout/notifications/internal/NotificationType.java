@@ -62,5 +62,14 @@ public enum NotificationType {
 
     TRIP_CHECK_IN,
 
-    PARTNER_LEFT
+    PARTNER_LEFT,
+
+    /** To a partner: one of her documents runs out in 30, 7 or 1 days - see driver-verification's PartnerDocumentExpiring. */
+    PARTNER_DOCUMENT_EXPIRING,
+
+    /** To a partner: a document expired, or her police check came due again - see VerificationLapsed. */
+    PARTNER_DOCUMENT_EXPIRED,
+
+    /** To a partner: an operator turned one of her documents down, with the reason. */
+    PARTNER_DOCUMENT_REJECTED
 }

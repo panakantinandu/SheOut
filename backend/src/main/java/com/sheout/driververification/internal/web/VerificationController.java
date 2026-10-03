@@ -169,6 +169,29 @@ public class VerificationController {
                     "Your ID is already verified. To change a document, contact support.");
             case DOCUMENT_TOO_LARGE -> new ApiException(HttpStatus.BAD_REQUEST, "DOCUMENT_TOO_LARGE",
                     "That file is larger than 10 MB. A photo taken with your phone's camera will be well under it.");
+            case DOCUMENT_TYPE_NOT_UPLOADABLE -> new ApiException(HttpStatus.BAD_REQUEST, "DOCUMENT_TYPE_NOT_UPLOADABLE",
+                    "That document is added by SheOut's team, not uploaded from the app.");
+            case DOCUMENT_FILE_MISSING -> new ApiException(HttpStatus.BAD_REQUEST, "DOCUMENT_FILE_MISSING",
+                    "Add a photo or PDF of the document. Nothing is approved without the document itself.");
+            case DOCUMENT_NUMBER_REQUIRED -> new ApiException(HttpStatus.BAD_REQUEST, "DOCUMENT_NUMBER_REQUIRED",
+                    "Type the number printed on the document.");
+            case VALID_UNTIL_REQUIRED -> new ApiException(HttpStatus.BAD_REQUEST, "VALID_UNTIL_REQUIRED",
+                    "Add the date the document is valid until. It is printed on it.");
+            case DOCUMENT_ALREADY_EXPIRED -> new ApiException(HttpStatus.BAD_REQUEST, "DOCUMENT_ALREADY_EXPIRED",
+                    "That date has already passed, so the document has expired. Upload the renewed one.");
+            case ISSUE_DATE_IN_FUTURE -> new ApiException(HttpStatus.BAD_REQUEST, "ISSUE_DATE_IN_FUTURE",
+                    "The issue date cannot be in the future. Check the year.");
+            case INSURANCE_USE_TYPE_REQUIRED -> new ApiException(HttpStatus.BAD_REQUEST, "INSURANCE_USE_TYPE_REQUIRED",
+                    "Say whether the policy is for commercial or private use. Choose \"Not sure\" if you do not know.");
+            case INSURANCE_NOT_COMMERCIAL -> new ApiException(HttpStatus.CONFLICT, "INSURANCE_NOT_COMMERCIAL",
+                    "This policy is not marked for commercial use. A private policy can be refused when she carries"
+                            + " paying passengers, so it cannot be approved for rides. Ask her for a commercial policy.");
+            case DOCUMENT_NOT_FOUND -> ApiException.notFound("No such document");
+            case DOCUMENT_NOT_UNDER_REVIEW -> new ApiException(HttpStatus.CONFLICT, "DOCUMENT_NOT_UNDER_REVIEW",
+                    "This document is not waiting for a decision. It has already been decided, or replaced by a newer one.");
+            case REASON_REQUIRED -> new ApiException(HttpStatus.BAD_REQUEST, "REASON_REQUIRED",
+                    "Write the reason. She is shown it, so she knows what to fix.");
+            case NOT_A_PARTNER -> ApiException.forbidden("Only partners upload these documents");
         };
     }
 

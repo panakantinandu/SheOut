@@ -3,10 +3,20 @@ package com.sheout.driververification.internal.web;
 import com.sheout.auth.AccountRole;
 import com.sheout.auth.AuthApi;
 import com.sheout.auth.CurrentAccount;
+import com.sheout.driververification.InsuranceUseType;
+import com.sheout.driververification.PartnerDocumentSource;
+import com.sheout.driververification.PartnerDocumentStatus;
+import com.sheout.driververification.PartnerDocumentSummary;
+import com.sheout.driververification.PartnerDocumentType;
 import com.sheout.driververification.VerificationStatus;
 import com.sheout.driververification.VerificationSummary;
+import com.sheout.driververification.internal.PartnerDocumentService;
 import com.sheout.driververification.internal.VerificationError;
 import com.sheout.driververification.internal.VerificationService;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.time.LocalDate;
 import com.sheout.sharedkernel.Result;
 import com.sheout.sharedkernel.web.ApiException;
 import jakarta.validation.Valid;
@@ -35,10 +45,13 @@ public class AdminVerificationController {
 
     private final VerificationService verificationService;
     private final AuthApi authApi;
+    private final PartnerDocumentService partnerDocuments;
 
-    public AdminVerificationController(VerificationService verificationService, AuthApi authApi) {
+    public AdminVerificationController(VerificationService verificationService, AuthApi authApi,
+                                       PartnerDocumentService partnerDocuments) {
         this.verificationService = verificationService;
         this.authApi = authApi;
+        this.partnerDocuments = partnerDocuments;
     }
 
     @GetMapping("/api/v1/admin/verification/queue")
@@ -73,6 +86,81 @@ public class AdminVerificationController {
             throw VerificationController.toApiException(result.error());
         }
         return ResponseEntity.ok(result.value());
+    }
+
+    // ------------------------------------------------------- partner documents
+
+    /**
+     * An operator's decision on one of her documents, with whatever they
+     * corrected after reading it. Approving needs the evidence and the facts
+     * that make it checkable; rejecting needs a reason - see
+     * PartnerDocumentService.review.
+     */
+    @PostMapping("/api/v1/admin/verification/documents/{documentId}/review")
+    public ResponseEntity<PartnerDocumentSummary> reviewDocument(@PathVariable UUID documentId,
+                                                                 @Valid @RequestBody DocumentReviewRequest request) {
+        CurrentAccount admin = requireAdmin();
+        Result<PartnerDocumentSummary, VerificationError> result = partnerDocuments.review(documentId, admin.accountId(),
+                request.decision(), request.reason(),
+                new PartnerDocumentService.DocumentFacts(request.documentNumber(), request.issuedOn(),
+                        request.validUntil(), request.insuranceUseType()));
+        if (result.isFailure()) {
+            throw VerificationController.toApiException(result.error());
+        }
+        return ResponseEntity.ok(result.value());
+    }
+
+    /**
+     * A document an operator puts on file for her - a certificate SheOut
+     * obtained, or a background report. Goes to the same review as one she
+     * uploaded, so a second pair of eyes is not skipped by the route it came in.
+     */
+    @PostMapping(value = "/api/v1/admin/verification/{accountId}/documents/{type}", consumes = "multipart/form-data")
+    public ResponseEntity<PartnerDocumentSummary> uploadDocument(
+            @PathVariable UUID accountId, @PathVariable PartnerDocumentType type,
+            @RequestParam(value = "file", required = false) MultipartFile file,
+            @RequestParam(value = "documentNumber", required = false) @Size(max = 64) String documentNumber,
+            @RequestParam(value = "issuedOn", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate issuedOn,
+            @RequestParam(value = "validUntil", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate validUntil,
+            @RequestParam(value = "insuranceUseType", required = false) InsuranceUseType insuranceUseType) {
+        CurrentAccount admin = requireAdmin();
+        if (verificationService.findByAccountId(accountId).map(v -> v.role() != AccountRole.DRIVER).orElse(true)) {
+            throw VerificationController.toApiException(VerificationError.NOT_A_PARTNER);
+        }
+        Result<PartnerDocumentSummary, VerificationError> result = partnerDocuments.submit(accountId, type,
+                file == null || file.isEmpty() ? null : PartnerDocumentController.toUpload(file),
+                new PartnerDocumentService.DocumentFacts(documentNumber, issuedOn, validUntil, insuranceUseType),
+                PartnerDocumentSource.OPERATOR_UPLOAD, admin.accountId(), false);
+        if (result.isFailure()) {
+            throw VerificationController.toApiException(result.error());
+        }
+        return ResponseEntity.ok(result.value());
+    }
+
+    /**
+     * A short-lived link to one document's file. The view is written to her
+     * audit trail before the link is returned, so every opening of a police
+     * certificate - or any other document - has a name and a time on it.
+     */
+    @GetMapping("/api/v1/admin/verification/documents/{documentId}/link")
+    public ResponseEntity<DocumentLink> documentLink(@PathVariable UUID documentId) {
+        CurrentAccount admin = requireAdmin();
+        return verificationService.openPartnerDocument(documentId, admin.accountId())
+                .map(url -> ResponseEntity.ok(new DocumentLink(url)))
+                .orElseThrow(() -> ApiException.notFound("No file for that document"));
+    }
+
+    public record DocumentLink(String url) {
+    }
+
+    /** Every field but the decision optional: they are corrections, applied before the rules are checked. */
+    public record DocumentReviewRequest(
+            @NotNull PartnerDocumentStatus decision,
+            @Size(max = 1000) String reason,
+            @Size(max = 64) String documentNumber,
+            LocalDate issuedOn,
+            LocalDate validUntil,
+            InsuranceUseType insuranceUseType) {
     }
 
     private CurrentAccount requireAdmin() {

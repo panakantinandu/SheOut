@@ -61,8 +61,19 @@ public record DataExport(
     public record EmergencyContact(String name, String phoneNumber, String relationship) {
     }
 
+    /**
+     * documents is a partner's licence, vehicle papers and police evidence,
+     * every version she or SheOut put on file - empty for a rider. The
+     * operator who reviewed each is not named: that is staff data, not hers.
+     */
     public record Verification(String identityCheck, String policeCheck, boolean identityDocumentOnFile,
-                               boolean liveSelfieOnFile) {
+                               boolean liveSelfieOnFile, List<PartnerDocument> documents) {
+    }
+
+    public record PartnerDocument(String type, String documentNumber, java.time.LocalDate issuedOn,
+                                  java.time.LocalDate validUntil, String status, String insuranceUseType,
+                                  String rejectionReason, boolean fileOnFile, Instant submittedAt, Instant reviewedAt,
+                                  boolean replacedByNewer) {
     }
 
     /**

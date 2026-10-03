@@ -93,7 +93,16 @@ class DataExportService {
                                 String.valueOf(v.genderVerificationStatus()),
                                 v.policeVerificationStatus() == null ? null : v.policeVerificationStatus().name(),
                                 v.documentSubmitted(),
-                                verificationApi.findLiveSelfie(id).isPresent()))
+                                verificationApi.findLiveSelfie(id).isPresent(),
+                                // Every version she sent: hers, so the
+                                // number on it is too. No link - see DataExport.
+                                verificationApi.findPartnerDocuments(id).stream()
+                                        .map(d -> new DataExport.PartnerDocument(d.type().name(), d.documentNumber(),
+                                                d.issuedOn(), d.validUntil(), d.status().name(),
+                                                d.insuranceUseType() == null ? null : d.insuranceUseType().name(),
+                                                d.rejectionReason(), d.fileOnFile(), d.submittedAt(), d.reviewedAt(),
+                                                d.supersededAt() != null))
+                                        .toList()))
                         .orElse(null),
                 bookings.stream().map(b -> trip(b, id, given.get(b.id()))).toList(),
                 new DataExport.RatingsReceived(received.averageStars(), received.totalRatings()),

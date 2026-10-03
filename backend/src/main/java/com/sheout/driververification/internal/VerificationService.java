@@ -11,7 +11,14 @@ import com.sheout.driververification.VerificationSummary;
 import com.sheout.driververification.VerificationDropOff;
 import com.sheout.driververification.VerificationTurnaround;
 import com.sheout.driververification.LiveSelfie;
+import com.sheout.driververification.PartnerDocumentSource;
+import com.sheout.driververification.PartnerDocumentSummary;
+import com.sheout.driververification.PartnerDocumentType;
+import com.sheout.driververification.PartnerReadiness;
+import com.sheout.driververification.PartnerReadiness.Blocker;
+import com.sheout.driververification.PartnerReadiness.BlockerCode;
 import com.sheout.driververification.SelfiePrompt;
+import com.sheout.driververification.VerificationAuditEntry;
 import com.sheout.sharedkernel.storage.DocumentRules;
 import com.sheout.sharedkernel.storage.DocumentStorage;
 import com.sheout.sharedkernel.storage.DocumentUpload;
@@ -52,6 +59,8 @@ public class VerificationService implements VerificationApi {
     private final DocumentStorage documentStorage;
     private final DomainEventPublisher eventPublisher;
     private final int targetMinutes;
+    private final PartnerDocumentService partnerDocuments;
+    private final VerificationAudit audit;
 
     public VerificationService(VerificationRecordRepository repository,
                                 VerificationFunnelRepository funnel,
@@ -60,12 +69,16 @@ public class VerificationService implements VerificationApi {
                                 // What operations commits to while there is
                                 // nothing measured yet. Said as a target, not
                                 // as a fact - see turnaroundFor.
-                                @Value("${sheout.verification.target-turnaround-minutes:240}") int targetMinutes) {
+                                @Value("${sheout.verification.target-turnaround-minutes:240}") int targetMinutes,
+                                PartnerDocumentService partnerDocuments,
+                                VerificationAudit audit) {
         this.repository = repository;
         this.funnel = funnel;
         this.documentStorage = documentStorage;
         this.eventPublisher = eventPublisher;
         this.targetMinutes = targetMinutes;
+        this.partnerDocuments = partnerDocuments;
+        this.audit = audit;
     }
 
     /**
@@ -175,12 +188,14 @@ public class VerificationService implements VerificationApi {
     }
 
     /**
-     * Takes the identity document, and for a partner the vehicle's
-     * registration certificate alongside it.
+     * Takes the identity document, and - from an app installed before the
+     * documents checklist - the vehicle's registration certificate with it.
      * <p>
-     * Both land in one call because they are evidence for one decision. Two
-     * separate endpoints would let a partner submit half her case and sit in
-     * the queue as a row an operator cannot action.
+     * The RC used to be required here, as evidence for the same decision.
+     * It is a document of its own now (see PartnerDocumentService), checked
+     * with its number and validity date, and the checklist sends it on its
+     * own step. One that still arrives here is filed as her VEHICLE_RC for an
+     * operator to read the details off, so an older app keeps working.
      * <p>
      * (The @Transactional for this method used to sit above firstProblem, a
      * private static helper, where it did nothing.)
@@ -209,14 +224,9 @@ public class VerificationService implements VerificationApi {
             return Result.failure(VerificationError.ALREADY_VERIFIED);
         }
 
-        // Partners submit two documents, riders one, and the difference is
-        // not an inconsistency: an operator reviewing a partner has to check
-        // the registration number she typed against the vehicle she actually
-        // owns, and there is nothing to cross-check for a rider who has no
-        // vehicle. Asking a rider for an RC would be asking for a document
-        // she cannot have.
-        if (record.getRole() == AccountRole.DRIVER && rcUpload == null) {
-            return Result.failure(VerificationError.RC_DOCUMENT_REQUIRED);
+        // A rider has no vehicle; an RC from her is ignored rather than filed.
+        if (record.getRole() != AccountRole.DRIVER) {
+            rcUpload = null;
         }
 
         // Checked before a byte is stored, and for both documents, so a
@@ -240,7 +250,6 @@ public class VerificationService implements VerificationApi {
         }
 
         String storageKey;
-        String rcStorageKey = null;
         String selfieKey;
         String framesKey;
         try {
@@ -248,9 +257,6 @@ public class VerificationService implements VerificationApi {
             // declared: the document is later served with this type to an
             // operator's browser, and the declared one is the caller's to choose.
             storageKey = documentStorage.store(accountId, "aadhaar", DocumentRules.asDetected(upload));
-            if (rcUpload != null) {
-                rcStorageKey = documentStorage.store(accountId, "rc", DocumentRules.asDetected(rcUpload));
-            }
             selfieKey = documentStorage.store(accountId, "selfie", DocumentRules.asDetected(live.selfie()));
             framesKey = documentStorage.store(accountId, "liveness", DocumentRules.asDetected(live.livenessFrames()));
         } catch (RuntimeException ex) {
@@ -264,10 +270,17 @@ public class VerificationService implements VerificationApi {
         // forever, unreferenced, so each retry kept another copy of her ID -
         // and on the database store, a few dozen retries filled the disk.
         String replacedId = record.getAadhaarDocumentKey();
-        String replacedRc = rcStorageKey != null ? record.getRcDocumentKey() : null;
         record.setAadhaarDocumentKey(storageKey);
-        if (rcStorageKey != null) {
-            record.setRcDocumentKey(rcStorageKey);
+        if (rcUpload != null) {
+            Result<PartnerDocumentSummary, VerificationError> rc = partnerDocuments.submit(accountId,
+                    PartnerDocumentType.VEHICLE_RC, rcUpload, PartnerDocumentService.DocumentFacts.none(),
+                    PartnerDocumentSource.PARTNER_UPLOAD, accountId, true);
+            if (rc.isFailure()) {
+                // Its file was already checked above, so this is storage
+                // failing. Thrown, so the half-made submission rolls back
+                // rather than committing an ID with no RC.
+                throw new IllegalStateException("Could not file the RC with the ID submission: " + rc.error());
+            }
         }
         if (record.getGenderVerificationStatus() == VerificationStatus.PENDING
                 || record.getGenderVerificationStatus() == VerificationStatus.REJECTED) {
@@ -279,7 +292,6 @@ public class VerificationService implements VerificationApi {
         record.markDocumentSubmitted();
         repository.save(record);
         deleteQuietly(replacedId);
-        deleteQuietly(replacedRc);
         deleteQuietly(replacedSelfie);
         deleteQuietly(replacedFrames);
         // Operations hears about it now, not when somebody next opens the
@@ -377,6 +389,9 @@ public class VerificationService implements VerificationApi {
         record.setGenderVerificationStatus(decision);
         record.recordReview(adminAccountId.toString(), decision == VerificationStatus.REJECTED ? reason : null);
         repository.save(record);
+        audit.record(accountId, adminAccountId, VerificationAudit.ACTOR_OPERATOR,
+                decision == VerificationStatus.VERIFIED ? VerificationAudit.ID_CHECK_VERIFIED : VerificationAudit.ID_CHECK_REJECTED,
+                null, null, decision == VerificationStatus.REJECTED ? reason : null);
         publishIfFullyVerified(record);
         if (decision == VerificationStatus.REJECTED) {
             // She is told, with the reason the operator gave. Without this
@@ -448,11 +463,88 @@ public class VerificationService implements VerificationApi {
                 .map(documentStorage::resolveUrl);
     }
 
+    /** Her current RC, from partner_documents - the old column is no longer written. */
     @Override
     public Optional<String> findRcDocumentUrl(UUID accountId) {
-        return repository.findByAccountId(accountId)
-                .map(VerificationRecordEntity::getRcDocumentKey)
+        return partnerDocuments.current(accountId, PartnerDocumentType.VEHICLE_RC)
+                .map(PartnerDocumentEntity::getDocumentKey)
                 .map(documentStorage::resolveUrl);
+    }
+
+    // ------------------------------------------------------- partner documents
+
+    /**
+     * Her ID check, her documents, her police check - in the order her
+     * checklist asks for them, so the first blocker is the next thing she
+     * can do.
+     * <p>
+     * While the document rule is not enforced (the rollout switch in
+     * DocumentRequirements), document problems are still worked out and
+     * shown to her, as warnings rather than a refusal.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public PartnerReadiness partnerReadiness(UUID accountId, String vehicleType) {
+        Optional<VerificationRecordEntity> found = repository.findByAccountId(accountId);
+        List<Blocker> blockers = new java.util.ArrayList<>();
+        List<Blocker> warnings = new java.util.ArrayList<>();
+        if (found.isEmpty() || found.get().getRole() != AccountRole.DRIVER) {
+            blockers.add(new Blocker(BlockerCode.ID_CHECK, null, null, "Your ID check is not complete yet."));
+            return new PartnerReadiness(false, blockers, warnings, List.of());
+        }
+        VerificationRecordEntity record = found.get();
+        if (record.getGenderVerificationStatus() != VerificationStatus.VERIFIED) {
+            blockers.add(new Blocker(BlockerCode.ID_CHECK, null, null, switch (record.getGenderVerificationStatus()) {
+                case UNDER_REVIEW -> "Your ID is being checked. You can go online once it is approved.";
+                case REJECTED -> "Your ID was not accepted. Send it again from Verification.";
+                default -> "Send your ID and a live selfie from Verification to start.";
+            }));
+        }
+        PartnerDocumentService.DocumentsReadiness docs = partnerDocuments.readiness(accountId, vehicleType);
+        if (docs.enforced()) {
+            blockers.addAll(docs.blockers());
+        } else {
+            warnings.addAll(docs.blockers());
+        }
+        warnings.addAll(docs.warnings());
+        if (record.getPoliceVerificationStatus() != VerificationStatus.VERIFIED) {
+            blockers.add(new Blocker(BlockerCode.POLICE_CHECK, null, null,
+                    record.getPoliceVerificationStatus() == VerificationStatus.REJECTED
+                            ? "Your police verification was not accepted. Contact support to find out what to do next."
+                            : "Your police verification is not complete yet."));
+        }
+        return new PartnerReadiness(blockers.isEmpty(), List.copyOf(blockers), List.copyOf(warnings), docs.documents());
+    }
+
+    @Override
+    public List<PartnerDocumentSummary> findPartnerDocuments(UUID accountId) {
+        return partnerDocuments.history(accountId);
+    }
+
+    @Override
+    public List<PartnerDocumentSummary> findDocumentsAwaitingReview() {
+        return partnerDocuments.awaitingReview();
+    }
+
+    @Override
+    public List<PartnerDocumentSummary> findDocumentsExpiringWithin(int days) {
+        return partnerDocuments.expiringWithin(days);
+    }
+
+    @Override
+    public List<PartnerDocumentSummary> findExpiredDocuments() {
+        return partnerDocuments.expired();
+    }
+
+    @Override
+    public Optional<String> openPartnerDocument(UUID documentId, UUID operatorAccountId) {
+        return partnerDocuments.open(documentId, operatorAccountId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<VerificationAuditEntry> auditTrail(UUID accountId) {
+        return audit.historyFor(accountId);
     }
 
     private void publishIfFullyVerified(VerificationRecordEntity record) {

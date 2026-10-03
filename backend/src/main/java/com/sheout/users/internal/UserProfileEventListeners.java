@@ -24,13 +24,23 @@ class UserProfileEventListeners {
     private final CustomerProfileRepository customerProfileRepository;
     private final DriverProfileRepository driverProfileRepository;
     private final TrustPolicy trustPolicy;
+    private final DriverProfileService driverProfiles;
 
     UserProfileEventListeners(CustomerProfileRepository customerProfileRepository,
                                DriverProfileRepository driverProfileRepository,
-                               TrustPolicy trustPolicy) {
+                               TrustPolicy trustPolicy,
+                               DriverProfileService driverProfiles) {
         this.customerProfileRepository = customerProfileRepository;
         this.driverProfileRepository = driverProfileRepository;
         this.trustPolicy = trustPolicy;
+        this.driverProfiles = driverProfiles;
+    }
+
+    /** A document expired or her police check came due - see DriverProfileService.onVerificationLapsed. */
+    @EventListener
+    @Transactional
+    public void onVerificationLapsed(com.sheout.driververification.VerificationLapsed event) {
+        driverProfiles.onVerificationLapsed(event);
     }
 
     /**

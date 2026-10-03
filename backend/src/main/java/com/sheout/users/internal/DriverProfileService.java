@@ -4,9 +4,9 @@ import com.sheout.auth.AccountSummary;
 import com.sheout.auth.AuthApi;
 import com.sheout.driververification.ShiftCheckApi;
 import com.sheout.driververification.ShiftCheckState;
+import com.sheout.driververification.PartnerReadiness;
 import com.sheout.driververification.VerificationApi;
-import com.sheout.driververification.VerificationStatus;
-import com.sheout.driververification.VerificationSummary;
+import com.sheout.driververification.VerificationLapsed;
 import com.sheout.sharedkernel.Result;
 import com.sheout.sharedkernel.event.DomainEventPublisher;
 import com.sheout.sharedkernel.devmode.DevMode;
@@ -302,7 +302,11 @@ public class DriverProfileService implements DriverProfileApi {
             }
         }
 
-        if (requested == OnlineStatus.ONLINE && !isFullyVerified(accountId) && !isVerifiedBypassAccount(accountId)) {
+        // Her ID, her police check, and every document her vehicle needs
+        // approved and in date - one answer from driver-verification, asked
+        // now. The refusal says which thing is missing: see readinessFor and
+        // DriverProfileController's NOT_READY.
+        if (requested == OnlineStatus.ONLINE && !isReady(profile) && !isVerifiedBypassAccount(accountId)) {
             return Result.failure(DriverProfileError.NOT_VERIFIED);
         }
 
@@ -357,7 +361,41 @@ public class DriverProfileService implements DriverProfileApi {
      */
     @Override
     public boolean isCurrentlyVerified(UUID accountId) {
-        return isFullyVerified(accountId);
+        return driverProfileRepository.findByAccountId(accountId).map(this::isReady).orElse(false);
+    }
+
+    /**
+     * Where she stands, for her checklist, her Home banner and a refusal's
+     * message. Asked of driver-verification with her vehicle, which only
+     * this module knows.
+     */
+    public Optional<PartnerReadiness> readinessFor(UUID accountId) {
+        return driverProfileRepository.findByAccountId(accountId).map(this::readiness);
+    }
+
+    /**
+     * Something she was cleared on lapsed: a document expired or her police
+     * check came due. She is taken offline now if she can no longer work -
+     * a trip already under way is not touched by going offline, so she
+     * finishes it, and dispatch (which asks isCurrentlyVerified before every
+     * offer) sends her nothing after it. A police check due again also
+     * clears the cached verified flag riders and the console see.
+     */
+    @Transactional
+    public void onVerificationLapsed(VerificationLapsed event) {
+        driverProfileRepository.findByAccountId(event.accountId()).ifPresent(profile -> {
+            if (event.cause() == VerificationLapsed.Cause.POLICE_REVERIFICATION_DUE) {
+                profile.setVerified(false);
+            }
+            boolean takenOffline = profile.getOnlineStatus() == OnlineStatus.ONLINE && !isReady(profile);
+            if (takenOffline) {
+                profile.setOnlineStatus(OnlineStatus.OFFLINE);
+            }
+            driverProfileRepository.save(profile);
+            if (takenOffline) {
+                eventPublisher.publish(new DriverWentOffline(profile.getAccountId()));
+            }
+        });
     }
 
     /** A rider on the back of a bike needs a helmet, and so does her partner. */
@@ -386,14 +424,13 @@ public class DriverProfileService implements DriverProfileApi {
         return count;
     }
 
-    private boolean isFullyVerified(UUID accountId) {
-        Optional<VerificationSummary> verification = verificationApi.findByAccountId(accountId);
-        if (verification.isEmpty()) {
-            return false;
-        }
-        VerificationSummary v = verification.get();
-        return v.genderVerificationStatus() == VerificationStatus.VERIFIED
-                && v.policeVerificationStatus() == VerificationStatus.VERIFIED;
+    private boolean isReady(DriverProfileEntity profile) {
+        return readiness(profile).ready();
+    }
+
+    private PartnerReadiness readiness(DriverProfileEntity profile) {
+        return verificationApi.partnerReadiness(profile.getAccountId(),
+                profile.getVehicleType() == null ? null : profile.getVehicleType().name());
     }
 
     private boolean isVerifiedBypassAccount(UUID accountId) {

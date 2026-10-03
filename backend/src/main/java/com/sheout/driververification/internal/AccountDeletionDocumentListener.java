@@ -28,12 +28,14 @@ class AccountDeletionDocumentListener {
     private final VerificationRecordRepository records;
     private final DocumentStorage documentStorage;
     private final ShiftCheckService shiftChecks;
+    private final PartnerDocumentService partnerDocuments;
 
     AccountDeletionDocumentListener(VerificationRecordRepository records, DocumentStorage documentStorage,
-                                    ShiftCheckService shiftChecks) {
+                                    ShiftCheckService shiftChecks, PartnerDocumentService partnerDocuments) {
         this.records = records;
         this.documentStorage = documentStorage;
         this.shiftChecks = shiftChecks;
+        this.partnerDocuments = partnerDocuments;
     }
 
     @EventListener
@@ -41,6 +43,9 @@ class AccountDeletionDocumentListener {
     public void onAccountDeletionRequested(AccountDeletionRequested event) {
         // Every start-of-shift selfie and helmet photo she ever took.
         shiftChecks.deletePhotosFor(event.accountId());
+        // Her licence, vehicle papers, police certificate and any background
+        // report - every version, not only the current one.
+        partnerDocuments.eraseFor(event.accountId());
         records.findByAccountId(event.accountId()).ifPresent(record -> {
             if (record.getAadhaarDocumentKey() != null) {
                 documentStorage.delete(record.getAadhaarDocumentKey());
