@@ -29,13 +29,16 @@ class AccountDeletionDocumentListener {
     private final DocumentStorage documentStorage;
     private final ShiftCheckService shiftChecks;
     private final PartnerDocumentService partnerDocuments;
+    private final PoliceVerificationService police;
 
     AccountDeletionDocumentListener(VerificationRecordRepository records, DocumentStorage documentStorage,
-                                    ShiftCheckService shiftChecks, PartnerDocumentService partnerDocuments) {
+                                    ShiftCheckService shiftChecks, PartnerDocumentService partnerDocuments,
+                                    PoliceVerificationService police) {
         this.records = records;
         this.documentStorage = documentStorage;
         this.shiftChecks = shiftChecks;
         this.partnerDocuments = partnerDocuments;
+        this.police = police;
     }
 
     @EventListener
@@ -46,6 +49,9 @@ class AccountDeletionDocumentListener {
         // Her licence, vehicle papers, police certificate and any background
         // report - every version, not only the current one.
         partnerDocuments.eraseFor(event.accountId());
+        // Her police certificate numbers and any rejection note; the
+        // decisions and their dates stay, like the statuses below.
+        police.eraseFor(event.accountId());
         records.findByAccountId(event.accountId()).ifPresent(record -> {
             if (record.getAadhaarDocumentKey() != null) {
                 documentStorage.delete(record.getAadhaarDocumentKey());

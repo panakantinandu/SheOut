@@ -42,10 +42,13 @@ class PartnerDocumentReviewTest {
     private final UUID operator = UUID.randomUUID();
     private PartnerDocumentService service;
 
+    private final VerificationConsent consent = mock(VerificationConsent.class);
+
     @BeforeEach
     void setUp() {
+        when(consent.isCurrent(any(UUID.class))).thenReturn(true);
         service = new PartnerDocumentService(repository, mock(DocumentStorage.class), DocumentRequirementsTest.defaults(),
-                mock(VerificationAudit.class), events, new ObjectMapper(), Clock.fixed(NOW, ZoneOffset.UTC));
+                mock(VerificationAudit.class), events, new ObjectMapper(), consent, Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
     private PartnerDocumentEntity waiting(PartnerDocumentType type) {
@@ -187,6 +190,19 @@ class PartnerDocumentReviewTest {
         var result = service.review(UUID.randomUUID(), operator, PartnerDocumentStatus.REJECTED, "changed my mind", null);
 
         assertThat(result.error()).isEqualTo(VerificationError.DOCUMENT_NOT_UNDER_REVIEW);
+    }
+
+    @Test
+    void nothingIsTakenFromHerBeforeSheConsents() {
+        when(consent.isCurrent(partner)).thenReturn(false);
+
+        var result = service.submit(partner, PartnerDocumentType.DRIVING_LICENCE, null, null,
+                PartnerDocumentSource.PARTNER_UPLOAD, partner, false);
+
+        assertThat(result.error()).isEqualTo(VerificationError.CONSENT_REQUIRED);
+        var byOperator = service.submit(partner, PartnerDocumentType.POLICE_CERTIFICATE, null, null,
+                PartnerDocumentSource.OPERATOR_UPLOAD, operator, false);
+        assertThat(byOperator.error()).as("nor filed about her by an operator").isEqualTo(VerificationError.CONSENT_REQUIRED);
     }
 
     @Test

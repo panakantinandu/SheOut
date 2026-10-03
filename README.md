@@ -101,8 +101,9 @@ module's business logic.
 5. An admin moves it to `VERIFIED`/`REJECTED` via
    **`POST /api/v1/admin/verification/{accountId}/gender-review`**
    (`{ decision, reason }`). Drivers additionally need
-   **`POST /api/v1/admin/verification/{accountId}/police-review`**
-   (`{ decision }`, no submission step - purely admin-set).
+   **`POST /api/v1/admin/verification/{accountId}/police-review`** - since
+   V56 a decision with its evidence, not a bare decision: see "Police
+   verification with evidence" below.
    **`GET /api/v1/admin/verification/queue?status=UNDER_REVIEW`** lists
    pending records with the account's phone number attached.
 6. Once an account is fully verified (customer: gender VERIFIED; driver:
@@ -269,6 +270,97 @@ the server starting.
   renewals; nothing yet asks for them automatically.
 - **Every operator view of any partner document is logged**, not only
   police certificates - the cost is a row per view.
+
+## Police verification with evidence
+
+The 2025 Motor Vehicle Aggregator Guidelines require police verification of
+drivers. It used to be an Approve button that recorded nothing about what
+it rested on. It is now a recorded fact with evidence, redone on a period -
+`PoliceVerificationService`, table `police_verifications` (V56).
+
+**Why a new table** rather than columns on `verification_records`: a police
+check is redone every `POLICE_REVERIFY_MONTHS`, and each decision has its
+own evidence. Columns would be overwritten by the next check, losing what
+the previous one rested on - and "was she police-verified, on what, on the
+night of trip X" is exactly what a complaint or an audit asks.
+`verification_records` keeps only the live state (status, due date,
+consent) the gate reads.
+
+### Flow
+
+1. **Consent first.** Before she uploads anything, a partner agrees to the
+   versioned consent (`PARTNER_VERIFICATION_CONSENT` in
+   `design-system/src/legal/content.ts`, every paragraph marked
+   `[to be reviewed by lawyer]`):
+   **`GET`/`POST /api/v1/driver-verification/consent`** `{ version }`. The
+   server accepts only `VERIFICATION_CONSENT_VERSION`; a newer wording asks
+   everyone again. Uploads, operator uploads on her behalf and a police
+   approval all answer `CONSENT_REQUIRED` without it. Riders are not asked:
+   their ID check rests on the privacy policy they accepted at signup.
+2. **The certificate**, either way: she applies on Telangana Police's portal
+   (https://pvc.tspolice.gov.in/) and uploads it as `POLICE_CERTIFICATE`, or
+   an operator uploads it after SheOut obtains it
+   (`POST /api/v1/admin/verification/{accountId}/documents/POLICE_CERTIFICATE`).
+3. **The decision**: `police-review` with
+   `{ decision, method, certificateNumber, issuingAuthority, issuedOn,
+   reverifyDueOn, evidenceDocumentId, extraEvidenceDocumentId, reason }`.
+   VERIFIED needs the method (`TS_POLICE_PVC`, `OTHER_STATE_POLICE`,
+   `THIRD_PARTY_BGV`), the certificate number, the issue date and an
+   evidence document of hers that is on file and not turned down - otherwise
+   `POLICE_EVIDENCE_MISSING`/`POLICE_EVIDENCE_INVALID`. The re-verify date
+   defaults to issue date + `POLICE_REVERIFY_MONTHS`. Approving also approves
+   the certificate document. REJECTED needs a reason. The "ID check first"
+   guard is unchanged.
+4. **Re-verification**, in the same hourly sweep as document expiry:
+   reminders 30 and 7 days before (`POLICE_REVERIFY_REMINDER_DAYS`), then on
+   the due date the check goes back to `PENDING` and `VerificationLapsed` is
+   published - `users` clears its cached `verified` flag and takes her
+   offline after any trip she is on. The gate does not wait for the sweep:
+   a check whose date has arrived blocks her at once.
+
+### Swap point: `VerificationProvider`
+
+`driververification.internal.provider.VerificationProvider`
+(`submitBackgroundCheck`, `fetchResult`, `parseWebhook`), selected by
+`VERIFICATION_PROVIDER`. The only implementation is
+`ManualVerificationProvider`, which does nothing: operators record results.
+**No vendor is integrated and no vendor's API is guessed at** - a vendor's
+request and webhook formats belong in its own implementation, written
+against its real documentation. A result arrives as a
+`BACKGROUND_CHECK_REPORT` for an operator to read; it decides nothing.
+
+`POST /api/v1/verification/provider/webhook` is a stub: 404 unless a
+provider is configured and `VERIFICATION_PROVIDER_WEBHOOK_SECRET` is set,
+then an HMAC-SHA256 of the raw body (hex, in the header named by
+`VERIFICATION_PROVIDER_SIGNATURE_HEADER`) checked in constant time, and the
+body handed to the provider.
+
+### Flagged assumptions
+
+- **A third-party background check alone is NOT accepted as police
+  verification** (`POLICE_ACCEPT_THIRD_PARTY_BGV_ALONE=false`). Whether a
+  private background check by itself satisfies MVAG's "police
+  verification" in Telangana is a legal question nobody has answered. Until
+  a lawyer says it does, a report can be attached beside a police
+  certificate but cannot make the check VERIFIED.
+- **Twelve months between police checks** is an assumption
+  (`POLICE_REVERIFY_MONTHS`).
+- **Every police check recorded before V56 had no evidence**, so V56 makes
+  each one due the day it is deployed. The first sweep puts them back to
+  `PENDING` and tells each partner to send a certificate; operators then
+  record them with evidence. Deploying this takes every existing partner
+  offline until that is done (as Part A's documents also do).
+- **The consent wording is a draft.** It is in the design system with
+  `[to be reviewed by lawyer]` on every paragraph and version
+  `2026-10-03-draft`; when approved, change the text and bump the version
+  in both places.
+- **A rejected police check is not pushed to her** - she sees it, with the
+  reason, on her checklist. The ID check's rejection is pushed; this one
+  could be, with its own copy, once the wording is agreed.
+- **Aadhaar:** this pass collects nothing new about Aadhaar. The lawyer
+  should confirm before launch whether the ID photo SheOut already takes
+  should be limited to a masked Aadhaar (the app already invites her to
+  cover the number) or replaced by DigiLocker.
 
 ## Users
 

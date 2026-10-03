@@ -21,6 +21,8 @@ interface PartnerDocumentRepository extends JpaRepository<PartnerDocumentEntity,
 
     Optional<PartnerDocumentEntity> findByAccountIdAndTypeAndSupersededAtIsNull(UUID accountId, PartnerDocumentType type);
 
+    Optional<PartnerDocumentEntity> findFirstByProviderReferenceOrderByCreatedAtDesc(String providerReference);
+
     /** Locked, so an upload and a review of the same type cannot interleave. */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select d from PartnerDocumentEntity d where d.id = :id")

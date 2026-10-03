@@ -11,6 +11,8 @@ import com.sheout.driververification.PartnerDocumentType;
 import com.sheout.driververification.VerificationStatus;
 import com.sheout.driververification.VerificationSummary;
 import com.sheout.driververification.internal.PartnerDocumentService;
+import com.sheout.driververification.internal.PoliceVerificationService;
+import com.sheout.driververification.internal.provider.BackgroundCheckService;
 import com.sheout.driververification.internal.VerificationError;
 import com.sheout.driververification.internal.VerificationService;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -46,12 +48,14 @@ public class AdminVerificationController {
     private final VerificationService verificationService;
     private final AuthApi authApi;
     private final PartnerDocumentService partnerDocuments;
+    private final BackgroundCheckService backgroundChecks;
 
     public AdminVerificationController(VerificationService verificationService, AuthApi authApi,
-                                       PartnerDocumentService partnerDocuments) {
+                                       PartnerDocumentService partnerDocuments, BackgroundCheckService backgroundChecks) {
         this.verificationService = verificationService;
         this.authApi = authApi;
         this.partnerDocuments = partnerDocuments;
+        this.backgroundChecks = backgroundChecks;
     }
 
     @GetMapping("/api/v1/admin/verification/queue")
@@ -81,7 +85,10 @@ public class AdminVerificationController {
                                                               @Valid @RequestBody PoliceReviewRequest request) {
         CurrentAccount admin = requireAdmin();
         Result<VerificationSummary, VerificationError> result = verificationService.reviewPoliceVerification(
-                accountId, admin.accountId(), request.decision());
+                accountId, admin.accountId(), new PoliceVerificationService.PoliceDecision(request.decision(),
+                        request.method(), request.certificateNumber(), request.issuingAuthority(), request.issuedOn(),
+                        request.reverifyDueOn(), request.evidenceDocumentId(), request.extraEvidenceDocumentId(),
+                        request.reason()));
         if (result.isFailure()) {
             throw VerificationController.toApiException(result.error());
         }
@@ -153,6 +160,32 @@ public class AdminVerificationController {
     public record DocumentLink(String url) {
     }
 
+    /** Which verification provider is set up, so the console offers "Request a background check" only when one is. */
+    @GetMapping("/api/v1/admin/verification/provider")
+    public ResponseEntity<ProviderStatus> provider() {
+        requireAdmin();
+        return ResponseEntity.ok(new ProviderStatus(backgroundChecks.providerName(), backgroundChecks.providerConfigured()));
+    }
+
+    /**
+     * Sends her to the configured provider for a background check. The
+     * answer comes back as a report for an operator to read; it decides
+     * nothing on its own. PROVIDER_NOT_CONFIGURED with the manual default.
+     */
+    @PostMapping("/api/v1/admin/verification/{accountId}/background-check")
+    public ResponseEntity<PartnerDocumentSummary> requestBackgroundCheck(@PathVariable UUID accountId) {
+        CurrentAccount admin = requireAdmin();
+        Result<PartnerDocumentSummary, VerificationError> result =
+                backgroundChecks.requestCheck(accountId, admin.accountId());
+        if (result.isFailure()) {
+            throw VerificationController.toApiException(result.error());
+        }
+        return ResponseEntity.ok(result.value());
+    }
+
+    public record ProviderStatus(String name, boolean configured) {
+    }
+
     /** Every field but the decision optional: they are corrections, applied before the rules are checked. */
     public record DocumentReviewRequest(
             @NotNull PartnerDocumentStatus decision,
@@ -190,7 +223,22 @@ public class AdminVerificationController {
     public record ReviewRequest(@NotNull VerificationStatus decision, @Size(max = 1000) String reason) {
     }
 
-    public record PoliceReviewRequest(@NotNull VerificationStatus decision) {
+    /**
+     * VERIFIED needs method, certificateNumber, issuedOn and
+     * evidenceDocumentId (a partner_documents id); reverifyDueOn defaults to
+     * issuedOn + POLICE_REVERIFY_MONTHS. REJECTED needs reason. The server
+     * enforces both, whatever the console allows.
+     */
+    public record PoliceReviewRequest(
+            @NotNull VerificationStatus decision,
+            com.sheout.driververification.PoliceVerificationMethod method,
+            @Size(max = 64) String certificateNumber,
+            @Size(max = 200) String issuingAuthority,
+            LocalDate issuedOn,
+            LocalDate reverifyDueOn,
+            UUID evidenceDocumentId,
+            UUID extraEvidenceDocumentId,
+            @Size(max = 1000) String reason) {
     }
 
     public record QueueItem(

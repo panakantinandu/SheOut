@@ -81,24 +81,26 @@ public class PartnerDocumentService {
     private final VerificationAudit audit;
     private final DomainEventPublisher events;
     private final ObjectMapper json;
+    private final VerificationConsent consent;
     private final Clock clock;
 
     @Autowired
     public PartnerDocumentService(PartnerDocumentRepository documents, DocumentStorage storage,
                                   DocumentRequirements requirements, VerificationAudit audit,
-                                  DomainEventPublisher events, ObjectMapper json) {
-        this(documents, storage, requirements, audit, events, json, Clock.systemUTC());
+                                  DomainEventPublisher events, ObjectMapper json, VerificationConsent consent) {
+        this(documents, storage, requirements, audit, events, json, consent, Clock.systemUTC());
     }
 
     PartnerDocumentService(PartnerDocumentRepository documents, DocumentStorage storage,
                            DocumentRequirements requirements, VerificationAudit audit,
-                           DomainEventPublisher events, ObjectMapper json, Clock clock) {
+                           DomainEventPublisher events, ObjectMapper json, VerificationConsent consent, Clock clock) {
         this.documents = documents;
         this.storage = storage;
         this.requirements = requirements;
         this.audit = audit;
         this.events = events;
         this.json = json;
+        this.consent = consent;
         this.clock = clock;
     }
 
@@ -127,6 +129,12 @@ public class PartnerDocumentService {
             PartnerDocumentSource source, UUID actorId, boolean withoutFacts) {
         if (source == PartnerDocumentSource.PARTNER_UPLOAD && !type.partnerUploads()) {
             return Result.failure(VerificationError.DOCUMENT_TYPE_NOT_UPLOADABLE);
+        }
+        // Nothing is taken from her, or filed about her by an operator, until
+        // she has agreed to be verified - and to the wording in force now. A
+        // provider's report arrives only for a check her consent started.
+        if (source != PartnerDocumentSource.PROVIDER && !consent.isCurrent(accountId)) {
+            return Result.failure(VerificationError.CONSENT_REQUIRED);
         }
         if (upload == null) {
             return Result.failure(VerificationError.DOCUMENT_FILE_MISSING);
@@ -501,9 +509,77 @@ public class PartnerDocumentService {
         return Optional.ofNullable(storage.resolveUrl(doc.getDocumentKey()));
     }
 
-    /** Package-private: Part B attaches police evidence by id and needs the entity. */
+    /**
+     * A background check sent to a provider: a PENDING report row holding
+     * the provider's reference, with nothing to read until it answers.
+     */
+    @Transactional
+    public PartnerDocumentSummary openProviderCheck(UUID accountId, String providerReference, UUID operatorId) {
+        Instant now = clock.instant();
+        documents.findByAccountIdAndTypeAndSupersededAtIsNull(accountId, PartnerDocumentType.BACKGROUND_CHECK_REPORT)
+                .ifPresent(earlier -> {
+                    earlier.supersede(now);
+                    documents.saveAndFlush(earlier);
+                });
+        PartnerDocumentEntity report = new PartnerDocumentEntity(accountId, PartnerDocumentType.BACKGROUND_CHECK_REPORT,
+                PartnerDocumentSource.PROVIDER, PartnerDocumentStatus.PENDING, now);
+        report.setProviderReference(providerReference);
+        documents.save(report);
+        audit.record(accountId, operatorId, VerificationAudit.ACTOR_OPERATOR, VerificationAudit.BACKGROUND_CHECK_SUBMITTED,
+                report.getId(), PartnerDocumentType.BACKGROUND_CHECK_REPORT, "Reference " + providerReference);
+        return toSummary(report);
+    }
+
+    /**
+     * A provider's answer: its report is filed on the waiting row, which
+     * moves to UNDER_REVIEW for an operator to read. Nothing is decided here.
+     * Empty when no check has that reference.
+     */
+    @Transactional
+    public Optional<PartnerDocumentSummary> recordProviderResult(String providerReference, DocumentUpload report, String summary) {
+        Optional<PartnerDocumentEntity> found = documents.findFirstByProviderReferenceOrderByCreatedAtDesc(providerReference);
+        if (found.isEmpty() || !found.get().isCurrent()) {
+            return Optional.empty();
+        }
+        PartnerDocumentEntity doc = found.get();
+        if (report != null && DocumentRules.check(report) == null) {
+            if (doc.getDocumentKey() != null) {
+                storage.delete(doc.getDocumentKey());
+            }
+            doc.setDocumentKey(storage.store(doc.getAccountId(), "partner-background_check_report", DocumentRules.asDetected(report)));
+        }
+        if (doc.getStatus() == PartnerDocumentStatus.PENDING) {
+            doc.markUnderReview();
+        }
+        documents.save(doc);
+        audit.record(doc.getAccountId(), null, VerificationAudit.ACTOR_PROVIDER, VerificationAudit.PROVIDER_RESULT_RECEIVED,
+                doc.getId(), doc.getType(), summary);
+        return Optional.of(toSummary(doc));
+    }
+
+    /** For PoliceVerificationService, which attaches evidence by id. */
     Optional<PartnerDocumentEntity> entity(UUID documentId) {
         return documents.findById(documentId);
+    }
+
+    /**
+     * The police check approved on this certificate: it is approved too,
+     * with the number and issue date the operator just recorded, if it was
+     * still waiting. One reading of one piece of paper, one decision.
+     */
+    void acceptAsPoliceEvidence(PartnerDocumentEntity evidence, UUID operatorId, String number, LocalDate issuedOn) {
+        if (evidence.getDocumentNumber() == null) {
+            evidence.setDocumentNumber(number);
+        }
+        if (evidence.getIssuedOn() == null) {
+            evidence.setIssuedOn(issuedOn);
+        }
+        if (evidence.getStatus() == PartnerDocumentStatus.UNDER_REVIEW || evidence.getStatus() == PartnerDocumentStatus.PENDING) {
+            evidence.markVerified(operatorId, clock.instant());
+            audit.record(evidence.getAccountId(), operatorId, VerificationAudit.ACTOR_OPERATOR,
+                    VerificationAudit.DOCUMENT_VERIFIED, evidence.getId(), evidence.getType(), describe(evidence));
+        }
+        documents.save(evidence);
     }
 
     Optional<PartnerDocumentEntity> current(UUID accountId, PartnerDocumentType type) {

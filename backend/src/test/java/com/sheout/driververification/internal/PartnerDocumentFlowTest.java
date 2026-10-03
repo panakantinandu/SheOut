@@ -55,6 +55,7 @@ class PartnerDocumentFlowTest {
     @Autowired ApplicationEventPublisher publisher;
     @Autowired JdbcTemplate jdbc;
     @Autowired ApplicationEvents events;
+    @Autowired VerificationConsent consent;
 
     private final UUID partner = UUID.randomUUID();
     private final UUID operator = UUID.randomUUID();
@@ -65,7 +66,8 @@ class PartnerDocumentFlowTest {
         // Both modules create their rows from the signup event, as in production.
         publisher.publishEvent(new AccountRegistered(partner, AccountRole.DRIVER));
         jdbc.update("update verification_records set gender_verification_status = 'VERIFIED',"
-                + " police_verification_status = 'VERIFIED' where account_id = ?", partner);
+                + " police_verification_status = 'VERIFIED', consent_version = ?, consent_accepted_at = now()"
+                + " where account_id = ?", consent.currentVersion(), partner);
         jdbc.update("update driver_profiles set vehicle_type = 'BIKE' where account_id = ?", partner);
     }
 

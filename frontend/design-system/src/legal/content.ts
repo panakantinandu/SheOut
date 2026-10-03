@@ -243,3 +243,53 @@ export const TERMS_OF_SERVICE: LegalDocument = {
     },
   ],
 };
+
+/** Wording a lawyer has not yet approved. Rendered visibly, like TODO_LEGAL. */
+export const TODO_LAWYER = '[to be reviewed by lawyer]';
+
+/**
+ * The version of the partner verification consent below. The server checks a
+ * partner agreed to exactly this version (VERIFICATION_CONSENT_VERSION in its
+ * configuration) before it takes any document from her, so the two must be
+ * bumped together whenever the substance changes.
+ */
+export const VERIFICATION_CONSENT_VERSION = '2026-10-03-draft';
+
+/**
+ * What a partner agrees to before she uploads anything: SheOut verifying her
+ * identity, her licence and vehicle documents, and her police or criminal
+ * record, and what happens to those documents.
+ * <p>
+ * Every claim is what the code does: who sees the documents (operators, by
+ * signed links that expire, each view recorded), how long a police check
+ * stands, and that a provider is named only once one is used. NOT APPROVED
+ * WORDING - every paragraph carries the lawyer marker until it is.
+ */
+export const PARTNER_VERIFICATION_CONSENT: LegalDocument = {
+  title: 'Consent to verification',
+  effective: `Version ${VERIFICATION_CONSENT_VERSION}`,
+  intro: `I agree to SheOut verifying my identity, my documents and my police or criminal record, as described below, so that I can carry riders and deliveries on SheOut. ${TODO_LAWYER}`,
+  sections: [
+    {
+      heading: 'What SheOut checks',
+      paragraphs: [
+        `My government ID and a live selfie, to confirm who I am. My driving licence, my vehicle\'s registration certificate (RC), its insurance, its PUC certificate and, for an auto or a cab, its fitness certificate, to confirm I may drive this vehicle for paying passengers. ${TODO_LAWYER}`,
+        `A police verification certificate - from Telangana Police\'s portal, or another state\'s police - and, where SheOut arranges one, a background check report. My police verification is redone periodically, and I will be asked for a new certificate when it is due. ${TODO_LAWYER}`,
+      ],
+    },
+    {
+      heading: 'Who sees my documents',
+      paragraphs: [
+        `SheOut\'s verification team, through links that expire. Every time someone opens one of my documents, SheOut records who opened it and when. Riders never see my documents. ${TODO_LAWYER}`,
+        `If SheOut uses a background-verification company, it receives what it needs to run the check, and SheOut will name it in the Privacy Policy before it is used. If I am enrolled in a group insurance cover, the insurer receives the details it needs to cover me and to handle a claim. ${TODO_LAWYER}`,
+      ],
+    },
+    {
+      heading: 'How long, and my choices',
+      paragraphs: [
+        `My documents are kept while I am a SheOut partner, and deleted with my account. Whether I was verified, and when, is kept as part of the record of the trips I took. ${TODO_LAWYER}`,
+        `I can withdraw this consent by deleting my account. Without it, SheOut cannot verify me and I cannot go online. ${TODO_LAWYER}`,
+      ],
+    },
+  ],
+};

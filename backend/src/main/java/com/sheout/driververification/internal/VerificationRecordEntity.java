@@ -83,6 +83,24 @@ public class VerificationRecordEntity extends BaseEntity {
     @Column(length = 1000)
     private String rejectionReason;
 
+    /**
+     * The verification consent she last agreed to, and when - see
+     * PoliceVerificationService.acceptConsent. A newer version of the wording
+     * asks again. Each acceptance is also a line in her audit trail.
+     */
+    @Column(length = 40)
+    private String consentVersion;
+    private Instant consentAcceptedAt;
+
+    /**
+     * When her police check must be redone: the issue date of the evidence
+     * plus POLICE_REVERIFY_MONTHS, or what the operator set. On that day the
+     * sweep puts police_verification_status back to PENDING.
+     */
+    private java.time.LocalDate policeReverifyDueOn;
+    /** The smallest "days before" reminder already sent for this due date. */
+    private Integer policeReverifyReminderDays;
+
     protected VerificationRecordEntity() {
         // JPA
     }
@@ -204,6 +222,37 @@ public class VerificationRecordEntity extends BaseEntity {
 
     public Instant getDocumentSubmittedAt() {
         return documentSubmittedAt;
+    }
+
+    public String getConsentVersion() {
+        return consentVersion;
+    }
+
+    public Instant getConsentAcceptedAt() {
+        return consentAcceptedAt;
+    }
+
+    void recordConsent(String version, Instant at) {
+        this.consentVersion = version;
+        this.consentAcceptedAt = at;
+    }
+
+    public java.time.LocalDate getPoliceReverifyDueOn() {
+        return policeReverifyDueOn;
+    }
+
+    public Integer getPoliceReverifyReminderDays() {
+        return policeReverifyReminderDays;
+    }
+
+    /** A new due date restarts its reminders. */
+    void setPoliceReverifyDueOn(java.time.LocalDate dueOn) {
+        this.policeReverifyDueOn = dueOn;
+        this.policeReverifyReminderDays = null;
+    }
+
+    void recordPoliceReverifyReminder(int days) {
+        this.policeReverifyReminderDays = days;
     }
 
     public void recordReview(String reviewedByAccountId, String rejectionReason) {

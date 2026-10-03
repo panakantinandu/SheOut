@@ -272,8 +272,11 @@ class NotificationEventListeners {
     @Async(NotificationDeliveryConfig.EXECUTOR)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onPartnerDocumentExpiring(com.sheout.driververification.PartnerDocumentExpiring event) {
+        // Her police check is not a document that expires but a check that is
+        // redone, and is said that way.
+        boolean police = event.type() == com.sheout.driververification.PartnerDocumentType.POLICE_CERTIFICATE;
         dispatcher.deliver(event.accountId(), NotificationType.PARTNER_DOCUMENT_EXPIRING, localized(event.accountId(),
-                "documentExpiring", language -> Map.of(
+                police ? "policeReverifySoon" : "documentExpiring", language -> Map.of(
                         "document", copy.one(language, "document." + event.type().name()),
                         "date", copy.date(event.validUntil(), language)),
                 "/verification"));

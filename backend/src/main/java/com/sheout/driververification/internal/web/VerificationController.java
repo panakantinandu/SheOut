@@ -43,10 +43,13 @@ public class VerificationController {
 
     private final VerificationService verificationService;
     private final RateLimiter rateLimiter;
+    private final com.sheout.driververification.internal.VerificationConsent consent;
 
-    public VerificationController(VerificationService verificationService, RateLimiter rateLimiter) {
+    public VerificationController(VerificationService verificationService, RateLimiter rateLimiter,
+                                  com.sheout.driververification.internal.VerificationConsent consent) {
         this.verificationService = verificationService;
         this.rateLimiter = rateLimiter;
+        this.consent = consent;
     }
 
     @PostMapping(value = "/api/v1/driver-verification/documents", consumes = "multipart/form-data")
@@ -192,7 +195,52 @@ public class VerificationController {
             case REASON_REQUIRED -> new ApiException(HttpStatus.BAD_REQUEST, "REASON_REQUIRED",
                     "Write the reason. She is shown it, so she knows what to fix.");
             case NOT_A_PARTNER -> ApiException.forbidden("Only partners upload these documents");
+            case CONSENT_REQUIRED -> new ApiException(HttpStatus.CONFLICT, "CONSENT_REQUIRED",
+                    "Agree to SheOut verifying your identity, documents and police record before sending anything.");
+            case CONSENT_VERSION_OUTDATED -> new ApiException(HttpStatus.CONFLICT, "CONSENT_VERSION_OUTDATED",
+                    "The consent wording has changed since this screen loaded. Read the new version and agree again.");
+            case POLICE_EVIDENCE_MISSING -> new ApiException(HttpStatus.BAD_REQUEST, "POLICE_EVIDENCE_MISSING",
+                    "Record how the police check was done, the certificate number, its issue date and the certificate"
+                            + " itself before approving. A police check is approved on evidence, not on a click.");
+            case POLICE_EVIDENCE_INVALID -> new ApiException(HttpStatus.BAD_REQUEST, "POLICE_EVIDENCE_INVALID",
+                    "That evidence cannot be used: it must be her own police certificate or report, with the file"
+                            + " on record, and not one that was turned down or has expired.");
+            case BGV_NOT_SUFFICIENT_ALONE -> new ApiException(HttpStatus.CONFLICT, "BGV_NOT_SUFFICIENT_ALONE",
+                    "A private background check cannot be the only evidence for a police check. Attach a police"
+                            + " certificate; the background report can go beside it as extra evidence.");
+            case POLICE_CERTIFICATE_TOO_OLD -> new ApiException(HttpStatus.CONFLICT, "POLICE_CERTIFICATE_TOO_OLD",
+                    "That certificate is old enough that it would already be due for re-verification. Ask her for a new one.");
+            case PROVIDER_NOT_CONFIGURED -> new ApiException(HttpStatus.CONFLICT, "PROVIDER_NOT_CONFIGURED",
+                    "No verification provider is set up. Record the result of a manual check instead.");
         };
+    }
+
+    /** The consent she gave against the version in force; the app shows the consent screen while current is false. */
+    @GetMapping("/api/v1/driver-verification/consent")
+    public ResponseEntity<com.sheout.driververification.VerificationConsentStatus> getConsent() {
+        CurrentAccount caller = requireAuthenticated();
+        return ResponseEntity.ok(verificationService.consentStatus(caller.accountId()));
+    }
+
+    /**
+     * She agrees, to the version she was shown. Partners only; a rider's ID
+     * check rests on the privacy policy she accepted at signup.
+     */
+    @PostMapping("/api/v1/driver-verification/consent")
+    public ResponseEntity<com.sheout.driververification.VerificationConsentStatus> acceptConsent(
+            @org.springframework.web.bind.annotation.RequestBody ConsentRequest request) {
+        CurrentAccount caller = requireAuthenticated();
+        if (caller.role() != com.sheout.auth.AccountRole.DRIVER) {
+            throw toApiException(VerificationError.NOT_A_PARTNER);
+        }
+        Result<?, VerificationError> result = consent.accept(caller.accountId(), request == null ? null : request.version());
+        if (result.isFailure()) {
+            throw toApiException(result.error());
+        }
+        return ResponseEntity.ok(verificationService.consentStatus(caller.accountId()));
+    }
+
+    public record ConsentRequest(String version) {
     }
 
     private DocumentUpload toUpload(MultipartFile file) {

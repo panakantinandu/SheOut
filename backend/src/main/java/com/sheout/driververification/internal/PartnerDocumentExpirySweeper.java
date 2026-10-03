@@ -8,8 +8,8 @@ import java.time.Duration;
 
 /**
  * Runs the documents' calendar: expires what has run out, sends the 30-,
- * 7- and 1-day reminders, and (see PoliceReverification) puts a police check
- * that has come due back to PENDING.
+ * 7- and 1-day reminders, and (see PoliceVerificationService.reverifyDue)
+ * puts a police check that has come due back to PENDING.
  * <p>
  * Hourly by default. Dates here are whole days in India, so an hour late is
  * an hour into a day the document was already not valid for at worst - and
@@ -21,10 +21,12 @@ import java.time.Duration;
 class PartnerDocumentExpirySweeper {
 
     private final PartnerDocumentService documents;
+    private final PoliceVerificationService police;
     private final ClusterLock lock;
 
-    PartnerDocumentExpirySweeper(PartnerDocumentService documents, ClusterLock lock) {
+    PartnerDocumentExpirySweeper(PartnerDocumentService documents, PoliceVerificationService police, ClusterLock lock) {
         this.documents = documents;
+        this.police = police;
         this.lock = lock;
     }
 
@@ -35,5 +37,6 @@ class PartnerDocumentExpirySweeper {
 
     void sweepOnce() {
         documents.expireAndRemind();
+        police.reverifyDue();
     }
 }

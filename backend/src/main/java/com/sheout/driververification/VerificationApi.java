@@ -127,4 +127,18 @@ public interface VerificationApi {
 
     /** Who did what to her verification, newest first - including every time a document was opened. */
     List<VerificationAuditEntry> auditTrail(UUID accountId);
+
+    // ------------------------------------------------- police check and consent
+
+    /** Every recorded decision on her police check and its evidence, newest first. */
+    List<PoliceVerificationRecord> policeHistory(UUID accountId);
+
+    /** Partners whose police check falls due within this many days (or already has), soonest first. */
+    List<VerificationSummary> findPoliceReverificationDueWithin(int days);
+
+    /** When her police check must be redone; empty when none is in force. */
+    Optional<java.time.LocalDate> policeReverifyDueOn(UUID accountId);
+
+    /** The consent she gave, against the version in force. */
+    VerificationConsentStatus consentStatus(UUID accountId);
 }

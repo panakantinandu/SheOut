@@ -427,6 +427,23 @@ envVarGroups:
       - key: DOCUMENT_REMINDER_DAYS
         value: "30,7,1"
 
+      # Police verification with evidence. 12 months and "a background
+      # check alone is not enough" are assumptions awaiting the lawyer - see
+      # the README. The consent version must match the apps' legal content.
+      - key: POLICE_REVERIFY_MONTHS
+        value: "12"
+      - key: POLICE_ACCEPT_THIRD_PARTY_BGV_ALONE
+        value: "false"
+      - key: VERIFICATION_CONSENT_VERSION
+        value: "2026-10-03-draft"
+      # No verification vendor: operators record checks by hand and the
+      # provider webhook is closed. The secret is set in the dashboard only
+      # once a vendor exists.
+      - key: VERIFICATION_PROVIDER
+        value: manual
+      - key: VERIFICATION_PROVIDER_WEBHOOK_SECRET
+        sync: false
+
       # Total time dispatch may spend hunting for a driver for one booking,
       # across every retry round and radius expansion. NOT the per-offer
       # accept window - that bounds one driver answering one offer. They

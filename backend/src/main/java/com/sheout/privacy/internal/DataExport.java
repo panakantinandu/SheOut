@@ -67,7 +67,14 @@ public record DataExport(
      * operator who reviewed each is not named: that is staff data, not hers.
      */
     public record Verification(String identityCheck, String policeCheck, boolean identityDocumentOnFile,
-                               boolean liveSelfieOnFile, List<PartnerDocument> documents) {
+                               boolean liveSelfieOnFile, List<PartnerDocument> documents,
+                               List<PoliceCheck> policeChecks, String consentVersion, Instant consentAcceptedAt) {
+    }
+
+    /** Each recorded decision on her police check and what it rested on. */
+    public record PoliceCheck(String outcome, String method, String certificateNumber, java.time.LocalDate issuedOn,
+                              String issuingAuthority, java.time.LocalDate reverifyDueOn, String rejectionReason,
+                              String consentVersion, Instant consentAt, Instant decidedAt) {
     }
 
     public record PartnerDocument(String type, String documentNumber, java.time.LocalDate issuedOn,

@@ -83,5 +83,35 @@ public enum VerificationError {
     REASON_REQUIRED,
 
     /** Partner documents were sent from an account that is not a partner's. */
-    NOT_A_PARTNER
+    NOT_A_PARTNER,
+
+    // ---- consent and police verification with evidence
+
+    /** She has not agreed to the current verification consent, and nothing is taken or checked until she does. */
+    CONSENT_REQUIRED,
+
+    /** She agreed to wording that is no longer the current version. */
+    CONSENT_VERSION_OUTDATED,
+
+    /**
+     * A police check marked VERIFIED without how it was done, the
+     * certificate number, its issue date, or the evidence document. Police
+     * verification is a recorded fact with evidence behind it, not a button.
+     */
+    POLICE_EVIDENCE_MISSING,
+
+    /** The evidence named is not hers, not a police certificate or report, has no file, or was turned down. */
+    POLICE_EVIDENCE_INVALID,
+
+    /**
+     * A private background check offered as the only evidence while
+     * POLICE_ACCEPT_THIRD_PARTY_BGV_ALONE is false - see PoliceVerificationRules.
+     */
+    BGV_NOT_SUFFICIENT_ALONE,
+
+    /** The certificate is old enough that it would already be due for re-verification. */
+    POLICE_CERTIFICATE_TOO_OLD,
+
+    /** A background check was requested from a provider while none is configured. */
+    PROVIDER_NOT_CONFIGURED
 }

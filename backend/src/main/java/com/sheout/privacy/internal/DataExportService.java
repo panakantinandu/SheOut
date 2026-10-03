@@ -102,7 +102,15 @@ class DataExportService {
                                                 d.insuranceUseType() == null ? null : d.insuranceUseType().name(),
                                                 d.rejectionReason(), d.fileOnFile(), d.submittedAt(), d.reviewedAt(),
                                                 d.supersededAt() != null))
-                                        .toList()))
+                                        .toList(),
+                                verificationApi.policeHistory(id).stream()
+                                        .map(p -> new DataExport.PoliceCheck(p.outcome().name(),
+                                                p.method() == null ? null : p.method().name(), p.certificateNumber(),
+                                                p.issuedOn(), p.issuingAuthority(), p.reverifyDueOn(),
+                                                p.rejectionReason(), p.consentTextVersion(), p.consentAt(), p.decidedAt()))
+                                        .toList(),
+                                verificationApi.consentStatus(id).acceptedVersion(),
+                                verificationApi.consentStatus(id).acceptedAt()))
                         .orElse(null),
                 bookings.stream().map(b -> trip(b, id, given.get(b.id()))).toList(),
                 new DataExport.RatingsReceived(received.averageStars(), received.totalRatings()),

@@ -174,6 +174,19 @@ sheout:
     # exist - see VerificationService.turnaroundFor. Four hours is what
     # operations can stand behind today; lower it when that changes.
     target-turnaround-minutes: ${VERIFICATION_TARGET_TURNAROUND_MINUTES:240}
+    # Background-verification vendor - see VerificationProvider. Only
+    # "manual" exists: operators record results, nothing is sent anywhere,
+    # and the provider webhook answers 404. A real vendor is a new
+    # implementation selected here, plus its webhook secret and the header
+    # its signature arrives in (HMAC-SHA256 of the raw body, hex).
+    provider: ${VERIFICATION_PROVIDER:manual}
+    provider-webhook-secret: ${VERIFICATION_PROVIDER_WEBHOOK_SECRET:}
+    provider-signature-header: ${VERIFICATION_PROVIDER_SIGNATURE_HEADER:X-Provider-Signature}
+    # The police rules themselves are flat env vars read in
+    # PoliceVerificationRules: POLICE_REVERIFY_MONTHS (12),
+    # POLICE_ACCEPT_THIRD_PARTY_BGV_ALONE (false), POLICE_REVERIFY_REMINDER_DAYS
+    # (30,7) and VERIFICATION_CONSENT_VERSION (must match the apps' legal
+    # content - see design-system/src/legal/content.ts).
 
   # A partner's licence, vehicle papers and police evidence - see
   # PartnerDocumentService. What each vehicle needs is read as flat env vars

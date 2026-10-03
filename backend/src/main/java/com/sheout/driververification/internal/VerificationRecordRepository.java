@@ -17,6 +17,10 @@ interface VerificationRecordRepository extends JpaRepository<VerificationRecordE
 
     List<VerificationRecordEntity> findByGenderVerificationStatus(VerificationStatus status);
 
+    /** Police checks in force whose re-verification falls due on or before the given day, soonest first. */
+    List<VerificationRecordEntity> findByPoliceVerificationStatusAndPoliceReverifyDueOnLessThanEqualOrderByPoliceReverifyDueOnAsc(
+            VerificationStatus status, java.time.LocalDate dueOnOrBefore);
+
     /**
      * Outstanding review work. One of only two @Query methods in this
      * codebase (the other is RatingRepository.aggregateFor), both using

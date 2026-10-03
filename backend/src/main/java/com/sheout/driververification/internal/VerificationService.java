@@ -35,6 +35,7 @@ import org.springframework.data.domain.PageRequest;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -61,6 +62,8 @@ public class VerificationService implements VerificationApi {
     private final int targetMinutes;
     private final PartnerDocumentService partnerDocuments;
     private final VerificationAudit audit;
+    private final PoliceVerificationService police;
+    private final VerificationConsent consent;
 
     public VerificationService(VerificationRecordRepository repository,
                                 VerificationFunnelRepository funnel,
@@ -71,7 +74,9 @@ public class VerificationService implements VerificationApi {
                                 // as a fact - see turnaroundFor.
                                 @Value("${sheout.verification.target-turnaround-minutes:240}") int targetMinutes,
                                 PartnerDocumentService partnerDocuments,
-                                VerificationAudit audit) {
+                                VerificationAudit audit,
+                                PoliceVerificationService police,
+                                VerificationConsent consent) {
         this.repository = repository;
         this.funnel = funnel;
         this.documentStorage = documentStorage;
@@ -79,6 +84,8 @@ public class VerificationService implements VerificationApi {
         this.targetMinutes = targetMinutes;
         this.partnerDocuments = partnerDocuments;
         this.audit = audit;
+        this.police = police;
+        this.consent = consent;
     }
 
     /**
@@ -222,6 +229,12 @@ public class VerificationService implements VerificationApi {
         // anybody checked. A real change of document goes through support.
         if (record.getGenderVerificationStatus() == VerificationStatus.VERIFIED) {
             return Result.failure(VerificationError.ALREADY_VERIFIED);
+        }
+
+        // A partner agrees to being verified - identity, documents, police
+        // record - before anything is taken from her. See VerificationConsent.
+        if (!consent.isCurrent(record)) {
+            return Result.failure(VerificationError.CONSENT_REQUIRED);
         }
 
         // A rider has no vehicle; an RC from her is ignored rather than filed.
@@ -404,36 +417,48 @@ public class VerificationService implements VerificationApi {
     }
 
     /**
-     * Driver-only, admin-set with no submission step of its own (per spec:
-     * "manual, admin-set") - so no UNDER_REVIEW gate, just PENDING/REJECTED
-     * moving to VERIFIED/REJECTED directly.
+     * Driver-only, decided by an operator - and no longer a bare decision.
+     * VERIFIED needs how it was done, the certificate number, its issue date
+     * and the evidence document; REJECTED needs a reason. The rules, and the
+     * row each decision writes, are PoliceVerificationService's; this adds
+     * what follows from the outcome (AccountVerified once both checks pass).
      */
     @Transactional
     public Result<VerificationSummary, VerificationError> reviewPoliceVerification(
-            UUID accountId, UUID adminAccountId, VerificationStatus decision) {
-        if (decision != VerificationStatus.VERIFIED && decision != VerificationStatus.REJECTED) {
-            return Result.failure(VerificationError.INVALID_DECISION);
+            UUID accountId, UUID adminAccountId, PoliceVerificationService.PoliceDecision decision) {
+        Result<VerificationRecordEntity, VerificationError> result = police.review(accountId, adminAccountId, decision);
+        if (result.isFailure()) {
+            return Result.failure(result.error());
         }
-        Optional<VerificationRecordEntity> found = repository.findByAccountId(accountId);
-        if (found.isEmpty()) {
-            return Result.failure(VerificationError.RECORD_NOT_FOUND);
-        }
-        VerificationRecordEntity record = found.get();
-        if (record.getRole() != AccountRole.DRIVER) {
-            return Result.failure(VerificationError.POLICE_VERIFICATION_NOT_APPLICABLE);
-        }
-        // The police check is on the woman the ID check has confirmed. Before
-        // that - no ID yet, one under review, or one rejected - there is
-        // nobody established to check, and the console offered Approve and
-        // Reject beside "Not yet submitted" as if there were.
-        if (record.getGenderVerificationStatus() != VerificationStatus.VERIFIED) {
-            return Result.failure(VerificationError.ID_CHECK_NOT_PASSED);
-        }
+        publishIfFullyVerified(result.value());
+        return Result.success(toSummary(result.value()));
+    }
 
-        record.setPoliceVerificationStatus(decision);
-        repository.save(record);
-        publishIfFullyVerified(record);
-        return Result.success(toSummary(record));
+    /** Every decision on her police check, newest first, with what each rested on. */
+    @Override
+    public List<com.sheout.driververification.PoliceVerificationRecord> policeHistory(UUID accountId) {
+        return police.history(accountId);
+    }
+
+    @Override
+    public List<VerificationSummary> findPoliceReverificationDueWithin(int days) {
+        return police.dueWithin(days).stream().map(this::toSummary).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<java.time.LocalDate> policeReverifyDueOn(UUID accountId) {
+        return repository.findByAccountId(accountId).map(VerificationRecordEntity::getPoliceReverifyDueOn);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public com.sheout.driververification.VerificationConsentStatus consentStatus(UUID accountId) {
+        Optional<VerificationRecordEntity> record = repository.findByAccountId(accountId);
+        return new com.sheout.driververification.VerificationConsentStatus(consent.currentVersion(),
+                record.map(VerificationRecordEntity::getConsentVersion).orElse(null),
+                record.map(VerificationRecordEntity::getConsentAcceptedAt).orElse(null),
+                record.map(consent::isCurrent).orElse(false));
     }
 
     public List<VerificationSummary> findByGenderStatus(VerificationStatus status) {
@@ -493,6 +518,11 @@ public class VerificationService implements VerificationApi {
             return new PartnerReadiness(false, blockers, warnings, List.of());
         }
         VerificationRecordEntity record = found.get();
+        if (!consent.isCurrent(record)) {
+            blockers.add(new Blocker(BlockerCode.CONSENT_REQUIRED, null, null, record.getConsentVersion() == null
+                    ? "Agree to SheOut verifying your identity, documents and police record to start."
+                    : "We have updated how we verify partners. Read it and agree again to keep going online."));
+        }
         if (record.getGenderVerificationStatus() != VerificationStatus.VERIFIED) {
             blockers.add(new Blocker(BlockerCode.ID_CHECK, null, null, switch (record.getGenderVerificationStatus()) {
                 case UNDER_REVIEW -> "Your ID is being checked. You can go online once it is approved.";
@@ -507,11 +537,23 @@ public class VerificationService implements VerificationApi {
             warnings.addAll(docs.blockers());
         }
         warnings.addAll(docs.warnings());
-        if (record.getPoliceVerificationStatus() != VerificationStatus.VERIFIED) {
+        LocalDate today = police.today();
+        LocalDate due = record.getPoliceReverifyDueOn();
+        if (record.getPoliceVerificationStatus() == VerificationStatus.VERIFIED && due != null && !today.isBefore(due)) {
+            // Due today or earlier and the sweep has not run yet: the date
+            // decides, not the sweep - dispatch asks this before every offer.
+            blockers.add(new Blocker(BlockerCode.POLICE_REVERIFY_DUE, null, due,
+                    "Your police verification was due on " + PartnerDocumentService.plain(due)
+                            + ". Upload a new police certificate to go online."));
+        } else if (record.getPoliceVerificationStatus() != VerificationStatus.VERIFIED) {
             blockers.add(new Blocker(BlockerCode.POLICE_CHECK, null, null,
                     record.getPoliceVerificationStatus() == VerificationStatus.REJECTED
                             ? "Your police verification was not accepted. Contact support to find out what to do next."
                             : "Your police verification is not complete yet."));
+        } else if (due != null && !police.reminderWindowEnd(today).isBefore(due)) {
+            warnings.add(new Blocker(BlockerCode.POLICE_REVERIFY_DUE, null, due,
+                    "Your police verification is due again on " + PartnerDocumentService.plain(due)
+                            + ". Upload a new police certificate before then to keep going online."));
         }
         return new PartnerReadiness(blockers.isEmpty(), List.copyOf(blockers), List.copyOf(warnings), docs.documents());
     }
