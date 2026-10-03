@@ -19,6 +19,11 @@ public enum BookingError {
     OUTSIDE_SERVICE_AREA,
     /** Outside the operating hours, or paused by an operator - see ServiceHoursApi. */
     SERVICE_CLOSED,
+    /**
+     * Rides need passenger insurance in force (INSURANCE_REQUIRED_FOR_RIDES)
+     * and no passenger policy is active - see booking's RideInsuranceGate.
+     */
+    RIDE_INSURANCE_NOT_ACTIVE,
     /** Booked near closing time, the trip would end too long after it - see ServiceHoursApi.latestTripFinish. */
     TRIP_ENDS_AFTER_HOURS,
     CATEGORY_TYPE_MISMATCH,

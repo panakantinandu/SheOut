@@ -10,8 +10,9 @@ public enum SupportTicketPriority {
     MEDIUM,
     HIGH;
 
-    /** SAFETY_CONCERN is HIGH; everything else starts at MEDIUM. */
+    /** SAFETY_CONCERN and an accident on a trip are HIGH; everything else starts at MEDIUM. */
     public static SupportTicketPriority forCategory(SupportTicketCategory category) {
-        return category == SupportTicketCategory.SAFETY_CONCERN ? HIGH : MEDIUM;
+        return category == SupportTicketCategory.SAFETY_CONCERN
+                || category == SupportTicketCategory.ACCIDENT_OR_INSURANCE_CLAIM ? HIGH : MEDIUM;
     }
 }

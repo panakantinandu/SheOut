@@ -54,6 +54,7 @@ the build on a cross-module `internal` import - not a rewrite.
 | `payments` **(implemented)** | `com.sheout.payments`              | Charging a trip's fare: Razorpay order at completion, Checkout verification, webhook capture, cash confirmed by the partner. The single capture path publishes `PaymentCaptured`. |
 | `payouts` **(implemented)** | `com.sheout.payouts`               | What a partner is owed and how she is paid: wallet (credited from `PaymentCaptured`, never polled), bank/UPI payout details, payout requests. Payouts are sent by hand and marked paid in the console - no payout API. |
 | `notifications` **(implemented)** | `com.sheout.notifications`         | The in-app inbox, push (Firebase Cloud Messaging), SMS (Twilio) and email (SMTP), all triggered by domain events; SOS alerts to emergency contacts and operators. |
+| `insurance` **(implemented)** | `com.sheout.insurance`        | Master policies (entered in the console), each trip's cover opened and closed from booking's events, the daily bordereau, premiums as a platform cost, partners' group-cover enrolment, and accident reports/claims. See "Insurance" below. |
 | `admin`                 | `com.sheout.admin`                 | Internal operator tooling, composes other modules' public APIs. |
 
 `com.sheout.platform` is **not** a domain module - it's cross-cutting
@@ -379,6 +380,109 @@ body handed to the provider.
   should confirm before launch whether the ID photo SheOut already takes
   should be limited to a masked Aadhaar (the app already invites her to
   cover the number) or replaced by DigiLocker.
+
+## Insurance
+
+`com.sheout.insurance`, tables `insurance_policies`, `trip_coverages`,
+`trip_coverage_claims`, `partner_insurance_enrolments` (V57).
+
+**The decision:** every trip is covered under a master group policy, built
+in rather than sold as a toggle. The premium is a **platform cost recorded
+per trip and paid out of SheOut's commission**. It is not added to the
+rider's fare, not taken from the partner's share, and not part of the 80%
+check. The rider sees an "Insured trip" chip and the policy and claim
+details, never a charge line. (Uber India sells rider cover as a ₹3 opt-in;
+Rapido's Acko cover is opt-in too. MVAG 2025 expects at least ₹5 lakh of
+passenger cover on every trip.)
+
+### Flow
+
+1. **Policies are entered in the console** (Insurance page) from the
+   insurer's schedule: kind (`PASSENGER_TRIP`, `GOODS_IN_TRANSIT`,
+   `PARTNER_HEALTH`, `PARTNER_TERM_LIFE`, `PARTNER_ACCIDENT`), insurer,
+   master policy number, sum insured, premium and unit (`PER_TRIP` for trip
+   and goods cover, `PER_MEMBER_PER_YEAR` for partner covers), effective
+   dates, claims phone and links, and what is covered and how to claim, in
+   the schedule's words. Saved switched off; one active policy per kind; an
+   active policy is not edited (trips point at it) - switch it off and add
+   the new terms. **No policy is hardcoded anywhere.**
+2. **Trip cover** is opened on `BookingStarted` (rides: `PASSENGER_TRIP`,
+   parcels: `GOODS_IN_TRANSIT`) when a policy of that kind is in force, with
+   the premium on the row, and closed on `BookingCompleted` (or a
+   cancellation, if one ever happens after a start). `BookingStarted` now
+   carries the category and route, so insurance never calls booking - booking
+   asks insurance whether rides are covered, and the two would otherwise wait
+   on each other at startup.
+3. **No active passenger policy means no chip.** The apps ask
+   `GET /api/v1/insurance/trips/{bookingId}` (404 without cover) and
+   `GET /api/v1/insurance/passenger-cover`; with nothing in force they say
+   nothing about insurance, and the console shows a red "Trips are NOT
+   insured: no active passenger policy" banner. With
+   **`INSURANCE_REQUIRED_FOR_RIDES=true`** (false locally, **true in
+   `render.yaml`**) ride requests are refused with `RIDE_INSURANCE_NOT_ACTIVE`
+   until one is switched on. Deliveries are never refused for this.
+4. **Reporting** goes through `InsurerReporter`. The default
+   `CsvBordereauReporter` produces the day's file - booking id, insurer,
+   policy number, start and end (IST), category, pickup and drop *area*,
+   premium - which an operator downloads from the console
+   (`GET /api/v1/admin/insurance/bordereau?date=`) and sends. Downloading
+   marks those trips `REPORTED`. `ApiInsurerReporter`
+   (`INSURANCE_REPORTER=api`) is a stub that refuses, marking trips `FAILED`
+   rather than pretending; a `FAILED` trip is no longer shown as insured.
+5. **Premiums** are summed per policy per month
+   (`GET /api/v1/admin/insurance/premium-report?month=`). They never change
+   `FareQuote.amount`, what the rider is charged, `driverPayout` or the
+   commission - `PremiumIsAPlatformCostTest` fails the build if the insurance
+   module ever imports payments, payouts or booking's fare code, or they it.
+6. **Partner group cover**: on `AccountVerified` a partner is put forward for
+   each partner cover in force as `PENDING_ENROLMENT`; an operator marks her
+   `ENROLLED` with the member id once the insurer confirms. Her app shows a
+   cover only when `ENROLLED` (`GET /api/v1/insurance/me/covers`). She is
+   `EXITED` when her account is deleted or blocked (new `auth` event
+   `AccountBlocked`). Monthly joiners and leavers:
+   `GET /api/v1/admin/insurance/enrolments/movements?month=` (name, date of
+   birth, phone - what the insurer needs, and what her consent says it gets).
+7. **Claims**: "Report an accident / make a claim" on a trip that started
+   (`POST /api/v1/insurance/trips/{bookingId}/claim`) raises a HIGH-priority
+   support ticket in the new `ACCIDENT_OR_INSURANCE_CLAIM` category, linked to
+   the trip, recorded beside its cover, and answers with the insurer's claim
+   steps and phone. SheOut helps; the insurer decides. A trip with no cover
+   can still report an accident - the answer then names no insurer.
+
+### Configuration
+
+`INSURANCE_REQUIRED_FOR_RIDES` (false; true in production),
+`INSURANCE_REPORTER` (`csv`), `INSURANCE_BADGE_REQUIRES_REPORTED` (false).
+
+### Flagged assumptions
+
+- **When the chip appears.** The ground rule says the rider app must not say
+  "insured" unless a policy is active *and the trip was reported*; Part E
+  puts the chip on the live trip screen. A daily bordereau is not sent until
+  the day ends, so read literally the chip could never appear during a trip.
+  It is shown from a coverage row against a policy that was in force when
+  the trip started, and **hidden if reporting failed**.
+  `INSURANCE_BADGE_REQUIRES_REPORTED=true` makes it appear only once the
+  trip is in a downloaded bordereau. **Ask the broker whether cover attaches
+  at the trip or at the declaration**, and set this to match.
+- **`REPORTED` means "in a bordereau an operator downloaded"** for the CSV
+  reporter. Whether it was actually sent is outside SheOut's records.
+- **Deploying with `INSURANCE_REQUIRED_FOR_RIDES=true` refuses every ride**
+  until a passenger policy is entered and switched on in the console. Do that
+  first, or deploy with it false and switch it on after.
+- **Pickup and drop areas** are the last two comma-separated parts of the
+  address with anything containing a digit dropped ("Jubilee Hills,
+  Hyderabad") - enough to place a claim, never a house number. A heuristic.
+- **Partners verified before a partner cover existed are not enrolled
+  automatically** - only those verified after it is switched on. An
+  unblocked partner is not re-enrolled automatically either.
+- **Per-member premiums are not accrued monthly** here; the premium report
+  covers per-trip premiums. Reconcile group-cover premiums against the
+  insurer's invoice.
+- **booking and insurance now refer to each other** at the package level
+  (booking's gate reads `InsuranceApi`; insurance listens to booking's
+  events), the same shape as booking and campaigns. There is no bean cycle:
+  claims live in their own bean for that reason.
 
 ## Users
 

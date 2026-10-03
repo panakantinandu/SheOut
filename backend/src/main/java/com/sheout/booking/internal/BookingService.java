@@ -92,6 +92,18 @@ public class BookingService implements BookingApi {
 
     /** Whether new bookings are being taken now, and how late a trip may end - see ServiceHoursApi. */
     private final BookingWindow bookingWindow;
+
+    /**
+     * Set by Spring after construction, rather than through the constructors
+     * the tests build this with: a booking service with no gate (a test)
+     * refuses nothing for insurance. See RideInsuranceGate.
+     */
+    private RideInsuranceGate insuranceGate;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setInsuranceGate(RideInsuranceGate insuranceGate) {
+        this.insuranceGate = insuranceGate;
+    }
     /** Time allowed for a partner to reach the pickup, when judging whether a trip ends in hours. */
     private static final Duration PICKUP_ALLOWANCE = Duration.ofMinutes(15);
 
@@ -236,6 +248,11 @@ public class BookingService implements BookingApi {
         // on, because cutting those off would strand her mid-journey.
         if (!bookingWindow.open()) {
             return Result.failure(BookingError.SERVICE_CLOSED);
+        }
+        // A platform-wide stop like the hours above: with no passenger cover
+        // in force and cover required, no ride is taken - see RideInsuranceGate.
+        if (insuranceGate != null && insuranceGate.refuses(command.type())) {
+            return Result.failure(BookingError.RIDE_INSURANCE_NOT_ACTIVE);
         }
         // Before the verification gate on purpose: whether we serve an area
         // is public information, so answering it first tells an unverified
@@ -462,7 +479,8 @@ public class BookingService implements BookingApi {
         bookingRepository.save(booking);
 
         eventPublisher.publish(new BookingStarted(
-                booking.getId(), booking.getCustomerId(), booking.getDriverId(), true));
+                booking.getId(), booking.getCustomerId(), booking.getDriverId(), true,
+                booking.getCategory(), booking.getPickup().toGeoAddress(), booking.getDrop().toGeoAddress()));
         return Result.success(toSummary(booking));
     }
 

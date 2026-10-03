@@ -999,6 +999,7 @@
   .police-panel .kv dd .btn { padding: 2px 10px; margin-left: 6px; }
   .sub-h { margin-top: 14px !important; }
   .audit-view td { color: var(--muted); }
+  .dx-card input[type="date"], .dx-card input[type="month"] { height: 34px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; font: inherit; background: var(--panel); color: var(--text); }
   .alert-banner { display: flex; gap: 10px; align-items: center; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--red-line); background: var(--red-bg); color: var(--red); font-weight: 650; margin-bottom: 14px; }
 </style>
 </head>
@@ -1106,6 +1107,10 @@
       <button data-tab="payouts" aria-current="false">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>
         <span class="nl">Payouts</span> <span class="count" id="cPayouts"></span>
+      </button>
+      <button data-tab="insurance" aria-current="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.5-3 8-7 9-4-1-7-4.5-7-9V6z"/><path d="m9 12 2 2 4-4"/></svg>
+        <span class="nl">Insurance</span> <span class="count urgent" id="cInsurance" hidden>!</span>
       </button>
       <button data-tab="routes" aria-current="false">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M8 19h6a4 4 0 0 0 0-8H10a4 4 0 0 1 0-8h6"/></svg>
@@ -2179,6 +2184,17 @@ const VIEWS = {
    * woman riding alone at 2 AM is the risk SheOut exists to avoid - and a
    * pause covers what a schedule cannot: rain, unrest, an incident.
    */
+  insurance: {
+    title: 'Insurance',
+    desc: 'The master policies SheOut holds, whether trips are covered right now, the daily file for the insurer, what SheOut owes in premiums, and partners in group cover. Policies come from the insurer\'s schedule; nothing here is assumed.',
+    cardTitle: 'Insurance',
+    hint: 'Policies are entered from the insurer\'s schedule',
+    custom: true,
+    columns: [],
+    load: () => Promise.all([api('/admin/insurance/status'), api('/admin/insurance/policies'), api('/admin/insurance/enrolments')]),
+    paint: paintInsurance,
+  },
+
   hours: {
     title: 'Service Hours',
     desc: 'When riders can book. Set daily operating hours, or pause new bookings at once for an incident, heavy rain or unrest. Only new bookings stop: trips already under way always finish. Both apps show riders and partners the hours and when bookings reopen.',
@@ -3545,6 +3561,233 @@ function docQueueView({ queue, title, desc, cardTitle, empty, dateLabel, date })
     onRowClick: r => openAccount(r.accountId, false, 'documents'),
     openLabel: 'Open documents',
   };
+}
+
+// ---- insurance --------------------------------------------------------------
+/**
+ * SheOut's master policies and what they cover. Nothing about a policy is
+ * hardcoded: an operator enters it here from the insurer's schedule. The
+ * banner at the top is the one fact that matters most - whether a trip
+ * starting now is covered - and it says so in red when it is not.
+ */
+const POLICY_KIND_TEXT = {
+  PASSENGER_TRIP: 'Passenger, per trip', GOODS_IN_TRANSIT: 'Goods in transit, per parcel',
+  PARTNER_HEALTH: 'Partner health', PARTNER_TERM_LIFE: 'Partner term life', PARTNER_ACCIDENT: 'Partner accident',
+};
+const PREMIUM_UNIT_TEXT = { PER_TRIP: 'per trip', PER_MEMBER_PER_YEAR: 'per member per year' };
+const ENROLMENT_TEXT = { PENDING_ENROLMENT: 'Waiting for the insurer', ENROLLED: 'Enrolled', EXITED: 'Left' };
+const ENROLMENT_TONE = { PENDING_ENROLMENT: 'amber', ENROLLED: 'green', EXITED: 'grey' };
+
+/** A file the API serves behind the operator's sign-in: fetched with it, then saved. */
+async function apiDownload(path, fallbackName) {
+  const res = await fetch(API + path, { headers: token ? { Authorization: 'Bearer ' + token } : {} });
+  if (res.status === 401 || res.status === 403) { signOut('Your session has ended. Sign in again to continue.'); throw new Error('unauthorized'); }
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error((body && body.message) || `Download failed (${res.status})`);
+  }
+  const name = ((res.headers.get('content-disposition') || '').match(/filename="([^"]+)"/) || [])[1] || fallbackName;
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+function policyRow(p) {
+  return `<tr>
+    <td><span class="strong">${esc(POLICY_KIND_TEXT[p.kind] || humanize(p.kind))}</span><div class="subtle">${esc(p.insurerName)}</div></td>
+    <td class="num">${esc(p.masterPolicyNumber)}</td>
+    <td class="num">${rupees(p.sumInsured)}</td>
+    <td class="num">${rupees(p.premiumPerUnit)} <span class="subtle">${esc(PREMIUM_UNIT_TEXT[p.premiumUnit] || '')}</span></td>
+    <td>${esc(plainDate(p.effectiveFrom))} – ${p.effectiveTo ? esc(plainDate(p.effectiveTo)) : '<span class="subtle">no end date</span>'}</td>
+    <td>${p.inForceToday ? '<span class="badge b-green">In force</span>' : p.active ? '<span class="badge b-amber">Active, not in its dates</span>' : '<span class="badge b-grey">Off</span>'}</td>
+    <td class="row">${p.active
+      ? `<button class="btn btn-reject" type="button" data-policy-off="${escValue(p.id)}">Switch off</button>`
+      : `<button class="btn btn-approve" type="button" data-policy-on="${escValue(p.id)}">Switch on</button>
+         <button class="btn" type="button" data-policy-edit="${escValue(p.id)}">Edit</button>`}</td>
+  </tr>`;
+}
+
+function enrolmentRow(e) {
+  return `<tr>
+    <td><span class="strong">${esc(e.partnerName || 'Name not set')}</span><div class="subtle num">${esc(e.phoneNumber)}</div></td>
+    <td>${esc(POLICY_KIND_TEXT[e.kind] || humanize(e.kind))}<div class="subtle">${esc(e.insurerName)} · ${esc(e.policyNumber)}</div></td>
+    <td><span class="badge b-${ENROLMENT_TONE[e.status] || 'grey'}">${esc(ENROLMENT_TEXT[e.status] || humanize(e.status))}</span>
+      ${e.exitReason ? `<div class="subtle">${esc(e.exitReason)}</div>` : ''}</td>
+    <td class="num">${esc(e.memberId)}</td>
+    <td class="subtle">${e.enrolledOn ? 'joined ' + esc(plainDate(e.enrolledOn)) : 'put forward ' + esc(time(e.createdAt))}${e.exitedOn ? '<br>left ' + esc(plainDate(e.exitedOn)) : ''}</td>
+    <td class="row">${e.status === 'PENDING_ENROLMENT' ? `<button class="btn btn-approve" type="button" data-enrol="${escValue(e.id)}">Mark enrolled</button>` : ''}
+      ${e.status !== 'EXITED' ? `<button class="btn" type="button" data-exit="${escValue(e.id)}">Mark left</button>` : ''}</td>
+  </tr>`;
+}
+
+function policyForm(p) {
+  const v = p || {};
+  const kinds = Object.keys(POLICY_KIND_TEXT);
+  return `<form class="hours-form" id="policyForm" data-policy-id="${escValue(v.id)}">
+      <div class="doc-fields">
+        <label class="field"><span>Kind</span><select name="kind">${kinds.map(k => `<option value="${k}"${v.kind === k ? ' selected' : ''}>${esc(POLICY_KIND_TEXT[k])}</option>`).join('')}</select></label>
+        <label class="field"><span>Insurer</span><input name="insurerName" maxlength="150" value="${escValue(v.insurerName)}" required></label>
+        <label class="field"><span>Master policy number</span><input name="masterPolicyNumber" maxlength="80" value="${escValue(v.masterPolicyNumber)}" required></label>
+        <label class="field"><span>Sum insured (₹)</span><input name="sumInsured" type="number" min="1" step="1" value="${escValue(v.sumInsured)}" required></label>
+        <label class="field"><span>Premium (₹)</span><input name="premiumPerUnit" type="number" min="0" step="0.01" value="${escValue(v.premiumPerUnit)}" required></label>
+        <label class="field"><span>Charged</span><select name="premiumUnit">
+          <option value="PER_TRIP"${v.premiumUnit === 'PER_TRIP' ? ' selected' : ''}>per trip</option>
+          <option value="PER_MEMBER_PER_YEAR"${v.premiumUnit === 'PER_MEMBER_PER_YEAR' ? ' selected' : ''}>per member per year</option></select></label>
+        <label class="field"><span>In force from</span><input name="effectiveFrom" type="date" value="${escValue(v.effectiveFrom)}" required></label>
+        <label class="field"><span>Until (blank: no end date)</span><input name="effectiveTo" type="date" value="${escValue(v.effectiveTo)}"></label>
+        <label class="field"><span>Claims phone</span><input name="claimsPhone" maxlength="30" value="${escValue(v.claimsPhone)}"></label>
+        <label class="field"><span>Claims web page</span><input name="claimsUrl" maxlength="500" value="${escValue(v.claimsUrl)}"></label>
+        <label class="field"><span>Policy summary link</span><input name="policySummaryUrl" maxlength="500" value="${escValue(v.policySummaryUrl)}"></label>
+      </div>
+      <label class="field"><span>What is covered, in the schedule's words (riders and partners read this)</span><textarea name="coverageSummary" maxlength="2000">${escValue(v.coverageSummary)}</textarea></label>
+      <label class="field"><span>How to claim (shown with the claims phone)</span><textarea name="claimSteps" maxlength="2000">${escValue(v.claimSteps)}</textarea></label>
+      <p class="hours-note">Saved switched off. Switch it on once these match the insurer's schedule - from then on, every trip of this kind is covered under it and riders see "Insured trip".</p>
+      <div class="foot"><button class="btn btn-primary" type="submit">${v.id ? 'Save changes' : 'Add policy'}</button>
+        <button class="btn" type="button" data-policy-cancel>Cancel</button></div>
+    </form>`;
+}
+
+function paintInsurance([status, policies, enrolments]) {
+  const pending = enrolments.filter(e => e.status === 'PENDING_ENROLMENT');
+  const thisMonth = todayInIndia().slice(0, 7);
+  $('cInsurance').hidden = status.passengerCoverActive;
+  $('panel').innerHTML = `
+    ${status.passengerCoverActive
+      ? '<div class="banner banner-ok" role="status"><strong>Trips are insured.</strong> A passenger policy is in force; every ride that starts now is covered under it, and riders see "Insured trip".</div>'
+      : '<div class="alert-banner" role="alert">Trips are NOT insured: no active passenger policy. Riders see nothing about insurance, and if rides are set to require cover, every ride request is refused until one is switched on below.</div>'}
+    ${status.failedReports ? `<div class="alert-banner" role="alert">${status.failedReports} covered trip${status.failedReports === 1 ? '' : 's'} could not be reported to the insurer. Those riders are no longer shown "Insured trip". Download that day's bordereau again once the reporter works.</div>` : ''}
+    <div class="dx-money">
+      <div><span>Trips covered today</span><b>${esc(status.tripsCoveredToday)}</b></div>
+      <div><span>Not yet in a bordereau</span><b>${esc(status.notYetReported)}</b></div>
+      <div><span>Not reported after a day</span><b>${status.notReportedAfterADay ? `<span class="pill warn">${esc(status.notReportedAfterADay)}</span>` : '0'}</b></div>
+      <div><span>Premium owed this month</span><b>${rupees(status.premiumThisMonth)}</b></div>
+      <div><span>Goods in transit cover</span><b>${status.goodsCoverActive ? 'In force' : 'None'}</b></div>
+    </div>
+
+    <div class="dx-grid">
+      <div class="dx-card"><h4>Daily bordereau <span class="right subtle">reporter: ${esc(status.reporter)}</span></h4>
+        <p class="subtle">The day's covered trips for the insurer: booking, policy, start and end (IST), service, pickup and drop area, premium. Downloading marks them reported; send it the same day.</p>
+        <div class="row"><input type="date" id="bxDate" value="${todayInIndia()}" max="${todayInIndia()}">
+          <button class="btn btn-primary" type="button" id="bxGo">Download CSV</button></div>
+      </div>
+      <div class="dx-card"><h4>Premium (a SheOut cost)</h4>
+        <p class="subtle">What SheOut owes for trips started in a month. Paid from SheOut's commission: never added to a fare, never taken from a partner.</p>
+        <div class="row"><input type="month" id="prMonth" value="${thisMonth}"><button class="btn" type="button" id="prGo">Show</button></div>
+        <div id="prOut"></div>
+      </div>
+    </div>
+
+    <div class="dx-card full">
+      <h4>Policies <span class="right"><button class="btn btn-primary" type="button" id="policyAdd">Add a policy</button></span></h4>
+      <div id="policyFormHost"></div>
+      ${policies.length ? `<div class="scroll"><table class="mini"><thead><tr><th>Kind</th><th>Policy no.</th><th>Sum insured</th><th>Premium</th><th>Dates</th><th>Now</th><th></th></tr></thead>
+        <tbody>${policies.map(policyRow).join('')}</tbody></table></div>` : '<p class="subtle">No policies yet. Add the passenger policy from the insurer\'s schedule.</p>'}
+    </div>
+
+    <div class="dx-card full">
+      <h4>Partner group cover <span class="right subtle">${pending.length} waiting for the insurer</span></h4>
+      <p class="subtle">Partners are put forward when they are verified. She sees a cover in her app only once you mark her enrolled with the member id the insurer gave her. She leaves it when her account is blocked or deleted.</p>
+      <div class="row"><input type="month" id="mvMonth" value="${thisMonth}"><button class="btn" type="button" id="mvGo">Joiners and leavers CSV</button></div>
+      ${enrolments.length ? `<div class="scroll"><table class="mini"><thead><tr><th>Partner</th><th>Cover</th><th>Status</th><th>Member id</th><th>When</th><th></th></tr></thead>
+        <tbody>${enrolments.map(enrolmentRow).join('')}</tbody></table></div>` : '<p class="subtle">Nobody yet. Partners appear here once a partner cover is switched on and they are verified.</p>'}
+    </div>`;
+  bindInsurance(policies);
+}
+
+function bindInsurance(policies) {
+  const panel = $('panel');
+  const fail = (title) => (err) => { if (err.message !== 'unauthorized') toast('bad', title, err.message); };
+  panel.querySelector('#bxGo').addEventListener('click', () => {
+    const date = panel.querySelector('#bxDate').value;
+    apiDownload(`/admin/insurance/bordereau?date=${encodeURIComponent(date)}`, `sheout-bordereau-${date}.csv`)
+      .then(() => { toast('ok', 'Bordereau downloaded', 'Its trips are marked reported. Send it to the insurer today.'); render({ quiet: true }); })
+      .catch(fail('Could not produce the bordereau'));
+  });
+  panel.querySelector('#mvGo').addEventListener('click', () => {
+    const month = panel.querySelector('#mvMonth').value;
+    apiDownload(`/admin/insurance/enrolments/movements?month=${encodeURIComponent(month)}`, `sheout-partner-cover-movements-${month}.csv`)
+      .catch(fail('Could not produce the file'));
+  });
+  panel.querySelector('#prGo').addEventListener('click', async () => {
+    const out = panel.querySelector('#prOut');
+    try {
+      const rows = await api(`/admin/insurance/premium-report?month=${encodeURIComponent(panel.querySelector('#prMonth').value)}`);
+      const total = rows.reduce((s, r) => s + Number(r.premium || 0), 0);
+      out.innerHTML = rows.length ? `<table class="mini"><thead><tr><th>Policy</th><th>Trips</th><th>Premium</th></tr></thead><tbody>
+          ${rows.map(r => `<tr><td>${esc(r.insurerName)} <span class="num subtle">${esc(r.policyNumber)}</span></td><td class="num">${esc(r.trips)}</td><td class="num">${rupees(r.premium)}</td></tr>`).join('')}
+          <tr><td class="strong">Total</td><td></td><td class="num strong">${rupees(total)}</td></tr></tbody></table>`
+        : '<p class="subtle">No covered trips that month.</p>';
+    } catch (err) { fail('Could not load the premium report')(err); }
+  });
+
+  const host = panel.querySelector('#policyFormHost');
+  const showForm = (p) => {
+    host.innerHTML = policyForm(p);
+    const form = host.querySelector('#policyForm');
+    form.querySelector('[data-policy-cancel]').addEventListener('click', () => { host.innerHTML = ''; });
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      const body = Object.fromEntries(new FormData(form).entries());
+      Object.keys(body).forEach(k => { if (body[k] === '') body[k] = null; });
+      try {
+        const id = form.dataset.policyId;
+        await api(id ? `/admin/insurance/policies/${id}` : '/admin/insurance/policies', { method: id ? 'PUT' : 'POST', body: JSON.stringify(body) });
+        toast('ok', id ? 'Policy saved' : 'Policy added', 'It is off until you switch it on.');
+        render({ quiet: true });
+      } catch (err) { fail('Could not save the policy')(err); }
+    });
+  };
+  panel.querySelector('#policyAdd').addEventListener('click', () => showForm(null));
+  panel.querySelectorAll('[data-policy-edit]').forEach(b => b.addEventListener('click', () =>
+    showForm(policies.find(p => p.id === b.dataset.policyEdit))));
+  panel.querySelectorAll('[data-policy-on]').forEach(b => b.addEventListener('click', async () => {
+    const p = policies.find(x => x.id === b.dataset.policyOn);
+    const ok = await confirmAction({
+      title: `Switch on ${p.masterPolicyNumber}?`,
+      message: p.kind === 'PASSENGER_TRIP'
+        ? `From now, every ride that starts is covered under it (${rupees(p.sumInsured)}), and riders see "Insured trip". Only if the policy is really in force with ${p.insurerName}.`
+        : `It becomes the ${(POLICY_KIND_TEXT[p.kind] || p.kind).toLowerCase()} cover. Only if the policy is really in force with ${p.insurerName}.`,
+      confirmLabel: 'Switch on', tone: 'approve',
+    });
+    if (!ok) return;
+    try { await api(`/admin/insurance/policies/${p.id}/activate`, { method: 'POST' }); toast('ok', 'Policy switched on', p.masterPolicyNumber); render({ quiet: true }); }
+    catch (err) { fail('Could not switch it on')(err); }
+  }));
+  panel.querySelectorAll('[data-policy-off]').forEach(b => b.addEventListener('click', async () => {
+    const p = policies.find(x => x.id === b.dataset.policyOff);
+    const ok = await confirmAction({
+      title: `Switch off ${p.masterPolicyNumber}?`,
+      message: 'Trips that start after this are not covered under it. Trips already covered keep their cover.',
+      confirmLabel: 'Switch off', tone: 'reject',
+    });
+    if (!ok) return;
+    try { await api(`/admin/insurance/policies/${p.id}/deactivate`, { method: 'POST' }); toast('ok', 'Policy switched off', p.masterPolicyNumber); render({ quiet: true }); }
+    catch (err) { fail('Could not switch it off')(err); }
+  }));
+  panel.querySelectorAll('[data-enrol]').forEach(b => b.addEventListener('click', async () => {
+    const ok = await confirmAction({
+      title: 'Mark her enrolled?', message: 'Only once the insurer has confirmed her membership. Her app then shows this cover.',
+      confirmLabel: 'Mark enrolled', tone: 'approve', withReason: true, reasonRequired: true,
+      reasonLabel: 'Member id from the insurer', reasonPlaceholder: 'e.g. GHI-2026-000123', reasonMissing: 'Enter the member id the insurer gave her.', reasonMaxLength: 80,
+    });
+    if (!ok) return;
+    try { await api(`/admin/insurance/enrolments/${b.dataset.enrol}/enrolled`, { method: 'POST', body: JSON.stringify({ memberId: ok.reason }) }); toast('ok', 'Enrolled', 'Her app now shows this cover.'); render({ quiet: true }); }
+    catch (err) { fail('Could not mark her enrolled')(err); }
+  }));
+  panel.querySelectorAll('[data-exit]').forEach(b => b.addEventListener('click', async () => {
+    const ok = await confirmAction({
+      title: 'Mark her as left?', message: 'She stops being shown this cover, and appears as a leaver in this month\'s file.',
+      confirmLabel: 'Mark left', tone: 'reject', withReason: true, reasonLabel: 'Why (optional)', reasonMaxLength: 200,
+    });
+    if (!ok) return;
+    try { await api(`/admin/insurance/enrolments/${b.dataset.exit}/exited`, { method: 'POST', body: JSON.stringify({ reason: ok.reason }) }); toast('ok', 'Marked as left', ''); render({ quiet: true }); }
+    catch (err) { fail('Could not update it')(err); }
+  }));
 }
 
 // ---- support tickets ------------------------------------------------------
@@ -6175,6 +6418,7 @@ async function refreshBadges() {
     // Partners' paperwork: what is waiting, and who is off the road for it.
     q('/admin/verification/document-queue?queue=TO_REVIEW').then(v => set('cDocReview', v && v.length)).catch(() => {});
     q('/admin/verification/document-queue?queue=EXPIRED').then(v => set('cDocExpired', v && (v.length || ''))).catch(() => {});
+    q('/admin/insurance/status').then(v => { if (v) $('cInsurance').hidden = v.passengerCoverActive; }).catch(() => {});
     q('/admin/service-hours').then(v => v && refreshHoursBadge(v.status)).catch(() => {});
     q('/admin/profile-changes').then(v => { if (v) $('cChanges').textContent = v.length || ''; }).catch(() => {});
   } catch (e) {

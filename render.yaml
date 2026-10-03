@@ -444,6 +444,16 @@ envVarGroups:
       - key: VERIFICATION_PROVIDER_WEBHOOK_SECRET
         sync: false
 
+      # Insurance. With this true and no passenger policy switched on in the
+      # console, EVERY RIDE REQUEST IS REFUSED - enter the policy first (see
+      # the README's Insurance section). Policies are never configured here.
+      - key: INSURANCE_REQUIRED_FOR_RIDES
+        value: "true"
+      - key: INSURANCE_REPORTER
+        value: csv
+      - key: INSURANCE_BADGE_REQUIRES_REPORTED
+        value: "false"
+
       # Total time dispatch may spend hunting for a driver for one booking,
       # across every retry round and radius expansion. NOT the per-offer
       # accept window - that bounds one driver answering one offer. They

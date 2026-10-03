@@ -14,11 +14,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class SupportTicketRulesTest {
 
     @Test
-    @DisplayName("a safety concern is always HIGH; nothing else is")
+    @DisplayName("a safety concern and an accident on a trip are always HIGH; nothing else is")
     void safetyIsHigh() {
         for (SupportTicketCategory category : SupportTicketCategory.values()) {
+            boolean urgent = category == SupportTicketCategory.SAFETY_CONCERN
+                    || category == SupportTicketCategory.ACCIDENT_OR_INSURANCE_CLAIM;
             assertEquals(
-                    category == SupportTicketCategory.SAFETY_CONCERN ? SupportTicketPriority.HIGH : SupportTicketPriority.MEDIUM,
+                    urgent ? SupportTicketPriority.HIGH : SupportTicketPriority.MEDIUM,
                     SupportTicketPriority.forCategory(category),
                     category.name());
         }

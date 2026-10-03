@@ -188,6 +188,20 @@ sheout:
     # (30,7) and VERIFICATION_CONSENT_VERSION (must match the apps' legal
     # content - see design-system/src/legal/content.ts).
 
+  # Insurance - see com.sheout.insurance and the README. Policies themselves
+  # are entered in the console; nothing about a policy is configured here.
+  insurance:
+    # Refuse ride requests while no passenger policy is in force. false
+    # locally, where nobody has a policy; render.yaml sets it true.
+    required-for-rides: ${INSURANCE_REQUIRED_FOR_RIDES:false}
+    # How covered trips are declared to the insurer: csv (a daily file an
+    # operator downloads and sends) or api (a stub that refuses).
+    reporter: ${INSURANCE_REPORTER:csv}
+    # true: the "Insured trip" chip appears only once the trip is in a
+    # reported bordereau, so not during the trip itself. Ask the broker
+    # whether cover attaches at the trip or at the declaration.
+    badge-requires-reported: ${INSURANCE_BADGE_REQUIRES_REPORTED:false}
+
   # A partner's licence, vehicle papers and police evidence - see
   # PartnerDocumentService. What each vehicle needs is read as flat env vars
   # (PARTNER_DOCS_BIKE and so on) in DocumentRequirements; see .env.example.

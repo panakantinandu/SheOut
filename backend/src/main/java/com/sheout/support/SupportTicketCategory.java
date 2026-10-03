@@ -14,5 +14,12 @@ public enum SupportTicketCategory {
     SAFETY_CONCERN,
     APP_ISSUE,
     CANCELLATION_DISPUTE,
-    OTHER
+    OTHER,
+    /**
+     * "Report an accident / make a claim" on a trip - raised by the insurance
+     * module, linked to the trip and its cover. HIGH priority, like a safety
+     * concern: somebody may be hurt. SheOut helps with the claim; the insurer
+     * decides it.
+     */
+    ACCIDENT_OR_INSURANCE_CLAIM
 }

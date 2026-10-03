@@ -311,6 +311,7 @@ public class AuthService implements AuthApi {
             // and the row alone does not say it happened at a point in a
             // sequence of other things.
             log.warn("Account {} blocked by admin {}", accountId, adminAccountId);
+            eventPublisher.publish(new com.sheout.auth.AccountBlocked(account.getId(), account.getRole()));
             return toSummary(account);
         });
     }

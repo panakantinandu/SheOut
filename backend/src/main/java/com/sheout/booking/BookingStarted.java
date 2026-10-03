@@ -27,12 +27,41 @@ public class BookingStarted extends DomainEvent {
     private final UUID customerId;
     private final UUID driverId;
     private final boolean pickupVerified;
+    private final BookingCategory category;
+    private final GeoAddress pickup;
+    private final GeoAddress drop;
 
     public BookingStarted(UUID bookingId, UUID customerId, UUID driverId, boolean pickupVerified) {
+        this(bookingId, customerId, driverId, pickupVerified, null, null, null);
+    }
+
+    /**
+     * With what the trip is and where it goes - for insurance, which opens
+     * the trip's cover from this event and must not call back into booking
+     * to find out (booking already asks insurance whether rides are covered).
+     */
+    public BookingStarted(UUID bookingId, UUID customerId, UUID driverId, boolean pickupVerified,
+                          BookingCategory category, GeoAddress pickup, GeoAddress drop) {
         this.bookingId = bookingId;
         this.customerId = customerId;
         this.driverId = driverId;
         this.pickupVerified = pickupVerified;
+        this.category = category;
+        this.pickup = pickup;
+        this.drop = drop;
+    }
+
+    /** Null only from the old four-argument constructor. */
+    public BookingCategory category() {
+        return category;
+    }
+
+    public GeoAddress pickup() {
+        return pickup;
+    }
+
+    public GeoAddress drop() {
+        return drop;
     }
 
     public UUID bookingId() {

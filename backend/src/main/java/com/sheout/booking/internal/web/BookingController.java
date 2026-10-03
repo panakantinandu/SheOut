@@ -595,6 +595,10 @@ public class BookingController {
             // Its own code so the app can show the hours and when booking
             // reopens, rather than a generic failure. The message is the
             // English fallback; the apps build their own from service-status.
+            // Said as what it is. Not "try another category": no ride is
+            // covered right now, and the rider is better told so plainly.
+            case RIDE_INSURANCE_NOT_ACTIVE -> new ApiException(HttpStatus.CONFLICT, "RIDE_INSURANCE_NOT_ACTIVE",
+                    "Rides are paused because SheOut cannot insure trips right now. Please try again a little later.");
             case SERVICE_CLOSED -> new ApiException(
                     HttpStatus.CONFLICT, "SERVICE_CLOSED", ServiceStatusController.closedMessage(serviceHours.currentStatus()));
             case TRIP_ENDS_AFTER_HOURS -> new ApiException(
