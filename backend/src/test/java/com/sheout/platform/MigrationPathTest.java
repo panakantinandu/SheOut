@@ -15,8 +15,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  * from empty to the latest, and from production's shape today (V54) with the
  * data V55-V59 change - an RC photo and a police check recorded without
  * evidence - to the latest. V61 (staff accounts) is also run over a database
- * holding a phone-login ADMIN account, as production's does. (V60, dropping
- * the old RC column, ships in the release after V55-V59 is live.)
+ * holding a phone-login ADMIN account, as production's does. V78 drops the
+ * old RC column, renumbered from V60 to come after V61-V77.
  * <p>
  * Plain JDBC and Flyway, no Spring context: this is about the SQL. Needs the
  * local Postgres (DB_HOST/DB_PORT/DB_NAME/DB_USERNAME/DB_PASSWORD, defaulted
@@ -53,7 +53,7 @@ class MigrationPathTest {
         var result = flyway(null).migrate();
 
         assertThat(result.success).isTrue();
-        assertThat(result.targetSchemaVersion).isEqualTo("77");
+        assertThat(result.targetSchemaVersion).isEqualTo("78");
         assertThat(jdbc.queryForObject("select count(*) from information_schema.tables where table_schema = ? and table_name in"
                         + " ('partner_documents','police_verifications','insurance_policies','trip_coverages','tax_invoices')",
                 Integer.class, schema)).isEqualTo(5);
@@ -73,7 +73,7 @@ class MigrationPathTest {
         var result = flyway(null).migrate();
 
         assertThat(result.success).isTrue();
-        assertThat(result.targetSchemaVersion).isEqualTo("77");
+        assertThat(result.targetSchemaVersion).isEqualTo("78");
         // V55: her RC photo is a document of its own now, waiting for an operator to date it.
         assertThat(jdbc.queryForMap("select type, status, document_key from " + schema + ".partner_documents where account_id = ?",
                 partnerWithRc))
@@ -89,6 +89,44 @@ class MigrationPathTest {
         assertThat(jdbc.queryForObject("select count(*) from information_schema.columns where table_schema = ?"
                 + " and ((table_name = 'bookings' and column_name = 'fare_base_fare')"
                 + " or (table_name = 'payments' and column_name = 'tax_amount'))", Integer.class, schema)).isEqualTo(2);
+        // V78: the old column is gone, and her RC was not copied twice.
+        assertThat(jdbc.queryForObject("select count(*) from information_schema.columns where table_schema = ?"
+                + " and table_name = 'verification_records' and column_name = 'rc_document_key'", Integer.class, schema)).isZero();
+        assertThat(jdbc.queryForObject("select count(*) from " + schema + ".partner_documents where account_id = ?",
+                Integer.class, partnerWithRc)).isEqualTo(1);
+    }
+
+    @Test
+    void anRcTheOldReleaseWroteAfterV55IsKeptBeforeTheColumnGoes() {
+        assertThat(flyway("59").migrate().targetSchemaVersion).isEqualTo("59");
+        UUID noChecklistRc = UUID.randomUUID();
+        UUID alreadyHasOne = UUID.randomUUID();
+        UUID alreadyCopied = UUID.randomUUID();
+        for (Object[] row : new Object[][] {{noChecklistRc, "late-rc-1"}, {alreadyHasOne, "late-rc-2"}, {alreadyCopied, "same-rc"}}) {
+            jdbc.update("insert into " + schema + ".verification_records (id, account_id, role, gender_verification_status,"
+                    + " police_verification_status, rc_document_key, document_submitted_at, created_at, updated_at)"
+                    + " values (gen_random_uuid(), ?, 'DRIVER', 'VERIFIED', 'VERIFIED', ?, now(), now(), now())", row);
+        }
+        String currentRc = "insert into " + schema + ".partner_documents (id, account_id, type, document_key, status, source,"
+                + " created_at, updated_at) values (gen_random_uuid(), ?, 'VEHICLE_RC', ?, 'VERIFIED', 'PARTNER_UPLOAD', now(), now())";
+        jdbc.update(currentRc, alreadyHasOne, "checklist-rc");
+        jdbc.update(currentRc, alreadyCopied, "same-rc");
+
+        assertThat(flyway(null).migrate().targetSchemaVersion).isEqualTo("78");
+
+        // Nothing on her checklist: the late photo becomes her RC, waiting for review.
+        assertThat(jdbc.queryForMap("select document_key, status, superseded_at from " + schema
+                + ".partner_documents where account_id = ?", noChecklistRc))
+                .containsEntry("document_key", "late-rc-1").containsEntry("status", "UNDER_REVIEW").containsEntry("superseded_at", null);
+        // She already has a current RC: it stays current; the late one is kept as history.
+        assertThat(jdbc.queryForObject("select document_key from " + schema
+                + ".partner_documents where account_id = ? and superseded_at is null", String.class, alreadyHasOne)).isEqualTo("checklist-rc");
+        assertThat(jdbc.queryForObject("select count(*) from " + schema
+                + ".partner_documents where account_id = ? and document_key = 'late-rc-2' and superseded_at is not null",
+                Integer.class, alreadyHasOne)).isEqualTo(1);
+        // Already copied: not copied again.
+        assertThat(jdbc.queryForObject("select count(*) from " + schema + ".partner_documents where account_id = ?",
+                Integer.class, alreadyCopied)).isEqualTo(1);
     }
 
     @Test
@@ -141,7 +179,7 @@ class MigrationPathTest {
         var result = flyway(null).migrate();
 
         assertThat(result.success).isTrue();
-        assertThat(result.targetSchemaVersion).isEqualTo("77");
+        assertThat(result.targetSchemaVersion).isEqualTo("78");
         assertThat(jdbc.queryForObject("select count(*) from information_schema.tables where table_schema = ? and table_name in"
                         + " ('staff_members','staff_invites','staff_recovery_codes','staff_sessions')",
                 Integer.class, schema)).isEqualTo(4);
