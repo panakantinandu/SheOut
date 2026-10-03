@@ -43,18 +43,6 @@ public class VerificationRecordEntity extends BaseEntity {
     private String aadhaarDocumentKey;
 
     /**
-     * The vehicle's registration certificate photo.
-     * <p>
-     * Here rather than on the driver profile because it is evidence for
-     * this review, not something a rider ever sees: an operator reads the
-     * Aadhaar to establish who she is and this to check the registration
-     * number she typed matches the vehicle she actually owns. One decision,
-     * one record.
-     */
-    @Column(length = 500)
-    private String rcDocumentKey;
-
-    /**
      * When the document was sent in, as opposed to when it was looked at.
      * Null until something is submitted. Re-submitting after a rejection
      * moves it: the queue started waiting again at that moment.
@@ -142,14 +130,6 @@ public class VerificationRecordEntity extends BaseEntity {
 
     public void setAadhaarDocumentKey(String key) {
         this.aadhaarDocumentKey = key;
-    }
-
-    public String getRcDocumentKey() {
-        return rcDocumentKey;
-    }
-
-    public void setRcDocumentKey(String key) {
-        this.rcDocumentKey = key;
     }
 
     public String getReviewedBy() {

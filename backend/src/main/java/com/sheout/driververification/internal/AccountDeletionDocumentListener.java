@@ -57,10 +57,6 @@ class AccountDeletionDocumentListener {
                 documentStorage.delete(record.getAadhaarDocumentKey());
                 record.setAadhaarDocumentKey(null);
             }
-            if (record.getRcDocumentKey() != null) {
-                documentStorage.delete(record.getRcDocumentKey());
-                record.setRcDocumentKey(null);
-            }
             // Her face, twice over: the selfie and the prompt frames go too.
             if (record.getSelfieDocumentKey() != null) {
                 documentStorage.delete(record.getSelfieDocumentKey());

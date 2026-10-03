@@ -254,8 +254,11 @@ the server starting.
   valid, so an operator reads those off and approves it again. The old
   column is no longer written or read for review, and is kept only so the
   release that is still serving while this one starts does not break.
-  **Drop `verification_records.rc_document_key` in a migration in the
-  release after this one is live.**
+  It is dropped by `V60__drop_rc_document_key.sql` on the
+  `next/drop-rc-document-key` branch, which ships in the release *after*
+  this one is live, never together with it. V60 first copies any RC an
+  older backend wrote to the column after V55 ran. If `main` gains other
+  migrations in the meantime, renumber it to come after them when rebasing.
 - **The ID submission no longer requires the RC.** The RC is its own
   checklist step now. An RC that an older app still sends with the ID is
   filed as her `VEHICLE_RC` for review.
