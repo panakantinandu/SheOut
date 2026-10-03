@@ -1,5 +1,9 @@
 package com.sheout.admin.internal.web;
 
+import com.sheout.staff.Permission;
+import com.sheout.staff.RequiresPermission;
+import com.sheout.staff.RequiresAnyPermission;
+import com.sheout.staff.StaffContext;
 import com.sheout.auth.AccountRole;
 import com.sheout.auth.AccountSummary;
 import com.sheout.auth.AuthApi;
@@ -59,20 +63,21 @@ public class AdminPayoutController {
     }
 
     /** status defaults to PENDING - the queue. Pass status=PAID for history. Oldest first. */
+    @RequiresAnyPermission({Permission.PAYOUTS_PREPARE, Permission.PAYOUTS_APPROVE, Permission.PAYMENTS_VIEW})
     @GetMapping
     public ResponseEntity<PageResponse<PayoutRow>> requests(
             @RequestParam(required = false, defaultValue = "PENDING") PayoutStatus status,
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer pageSize) {
-        requireAdmin();
         return ResponseEntity.ok(PageResponse.from(
                 payoutApi.listRequests(status, PageRequest.of(PageResponse.normalizePage(page), PageResponse.normalizePageSize(pageSize))),
                 this::toRow));
     }
 
+    @RequiresPermission({Permission.PAYOUTS_PREPARE, Permission.PAYOUTS_APPROVE})
     @PostMapping("/{requestId}/mark-paid")
     public ResponseEntity<PayoutRow> markPaid(@PathVariable UUID requestId, @Valid @RequestBody MarkPaidRequest request) {
-        CurrentAccount admin = requireAdmin();
+        CurrentAccount admin = caller();
         Result<PayoutRequestSummary, PayoutError> result = payoutApi.markPaid(requestId, admin.accountId(), request.paymentReference());
         if (result.isFailure()) {
             throw switch (result.error()) {
@@ -105,13 +110,13 @@ public class AdminPayoutController {
                 r.paymentReference(), wallet.availableBalance());
     }
 
-    private CurrentAccount requireAdmin() {
-        CurrentAccount caller = CurrentAccountContext.get()
-                .orElseThrow(() -> ApiException.unauthorized("Authentication required"));
-        if (caller.role() != AccountRole.ADMIN) {
-            throw ApiException.forbidden("Admin role required");
-        }
-        return caller;
+    /**
+     * Who is acting, for the records that say who decided. Whether she may is
+     * already settled: the endpoint's permission was checked before it ran
+     * (staff's StaffPermissionInterceptor).
+     */
+    private static CurrentAccount caller() {
+        return CurrentAccountContext.get().orElseThrow(StaffContext::signInRequired);
     }
 
     public record MarkPaidRequest(@NotBlank @Size(max = 100) String paymentReference) {

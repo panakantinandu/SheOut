@@ -70,3 +70,11 @@ with copies of the software. Both notices are in each package's `LICENSE`
 file, which is kept in `node_modules`. Vite's production bundle does not
 copy licence files, so the notices are reproduced here. This file ships
 with the source handover.
+
+## Staff console sign-in (backend, 2026-10)
+
+| What | Version | Licence | Used for |
+|---|---|---|---|
+| BouncyCastle `bcprov-jdk18on` | 1.78 | MIT-style (Bouncy Castle Licence) | The Argon2id algorithm under Spring Security's `Argon2PasswordEncoder` (staff passwords) |
+| ZXing `core` | 3.5.3 | Apache 2.0 | Drawing the authenticator QR code on the server, so the console loads no script |
+| SecLists `10k-most-common.txt`, `100k-most-used-passwords-NCSC.txt` | master, fetched 2026-10-03 | MIT, (c) 2018 Daniel Miessler | `backend/src/main/resources/staff/common-passwords.txt`: passwords staff may not choose |

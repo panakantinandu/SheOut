@@ -547,14 +547,72 @@ sheout:
     verified-driver-bypass-phone: ${VERIFIED_DRIVER_BYPASS_PHONE:}
 
   admin:
-    # Blank by default and a no-op when unset - an environment that never
-    # sets this never gains an admin. Signup refuses role=ADMIN (see
-    # AuthController.requireSelfServiceRole), so this is the only path to
-    # an ADMIN account. The account must ALREADY exist: sign in normally
-    # with this number first, then this promotes it on the next boot (see
-    # AdminBootstrap). Unlike the bypass switches above, this IS meant to
-    # be set in a real environment - it is how the operator gets access.
+    # The old way into the console: an ADMIN account signed in with a phone
+    # number and an SMS code, like a rider. OFF unless set: staff now sign in
+    # with email, password and an authenticator app (sheout.staff below).
+    # While off, phone-code sign-in as ADMIN is refused and any ADMIN bearer
+    # token is ignored. Turn on only on a developer's machine, never in
+    # production.
+    phone-login-enabled: ${ADMIN_PHONE_LOGIN_ENABLED:false}
+    # Optional. The phone number of the ADMIN account the founder used before
+    # staff accounts existed. The first OWNER invitation is then linked to
+    # that account, so decisions she made then stay attributed to her (see
+    # staff.internal.OwnerBootstrap). It no longer grants anything.
     bootstrap-phone: ${ADMIN_BOOTSTRAP_PHONE:}
+
+  # Staff accounts for the console (the staff module). README "Staff
+  # accounts and roles" explains each of these in plain words.
+  staff:
+    # REQUIRED, no default outside the local profile. Encrypts authenticator
+    # secrets and keys recovery-code hashes. 32+ random bytes, base64:
+    # `openssl rand -base64 32`. Changing it makes every enrolled
+    # authenticator unreadable - everyone would need a second-factor reset.
+    secrets-key: ${STAFF_SECRETS_KEY}
+    # With no active OWNER, each start invites this address as the first
+    # OWNER (once; see OwnerBootstrap). Ignored as soon as an OWNER exists.
+    owner-bootstrap-email: ${SHEOUT_OWNER_BOOTSTRAP_EMAIL:}
+    # Where the console is, for the link in invitation emails.
+    console-url: ${STAFF_CONSOLE_URL:http://localhost:8080/admin/}
+    invite-hours: ${STAFF_INVITE_HOURS:24}
+    # Off only for plain-HTTP testing on a machine that is not localhost.
+    cookie-secure: ${STAFF_COOKIE_SECURE:true}
+    session:
+      # Signed out after this long with nothing done (the console's own
+      # polling does not count), and after this long whatever is done.
+      # The founder's choice: 30/8 for most roles, owners 15/8, the
+      # night-shift safety desk 60/12.
+      idle-minutes: ${STAFF_SESSION_IDLE_MINUTES:30}
+      absolute-hours: ${STAFF_SESSION_ABSOLUTE_HOURS:8}
+      owner-idle-minutes: ${STAFF_SESSION_IDLE_MINUTES_OWNER:15}
+      owner-absolute-hours: ${STAFF_SESSION_ABSOLUTE_HOURS_OWNER:8}
+      safety-idle-minutes: ${STAFF_SESSION_IDLE_MINUTES_SAFETY_RESPONDER:60}
+      safety-absolute-hours: ${STAFF_SESSION_ABSOLUTE_HOURS_SAFETY_RESPONDER:12}
+    # An auditor invited without an end date gets this many days.
+    auditor-default-days: ${STAFF_AUDITOR_DEFAULT_DAYS:30}
+    # Rupees a role may refund on its own; above it needs an owner. Owners
+    # have no limit. Enforced by the refund endpoint when it arrives.
+    refund-limit:
+      support: ${REFUND_LIMIT_SUPPORT:200}
+      manager: ${REFUND_LIMIT_MANAGER:1000}
+      finance: ${REFUND_LIMIT_FINANCE:200}
+    # Networks each role may use the console from: comma-separated addresses
+    # or CIDR ranges. Blank (the default, and the founder's choice for now)
+    # means anywhere. Checked at sign-in and on every request.
+    ip-allowlist:
+      owner: ${STAFF_IP_ALLOWLIST_OWNER:}
+      manager: ${STAFF_IP_ALLOWLIST_MANAGER:}
+      verification-agent: ${STAFF_IP_ALLOWLIST_VERIFICATION_AGENT:}
+      support-agent: ${STAFF_IP_ALLOWLIST_SUPPORT_AGENT:}
+      safety-responder: ${STAFF_IP_ALLOWLIST_SAFETY_RESPONDER:}
+      finance: ${STAFF_IP_ALLOWLIST_FINANCE:}
+      marketplace-moderator: ${STAFF_IP_ALLOWLIST_MARKETPLACE_MODERATOR:}
+      auditor: ${STAFF_IP_ALLOWLIST_AUDITOR:}
+    login:
+      # Wrong answers in a row before an account is locked, and for how long.
+      max-failures: ${STAFF_LOGIN_MAX_FAILURES:5}
+      lock-minutes: ${STAFF_LOGIN_LOCK_MINUTES:15}
+      # Sign-in attempts per network address per 15 minutes.
+      per-address: ${STAFF_LOGIN_PER_ADDRESS:20}
 
 # Error reporting. Blank DSN means the SDK starts disabled and sends nothing,
 # which is what every local run and every fork of this repo gets; set

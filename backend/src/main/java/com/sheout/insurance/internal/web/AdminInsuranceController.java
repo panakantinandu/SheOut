@@ -1,5 +1,9 @@
 package com.sheout.insurance.internal.web;
 
+import com.sheout.staff.Permission;
+import com.sheout.staff.RequiresPermission;
+import com.sheout.staff.RequiresAnyPermission;
+import com.sheout.staff.StaffContext;
 import com.sheout.auth.AccountRole;
 import com.sheout.auth.AccountSummary;
 import com.sheout.auth.AuthApi;
@@ -59,49 +63,50 @@ public class AdminInsuranceController {
 
     // ---------------------------------------------------------------- policies
 
+    @RequiresAnyPermission({Permission.INSURANCE_MANAGE, Permission.REPORTS_FINANCE})
     @GetMapping("/api/v1/admin/insurance/policies")
     public ResponseEntity<List<PolicyView>> policies() {
-        requireAdmin();
         return ResponseEntity.ok(insurance.allPolicies().stream().map(this::view).toList());
     }
 
+    @RequiresPermission(Permission.INSURANCE_MANAGE)
     @PostMapping("/api/v1/admin/insurance/policies")
     public ResponseEntity<PolicyView> createPolicy(@RequestBody PolicyRequest request) {
-        CurrentAccount admin = requireAdmin();
+        CurrentAccount admin = caller();
         return ResponseEntity.ok(view(orThrow(insurance.createPolicy(request.toInput(), admin.accountId()))));
     }
 
+    @RequiresPermission(Permission.INSURANCE_MANAGE)
     @PutMapping("/api/v1/admin/insurance/policies/{id}")
     public ResponseEntity<PolicyView> updatePolicy(@PathVariable UUID id, @RequestBody PolicyRequest request) {
-        requireAdmin();
         return ResponseEntity.ok(view(orThrow(insurance.updatePolicy(id, request.toInput()))));
     }
 
+    @RequiresPermission(Permission.INSURANCE_MANAGE)
     @PostMapping("/api/v1/admin/insurance/policies/{id}/activate")
     public ResponseEntity<PolicyView> activate(@PathVariable UUID id) {
-        requireAdmin();
         return ResponseEntity.ok(view(orThrow(insurance.setActive(id, true))));
     }
 
+    @RequiresPermission(Permission.INSURANCE_MANAGE)
     @PostMapping("/api/v1/admin/insurance/policies/{id}/deactivate")
     public ResponseEntity<PolicyView> deactivate(@PathVariable UUID id) {
-        requireAdmin();
         return ResponseEntity.ok(view(orThrow(insurance.setActive(id, false))));
     }
 
     // ------------------------------------------------------------ status, files
 
     /** Whether trips are covered right now, and how reporting stands - the console's banner and tiles. */
+    @RequiresAnyPermission({Permission.INSURANCE_MANAGE, Permission.REPORTS_OPS, Permission.REPORTS_FINANCE})
     @GetMapping("/api/v1/admin/insurance/status")
     public ResponseEntity<InsuranceService.Status> status() {
-        requireAdmin();
         return ResponseEntity.ok(insurance.status());
     }
 
     /** One day's covered trips, as the configured reporter produces them (a CSV by default). */
+    @RequiresPermission(Permission.INSURANCE_MANAGE)
     @GetMapping("/api/v1/admin/insurance/bordereau")
     public ResponseEntity<byte[]> bordereau(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        requireAdmin();
         Result<InsurerReporter.Report, String> result = insurance.bordereau(date);
         if (result.isFailure()) {
             throw new ApiException(HttpStatus.BAD_GATEWAY, "REPORT_FAILED",
@@ -113,30 +118,30 @@ public class AdminInsuranceController {
     }
 
     /** The premium SheOut owes for trips started in a month, per policy. A platform cost, never a fare line. */
+    @RequiresAnyPermission({Permission.INSURANCE_MANAGE, Permission.REPORTS_FINANCE})
     @GetMapping("/api/v1/admin/insurance/premium-report")
     public ResponseEntity<List<InsuranceService.PremiumRow>> premiumReport(@RequestParam String month) {
-        requireAdmin();
         return ResponseEntity.ok(insurance.premiumReport(parseMonth(month)));
     }
 
     // -------------------------------------------------------------- enrolments
 
+    @RequiresPermission(Permission.INSURANCE_MANAGE)
     @GetMapping("/api/v1/admin/insurance/enrolments")
     public ResponseEntity<List<EnrolmentView>> enrolments() {
-        requireAdmin();
         return ResponseEntity.ok(insurance.allEnrolments().stream().map(this::view).toList());
     }
 
     /** The insurer confirmed her: she is ENROLLED with the member id it gave, and her app shows the cover. */
+    @RequiresPermission(Permission.INSURANCE_MANAGE)
     @PostMapping("/api/v1/admin/insurance/enrolments/{id}/enrolled")
     public ResponseEntity<EnrolmentView> markEnrolled(@PathVariable UUID id, @RequestBody EnrolRequest request) {
-        requireAdmin();
         return ResponseEntity.ok(view(orThrowEnrolment(insurance.markEnrolled(id, request == null ? null : request.memberId()))));
     }
 
+    @RequiresPermission(Permission.INSURANCE_MANAGE)
     @PostMapping("/api/v1/admin/insurance/enrolments/{id}/exited")
     public ResponseEntity<EnrolmentView> markExited(@PathVariable UUID id, @RequestBody(required = false) ExitRequest request) {
-        requireAdmin();
         return ResponseEntity.ok(view(orThrowEnrolment(insurance.markExited(id, request == null ? null : request.reason()))));
     }
 
@@ -145,9 +150,9 @@ public class AdminInsuranceController {
      * name, date of birth and phone number are what an insurer needs to
      * enrol her - and what the partner consent says it receives.
      */
+    @RequiresPermission(Permission.INSURANCE_MANAGE)
     @GetMapping("/api/v1/admin/insurance/enrolments/movements")
     public ResponseEntity<byte[]> movements(@RequestParam String month) {
-        requireAdmin();
         YearMonth ym = parseMonth(month);
         InsuranceService.Movements m = insurance.movements(ym);
         StringBuilder csv = new StringBuilder("movement,date,insurer,policy_number,member_id,partner_name,date_of_birth,phone,account_id\r\n");
@@ -273,12 +278,12 @@ public class AdminInsuranceController {
         return v.contains(",") || v.contains("\"") || v.contains("\n") ? "\"" + v.replace("\"", "\"\"") + "\"" : v;
     }
 
-    private static CurrentAccount requireAdmin() {
-        CurrentAccount caller = CurrentAccountContext.get()
-                .orElseThrow(() -> ApiException.unauthorized("Authentication required"));
-        if (caller.role() != AccountRole.ADMIN) {
-            throw ApiException.forbidden("Admin role required");
-        }
-        return caller;
+    /**
+     * Who is acting, for the records that say who decided. Whether she may is
+     * already settled: the endpoint's permission was checked before it ran
+     * (staff's StaffPermissionInterceptor).
+     */
+    private static CurrentAccount caller() {
+        return CurrentAccountContext.get().orElseThrow(StaffContext::signInRequired);
     }
 }

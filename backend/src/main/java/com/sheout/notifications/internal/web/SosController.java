@@ -38,9 +38,10 @@ import java.util.UUID;
  * safety-critical screen to handle correctly than asking it to special-case
  * two different non-2xx statuses AND parse two different body shapes.
  * <p>
- * GET /active is gated to ADMIN, same as AdminVerificationController - see
- * that controller's Javadoc for why there is no real way to provision an
- * ADMIN account yet (the admin module doesn't exist).
+ * Operators read active alerts from the console's own endpoint,
+ * /api/v1/admin/sos/active, under the sos.respond permission. The ADMIN-only
+ * copy that used to be here was removed with phone-and-code operator sign-in:
+ * a console sign-in is a cookie sent only to /api/v1/admin.
  */
 @RestController
 @RequestMapping("/api/v1/notifications/sos")
@@ -80,12 +81,6 @@ public class SosController {
         return ResponseEntity.ok(SosResponse.from(outcome));
     }
 
-    @GetMapping("/active")
-    public ResponseEntity<List<SosAlertSummary>> active() {
-        requireAdmin();
-        return ResponseEntity.ok(sosService.findActiveAlerts());
-    }
-
     private boolean isParticipant(UUID accountId, UUID bookingId) {
         var participants = bookingApi.getParticipants(bookingId);
         return participants.isSuccess() && (accountId.equals(participants.value().customerId())
@@ -101,14 +96,6 @@ public class SosController {
         return caller;
     }
 
-    private CurrentAccount requireAdmin() {
-        CurrentAccount caller = CurrentAccountContext.get()
-                .orElseThrow(() -> ApiException.unauthorized("Authentication required"));
-        if (caller.role() != AccountRole.ADMIN) {
-            throw ApiException.forbidden("Admin role required");
-        }
-        return caller;
-    }
 
     public record SosRequest(
             @NotNull @DecimalMin("-90") @DecimalMax("90") Double lat,

@@ -6,6 +6,8 @@ import com.sheout.auth.AuthApi;
 import com.sheout.booking.BookingApi;
 import com.sheout.notifications.SosApi;
 import com.sheout.sharedkernel.Result;
+import com.sheout.staff.Permission;
+import com.sheout.staff.StaffDirectory;
 import com.sheout.support.SupportApi;
 import com.sheout.support.SupportError;
 import com.sheout.support.SupportTicketCategory;
@@ -46,15 +48,18 @@ public class SupportOpsService {
     private final DriverProfileApi driverProfileApi;
     private final BookingApi bookingApi;
     private final SosApi sosApi;
+    private final StaffDirectory staffDirectory;
 
     public SupportOpsService(SupportApi supportApi, AuthApi authApi, CustomerProfileApi customerProfileApi,
-                             DriverProfileApi driverProfileApi, BookingApi bookingApi, SosApi sosApi) {
+                             DriverProfileApi driverProfileApi, BookingApi bookingApi, SosApi sosApi,
+                             StaffDirectory staffDirectory) {
         this.supportApi = supportApi;
         this.authApi = authApi;
         this.customerProfileApi = customerProfileApi;
         this.driverProfileApi = driverProfileApi;
         this.bookingApi = bookingApi;
         this.sosApi = sosApi;
+        this.staffDirectory = staffDirectory;
     }
 
     public Page<SupportTicketOpsRow> tickets(SupportTicketQuery query, Pageable pageable) {
@@ -91,10 +96,15 @@ public class SupportOpsService {
         return supportApi.assignTicket(ticketId, assigneeAdminId, adminAccountId);
     }
 
-    /** Operations accounts a ticket can be assigned to. A small list; one page is all of them. */
+    /**
+     * Staff a ticket can be assigned to: everyone active whose role works
+     * tickets. The assignee check in support only asks "is this a staff
+     * account"; who appears here is what keeps a ticket from being handed to
+     * somebody whose role cannot open it.
+     */
     public List<Operator> operators() {
-        return authApi.searchAccounts(null, Set.of(AccountRole.ADMIN), false, PageRequest.of(0, 100)).stream()
-                .map(account -> new Operator(account.id(), account.phoneNumber()))
+        return staffDirectory.activeWith(Permission.SUPPORT_WORK).stream()
+                .map(member -> new Operator(member.accountId(), staffDirectory.label(member.accountId()).orElse(member.displayName())))
                 .toList();
     }
 
@@ -164,15 +174,21 @@ public class SupportOpsService {
                 : customerProfileApi.findByAccountId(accountId).map(p -> p.name()).orElse(null);
     }
 
+    /**
+     * How an operator is named on a ticket: "Asha (Support agent)" for staff,
+     * and the phone number only for an account from before staff sign-in.
+     */
     private String phoneFor(UUID accountId) {
         if (accountId == null) return null;
-        return authApi.findAccount(accountId).map(AccountSummary::phoneNumber).orElse(null);
+        return staffDirectory.label(accountId)
+                .orElseGet(() -> authApi.findAccount(accountId).map(AccountSummary::phoneNumber).orElse(null));
     }
 
     /** unresolved: OPEN or IN_PROGRESS. high and safety are subsets of it. */
     public record SupportCounts(long unresolved, long unresolvedHigh, long unresolvedSafety) {
     }
 
-    public record Operator(UUID accountId, String phoneNumber) {
+    /** label is the staff member's name and role. */
+    public record Operator(UUID accountId, String label) {
     }
 }

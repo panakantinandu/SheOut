@@ -25,3 +25,13 @@ sheout:
     jwt-secret: ${JWT_SECRET:local-dev-only-secret-do-not-use-in-production-32bytes}
     # No SMS provider locally, so the log is the only place a code can go.
     log-otp-codes: ${LOG_OTP_CODES:true}
+
+  # Local only: this key is public, in this file, and must never be used
+  # anywhere real. Production's STAFF_SECRETS_KEY has no default.
+  staff:
+    secrets-key: ${STAFF_SECRETS_KEY:bG9jYWwtZGV2LW9ubHktc3RhZmYta2V5LW5vdC1mb3ItcHJvZHVjdGlvbg==}
+
+  # Local scripts still sign in to the console API with a phone and code.
+  # Production leaves this off (application.yml).
+  admin:
+    phone-login-enabled: ${ADMIN_PHONE_LOGIN_ENABLED:true}

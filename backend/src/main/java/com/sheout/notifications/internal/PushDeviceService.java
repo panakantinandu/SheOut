@@ -1,5 +1,6 @@
 package com.sheout.notifications.internal;
 
+import com.sheout.notifications.OperatorDeviceApi;
 import com.sheout.notifications.internal.channel.FcmPushChannel;
 import com.sheout.auth.AccountRole;
 import org.springframework.stereotype.Service;
@@ -12,7 +13,7 @@ import java.util.UUID;
 
 /** Device registration for push, and forgetting devices FCM says are gone. */
 @Service
-public class PushDeviceService {
+public class PushDeviceService implements OperatorDeviceApi {
 
     private final PushDeviceRepository devices;
     private final FcmPushChannel push;
@@ -47,6 +48,29 @@ public class PushDeviceService {
     @Transactional
     public void unregister(UUID accountId, String token) {
         devices.deleteByTokenAndAccountId(token, accountId);
+    }
+
+    /** No announcement topic: an operator's browser is for alerts, not broadcasts to riders. */
+    @Override
+    @Transactional
+    public void registerOperatorDevice(UUID accountId, String token, String userAgent) {
+        Instant now = Instant.now();
+        String agent = userAgent == null ? null : userAgent.substring(0, Math.min(userAgent.length(), 300));
+        devices.findByToken(token).ifPresentOrElse(
+                device -> device.refresh(accountId, AccountRole.ADMIN, agent, now),
+                () -> devices.save(new PushDeviceEntity(accountId, AccountRole.ADMIN, token, agent, now)));
+    }
+
+    @Override
+    @Transactional
+    public void unregisterOperatorDevice(UUID accountId, String token) {
+        devices.deleteByTokenAndAccountId(token, accountId);
+    }
+
+    @Override
+    @Transactional
+    public int forgetOperatorDevices(UUID accountId) {
+        return devices.deleteByAccountId(accountId);
     }
 
     public List<PushDeviceEntity> devicesFor(UUID accountId) {

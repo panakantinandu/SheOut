@@ -1,5 +1,8 @@
 package com.sheout.admin.internal.web;
 
+import com.sheout.staff.Permission;
+import com.sheout.staff.RequiresPermission;
+import com.sheout.staff.StaffContext;
 import com.sheout.admin.internal.SupportOpsService;
 import com.sheout.admin.internal.SupportTicketOpsDetail;
 import com.sheout.admin.internal.SupportTicketOpsRow;
@@ -56,6 +59,7 @@ public class AdminSupportController {
     }
 
     /** The queue: unresolved first, HIGH first within that. Filters match the other paged lists. */
+    @RequiresPermission(Permission.SUPPORT_WORK)
     @GetMapping("/tickets")
     public ResponseEntity<PageResponse<SupportTicketOpsRow>> tickets(
             @RequestParam(required = false) Integer page,
@@ -65,7 +69,6 @@ public class AdminSupportController {
             @RequestParam(required = false) Set<SupportTicketPriority> priority,
             @RequestParam(required = false) Instant from,
             @RequestParam(required = false) Instant to) {
-        requireAdmin();
         SupportTicketQuery query = new SupportTicketQuery(null, status, category, priority, from, to);
         return ResponseEntity.ok(PageResponse.from(
                 supportOps.tickets(query, PageRequest.of(
@@ -74,30 +77,32 @@ public class AdminSupportController {
     }
 
     /** For the sidebar badge and the SOS page's link to open safety tickets. */
+    @RequiresPermission(Permission.SUPPORT_WORK)
     @GetMapping("/counts")
     public ResponseEntity<SupportOpsService.SupportCounts> counts() {
-        requireAdmin();
         return ResponseEntity.ok(supportOps.counts());
     }
 
+    @RequiresPermission(Permission.SUPPORT_WORK)
     @GetMapping("/operators")
     public ResponseEntity<List<SupportOpsService.Operator>> operators() {
-        requireAdmin();
         return ResponseEntity.ok(supportOps.operators());
     }
 
+    @RequiresPermission(Permission.SUPPORT_WORK)
     @GetMapping("/tickets/{ticketId}")
     public ResponseEntity<SupportTicketOpsDetail> ticket(@PathVariable UUID ticketId) {
-        CurrentAccount admin = requireAdmin();
+        CurrentAccount admin = caller();
         return ResponseEntity.ok(supportOps.ticket(ticketId, admin.accountId())
                 .orElseThrow(() -> ApiException.notFound("No such ticket")));
     }
 
     /** A reply the raiser sees (and is texted about), or with internalOnly, a note only operators see. */
+    @RequiresPermission(Permission.SUPPORT_WORK)
     @PostMapping("/tickets/{ticketId}/messages")
     public ResponseEntity<SupportTicketMessage> message(@PathVariable UUID ticketId,
                                                         @Valid @RequestBody MessageRequest request) {
-        CurrentAccount admin = requireAdmin();
+        CurrentAccount admin = caller();
         Result<SupportTicketMessage, SupportError> result = supportOps.addMessage(
                 ticketId, admin.accountId(), request.message(), Boolean.TRUE.equals(request.internalOnly()));
         if (result.isFailure()) {
@@ -106,18 +111,20 @@ public class AdminSupportController {
         return ResponseEntity.status(HttpStatus.CREATED).body(result.value());
     }
 
+    @RequiresPermission(Permission.SUPPORT_WORK)
     @PostMapping("/tickets/{ticketId}/status")
     public ResponseEntity<SupportTicketSummary> status(@PathVariable UUID ticketId,
                                                        @Valid @RequestBody StatusRequest request) {
-        CurrentAccount admin = requireAdmin();
+        CurrentAccount admin = caller();
         return respond(supportOps.updateStatus(ticketId, request.status(), admin.accountId()));
     }
 
     /** assigneeAdminId null unassigns. */
+    @RequiresPermission(Permission.SUPPORT_WORK)
     @PostMapping("/tickets/{ticketId}/assign")
     public ResponseEntity<SupportTicketSummary> assign(@PathVariable UUID ticketId,
                                                        @RequestBody AssignRequest request) {
-        CurrentAccount admin = requireAdmin();
+        CurrentAccount admin = caller();
         return respond(supportOps.assign(ticketId, request.assigneeAdminId(), admin.accountId()));
     }
 
@@ -128,13 +135,13 @@ public class AdminSupportController {
         return ResponseEntity.ok(result.value());
     }
 
-    private CurrentAccount requireAdmin() {
-        CurrentAccount caller = CurrentAccountContext.get()
-                .orElseThrow(() -> ApiException.unauthorized("Authentication required"));
-        if (caller.role() != AccountRole.ADMIN) {
-            throw ApiException.forbidden("Admin role required");
-        }
-        return caller;
+    /**
+     * Who is acting, for the records that say who decided. Whether she may is
+     * already settled: the endpoint's permission was checked before it ran
+     * (staff's StaffPermissionInterceptor).
+     */
+    private static CurrentAccount caller() {
+        return CurrentAccountContext.get().orElseThrow(StaffContext::signInRequired);
     }
 
     private static ApiException toApiException(SupportError error) {

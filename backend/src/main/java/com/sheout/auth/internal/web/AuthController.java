@@ -191,6 +191,9 @@ public class AuthController {
                     // A pure role gate, not tied to a specific resource id, so 403
                     // rather than the 404 used for per-resource authorization.
                     ApiException.forbidden("ADMIN accounts cannot be created via self-service signup");
+            case ADMIN_PHONE_LOGIN_DISABLED ->
+                    new ApiException(HttpStatus.FORBIDDEN, "ADMIN_PHONE_LOGIN_DISABLED",
+                            "Staff sign in to the console with their work email, password and authenticator code.");
             case EMAIL_LINKED_TO_PHONE_ACCOUNT ->
                     new ApiException(HttpStatus.CONFLICT, "Conflict", "An account already exists with this email. Sign in with your phone number instead.");
             case GOOGLE_NOT_FOR_ROLE ->

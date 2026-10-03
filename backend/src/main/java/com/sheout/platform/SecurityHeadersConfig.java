@@ -33,12 +33,20 @@ import java.util.regex.Pattern;
  * Response security headers, and nothing else.
  * <p>
  * Spring Security is on the classpath for its header writers, not for
- * authentication. Who is calling is still JwtAuthenticationFilter's job and
- * whether they may is still each controller's (see CurrentAccountContext and
- * the enumeration-safe 404s) - so every request is permitted here, and CSRF,
- * sessions, form login and HTTP Basic are all off. The API takes a bearer
- * token in a header, never a cookie, which is what makes turning CSRF off
- * correct rather than convenient.
+ * authentication. Who is calling is JwtAuthenticationFilter's job for the
+ * apps and staff's StaffSessionFilter's for the console; whether they may is
+ * each controller's for the apps (see CurrentAccountContext and the
+ * enumeration-safe 404s) and staff's permission interceptor's for the
+ * console. So every request is permitted here, and Spring's CSRF, sessions,
+ * form login and HTTP Basic are all off. The apps send a bearer token in a
+ * header, never a cookie, so they need no CSRF protection; the console does
+ * use a cookie, and StaffSessionFilter checks its CSRF token itself.
+ * <p>
+ * Referrer-Policy: no-referrer everywhere. Console URLs carry record ids and
+ * an invitation link carries a token in its fragment; nothing about either
+ * should travel to whatever site a link on the page leads to. The console
+ * also says noindex (X-Robots-Tag, and robots.txt) - it is not a page for a
+ * search engine to know about.
  * <p>
  * Two Content-Security-Policies, because this server serves two kinds of
  * thing:
@@ -113,6 +121,10 @@ public class SecurityHeadersConfig {
                                     .requestMatcher(AnyRequestMatcher.INSTANCE)
                                     .includeSubDomains(true)
                                     .maxAgeInSeconds(31_536_000))
+                            .referrerPolicy(referrer -> referrer.policy(
+                                    org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER))
+                            .addHeaderWriter(new DelegatingRequestMatcherHeaderWriter(
+                                    admin, new StaticHeadersWriter("X-Robots-Tag", "noindex, nofollow")))
                             .addHeaderWriter(new DelegatingRequestMatcherHeaderWriter(
                                     admin, new StaticHeadersWriter("Content-Security-Policy", adminCsp())))
                             .addHeaderWriter(new DelegatingRequestMatcherHeaderWriter(

@@ -1,9 +1,13 @@
 package com.sheout.driververification.internal.web;
 
+import com.sheout.staff.Permission;
+import com.sheout.staff.RequiresPermission;
+import com.sheout.staff.StaffContext;
 import com.sheout.auth.AccountRole;
 import com.sheout.auth.AccountSummary;
 import com.sheout.auth.AuthApi;
 import com.sheout.auth.CurrentAccount;
+import com.sheout.auth.CurrentAccountContext;
 import com.sheout.driververification.internal.ShiftCheckError;
 import com.sheout.driververification.internal.ShiftCheckService;
 import com.sheout.sharedkernel.Result;
@@ -83,9 +87,9 @@ public class ShiftCheckController {
                 faceDistance, faceOutcome)));
     }
 
+    @RequiresPermission(Permission.VERIFICATION_REVIEW)
     @GetMapping("/api/v1/admin/shift-checks")
     public ResponseEntity<List<QueueRow>> queue() {
-        requireAdmin();
         return ResponseEntity.ok(service.reviewQueue().stream()
                 .map(item -> new QueueRow(item, authApi.findAccount(item.accountId()).map(AccountSummary::phoneNumber).orElse(null)))
                 .toList());
@@ -95,10 +99,11 @@ public class ShiftCheckController {
     public record QueueRow(ShiftCheckService.ReviewItem check, String phoneNumber) {
     }
 
+    @RequiresPermission(Permission.VERIFICATION_REVIEW)
     @PostMapping("/api/v1/admin/shift-checks/{checkId}/review")
     public ResponseEntity<ShiftCheckService.ReviewItem> review(@PathVariable UUID checkId,
                                                                @Valid @RequestBody ReviewRequest request) {
-        CurrentAccount admin = requireAdmin();
+        CurrentAccount admin = caller();
         return ResponseEntity.ok(orThrow(service.review(checkId, admin.accountId(), request.decision(), request.note())));
     }
 
@@ -113,12 +118,13 @@ public class ShiftCheckController {
         return caller;
     }
 
-    private static CurrentAccount requireAdmin() {
-        CurrentAccount caller = VerificationController.requireAuthenticated();
-        if (caller.role() != AccountRole.ADMIN) {
-            throw ApiException.forbidden("Admin role required");
-        }
-        return caller;
+    /**
+     * Who is acting, for the records that say who decided. Whether she may is
+     * already settled: the endpoint's permission was checked before it ran
+     * (staff's StaffPermissionInterceptor).
+     */
+    private static CurrentAccount caller() {
+        return CurrentAccountContext.get().orElseThrow(StaffContext::signInRequired);
     }
 
     private static <T> T orThrow(Result<T, ShiftCheckError> result) {

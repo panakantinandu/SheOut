@@ -187,11 +187,49 @@ services:
       - key: VERIFIED_DRIVER_BYPASS_PHONE
         sync: false
 
-      # The operator account for the admin console. Signup refuses
-      # role=ADMIN, so this is the only way an ADMIN account can exist.
-      # The account must already exist (sign in with this number once
-      # first); AdminBootstrap promotes it on the next boot. A promoted
-      # account must sign in AGAIN to get a token carrying the new role.
+      # Staff accounts for the console (README "Staff accounts and roles").
+      # STAFF_SECRETS_KEY is required: the server will not start without it.
+      # Generate with `openssl rand -base64 32` and keep it; changing it
+      # makes every enrolled authenticator unreadable.
+      - key: STAFF_SECRETS_KEY
+        sync: false
+      # With no active OWNER, each start invites this address as the first
+      # OWNER. Without SMTP the link is in the service log (INFO).
+      - key: SHEOUT_OWNER_BOOTSTRAP_EMAIL
+        sync: false
+      # e.g. https://admin.sheoutride.com/admin/ - the link in invitations.
+      - key: STAFF_CONSOLE_URL
+        sync: false
+      # The old phone-and-code console sign-in. Stays false in production.
+      - key: ADMIN_PHONE_LOGIN_ENABLED
+        value: "false"
+      # Session lengths per role (the founder's decision, 2026-10-03).
+      - key: STAFF_SESSION_IDLE_MINUTES
+        value: "30"
+      - key: STAFF_SESSION_ABSOLUTE_HOURS
+        value: "8"
+      - key: STAFF_SESSION_IDLE_MINUTES_OWNER
+        value: "15"
+      - key: STAFF_SESSION_ABSOLUTE_HOURS_OWNER
+        value: "8"
+      - key: STAFF_SESSION_IDLE_MINUTES_SAFETY_RESPONDER
+        value: "60"
+      - key: STAFF_SESSION_ABSOLUTE_HOURS_SAFETY_RESPONDER
+        value: "12"
+      - key: STAFF_AUDITOR_DEFAULT_DAYS
+        value: "30"
+      # Rupees refunded without an owner's approval (founder, 2026-10-03).
+      - key: REFUND_LIMIT_SUPPORT
+        value: "200"
+      - key: REFUND_LIMIT_MANAGER
+        value: "1000"
+      # Off for now (founder). Set to addresses/CIDR ranges to turn on.
+      - key: STAFF_IP_ALLOWLIST_OWNER
+        sync: false
+      - key: STAFF_IP_ALLOWLIST_FINANCE
+        sync: false
+      # Optional, and it grants nothing now: the founder's old phone-login
+      # ADMIN account, adopted by the first OWNER so her history stays hers.
       - key: ADMIN_BOOTSTRAP_PHONE
         sync: false
 
@@ -322,6 +360,14 @@ services:
       # the per-network sign-in limit (30) would stop. Staging only.
       - key: LOGIN_PER_CLIENT
         value: "100000"
+      - key: STAFF_SECRETS_KEY
+        sync: false
+      - key: SHEOUT_OWNER_BOOTSTRAP_EMAIL
+        sync: false
+      - key: STAFF_CONSOLE_URL
+        sync: false
+      - key: ADMIN_PHONE_LOGIN_ENABLED
+        value: "false"
       - key: ADMIN_BOOTSTRAP_PHONE
         sync: false
       - key: VERIFIED_BYPASS_PHONE

@@ -3,6 +3,7 @@ package com.sheout.platform;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
@@ -42,5 +43,16 @@ public class WebConfig implements WebMvcConfigurer {
                 // name, or how long a 429 says to wait - both arrived, and
                 // fetch() reported them as absent.
                 .exposedHeaders("Content-Disposition", "Retry-After");
+    }
+
+    /**
+     * The console at /admin/ as well as /admin/index.html. Invitation links
+     * are /admin/#invite=..., and a link that opens a 404 is a link nobody
+     * can use.
+     */
+    @Override
+    public void addViewControllers(ViewControllerRegistry registry) {
+        registry.addRedirectViewController("/admin", "/admin/");
+        registry.addViewController("/admin/").setViewName("forward:/admin/index.html");
     }
 }

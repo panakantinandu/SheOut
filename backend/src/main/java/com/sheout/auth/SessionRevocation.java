@@ -20,5 +20,11 @@ public enum SessionRevocation {
     SIGNED_OUT,
 
     /** The account was deleted. */
-    ACCOUNT_DELETED
+    ACCOUNT_DELETED,
+
+    /**
+     * A member of staff was disabled, her role changed, or her second factor
+     * was reset: every console sign-in she had ends at once.
+     */
+    ACCESS_CHANGED
 }

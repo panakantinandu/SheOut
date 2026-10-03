@@ -12,6 +12,10 @@ import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import com.sheout.auth.AccountRole;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -40,8 +44,17 @@ import java.util.Optional;
  * take effect immediately rather than whenever the token happens to expire.
  * It costs one lookup by primary key, the same number of queries this filter
  * made before sessions existed. See SessionService.
+ * <p>
+ * AN ADMIN TOKEN IS NOT A CREDENTIAL while ADMIN_PHONE_LOGIN_ENABLED is off,
+ * which it always is in production. Staff sign in to the console with email,
+ * password and an authenticator code and carry a cookie (staff's
+ * StaffSessionFilter, which runs after this one); an ADMIN bearer token still
+ * held from before that switch is treated as no token at all, so it stops
+ * working the moment the switch is deployed rather than up to twelve hours
+ * later.
  */
 @Component
+@Order(Ordered.LOWEST_PRECEDENCE - 10)
 public class JwtAuthenticationFilter implements jakarta.servlet.Filter {
 
     private static final String BEARER_PREFIX = "Bearer ";
@@ -49,18 +62,22 @@ public class JwtAuthenticationFilter implements jakarta.servlet.Filter {
     private final JwtService jwtService;
     private final SessionService sessions;
     private final ObjectMapper objectMapper;
+    private final boolean adminPhoneLoginEnabled;
 
-    public JwtAuthenticationFilter(JwtService jwtService, SessionService sessions, ObjectMapper objectMapper) {
+    public JwtAuthenticationFilter(JwtService jwtService, SessionService sessions, ObjectMapper objectMapper,
+                                   @Value("${sheout.admin.phone-login-enabled:false}") boolean adminPhoneLoginEnabled) {
         this.jwtService = jwtService;
         this.sessions = sessions;
         this.objectMapper = objectMapper;
+        this.adminPhoneLoginEnabled = adminPhoneLoginEnabled;
     }
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
             throws IOException, ServletException {
         try {
-            Optional<CurrentAccount> caller = extractToken((HttpServletRequest) request).flatMap(jwtService::parse);
+            Optional<CurrentAccount> caller = extractToken((HttpServletRequest) request).flatMap(jwtService::parse)
+                    .filter(account -> adminPhoneLoginEnabled || account.role() != AccountRole.ADMIN);
             if (caller.isPresent()) {
                 Optional<SessionRevocation> ended = sessions.checkLive(caller.get().sessionId());
                 if (ended.isPresent()) {
@@ -99,6 +116,7 @@ public class JwtAuthenticationFilter implements jakarta.servlet.Filter {
             case ACCOUNT_BLOCKED -> "This account has been blocked by SheOut. Please contact support if you think this is a mistake.";
             case ACCOUNT_DELETED -> "This account has been deleted.";
             case SIGNED_OUT -> "You've been signed out.";
+            case ACCESS_CHANGED -> "Your access has changed. Sign in again.";
         };
     }
 

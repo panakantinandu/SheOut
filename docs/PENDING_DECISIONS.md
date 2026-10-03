@@ -55,3 +55,13 @@ Policies are entered in the console, never in configuration.
 | 19 | Registered entity, address, grievance officer, data-retention periods in the privacy policy and terms | Founder / Lawyer | Visible `[to be completed by SheOut]` placeholders | `frontend/design-system/src/legal/content.ts`; bump `LEGAL_VERSION`; `GRIEVANCE_OFFICER_EMAIL` |
 | 20 | Copyright holder in `LICENSE` and `NOTICE` | Founder | The individual, until the company exists | Both files |
 | 21 | Privacy policy naming Anthropic (help assistant, marketplace search) | Lawyer | Not yet named; see `docs/LEGAL_REVIEW.md` | `content.ts`; bump `LEGAL_VERSION` |
+
+## Staff console (see `docs/ADMIN_SECURITY.md`)
+
+| # | Decision | Who | Safe default today | When answered, change |
+|---|---|---|---|---|
+| 22 | Who the owners are | Founder | **Decided 2026-10-03:** two owners - the founder now (set `SHEOUT_OWNER_BOOTSTRAP_EMAIL` in the Render dashboard), a second invited later from Staff | - |
+| 23 | Refund limits | Founder | **Decided:** support ₹200, manager ₹1,000, above that an owner approves (`REFUND_LIMIT_SUPPORT`, `REFUND_LIMIT_MANAGER`). Finance not decided: ₹200 (`REFUND_LIMIT_FINANCE`) | Finance's figure |
+| 24 | IP allowlist for owner and finance | Founder | **Decided:** off for now; built, so `STAFF_IP_ALLOWLIST_<ROLE>` turns it on | Set the networks when wanted |
+| 25 | Session lengths | Founder | **Decided:** 30 min idle / 8 h for most; safety responders 60 min / 12 h; owners 15 min / 8 h (all configurable) | - |
+| 26 | Auditor account for the CA | Founder / CA | **Decided:** supported, read-only finance, access 30 days unless another date is given; none created yet | Invite as Auditor from Staff when needed |

@@ -1,5 +1,7 @@
 package com.sheout.admin.internal.web;
 
+import com.sheout.staff.Permission;
+import com.sheout.staff.RequiresPermission;
 import com.sheout.auth.AccountRole;
 import com.sheout.auth.CurrentAccount;
 import com.sheout.auth.CurrentAccountContext;
@@ -29,13 +31,9 @@ public class AdminWaitlistController {
         this.waitlist = waitlist;
     }
 
+    @RequiresPermission(Permission.REPORTS_OPS)
     @GetMapping
     public ResponseEntity<List<WaitlistCount>> counts() {
-        CurrentAccount caller = CurrentAccountContext.get()
-                .orElseThrow(() -> ApiException.unauthorized("Authentication required"));
-        if (caller.role() != AccountRole.ADMIN) {
-            throw ApiException.forbidden("Admin only");
-        }
         return ResponseEntity.ok(Arrays.stream(WaitlistFeature.values())
                 .map(feature -> new WaitlistCount(feature, waitlist.countInterested(feature)))
                 .toList());

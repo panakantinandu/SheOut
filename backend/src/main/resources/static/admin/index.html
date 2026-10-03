@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SheOut Ops Console</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
 <link rel="icon" type="image/svg+xml" href="icons/favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -30,8 +32,12 @@
   the active nav item and primary buttons, which is enough to place it as
   the same product without making an operational console feel playful.
 
-  Every API call, the ADMIN role gate and the auth flow are unchanged from
-  the previous version: this was a presentation and structure rebuild.
+  Staff sign in with a work email, a password and an authenticator code
+  (never an SMS). The sign-in is an HttpOnly cookie the page cannot read, so
+  nothing here stores a credential: no token in localStorage or anywhere a
+  script could reach it. Every change carries the session's CSRF token.
+  Sections a role cannot use are hidden, but hiding is a courtesy: the server
+  checks the permission on every request.
 -->
 <style>
   :root {
@@ -1001,12 +1007,37 @@
   .audit-view td { color: var(--muted); }
   .dx-card input[type="date"], .dx-card input[type="month"] { height: 34px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; font: inherit; background: var(--panel); color: var(--text); }
   .alert-banner { display: flex; gap: 10px; align-items: center; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--red-line); background: var(--red-bg); color: var(--red); font-weight: 650; margin-bottom: 14px; }
+
+  /* ---------- staff sign-in, invitations, the session ---------- */
+  .login .hint { margin: 6px 0 0; font-size: 12px; color: var(--muted); }
+  .login .check { display: flex; gap: 8px; align-items: flex-start; font-weight: 500; color: var(--text); font-size: 13px; margin-top: 14px; }
+  .login .check input { width: auto; margin-top: 2px; }
+  .login .steps { font-size: 11.5px; color: var(--muted); font-weight: 650; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
+  .login .btn.btn-ghost { background: none; border: 1px solid var(--line); color: var(--text); }
+  .enrol-qr { display: block; width: 184px; height: 184px; margin: 14px auto 8px; border-radius: 8px; border: 1px solid var(--line); background: #fff; }
+  .secret { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; letter-spacing: .06em; word-break: break-all;
+    background: var(--panel-soft); border: 1px solid var(--line-soft); border-radius: 8px; padding: 8px 10px; color: var(--text); }
+  .codes { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px; margin: 12px 0; padding: 12px 14px; border: 1px dashed var(--line); border-radius: 8px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 14px; color: var(--text); }
+  .session-warn { position: fixed; left: 50%; top: 14px; transform: translateX(-50%); z-index: 60; display: flex; gap: 12px; align-items: center;
+    padding: 12px 16px; border-radius: 10px; border: 1px solid var(--amber-line); background: var(--amber-bg); color: var(--amber);
+    font-size: 13px; font-weight: 600; box-shadow: var(--elev-2, 0 6px 24px rgba(0,0,0,.18)); max-width: calc(100vw - 32px); }
+  .session-warn .btn { white-space: nowrap; }
+  .staff-actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+  .staff-actions .btn { padding: 5px 10px; font-size: 12px; }
+  .perm-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .account-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+  .account-grid label, .staff-invite label { display: block; font-size: 12px; color: var(--muted); margin: 10px 0 5px; font-weight: 600; }
+  .account-grid input, .staff-invite input, .staff-invite select, .modal select {
+    width: 100%; padding: 9px 11px; border: 1px solid var(--line); border-radius: 8px; font: inherit; background: var(--panel); color: var(--text); }
+  .staff-invite .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0 12px; }
+  .who .role-chip { display: inline-block; margin-top: 2px; }
 </style>
 </head>
 <body>
 
 <!-- ============================== LOGIN ============================== -->
-<div class="login-wrap" id="loginWrap">
+<div class="login-wrap" id="loginWrap" hidden>
   <div class="login">
     <div class="card">
       <div class="brand">
@@ -1015,30 +1046,26 @@
           <div class="sub">Ops Console</div>
         </div>
       </div>
+      <div id="signInBlock">
       <h2>Sign in</h2>
-      <p class="lead">Use the mobile number registered to your operations account. We'll send a one-time code.</p>
+      <p class="lead">Your work email, your password, and the 6-digit code from the authenticator app on your phone.</p>
       <div class="banner banner-err" id="loginErr" hidden></div>
       <form id="login">
-        <label for="phone">Mobile number</label>
-        <!-- Same rules as PhoneField in the shared design system, which this
-             page cannot import: it is a dependency-free static file with no
-             build step and no React. A fixed +91 chip outside the field,
-             ten digits inside it, non-digits rejected as they are typed.
-             Before this it was one free-text box that took a country code,
-             a name, any length of anything - so the same operator saw three
-             different phone fields across the product. -->
-        <div class="phone-field" id="phoneWrap">
-          <span class="cc">+91</span>
-          <input id="phone" inputmode="numeric" placeholder="9000000042"
-                 autocomplete="tel-national" aria-describedby="phoneErr" required>
-        </div>
-        <p class="field-err" id="phoneErr" hidden>Enter the 10 digits of your mobile number.</p>
-        <div id="codeRow" hidden>
-          <label for="code">One-time code</label>
-          <input id="code" inputmode="numeric" placeholder="6-digit code" autocomplete="one-time-code">
-        </div>
-        <button class="btn btn-primary" id="loginBtn" type="submit">Send code</button>
+        <!-- Staff never sign in with an SMS code: SIM swaps and phished SMS
+             codes are how operations consoles are usually taken over. -->
+        <label for="email">Work email</label>
+        <input id="email" type="email" autocomplete="username" maxlength="254" required>
+        <label for="password">Password</label>
+        <input id="password" type="password" autocomplete="current-password" maxlength="128" required>
+        <label for="code">Authenticator code</label>
+        <input id="code" autocomplete="one-time-code" placeholder="6-digit code" maxlength="12" required>
+        <p class="hint">Lost your phone? Type one of your recovery codes here instead.</p>
+        <button class="btn btn-primary" id="loginBtn" type="submit">Sign in</button>
       </form>
+      </div>
+      <!-- An invitation (or a reset) arrives as a link to this page; it is
+           worked through here, in three steps, before the console opens. -->
+      <div id="inviteBlock" hidden></div>
     </div>
   </div>
 </div>
@@ -1156,6 +1183,15 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2M20 14h2M15 13v2M9 13v2"/></svg>
         <span class="nl">Help Assistant</span> <span class="count" id="cAssistant" hidden></span>
       </button>
+      <div class="label">Staff</div>
+      <button data-tab="staff" aria-current="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M2 21v-2a4 4 0 0 1 4-4h6"/><path d="M16 11l2 2 4-4"/><path d="M15 21v-2a3 3 0 0 1 2-2.8"/></svg>
+        <span class="nl">Staff</span> <span class="count" id="cStaff" hidden></span>
+      </button>
+      <button data-tab="account" aria-current="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><circle cx="12" cy="16" r="1.5"/></svg>
+        <span class="nl">My account</span>
+      </button>
     </nav>
 
     <!-- Pinned under the list, so Log out is always on screen. -->
@@ -1163,7 +1199,7 @@
       <div class="who-card">
         <span class="avatar" id="whoInitials" aria-hidden="true">OP</span>
         <div class="who-wrap">
-          <div class="who">Signed in as operator</div>
+          <div class="who" id="whoRole">Signed in</div>
           <div class="phone" id="who">—</div>
         </div>
         <button class="icon-btn" id="logout" type="button" title="Log out" aria-label="Log out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg></button>
@@ -1201,6 +1237,7 @@
     </div>
 
     <div class="banner banner-err" id="err" hidden></div>
+    <div class="banner banner-info" id="ownerBanner" hidden></div>
     <div class="banner banner-info" id="crossLink" hidden></div>
 
     <!-- A section that composes as well as lists puts its form here, above
@@ -1229,10 +1266,21 @@
 
 <div class="toasts" id="toasts"></div>
 <div id="modalRoot"></div>
+<div class="session-warn" id="sessionWarn" role="alert" hidden>
+  <span id="sessionWarnText"></span>
+  <button class="btn btn-primary" id="sessionStay" type="button">Stay signed in</button>
+</div>
 
 <script>
 const API = '/api/v1';
-let token = localStorage.getItem('sheout.admin.token') || '';
+/**
+ * Who is signed in: name, role, permissions, the CSRF token and when the
+ * session ends - from /admin/auth/me or the sign-in answer. Never the
+ * sign-in itself: that is an HttpOnly cookie this page cannot read.
+ */
+let me = null;
+/** True while a timed refresh is running: its requests do not count as her being active. */
+let quietDepth = 0;
 let tab = 'overview';
 let sort = { key: null, dir: 'asc' };
 let lastRows = [];
@@ -1416,27 +1464,60 @@ function waited(iso) {
   return { text, cls, mins };
 }
 
-async function api(path, options = {}) {
-  const res = await fetch(API + path, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: 'Bearer ' + token } : {}),
-      ...(options.headers || {})
-    }
-  });
-  if (res.status === 401 || res.status === 403) {
-    // 401: the session is over - operator sign-ins last a working day, and
-    // can be ended from elsewhere. 403: signed in, but not as an operator -
-    // a role gate, genuinely distinct from the 404 per-resource checks return.
-    signOut(res.status === 401
-      ? 'Your session has ended. Operator sign-ins last 12 hours - sign in again to continue.'
-      : 'Your session is not authorised as an operations account. Sign in with an admin account.');
+/** Whether the signed-in member of staff holds a permission, e.g. can('trips.view'). */
+const can = permission => !!(me && me.permissions && me.permissions.includes(permission));
+
+/** Headers every console request needs: the CSRF token on a change, and whether a person or a timer sent it. */
+function staffHeaders(method, background) {
+  return {
+    ...(method !== 'GET' && me && me.csrfToken ? { 'X-CSRF-Token': me.csrfToken } : {}),
+    ...(background ? { 'X-Staff-Background': '1' } : {}),
+  };
+}
+
+/**
+ * 401 is the end of the session: idle, the end of a shift, signed out from
+ * elsewhere, or access changed - the server says which, and that sentence is
+ * shown on the sign-in screen. 403 is NOT the end of anything: it is this
+ * role not holding this permission, said as a message where it happened.
+ */
+async function handleStatus(res, quiet401) {
+  if (res.status === 401) {
+    const body = await res.json().catch(() => null);
+    if (quiet401) throw new Error((body && body.message) || 'Sign in to continue.');
+    signOut((body && body.message) || 'Your session has ended. Sign in again to continue.');
     throw new Error('unauthorized');
   }
+}
+
+async function api(path, options = {}) {
+  const { background, quiet401, ...init } = options;
+  const method = (init.method || 'GET').toUpperCase();
+  const isBackground = !!background || quietDepth > 0;
+  const res = await fetch(API + path, {
+    ...init,
+    credentials: 'same-origin',
+    headers: {
+      'Content-Type': 'application/json',
+      ...staffHeaders(method, isBackground),
+      ...(init.headers || {})
+    }
+  });
+  await handleStatus(res, quiet401);
   const body = res.status === 204 ? null : await res.json().catch(() => null);
   if (!res.ok) throw new Error((body && body.message) || `Request failed (${res.status})`);
+  if (!isBackground) noteActivity();
   return body;
+}
+
+/** Runs a timed refresh so that none of its requests count as her being at the console. */
+async function inBackground(fn) {
+  quietDepth++;
+  try {
+    return await fn();
+  } finally {
+    quietDepth--;
+  }
 }
 
 // ---- toasts ---------------------------------------------------------------
@@ -1508,89 +1589,244 @@ function confirmAction({
   });
 }
 
-// ---- login ----------------------------------------------------------------
-let awaitingCode = false;
-
-// Mirrors normalizeDigits/isCompletePhone in the design system's PhoneField.
-const PHONE_DIGITS = 10;
-const cleanPhone = raw => String(raw).replace(/\D/g, '').replace(/^91(?=\d{10}$)/, '').slice(0, PHONE_DIGITS);
-
-// Rejected as typed, not only on submit - a field that silently accepts a
-// letter and then complains later reads as broken.
-$('phone').addEventListener('input', e => {
-  const cleaned = cleanPhone(e.target.value);
-  if (e.target.value !== cleaned) e.target.value = cleaned;
-  if (cleaned.length === PHONE_DIGITS) showPhoneError(false);
-});
-
-function showPhoneError(show) {
-  $('phoneWrap').classList.toggle('bad', show);
-  $('phoneErr').hidden = !show;
+// ---- signing in -----------------------------------------------------------
+function showLoginError(message) {
+  $('loginErr').textContent = message;
+  $('loginErr').hidden = !message;
 }
-
-// Same six-digit numeric-only treatment the two apps give their OTP box.
-$('code').addEventListener('input', e => {
-  const cleaned = String(e.target.value).replace(/\D/g, '').slice(0, 6);
-  if (e.target.value !== cleaned) e.target.value = cleaned;
-});
 
 $('login').addEventListener('submit', async e => {
   e.preventDefault();
-  $('loginErr').hidden = true;
-  const digits = cleanPhone($('phone').value);
-  if (digits.length !== PHONE_DIGITS) {
-    showPhoneError(true);
-    $('phone').focus();
-    return;
-  }
-  showPhoneError(false);
-  const phoneNumber = '+91' + digits;
+  showLoginError('');
+  $('loginBtn').disabled = true;
   try {
-    if (!awaitingCode) {
-      await api('/auth/otp/request', { method: 'POST', body: JSON.stringify({ phoneNumber, role: 'ADMIN' }) });
-      awaitingCode = true;
-      $('codeRow').hidden = false;
-      $('loginBtn').textContent = 'Sign in';
-      $('code').focus();
-      return;
-    }
-    const out = await api('/auth/otp/verify', {
+    const out = await api('/admin/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ phoneNumber, code: $('code').value.trim(), role: 'ADMIN' })
+      quiet401: true,
+      body: JSON.stringify({ email: $('email').value.trim(), password: $('password').value, code: $('code').value.trim() }),
     });
-    token = out.accessToken;
-    localStorage.setItem('sheout.admin.token', token);
-    localStorage.setItem('sheout.admin.phone', phoneNumber);
+    $('password').value = '';
+    $('code').value = '';
+    me = out.me;
     start();
+    if (out.usedRecoveryCode) {
+      toast('bad', 'You signed in with a recovery code',
+        `${me.recoveryCodesLeft} left. Make new ones in My account. If your phone is lost, ask an owner to reset your authenticator.`);
+    }
   } catch (err) {
-    if (err.message === 'unauthorized') return;
-    $('loginErr').textContent = err.message;
-    $('loginErr').hidden = false;
+    showLoginError(err.message);
+  } finally {
+    $('loginBtn').disabled = false;
   }
 });
 
-function signOut(message) {
-  // Before the token is cleared: the unregister request needs it.
-  dropPushDevice();
-  token = '';
-  localStorage.removeItem('sheout.admin.token');
-  awaitingCode = false;
-  $('codeRow').hidden = true;
+/**
+ * Ends the console here. tellServer: she chose to sign out, so the session is
+ * ended on the server too (and this browser stops getting SOS alerts). On a
+ * 401 the server has already ended it, so there is nothing to tell.
+ */
+async function signOut(message, opts = {}) {
+  if (opts.tellServer && me) {
+    try { await api('/admin/auth/logout', { method: 'POST', quiet401: true }); } catch (e) { /* it is over either way */ }
+  }
+  me = null;
+  hideSessionWarning();
+  $('password').value = '';
   $('code').value = '';
-  showPhoneError(false);
-  $('loginBtn').textContent = 'Send code';
   $('app').hidden = true;
   $('loginWrap').hidden = false;
+  $('signInBlock').hidden = false;
+  $('inviteBlock').hidden = true;
   closeModal();
-  if (message) { $('loginErr').textContent = message; $('loginErr').hidden = false; }
+  showLoginError(message || '');
 }
 $('logout').addEventListener('click', async () => {
   const ok = await confirmAction({
-    title: 'Log out of the ops console?',
-    message: 'You will need your mobile number and a one-time code to sign back in.',
-    confirmLabel: 'Log out',
+    title: 'Sign out of the ops console?',
+    message: 'You will need your email, your password and your authenticator code to sign back in.',
+    confirmLabel: 'Sign out',
   });
-  if (ok) signOut(null);
+  if (ok) signOut(null, { tellServer: true });
+});
+
+// ---- invitations ------------------------------------------------------------
+/**
+ * The link in an invitation email: /admin/#invite=TOKEN. The token is taken
+ * out of the address bar at once (it is a credential until used) and kept
+ * only in this variable. Three steps: a password, an authenticator, then the
+ * recovery codes - and only then is she signed in.
+ */
+let inviteToken = null;
+
+function recoveryCodesBlock(codes) {
+  return `<div class="codes" id="codeList">${codes.map(c => `<span>${esc(c)}</span>`).join('')}</div>
+    <button class="btn btn-ghost" type="button" id="codesSave">Download as a text file</button>`;
+}
+
+function wireRecoveryDownload(codes, who) {
+  $('codesSave').addEventListener('click', () => {
+    const text = `SheOut console recovery codes for ${who}\nEach works once, in place of an authenticator code.\n\n${codes.join('\n')}\n`;
+    const url = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'sheout-console-recovery-codes.txt';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+}
+
+async function showInvite() {
+  $('loginWrap').hidden = false;
+  $('app').hidden = true;
+  $('signInBlock').hidden = true;
+  const host = $('inviteBlock');
+  host.hidden = false;
+  host.innerHTML = '<p class="lead">Checking your invitation…</p>';
+  let invite;
+  try {
+    invite = await api('/admin/auth/invites/lookup', { method: 'POST', quiet401: true, body: JSON.stringify({ token: inviteToken }) });
+  } catch (err) {
+    host.innerHTML = `<h2>This link can't be used</h2><p class="lead">${esc(err.message)}</p>
+      <button class="btn btn-primary" type="button" id="toSignIn">Go to sign in</button>`;
+    $('toSignIn').addEventListener('click', () => signOut(null));
+    return;
+  }
+  host.innerHTML = `
+    <div class="steps">Step 1 of 3</div>
+    <h2>${invite.reset ? 'Choose a new password' : 'Set up your account'}</h2>
+    <p class="lead">${invite.reset
+      ? `An owner reset the sign-in for <b>${esc(invite.email)}</b>. Choose a new password, then set up your authenticator again.`
+      : `${esc(invite.displayName)}, you've been invited as <b>${esc(invite.roleLabel)}</b>. You'll sign in as <b>${esc(invite.email)}</b>.`}</p>
+    <div class="banner banner-err" id="inviteErr" hidden></div>
+    <form id="invitePw">
+      <label for="newPw">Password</label>
+      <input id="newPw" type="password" autocomplete="new-password" minlength="12" maxlength="128" required>
+      <label for="newPw2">The same password again</label>
+      <input id="newPw2" type="password" autocomplete="new-password" minlength="12" maxlength="128" required>
+      <p class="hint">At least 12 characters. A few unrelated words is easy to remember and hard to guess. Not a password you use anywhere else.</p>
+      <button class="btn btn-primary" type="submit">Continue</button>
+    </form>`;
+  const err = msg => { $('inviteErr').textContent = msg; $('inviteErr').hidden = !msg; };
+  $('invitePw').addEventListener('submit', async e => {
+    e.preventDefault();
+    err('');
+    if ($('newPw').value !== $('newPw2').value) return err('The two passwords are not the same.');
+    try {
+      const enrolment = await api('/admin/auth/invites/password', {
+        method: 'POST', quiet401: true, body: JSON.stringify({ token: inviteToken, password: $('newPw').value }),
+      });
+      showEnrolment(invite, enrolment);
+    } catch (e2) {
+      err(e2.message);
+    }
+  });
+}
+
+function showEnrolment(invite, enrolment) {
+  const host = $('inviteBlock');
+  const grouped = enrolment.secret.match(/.{1,4}/g).join(' ');
+  host.innerHTML = `
+    <div class="steps">Step 2 of 3</div>
+    <h2>Set up your authenticator</h2>
+    <p class="lead">Open an authenticator app on your phone (Google Authenticator, Microsoft Authenticator or similar), add an account, and scan this code.</p>
+    <img class="enrol-qr" src="${escValue(enrolment.qrDataUri)}" alt="QR code for your authenticator app">
+    <p class="hint">Can't scan it? Choose "enter a key" in the app and type:</p>
+    <div class="secret" id="secretText">${esc(grouped)}</div>
+    <div class="banner banner-err" id="inviteErr" hidden></div>
+    <form id="inviteTotp">
+      <label for="firstCode">The 6-digit code your app now shows</label>
+      <input id="firstCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required>
+      <button class="btn btn-primary" type="submit">Confirm</button>
+    </form>`;
+  const err = msg => { $('inviteErr').textContent = msg; $('inviteErr').hidden = !msg; };
+  $('inviteTotp').addEventListener('submit', async e => {
+    e.preventDefault();
+    err('');
+    try {
+      const joined = await api('/admin/auth/invites/confirm', {
+        method: 'POST', quiet401: true, body: JSON.stringify({ token: inviteToken, code: $('firstCode').value.trim() }),
+      });
+      inviteToken = null;
+      me = joined.me;
+      showRecoveryCodes(joined.recoveryCodes);
+    } catch (e2) {
+      err(e2.message);
+    }
+  });
+}
+
+function showRecoveryCodes(codes) {
+  const host = $('inviteBlock');
+  host.innerHTML = `
+    <div class="steps">Step 3 of 3</div>
+    <h2>Save your recovery codes</h2>
+    <p class="lead">If you lose your phone, each of these signs you in once in place of an authenticator code. Keep them somewhere safe that is not your phone. They are shown only now.</p>
+    ${recoveryCodesBlock(codes)}
+    <label class="check"><input type="checkbox" id="codesKept"> I have saved my recovery codes</label>
+    <button class="btn btn-primary" type="button" id="openConsole" disabled>Open the console</button>`;
+  wireRecoveryDownload(codes, me.email);
+  $('codesKept').addEventListener('change', () => { $('openConsole').disabled = !$('codesKept').checked; });
+  $('openConsole').addEventListener('click', () => start());
+}
+
+// ---- the session's clocks ---------------------------------------------------
+/**
+ * The server signs her out after 30 minutes with nothing done and at the end
+ * of a shift (8 hours), whatever she does. This mirrors those clocks so she is
+ * warned two minutes before, rather than losing a half-typed reply. Typing or
+ * clicking with no request to the server still counts: once a minute such
+ * activity is reported with a plain request.
+ */
+let lastActivityAt = 0;
+let pendingInput = false;
+let warnedFor = null;
+
+function noteActivity() {
+  lastActivityAt = Date.now();
+  if (warnedFor === 'idle') hideSessionWarning();
+}
+['pointerdown', 'keydown', 'wheel'].forEach(type =>
+  document.addEventListener(type, () => { pendingInput = true; }, { passive: true, capture: true }));
+
+function hideSessionWarning() {
+  warnedFor = null;
+  $('sessionWarn').hidden = true;
+}
+
+function sessionTick() {
+  if (!me || me.legacy || !me.absoluteExpiresAt) return;
+  const now = Date.now();
+  if (pendingInput && now - lastActivityAt > 60000) {
+    pendingInput = false;
+    api('/admin/auth/me').then(m => { if (me) me = { ...me, ...m }; }).catch(() => {});
+    return;
+  }
+  // A little early, so the screen never thinks she is in when the server does not.
+  const idleEnd = lastActivityAt + (me.idleTimeoutSeconds || 1800) * 1000 - 20000;
+  const shiftEnd = new Date(me.absoluteExpiresAt).getTime();
+  const end = Math.min(idleEnd, shiftEnd);
+  if (now >= end) {
+    signOut(idleEnd <= shiftEnd
+      ? 'You were signed out after a period with no activity. Sign in again to continue.'
+      : 'Console sign-ins last one shift. Sign in again to continue.', { tellServer: true });
+    return;
+  }
+  if (end - now <= 120000) {
+    warnedFor = idleEnd <= shiftEnd ? 'idle' : 'shift';
+    const left = Math.max(0, Math.round((end - now) / 1000));
+    const mmss = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
+    $('sessionWarnText').textContent = warnedFor === 'idle'
+      ? `You'll be signed out in ${mmss} because nothing has happened for a while.`
+      : `This sign-in ends with your shift in ${mmss}. Save anything you are typing.`;
+    $('sessionStay').hidden = warnedFor !== 'idle';
+    $('sessionWarn').hidden = false;
+  }
+}
+setInterval(sessionTick, 1000);
+$('sessionStay').addEventListener('click', () => {
+  api('/admin/auth/me').then(m => { if (me) me = { ...me, ...m }; }).catch(() => {});
 });
 
 // ---- views ----------------------------------------------------------------
@@ -2056,7 +2292,9 @@ const VIEWS = {
       }
       if (key === 'act') return r.status === 'PAID'
         ? `<span class="badge b-green">Paid</span><div class="subtle">${time(r.paidAt)}</div><div class="subtle">Ref <span class="num">${esc(r.paymentReference)}</span></div><div class="subtle">by <span class="num">${esc(r.paidByPhone || '—')}</span></div>`
-        : `<button class="btn btn-approve" data-markpaid="${esc(r.id)}" type="button">Mark paid</button>`;
+        : can('payouts.prepare') && can('payouts.approve')
+          ? `<button class="btn btn-approve" data-markpaid="${esc(r.id)}" type="button">Mark paid</button>`
+          : '<span class="subtle">An owner marks it paid</span>';
       return '—';
     },
   },
@@ -2191,7 +2429,8 @@ const VIEWS = {
     hint: 'Policies are entered from the insurer\'s schedule',
     custom: true,
     columns: [],
-    load: () => Promise.all([api('/admin/insurance/status'), api('/admin/insurance/policies'), api('/admin/insurance/enrolments')]),
+    load: () => Promise.all([api('/admin/insurance/status'), api('/admin/insurance/policies'),
+      can('insurance.manage') ? api('/admin/insurance/enrolments') : Promise.resolve([])]),
     paint: paintInsurance,
   },
 
@@ -2204,6 +2443,28 @@ const VIEWS = {
     columns: [],
     load: () => api('/admin/service-hours'),
     paint: paintHours,
+  },
+
+  staff: {
+    title: 'Staff',
+    desc: 'Everyone who can sign in to this console, what their role lets them do, and invitations still waiting. Nobody signs up: an owner or a manager invites by email. Disabling someone signs them out everywhere at once, and only an owner can undo it.',
+    cardTitle: 'Staff',
+    hint: 'Roles are fixed; the README lists what each one can do',
+    custom: true,
+    columns: [],
+    load: () => api('/admin/staff'),
+    paint: paintStaff,
+  },
+
+  account: {
+    title: 'My account',
+    desc: 'Your sign-in: where you are signed in, your password, and your recovery codes. Sign out anywhere you do not recognise.',
+    cardTitle: 'My account',
+    hint: 'Only you can see this page',
+    custom: true,
+    columns: [],
+    load: () => Promise.all([api('/admin/auth/me'), api('/admin/me/sessions')]),
+    paint: paintAccount,
   },
 
   overview: {
@@ -3115,11 +3376,8 @@ function expiryText(validUntil, status) {
 
 /** A multipart upload. api() sends JSON; a file needs the browser to set its own boundary. */
 async function apiUpload(path, form) {
-  const res = await fetch(API + path, { method: 'POST', body: form, headers: token ? { Authorization: 'Bearer ' + token } : {} });
-  if (res.status === 401 || res.status === 403) {
-    signOut('Your session has ended. Sign in again to continue.');
-    throw new Error('unauthorized');
-  }
+  const res = await fetch(API + path, { method: 'POST', body: form, credentials: 'same-origin', headers: staffHeaders('POST', false) });
+  await handleStatus(res, false);
   const body = await res.json().catch(() => null);
   if (!res.ok) throw new Error((body && body.message) || `Upload failed (${res.status})`);
   return body;
@@ -3580,8 +3838,8 @@ const ENROLMENT_TONE = { PENDING_ENROLMENT: 'amber', ENROLLED: 'green', EXITED: 
 
 /** A file the API serves behind the operator's sign-in: fetched with it, then saved. */
 async function apiDownload(path, fallbackName) {
-  const res = await fetch(API + path, { headers: token ? { Authorization: 'Bearer ' + token } : {} });
-  if (res.status === 401 || res.status === 403) { signOut('Your session has ended. Sign in again to continue.'); throw new Error('unauthorized'); }
+  const res = await fetch(API + path, { credentials: 'same-origin', headers: staffHeaders('GET', false) });
+  await handleStatus(res, false);
   if (!res.ok) {
     const body = await res.json().catch(() => null);
     throw new Error((body && body.message) || `Download failed (${res.status})`);
@@ -3818,6 +4076,7 @@ async function operators() {
  * Red when any unresolved ticket is High priority.
  */
 async function refreshSupportCounts() {
+  if (!can('support.work')) return null;
   try {
     const c = await api('/admin/support/counts');
     const el = $('cSupport');
@@ -4306,7 +4565,7 @@ function scheduleCampaignRefresh() {
     if (tab !== 'campaigns') return;
     if ($('modalRoot').innerHTML || document.visibilityState !== 'visible') { scheduleCampaignRefresh(); return; }
     try {
-      const data = await VIEWS.campaigns.load();
+      const data = await inBackground(() => VIEWS.campaigns.load());
       if (tab !== 'campaigns') return;
       if ($('modalRoot').innerHTML) scheduleCampaignRefresh();
       else paintCampaigns(data);
@@ -4460,7 +4719,7 @@ $('panel').addEventListener('click', async e => {
  * Web Mercator arithmetic, with markers and lines on top. Drag to pan, the
  * wheel or +/- to zoom.
  *
- * Not a map library, on purpose. This page holds an operator's token, and
+ * Not a map library, on purpose. This page is an operator's signed-in console, and
  * its Content-Security-Policy lets no script run here but its own hashed
  * block (and Firebase's, for push). A map library from a CDN would be a
  * second, third-party script on the one page that can block accounts and
@@ -5414,10 +5673,287 @@ function startLiveRefresh() {
   let ticks = 0;
   liveTimer = setInterval(() => {
     ticks++;
-    if (!token || document.hidden || $('modalRoot').innerHTML) return;
+    if (!me || document.hidden || $('modalRoot').innerHTML) return;
     if (tab === 'live') render({ quiet: true });
     else if (tab === 'overview' && ticks % 3 === 0) render({ quiet: true });
   }, 10000);
+}
+
+// ---- staff ------------------------------------------------------------------
+/** Which permission manages a role - mirrors StaffRole.managedBy on the server, which is the one that decides. */
+const MANAGED_BY = role => role === 'OWNER' ? 'staff.manage.owner' : role === 'MANAGER' ? 'staff.manage.manager' : 'staff.manage.employee';
+
+function staffStatus(m) {
+  if (m.status === 'DISABLED') return '<span class="badge b-grey">Disabled</span>';
+  if (m.resetPending) return '<span class="badge b-amber">Reset sent</span>';
+  if (m.lockedUntil) return `<span class="badge b-red">Locked until ${esc(new Date(m.lockedUntil).toLocaleTimeString())}</span>`;
+  if (m.accessExpiresAt && new Date(m.accessExpiresAt) <= new Date()) return '<span class="badge b-grey">Access ended</span>';
+  return '<span class="badge b-green">Active</span>';
+}
+
+function paintStaff(data) {
+  const grantable = data.rolesYouCanGrant || [];
+  const roleOptions = grantable.map(r => `<option value="${escValue(r.role)}" data-expiry="${r.requiresAccessExpiry}">${esc(r.label)}</option>`).join('');
+  const mayManage = m => m.id !== me.staffId && can(MANAGED_BY(m.role));
+  $('cStaff').textContent = data.invites.length || '';
+  $('cStaff').hidden = !data.invites.length;
+  $('panel').innerHTML = `<div id="staffRoot">
+    ${grantable.length ? `<div class="dx-card full staff-invite"><h4>Invite someone</h4>
+      <p class="subtle">They get a link, valid once for 24 hours, to choose a password and set up an authenticator app. No password is ever chosen for them.</p>
+      <form id="inviteForm"><div class="grid">
+        <div><label for="invEmail">Work email</label><input id="invEmail" type="email" maxlength="254" required></div>
+        <div><label for="invName">Name</label><input id="invName" maxlength="80" required></div>
+        <div><label for="invRole">Role</label><select id="invRole">${roleOptions}</select></div>
+        <div id="invExpiryWrap" hidden><label for="invExpiry">Access ends on (30 days if left empty)</label><input id="invExpiry" type="date"></div>
+      </div>
+      <div class="foot"><button class="btn btn-primary" type="submit">Send invitation</button></div></form></div>` : ''}
+
+    <div class="dx-card full"><h4>People <span class="right subtle">${data.activeOwners} active owner${data.activeOwners === 1 ? '' : 's'}</span></h4>
+      <div class="scroll"><table class="mini"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Last sign-in</th><th></th></tr></thead>
+      <tbody>${data.members.map((m, i) => `<tr>
+        <td><b>${esc(m.displayName)}</b>${m.id === me.staffId ? ' <span class="pill">You</span>' : ''}</td>
+        <td>${esc(m.email)}</td>
+        <td>${esc(m.roleLabel)}${m.accessExpiresAt ? `<div class="subtle">until ${esc(plainDate(m.accessExpiresAt))}</div>` : ''}</td>
+        <td>${staffStatus(m)}${m.disabledReason ? `<div class="subtle">${esc(m.disabledReason)}</div>` : ''}</td>
+        <td>${m.lastLoginAt ? esc(time(m.lastLoginAt)) : '<span class="subtle">Never</span>'}</td>
+        <td>${mayManage(m) ? `<div class="staff-actions">
+          <button class="btn" type="button" data-staff-sessions="${i}">Sessions</button>
+          ${m.status === 'ACTIVE' ? `<button class="btn" type="button" data-staff-role="${i}">Change role</button>
+            <button class="btn btn-reject" type="button" data-staff-disable="${i}">Disable</button>` : ''}
+          ${m.status === 'DISABLED' && can('staff.manage.owner') ? `<button class="btn btn-approve" type="button" data-staff-enable="${i}">Re-enable</button>` : ''}
+          ${m.status === 'ACTIVE' && can('staff.manage.owner') ? `<button class="btn" type="button" data-staff-reset="${i}">Reset password &amp; authenticator</button>` : ''}
+        </div>` : ''}</td></tr>`).join('')}</tbody></table></div>
+    </div>
+
+    <div class="dx-card full"><h4>Invitations waiting</h4>
+      ${data.invites.length ? `<div class="scroll"><table class="mini"><thead><tr><th>Email</th><th>Name</th><th>Role</th><th>Kind</th><th>Link works until</th><th></th></tr></thead>
+        <tbody>${data.invites.map((v, i) => `<tr><td>${esc(v.email)}</td><td>${esc(v.displayName)}</td><td>${esc(v.roleLabel)}</td>
+          <td>${v.reset ? 'Reset' : 'New'}</td><td>${esc(time(v.expiresAt))}</td>
+          <td>${can(MANAGED_BY(v.role)) ? `<button class="btn" type="button" data-invite-revoke="${i}">Withdraw</button>` : ''}</td></tr>`).join('')}</tbody></table></div>`
+        : '<p class="subtle">None.</p>'}
+    </div></div>`;
+
+  const form = $('inviteForm');
+  if (form) {
+    const syncExpiry = () => {
+      const opt = $('invRole').selectedOptions[0];
+      const needs = !!opt && opt.dataset.expiry === 'true';
+      $('invExpiryWrap').hidden = !needs;
+      if (needs && !$('invExpiry').value) $('invExpiry').value = new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10);
+    };
+    $('invRole').addEventListener('change', syncExpiry);
+    syncExpiry();
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      const role = $('invRole').value;
+      const body = { email: $('invEmail').value.trim(), displayName: $('invName').value.trim(), role };
+      if (!$('invExpiryWrap').hidden && $('invExpiry').value) body.accessExpiresAt = new Date($('invExpiry').value + 'T23:59:59+05:30').toISOString();
+      try {
+        const out = await api('/admin/staff/invites', { method: 'POST', body: JSON.stringify(body) });
+        if (out.emailed) toast('ok', 'Invitation sent', `${body.email} has 24 hours to accept it.`);
+        else showInviteLink(out.link, body.displayName, 'invitation');
+        render();
+      } catch (err) {
+        if (err.message !== 'unauthorized') toast('bad', 'Could not send the invitation', err.message);
+      }
+    });
+  }
+
+  $('staffRoot').addEventListener('click', async e => {
+    const at = attr => { const b = e.target.closest(`[${attr}]`); return b ? data.members[Number(b.getAttribute(attr))] : null; };
+    const disable = at('data-staff-disable'), enable = at('data-staff-enable'), roleOf = at('data-staff-role');
+    const sessionsOf = at('data-staff-sessions'), reset = at('data-staff-reset');
+    const revoke = e.target.closest('[data-invite-revoke]');
+    try {
+      if (disable) {
+        const ok = await confirmAction({
+          title: `Disable ${disable.displayName}?`,
+          message: 'She is signed out everywhere at once, stops receiving SOS alerts, and cannot sign in. Only an owner can re-enable her.',
+          confirmLabel: 'Disable', tone: 'reject', withReason: true, reasonRequired: true,
+          reasonLabel: 'Why (kept with the record)', reasonPlaceholder: 'e.g. Left the company on 30 September', reasonMaxLength: 500,
+        });
+        if (!ok) return;
+        await api(`/admin/staff/${disable.id}/disable`, { method: 'POST', body: JSON.stringify({ reason: ok.reason }) });
+        toast('ok', `${disable.displayName} is disabled`, 'Every session she had has ended.');
+        render();
+      } else if (enable) {
+        const ok = await confirmAction({ title: `Re-enable ${enable.displayName}?`, message: 'She can sign in again with her password and authenticator.', confirmLabel: 'Re-enable', tone: 'approve' });
+        if (!ok) return;
+        await api(`/admin/staff/${enable.id}/enable`, { method: 'POST' });
+        toast('ok', `${enable.displayName} can sign in again`);
+        render();
+      } else if (roleOf) {
+        changeRoleDialog(roleOf, data.rolesYouCanGrant);
+      } else if (sessionsOf) {
+        staffSessionsDialog(sessionsOf);
+      } else if (reset) {
+        const ok = await confirmAction({
+          title: `Reset ${reset.displayName}'s password and authenticator?`,
+          message: 'For a lost phone and lost recovery codes. Her current password and authenticator stop working now and every session ends. She gets a link to choose new ones; her role and history stay the same.',
+          confirmLabel: 'Reset', tone: 'reject',
+        });
+        if (!ok) return;
+        const out = await api(`/admin/staff/${reset.id}/reset-second-factor`, { method: 'POST' });
+        if (out.emailed) toast('ok', 'Reset link sent', `${reset.email} has 24 hours to use it.`);
+        else showInviteLink(out.link, reset.displayName, 'reset link');
+        render();
+      } else if (revoke) {
+        const v = data.invites[Number(revoke.dataset.inviteRevoke)];
+        const ok = await confirmAction({ title: `Withdraw the invitation to ${v.email}?`, message: 'The link stops working at once.', confirmLabel: 'Withdraw', tone: 'reject' });
+        if (!ok) return;
+        await api(`/admin/staff/invites/${v.id}/revoke`, { method: 'POST' });
+        toast('ok', 'Invitation withdrawn');
+        render();
+      }
+    } catch (err) {
+      if (err.message !== 'unauthorized') toast('bad', 'That did not work', err.message);
+    }
+  });
+}
+
+/** Email is not set up on this server: the inviter passes the link on herself. */
+function showInviteLink(link, name, what) {
+  openModal(`
+    <div class="modal-head"><h3>Send this ${esc(what)} to ${esc(name)} yourself</h3>
+      <p>Email is not set up on this server, so nothing was sent. Pass this link on privately (not in a group chat). It works once, for 24 hours, and anyone holding it can set up the account.</p></div>
+    <div class="modal-body"><div class="secret" id="inviteLinkText">${esc(link)}</div></div>
+    <div class="modal-foot"><button class="btn" type="button" data-cancel>Close</button>
+      <button class="btn btn-primary" type="button" id="copyInvite">Copy link</button></div>`);
+  $('modalRoot').querySelector('[data-cancel]').addEventListener('click', closeModal);
+  $('copyInvite').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(link); toast('ok', 'Link copied'); } catch (e) { toast('bad', 'Copy it by hand', 'The browser would not copy it.'); }
+  });
+}
+
+function changeRoleDialog(member, roles) {
+  openModal(`
+    <div class="modal-head"><h3>Change ${esc(member.displayName)}'s role</h3>
+      <p>She is signed out everywhere and starts her next sign-in with the new role's permissions.</p></div>
+    <div class="modal-body">
+      <label for="newRole">New role</label>
+      <select id="newRole">${roles.filter(r => r.role !== member.role || r.requiresAccessExpiry)
+        .map(r => `<option value="${escValue(r.role)}" data-expiry="${r.requiresAccessExpiry}">${esc(r.label)}</option>`).join('')}</select>
+      <div id="roleExpiryWrap" hidden><label for="roleExpiry">Access ends on (30 days if left empty)</label><input id="roleExpiry" type="date"></div>
+      <p class="field-err" id="roleErr" hidden></p>
+    </div>
+    <div class="modal-foot"><button class="btn" type="button" data-cancel>Cancel</button>
+      <button class="btn btn-primary" type="button" id="roleGo">Change role</button></div>`);
+  const sync = () => { const o = $('newRole').selectedOptions[0]; $('roleExpiryWrap').hidden = !(o && o.dataset.expiry === 'true'); };
+  $('newRole').addEventListener('change', sync);
+  sync();
+  $('modalRoot').querySelector('[data-cancel]').addEventListener('click', closeModal);
+  $('roleGo').addEventListener('click', async () => {
+    const body = { role: $('newRole').value };
+    if (!$('roleExpiryWrap').hidden && $('roleExpiry').value) body.accessExpiresAt = new Date($('roleExpiry').value + 'T23:59:59+05:30').toISOString();
+    try {
+      await api(`/admin/staff/${member.id}/role`, { method: 'POST', body: JSON.stringify(body) });
+      closeModal();
+      toast('ok', 'Role changed', `${member.displayName} signs in again to use it.`);
+      render();
+    } catch (err) {
+      if (err.message === 'unauthorized') return;
+      $('roleErr').textContent = err.message;
+      $('roleErr').hidden = false;
+    }
+  });
+}
+
+function sessionRows(sessions, withEnd) {
+  return sessions.length ? `<div class="scroll"><table class="mini"><thead><tr><th>Device</th><th>Signed in</th><th>Last active</th><th></th></tr></thead>
+    <tbody>${sessions.map(x => `<tr><td>${esc(x.device || 'Browser')}${x.current ? ' <span class="pill ok">This browser</span>' : ''}</td>
+      <td>${esc(time(x.signedInAt))}</td><td>${esc(time(x.lastActiveAt))}</td>
+      <td>${withEnd ? `<button class="btn" type="button" data-end-session="${escValue(x.id)}">Sign out</button>` : ''}</td></tr>`).join('')}</tbody></table></div>`
+    : '<p class="subtle">Not signed in anywhere.</p>';
+}
+
+async function staffSessionsDialog(member) {
+  let out;
+  try { out = await api(`/admin/staff/${member.id}/sessions`); } catch (err) { if (err.message !== 'unauthorized') toast('bad', 'Could not load sessions', err.message); return; }
+  openModal(`
+    <div class="modal-head"><h3>Where ${esc(member.displayName)} is signed in</h3><p>Signing her out ends every one of these on its next request.</p></div>
+    <div class="modal-body">${sessionRows(out.sessions, false)}</div>
+    <div class="modal-foot"><button class="btn" type="button" data-cancel>Close</button>
+      ${out.sessions.length ? '<button class="btn btn-reject" type="button" id="endAllFor">Sign out everywhere</button>' : ''}</div>`, { wide: true });
+  $('modalRoot').querySelector('[data-cancel]').addEventListener('click', closeModal);
+  const endAll = $('endAllFor');
+  if (endAll) endAll.addEventListener('click', async () => {
+    try {
+      await api(`/admin/staff/${member.id}/sessions/end-all`, { method: 'POST' });
+      closeModal();
+      toast('ok', `${member.displayName} is signed out everywhere`);
+    } catch (err) { if (err.message !== 'unauthorized') toast('bad', 'Could not sign her out', err.message); }
+  });
+}
+
+// ---- my account ---------------------------------------------------------------
+function paintAccount([profile, mine]) {
+  me = { ...me, ...profile };
+  $('panel').innerHTML = `<div id="accountRoot">
+    <div class="account-grid">
+      <div class="dx-card"><h4>You</h4>
+        <p><b>${esc(profile.displayName)}</b> &middot; ${esc(profile.roleLabel)}</p>
+        <p class="subtle">${esc(profile.email)}${profile.accessExpiresAt ? ` &middot; access ends ${esc(plainDate(profile.accessExpiresAt))}` : ''}</p>
+        <p class="subtle">What your role lets you do:</p>
+        <div class="perm-list">${profile.permissions.map(p => `<span class="pill">${esc(p)}</span>`).join('')}</div>
+      </div>
+      <div class="dx-card"><h4>Password</h4>
+        <form id="pwForm">
+          <label for="pwNow">Current password</label><input id="pwNow" type="password" autocomplete="current-password" required>
+          <label for="pwNew">New password</label><input id="pwNew" type="password" autocomplete="new-password" minlength="12" maxlength="128" required>
+          <label for="pwNew2">New password again</label><input id="pwNew2" type="password" autocomplete="new-password" minlength="12" maxlength="128" required>
+          <p class="subtle">At least 12 characters. Changing it signs you out everywhere else.</p>
+          <div class="foot"><button class="btn btn-primary" type="submit">Change password</button></div>
+        </form>
+      </div>
+      <div class="dx-card"><h4>Recovery codes <span class="right subtle">${profile.recoveryCodesLeft} of 10 left</span></h4>
+        <p class="subtle">Each signs you in once if your phone is lost. Making new ones cancels the old ones.</p>
+        <form id="rcForm"><label for="rcCode">A code from your authenticator app</label>
+          <input id="rcCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required>
+          <div class="foot"><button class="btn" type="submit">Make new recovery codes</button></div></form>
+        <p class="subtle">New phone? Ask an owner to reset your authenticator.</p>
+      </div>
+    </div>
+    <div class="dx-card full"><h4>Where you are signed in <span class="right"><button class="btn btn-reject" type="button" id="endAllMine">Sign out everywhere</button></span></h4>
+      ${sessionRows(mine.sessions, true)}
+    </div></div>`;
+
+  $('pwForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    if ($('pwNew').value !== $('pwNew2').value) return toast('bad', 'The new passwords are not the same');
+    try {
+      await api('/admin/me/password', { method: 'POST', body: JSON.stringify({ currentPassword: $('pwNow').value, newPassword: $('pwNew').value }) });
+      toast('ok', 'Password changed', 'You are signed out everywhere else.');
+      render();
+    } catch (err) { if (err.message !== 'unauthorized') toast('bad', 'Password not changed', err.message); }
+  });
+  $('rcForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    try {
+      const out = await api('/admin/me/recovery-codes', { method: 'POST', body: JSON.stringify({ code: $('rcCode').value.trim() }) });
+      openModal(`<div class="modal-head"><h3>Your new recovery codes</h3><p>The old ones no longer work. These are shown only now.</p></div>
+        <div class="modal-body login">${recoveryCodesBlock(out.codes)}</div>
+        <div class="modal-foot"><button class="btn btn-primary" type="button" data-cancel>I have saved them</button></div>`);
+      wireRecoveryDownload(out.codes, profile.email);
+      $('modalRoot').querySelector('[data-cancel]').addEventListener('click', () => { closeModal(); render(); });
+    } catch (err) { if (err.message !== 'unauthorized') toast('bad', 'No new codes', err.message); }
+  });
+  $('accountRoot').addEventListener('click', async e => {
+    const end = e.target.closest('[data-end-session]');
+    try {
+      if (end) {
+        const current = mine.sessions.find(x => x.id === end.dataset.endSession && x.current);
+        await api(`/admin/me/sessions/${end.dataset.endSession}/end`, { method: 'POST' });
+        if (current) return signOut('You signed out.');
+        toast('ok', 'Signed out there');
+        render();
+      } else if (e.target.closest('#endAllMine')) {
+        const ok = await confirmAction({ title: 'Sign out everywhere?', message: 'Every browser you are signed in on, this one included.', confirmLabel: 'Sign out everywhere', tone: 'reject' });
+        if (!ok) return;
+        await api('/admin/me/sessions/end-all', { method: 'POST' });
+        signOut('You signed out everywhere.');
+      }
+    } catch (err) { if (err.message !== 'unauthorized') toast('bad', 'That did not work', err.message); }
+  });
 }
 
 // ---- overview -------------------------------------------------------------
@@ -5426,25 +5962,27 @@ const OV_ICON = {"check":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"curr
 /** Each number from the endpoint its own section uses; one that fails shows "-", not an error page. */
 async function loadOverview() {
   const today = new Date().toISOString().slice(0, 10);
-  const q = (path) => api(path).catch((err) => { if (err.message === 'unauthorized') throw err; return null; });
-  const shops = (status) => q(`/admin/sellers${filterQuery({ status }, { pageSize: 1 })}`);
+  // Each number only if this role may read it; one it may not shows as "-".
+  const q = (path, ok = true) => (ok ? api(path) : Promise.resolve(null))
+    .catch((err) => { if (err.message === 'unauthorized') throw err; return null; });
+  const shops = (status) => q(`/admin/sellers${filterQuery({ status }, { pageSize: 1 })}`, can('marketplace.moderate'));
   const [queue, sos, support, payouts, bookingsToday, completedToday, noPartnerToday, routes, trust, campaigns,
     shopsInReview, shopsAwaitingFee, shopsLive, live, changes] = await Promise.all([
-    q('/admin/verification/review-queue'),
-    q('/admin/sos/active'),
-    q('/admin/support/counts'),
-    q(`/admin/payouts${filterQuery({}, { pageSize: 100 })}`),
-    q(`/admin/bookings${filterQuery({ from: today }, { pageSize: 1 })}`),
-    q(`/admin/bookings${filterQuery({ from: today, status: 'COMPLETED' }, { pageSize: 1 })}`),
-    q(`/admin/bookings${filterQuery({ from: today, status: 'NO_DRIVERS_AVAILABLE' }, { pageSize: 1 })}`),
-    q('/admin/route-review/queue'),
-    q('/admin/trust/review-queue'),
-    q('/admin/campaigns'),
+    q('/admin/verification/review-queue', can('verification.review')),
+    q('/admin/sos/active', can('sos.respond')),
+    q('/admin/support/counts', can('support.work')),
+    q(`/admin/payouts${filterQuery({}, { pageSize: 100 })}`, canOpen('payouts')),
+    q(`/admin/bookings${filterQuery({ from: today }, { pageSize: 1 })}`, can('trips.view')),
+    q(`/admin/bookings${filterQuery({ from: today, status: 'COMPLETED' }, { pageSize: 1 })}`, can('trips.view')),
+    q(`/admin/bookings${filterQuery({ from: today, status: 'NO_DRIVERS_AVAILABLE' }, { pageSize: 1 })}`, can('trips.view')),
+    q('/admin/route-review/queue', can('sos.respond')),
+    q('/admin/trust/review-queue', can('users.block')),
+    q('/admin/campaigns', canOpen('campaigns')),
     shops('SUBMITTED_FOR_REVIEW'),
     shops('APPROVED_AWAITING_PAYMENT'),
     shops('ACTIVE'),
-    q('/admin/live'),
-    q('/admin/profile-changes'),
+    q('/admin/live', canOpen('live')),
+    q('/admin/profile-changes', can('verification.review')),
   ]);
   return { queue, sos, support, payouts, bookingsToday, completedToday, noPartnerToday, routes, trust, campaigns,
     shopsInReview, shopsAwaitingFee, shopsLive, live, changes };
@@ -5544,7 +6082,9 @@ function paintOverview(d) {
       ? `<button type="button" class="ov-alert" data-go="sos"><span class="big">${OV_ICON.siren}</span>
            <span><b>${sosN} active SOS alert${sosN === 1 ? '' : 's'}</b><span>A rider or partner may need help right now. Answer these before anything else.</span></span>
            <span class="cta">Open SOS alerts →</span></button>`
-      : `<div class="ov-calm">${OV_EXTRA.shield}No active SOS alerts. Everyone who raised one has been looked after.</div>`}
+      // "No alerts" only from someone allowed to see them: for any other
+      // role it would be a claim this page cannot make.
+      : d.sos ? `<div class="ov-calm">${OV_EXTRA.shield}No active SOS alerts. Everyone who raised one has been looked after.</div>` : ''}
 
     ${liveStrip(d.live)}
     <div class="ov-grid" data-overview>
@@ -5827,7 +6367,14 @@ function paintAbove(view) {
   view.above(host);
 }
 
+/** A timed repaint (quiet) runs in the background: polling never keeps a session alive. */
 async function render(opts = {}) {
+  if (!opts.quiet) return renderNow(opts);
+  return inBackground(() => renderNow(opts));
+}
+
+async function renderNow(opts = {}) {
+  if (!canOpen(tab)) tab = 'overview';
   const generation = ++renderGeneration;
   const isStale = () => generation !== renderGeneration;
   const view = VIEWS[tab];
@@ -5915,7 +6462,7 @@ async function render(opts = {}) {
 
 /** Changes section; `state`, when given, replaces that section's filters (e.g. arriving from a cross-link). */
 function switchTab(name, state, fromHistory) {
-  if (!VIEWS[name]) name = 'overview';
+  if (!VIEWS[name] || !canOpen(name)) name = 'overview';
   tab = name;
   sort = { key: null, dir: 'asc' };
   if (state) filterState[name] = state;
@@ -5931,7 +6478,7 @@ function switchTab(name, state, fromHistory) {
   render();
 }
 window.addEventListener('popstate', () => {
-  if (!token) return;
+  if (!me) return;
   const name = (location.hash.match(/^#\/([a-z]+)/) || [])[1] || 'overview';
   if (name !== tab) switchTab(name, null, true);
 });
@@ -6164,7 +6711,6 @@ $('rows').addEventListener('click', async e => {
  * SecurityHeadersConfig). The notification itself is shown by /admin/push-sw.js,
  * the same handler the two apps use.
  */
-const PUSH_KEY = 'sheout.admin.pushToken';
 const FIREBASE_BASE = 'https://www.gstatic.com/firebasejs/12.19.0/';
 
 function paintPush(state) {
@@ -6210,8 +6756,8 @@ async function setUpPush(ask) {
       vapidKey: config.vapidKey,
       serviceWorkerRegistration: registration,
     });
-    await api('/notifications/devices', { method: 'POST', body: JSON.stringify({ token: pushToken }) });
-    localStorage.setItem(PUSH_KEY, pushToken);
+    // Tied to this sign-in: signing out, or being signed out, stops alerts here.
+    await api('/admin/me/push-device', { method: 'POST', body: JSON.stringify({ token: pushToken }) });
     paintPush('on');
   } catch (err) {
     if (err.message === 'unauthorized') return;
@@ -6220,23 +6766,16 @@ async function setUpPush(ask) {
   }
 }
 
-/** Signing out: this browser stops receiving the next operator's SOS alerts. */
-function dropPushDevice() {
-  const pushToken = localStorage.getItem(PUSH_KEY);
-  localStorage.removeItem(PUSH_KEY);
-  if (!pushToken || !token) return;
-  fetch(API + '/notifications/devices/unregister', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-    body: JSON.stringify({ token: pushToken }),
-  }).catch(() => {});
-}
+// Signing out stops this browser's SOS alerts on the server: the push
+// registration belongs to the session (see StaffSessionService), so there is
+// nothing to remember or undo here.
 
 $('pushBtn').addEventListener('click', () => setUpPush(true));
 
 async function refreshSosCount() {
+  if (!can('sos.respond')) return;
   try {
-    const alerts = await api('/admin/sos/active');
+    const alerts = await api('/admin/sos/active', { background: true });
     $('cSos').textContent = alerts.length;
   } catch (e) {
     // The next render sets it.
@@ -6247,7 +6786,7 @@ if ('serviceWorker' in navigator) {
   // A push arrived while the console is open: the count and, if it is on
   // screen, the SOS list change now rather than on the next manual refresh.
   navigator.serviceWorker.addEventListener('message', event => {
-    if (!event.data || event.data.type !== 'sheout-push' || !token) return;
+    if (!event.data || event.data.type !== 'sheout-push' || !me) return;
     refreshSosCount();
     if (tab === 'sos') render();
   });
@@ -6395,17 +6934,22 @@ $('sosPill').addEventListener('click', () => switchTab('sos'));
  */
 let badgeTimer = null;
 async function refreshBadges() {
-  const q = (path) => api(path).catch((err) => { if (err.message === 'unauthorized') throw err; return null; });
+  return inBackground(refreshBadgesNow);
+}
+
+async function refreshBadgesNow() {
+  const q = (path, ok = true) => (ok ? api(path) : Promise.resolve(null))
+    .catch((err) => { if (err.message === 'unauthorized') throw err; return null; });
   const set = (id, v) => { if (v !== null && v !== undefined) $(id).textContent = v; };
   try {
     const [queue, sos, payouts, routes, trust, sellers, shift] = await Promise.all([
-      q('/admin/verification/review-queue'),
-      q('/admin/sos/active'),
-      q(`/admin/payouts${filterQuery({}, { pageSize: 1 })}`),
-      q('/admin/route-review/queue'),
-      q('/admin/trust/review-queue'),
-      q('/admin/sellers/awaiting-count'),
-      q('/admin/shift-checks'),
+      q('/admin/verification/review-queue', can('verification.review')),
+      q('/admin/sos/active', can('sos.respond')),
+      q(`/admin/payouts${filterQuery({}, { pageSize: 1 })}`, canOpen('payouts')),
+      q('/admin/route-review/queue', can('sos.respond')),
+      q('/admin/trust/review-queue', can('users.block')),
+      q('/admin/sellers/awaiting-count', can('marketplace.moderate')),
+      q('/admin/shift-checks', can('verification.review')),
     ]);
     set('cQueue', queue && queue.length);
     set('cSos', sos && sos.length);
@@ -6414,39 +6958,130 @@ async function refreshBadges() {
     set('cTrust', trust && trust.length);
     set('cSellers', sellers);
     set('cShift', shift && shift.length);
-    refreshSupportCounts();
+    await refreshSupportCounts();
     // Partners' paperwork: what is waiting, and who is off the road for it.
-    q('/admin/verification/document-queue?queue=TO_REVIEW').then(v => set('cDocReview', v && v.length)).catch(() => {});
-    q('/admin/verification/document-queue?queue=EXPIRED').then(v => set('cDocExpired', v && (v.length || ''))).catch(() => {});
-    q('/admin/insurance/status').then(v => { if (v) $('cInsurance').hidden = v.passengerCoverActive; }).catch(() => {});
-    q('/admin/service-hours').then(v => v && refreshHoursBadge(v.status)).catch(() => {});
-    q('/admin/profile-changes').then(v => { if (v) $('cChanges').textContent = v.length || ''; }).catch(() => {});
+    if (can('verification.review')) {
+      await Promise.all([
+        q('/admin/verification/document-queue?queue=TO_REVIEW').then(v => set('cDocReview', v && v.length)),
+        q('/admin/verification/document-queue?queue=EXPIRED').then(v => set('cDocExpired', v && (v.length || ''))),
+        q('/admin/profile-changes').then(v => { if (v) $('cChanges').textContent = v.length || ''; }),
+      ]).catch(() => {});
+    }
+    if (canOpen('insurance')) await q('/admin/insurance/status').then(v => { if (v) $('cInsurance').hidden = v.passengerCoverActive; }).catch(() => {});
+    if (canOpen('hours')) await q('/admin/service-hours').then(v => v && refreshHoursBadge(v.status)).catch(() => {});
   } catch (e) {
     // Signed out; nothing to count.
   }
 }
 
+/** Which sections this role can open. Hiding is a courtesy; the server checks every request. */
+const anyOf = (...permissions) => () => permissions.some(can);
+const TAB_ACCESS = {
+  overview: () => true,
+  account: () => !!me && !me.legacy,
+  live: () => can('trips.view') && can('trips.live.view'),
+  sos: anyOf('sos.respond'),
+  routes: anyOf('sos.respond'),
+  support: anyOf('support.work'),
+  hours: anyOf('service.hours.manage', 'reports.ops'),
+  queue: anyOf('verification.review'),
+  docreview: anyOf('verification.review'),
+  docexpiring: anyOf('verification.review'),
+  docexpired: anyOf('verification.review'),
+  policedue: anyOf('verification.review'),
+  changes: anyOf('verification.review'),
+  shiftchecks: anyOf('verification.review'),
+  bookings: anyOf('trips.view'),
+  feedback: anyOf('trips.view'),
+  payouts: anyOf('payouts.prepare', 'payouts.approve', 'payments.view'),
+  insurance: anyOf('insurance.manage', 'reports.finance'),
+  sellers: anyOf('marketplace.moderate'),
+  accounts: anyOf('users.view'),
+  trust: anyOf('users.block'),
+  campaigns: anyOf('campaigns.manage', 'reports.ops'),
+  announcements: anyOf('announcements.send'),
+  content: anyOf('content.manage'),
+  assistant: anyOf('reports.ops'),
+  staff: anyOf('staff.manage.employee', 'staff.manage.manager', 'staff.manage.owner'),
+};
+function canOpen(name) {
+  return !!me && !!TAB_ACCESS[name] && TAB_ACCESS[name]();
+}
+
+/** Hides the sections, and the headings over them, this role cannot open. */
+function shapeNav() {
+  let label = null, anyShown = false;
+  const closeLabel = () => { if (label) label.hidden = !anyShown; };
+  for (const el of $('nav').children) {
+    if (el.classList.contains('label')) {
+      closeLabel();
+      label = el;
+      anyShown = false;
+    } else if (el.dataset.tab) {
+      el.hidden = !canOpen(el.dataset.tab);
+      if (!el.hidden) anyShown = true;
+    }
+  }
+  closeLabel();
+  $('sosPill').hidden = !can('sos.respond');
+}
+
+/** One owner means one login can lock SheOut out of its own console. */
+function paintOwnerBanner() {
+  const host = $('ownerBanner');
+  const alone = me && me.role === 'OWNER' && me.activeOwners !== null && me.activeOwners < 2;
+  host.hidden = !alone;
+  if (!alone) return;
+  host.innerHTML = `<span><strong>You are the only owner.</strong> Add a second owner, so that one lost phone or one stolen login can never lock SheOut out of its own console.</span>
+    <button class="btn" type="button" id="toStaff">Invite an owner</button>`;
+  $('toStaff').addEventListener('click', () => switchTab('staff'));
+}
+
 function start() {
   $('loginWrap').hidden = true;
   $('app').hidden = false;
-  const phone = localStorage.getItem('sheout.admin.phone') || 'Operator';
-  $('who').textContent = phone;
-  $('whoInitials').textContent = /\d/.test(phone) ? phone.replace(/\D/g, '').slice(-2) : 'OP';
+  noteActivity();
+  const name = me.displayName || 'Staff';
+  $('who').textContent = name;
+  $('whoRole').textContent = me.roleLabel || 'Signed in';
+  $('whoInitials').textContent = name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') || 'S';
+  shapeNav();
+  paintOwnerBanner();
   const fromUrl = (location.hash.match(/^#\/([a-z]+)/) || [])[1];
-  if (fromUrl && VIEWS[fromUrl] && fromUrl !== tab) {
+  if (fromUrl && VIEWS[fromUrl] && canOpen(fromUrl) && fromUrl !== tab) {
     switchTab(fromUrl, null, true);
   } else {
+    if (!canOpen(tab)) tab = 'overview';
     if (location.hash !== '#/' + tab) history.replaceState(null, '', '#/' + tab);
     render();
   }
   refreshBadges();
   // Counts that mean work waiting stay current while the console is open.
-  if (!badgeTimer) badgeTimer = setInterval(() => { if (token && !document.hidden) refreshBadges(); }, 60000);
-  setUpPush(false);
+  if (!badgeTimer) badgeTimer = setInterval(() => { if (me && !document.hidden) refreshBadges(); }, 60000);
+  if (can('sos.respond')) setUpPush(false);
   startLiveRefresh();
 }
 
-if (token) start();
+/**
+ * Opening the page: an invitation link, an existing sign-in (the cookie the
+ * page cannot see, so it asks), or the sign-in screen.
+ */
+async function boot() {
+  const invite = location.hash.match(/^#invite=([A-Za-z0-9_-]+)/);
+  if (invite) {
+    inviteToken = invite[1];
+    history.replaceState(null, '', location.pathname);
+    showInvite();
+    return;
+  }
+  try {
+    me = await api('/admin/auth/me', { quiet401: true });
+    start();
+  } catch (e) {
+    $('loginWrap').hidden = false;
+  }
+}
+boot();
 </script>
 </body>
 </html>

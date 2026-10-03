@@ -1,5 +1,8 @@
 package com.sheout.admin.internal.web;
 
+import com.sheout.staff.Permission;
+import com.sheout.staff.RequiresPermission;
+import com.sheout.staff.StaffContext;
 import com.sheout.auth.AccountRole;
 import com.sheout.auth.AccountSummary;
 import com.sheout.auth.AuthApi;
@@ -55,51 +58,55 @@ public class AdminSellerController {
     public record ReasonRequest(String reason) {
     }
 
+    @RequiresPermission(Permission.MARKETPLACE_MODERATE)
     @GetMapping
     public ResponseEntity<PageResponse<SellerRow>> list(@RequestParam(required = false) SellerStatus status,
                                                         @RequestParam(required = false) String q,
                                                         @RequestParam(required = false) Integer page,
                                                         @RequestParam(required = false) Integer pageSize) {
-        requireAdmin();
         PageRequest pageable = PageRequest.of(PageResponse.normalizePage(page), PageResponse.normalizePageSize(pageSize));
         return ResponseEntity.ok(PageResponse.from(marketplace.listSellers(status, q, pageable), this::withOwner));
     }
 
+    @RequiresPermission(Permission.MARKETPLACE_MODERATE)
     @GetMapping("/awaiting-count")
     public ResponseEntity<Long> awaitingCount() {
-        requireAdmin();
         return ResponseEntity.ok(marketplace.countAwaitingReview());
     }
 
+    @RequiresPermission(Permission.MARKETPLACE_MODERATE)
     @GetMapping("/{sellerId}")
     public ResponseEntity<SellerDetail> detail(@PathVariable UUID sellerId) {
-        requireAdmin();
         return marketplace.sellerDetail(sellerId)
                 .map(d -> ResponseEntity.ok(new SellerDetail(withOwner(d.seller()), d.products())))
                 .orElseThrow(() -> ApiException.notFound("No such seller"));
     }
 
+    @RequiresPermission(Permission.MARKETPLACE_MODERATE)
     @PostMapping("/{sellerId}/approve")
     public ResponseEntity<SellerRow> approve(@PathVariable UUID sellerId) {
-        CurrentAccount admin = requireAdmin();
+        CurrentAccount admin = caller();
         return ResponseEntity.ok(withOwner(unwrap(marketplace.approve(sellerId, admin.accountId()))));
     }
 
+    @RequiresPermission(Permission.MARKETPLACE_MODERATE)
     @PostMapping("/{sellerId}/reject")
     public ResponseEntity<SellerRow> reject(@PathVariable UUID sellerId, @RequestBody ReasonRequest request) {
-        CurrentAccount admin = requireAdmin();
+        CurrentAccount admin = caller();
         return ResponseEntity.ok(withOwner(unwrap(marketplace.reject(sellerId, admin.accountId(), reasonOf(request)))));
     }
 
+    @RequiresPermission(Permission.MARKETPLACE_MODERATE)
     @PostMapping("/{sellerId}/suspend")
     public ResponseEntity<SellerRow> suspend(@PathVariable UUID sellerId, @RequestBody ReasonRequest request) {
-        CurrentAccount admin = requireAdmin();
+        CurrentAccount admin = caller();
         return ResponseEntity.ok(withOwner(unwrap(marketplace.suspend(sellerId, admin.accountId(), reasonOf(request)))));
     }
 
+    @RequiresPermission(Permission.MARKETPLACE_MODERATE)
     @PostMapping("/{sellerId}/reinstate")
     public ResponseEntity<SellerRow> reinstate(@PathVariable UUID sellerId) {
-        CurrentAccount admin = requireAdmin();
+        CurrentAccount admin = caller();
         return ResponseEntity.ok(withOwner(unwrap(marketplace.reinstate(sellerId, admin.accountId()))));
     }
 
@@ -130,12 +137,12 @@ public class AdminSellerController {
         };
     }
 
-    private static CurrentAccount requireAdmin() {
-        CurrentAccount caller = CurrentAccountContext.get()
-                .orElseThrow(() -> ApiException.unauthorized("Authentication required"));
-        if (caller.role() != AccountRole.ADMIN) {
-            throw ApiException.forbidden("Admin only");
-        }
-        return caller;
+    /**
+     * Who is acting, for the records that say who decided. Whether she may is
+     * already settled: the endpoint's permission was checked before it ran
+     * (staff's StaffPermissionInterceptor).
+     */
+    private static CurrentAccount caller() {
+        return CurrentAccountContext.get().orElseThrow(StaffContext::signInRequired);
     }
 }

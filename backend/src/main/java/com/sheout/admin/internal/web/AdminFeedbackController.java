@@ -1,5 +1,7 @@
 package com.sheout.admin.internal.web;
 
+import com.sheout.staff.Permission;
+import com.sheout.staff.RequiresPermission;
 import com.sheout.auth.AccountRole;
 import com.sheout.auth.AccountSummary;
 import com.sheout.auth.AuthApi;
@@ -79,11 +81,11 @@ public class AdminFeedbackController {
      * operator actually asks - "what are riders saying about partners". The
      * rows it counts are the ones written by the other side.
      */
+    @RequiresPermission(Permission.TRIPS_VIEW)
     @GetMapping
     public ResponseEntity<List<FeedbackRow>> feedback(
             @RequestParam(required = false, defaultValue = "DRIVER") AccountRole about,
             @RequestParam(required = false, defaultValue = "" + DEFAULT_DAYS) int days) {
-        requireAdmin();
         if (about != AccountRole.DRIVER && about != AccountRole.CUSTOMER) {
             throw new ApiException(org.springframework.http.HttpStatus.BAD_REQUEST, "Bad Request",
                     "Ratings are about partners or riders.");
@@ -132,14 +134,6 @@ public class AdminFeedbackController {
                 : customerProfileApi.findByAccountId(accountId).map(p -> p.name()).orElse(null);
     }
 
-    private CurrentAccount requireAdmin() {
-        CurrentAccount caller = CurrentAccountContext.get()
-                .orElseThrow(() -> ApiException.unauthorized("Authentication required"));
-        if (caller.role() != AccountRole.ADMIN) {
-            throw ApiException.forbidden("Admin role required");
-        }
-        return caller;
-    }
 
     /**
      * One account and what has been said about it in the window.

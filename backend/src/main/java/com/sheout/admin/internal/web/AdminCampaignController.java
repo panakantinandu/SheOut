@@ -1,5 +1,8 @@
 package com.sheout.admin.internal.web;
 
+import com.sheout.staff.Permission;
+import com.sheout.staff.RequiresPermission;
+import com.sheout.staff.RequiresAnyPermission;
 import com.sheout.auth.AccountRole;
 import com.sheout.auth.AuthApi;
 import com.sheout.auth.CurrentAccount;
@@ -53,57 +56,57 @@ public class AdminCampaignController {
     public record Overview(List<CampaignsAdminApi.PromotionView> promotions, List<CampaignsAdminApi.IncentiveView> incentives) {
     }
 
+    @RequiresAnyPermission({Permission.CAMPAIGNS_MANAGE, Permission.REPORTS_OPS})
     @GetMapping
     public ResponseEntity<Overview> overview() {
-        requireAdmin();
         return ResponseEntity.ok(new Overview(campaigns.listPromotions(), campaigns.listIncentives()));
     }
 
+    @RequiresPermission(Permission.CAMPAIGNS_MANAGE)
     @PostMapping("/promotions")
     public ResponseEntity<CampaignsAdminApi.PromotionView> createPromotion(@RequestBody CampaignsAdminApi.PromotionDraft draft) {
-        requireAdmin();
         return ResponseEntity.status(HttpStatus.CREATED).body(validated(() -> campaigns.createPromotion(draft)));
     }
 
+    @RequiresPermission(Permission.CAMPAIGNS_MANAGE)
     @PutMapping("/promotions/{id}")
     public ResponseEntity<CampaignsAdminApi.PromotionView> updatePromotion(@PathVariable UUID id, @RequestBody CampaignsAdminApi.PromotionDraft draft) {
-        requireAdmin();
         return ResponseEntity.ok(found(validated(() -> campaigns.updatePromotion(id, draft))));
     }
 
+    @RequiresPermission(Permission.CAMPAIGNS_MANAGE)
     @PostMapping("/promotions/{id}/pause")
     public ResponseEntity<CampaignsAdminApi.PromotionView> pausePromotion(@PathVariable UUID id) {
-        requireAdmin();
         return ResponseEntity.ok(found(campaigns.setPromotionPaused(id, true)));
     }
 
+    @RequiresPermission(Permission.CAMPAIGNS_MANAGE)
     @PostMapping("/promotions/{id}/resume")
     public ResponseEntity<CampaignsAdminApi.PromotionView> resumePromotion(@PathVariable UUID id) {
-        requireAdmin();
         return ResponseEntity.ok(found(campaigns.setPromotionPaused(id, false)));
     }
 
+    @RequiresPermission(Permission.CAMPAIGNS_MANAGE)
     @PostMapping("/incentives")
     public ResponseEntity<CampaignsAdminApi.IncentiveView> createIncentive(@RequestBody CampaignsAdminApi.IncentiveDraft draft) {
-        requireAdmin();
         return ResponseEntity.status(HttpStatus.CREATED).body(validated(() -> campaigns.createIncentive(draft)));
     }
 
+    @RequiresPermission(Permission.CAMPAIGNS_MANAGE)
     @PutMapping("/incentives/{id}")
     public ResponseEntity<CampaignsAdminApi.IncentiveView> updateIncentive(@PathVariable UUID id, @RequestBody CampaignsAdminApi.IncentiveDraft draft) {
-        requireAdmin();
         return ResponseEntity.ok(found(validated(() -> campaigns.updateIncentive(id, draft))));
     }
 
+    @RequiresPermission(Permission.CAMPAIGNS_MANAGE)
     @PostMapping("/incentives/{id}/pause")
     public ResponseEntity<CampaignsAdminApi.IncentiveView> pauseIncentive(@PathVariable UUID id) {
-        requireAdmin();
         return ResponseEntity.ok(found(campaigns.setIncentivePaused(id, true)));
     }
 
+    @RequiresPermission(Permission.CAMPAIGNS_MANAGE)
     @PostMapping("/incentives/{id}/resume")
     public ResponseEntity<CampaignsAdminApi.IncentiveView> resumeIncentive(@PathVariable UUID id) {
-        requireAdmin();
         return ResponseEntity.ok(found(campaigns.setIncentivePaused(id, false)));
     }
 
@@ -129,9 +132,9 @@ public class AdminCampaignController {
                                   List<RetentionRow> riders) {
     }
 
+    @RequiresPermission(Permission.REPORTS_OPS)
     @GetMapping("/signup-retention")
     public ResponseEntity<RetentionReport> signupRetention() {
-        requireAdmin();
         Instant now = Instant.now();
         List<CampaignsAdminApi.SignupCreditOutcome> outcomes = campaigns.signupCreditOutcomes();
         List<RetentionRow> rows = outcomes.stream()
@@ -178,12 +181,4 @@ public class AdminCampaignController {
         return value.orElseThrow(() -> ApiException.notFound("No such campaign"));
     }
 
-    private static CurrentAccount requireAdmin() {
-        CurrentAccount caller = CurrentAccountContext.get()
-                .orElseThrow(() -> ApiException.unauthorized("Authentication required"));
-        if (caller.role() != AccountRole.ADMIN) {
-            throw ApiException.forbidden("Admin role required");
-        }
-        return caller;
-    }
 }

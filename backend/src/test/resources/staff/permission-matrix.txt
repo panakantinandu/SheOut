@@ -1,0 +1,44 @@
+# Staff permission matrix: Y = the role holds the permission.
+# Generated from StaffRole by PermissionMatrixTest. Change both together, in one commit.
+#
+# OWN  OWNER
+# MGR  MANAGER
+# VER  VERIFICATION_AGENT
+# SUP  SUPPORT_AGENT
+# SAF  SAFETY_RESPONDER
+# FIN  FINANCE
+# MKT  MARKETPLACE_MODERATOR
+# AUD  AUDITOR
+
+permission                    OWN  MGR  VER  SUP  SAF  FIN  MKT  AUD
+verification.review             Y    Y    Y    .    .    .    .    .
+verification.police.record      Y    Y    Y    .    .    .    .    .
+documents.view                  Y    Y    Y    .    .    .    .    .
+documents.download              Y    .    .    .    .    .    .    .
+pii.phone.reveal                Y    Y    .    .    Y    .    .    .
+pii.address.reveal              Y    Y    .    .    .    .    .    .
+users.view                      Y    Y    .    .    .    .    .    .
+users.block                     Y    Y    .    .    .    .    .    .
+trips.view                      Y    Y    .    .    .    .    .    .
+trips.live.view                 Y    Y    .    .    Y    .    .    .
+sos.respond                     Y    Y    .    .    Y    .    .    .
+support.work                    Y    Y    .    Y    .    .    .    .
+refunds.issue                   Y    Y    .    Y    .    Y    .    .
+payouts.prepare                 Y    .    .    .    .    Y    .    .
+payouts.approve                 Y    Y    .    .    .    .    .    .
+payments.view                   Y    Y    .    .    .    Y    .    Y
+invoices.view                   Y    Y    .    .    .    Y    .    Y
+insurance.manage                Y    .    .    .    .    .    .    .
+campaigns.manage                Y    .    .    .    .    .    .    .
+config.edit                     Y    .    .    .    .    .    .    .
+service.hours.manage            Y    Y    .    .    .    .    .    .
+content.manage                  Y    Y    .    .    .    .    .    .
+announcements.send              Y    Y    .    .    .    .    .    .
+marketplace.moderate            Y    Y    .    .    .    .    Y    .
+reports.ops                     Y    Y    .    .    .    .    .    .
+reports.finance                 Y    Y    .    .    .    Y    .    Y
+staff.manage.employee           Y    Y    .    .    .    .    .    .
+staff.manage.manager            Y    .    .    .    .    .    .    .
+staff.manage.owner              Y    .    .    .    .    .    .    .
+audit.view                      Y    .    .    .    .    .    .    .
+data.export                     Y    .    .    .    .    .    .    .

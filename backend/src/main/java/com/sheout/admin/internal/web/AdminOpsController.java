@@ -1,5 +1,9 @@
 package com.sheout.admin.internal.web;
 
+import com.sheout.staff.Permission;
+import com.sheout.staff.RequiresPermission;
+import com.sheout.staff.RequiresAnyPermission;
+import com.sheout.staff.StaffContext;
 import com.sheout.admin.internal.AdminOpsService;
 import com.sheout.admin.internal.OpsViews.AccountDetail;
 import com.sheout.admin.internal.OpsViews.BookingDetail;
@@ -63,23 +67,25 @@ public class AdminOpsController {
      * date of birth, photo, vehicle - waiting for a decision. See
      * DriverProfileChangeService.
      */
+    @RequiresPermission(Permission.VERIFICATION_REVIEW)
     @GetMapping("/profile-changes")
     public ResponseEntity<java.util.List<com.sheout.users.ProfileChangeReview>> profileChanges() {
-        requireAdmin();
         return noStore(driverProfiles.findPendingProfileChanges());
     }
 
+    @RequiresPermission(Permission.VERIFICATION_REVIEW)
     @PostMapping("/profile-changes/{changeId}/approve")
     public ResponseEntity<Void> approveProfileChange(@PathVariable UUID changeId) {
-        CurrentAccount admin = requireAdmin();
+        CurrentAccount admin = caller();
         decided(driverProfiles.decideProfileChange(changeId, true, admin.accountId(), null));
         return ResponseEntity.noContent().build();
     }
 
     /** The note is shown to her, so it says what to do next ("the RC photo is blurred - send it again"). */
+    @RequiresPermission(Permission.VERIFICATION_REVIEW)
     @PostMapping("/profile-changes/{changeId}/reject")
     public ResponseEntity<Void> rejectProfileChange(@PathVariable UUID changeId, @Valid @RequestBody DecisionRequest request) {
-        CurrentAccount admin = requireAdmin();
+        CurrentAccount admin = caller();
         decided(driverProfiles.decideProfileChange(changeId, false, admin.accountId(), request.note()));
         return ResponseEntity.noContent().build();
     }
@@ -88,9 +94,10 @@ public class AdminOpsController {
     }
 
     /** "I have checked on this trip" - what was found or done goes in the note. The trip is not touched. */
+    @RequiresPermission(Permission.SOS_RESPOND)
     @PostMapping("/trip-alerts/{alertId}/ack")
     public ResponseEntity<Void> acknowledgeTripAlert(@PathVariable UUID alertId, @Valid @RequestBody DecisionRequest request) {
-        CurrentAccount admin = requireAdmin();
+        CurrentAccount admin = caller();
         if (!ops.acknowledgeTripAlert(alertId, admin.accountId(), request.note().trim())) {
             throw ApiException.notFound("No open alert with that id");
         }
@@ -110,28 +117,28 @@ public class AdminOpsController {
         };
     }
 
+    @RequiresPermission(Permission.USERS_VIEW)
     @GetMapping("/accounts/{accountId}/detail")
     public ResponseEntity<AccountDetail> accountDetail(@PathVariable UUID accountId) {
-        requireAdmin();
         return noStore(ops.accountDetail(accountId).orElseThrow(() -> ApiException.notFound("No such account")));
     }
 
+    @RequiresPermission(Permission.TRIPS_VIEW)
     @GetMapping("/bookings/{bookingId}")
     public ResponseEntity<BookingDetail> bookingDetail(@PathVariable UUID bookingId) {
-        requireAdmin();
         return noStore(ops.bookingDetail(bookingId).orElseThrow(() -> ApiException.notFound("No such booking")));
     }
 
     /** Partners online and trips under way, for the console's Live page; it asks every few seconds. */
+    @RequiresPermission({Permission.TRIPS_VIEW, Permission.TRIPS_LIVE_VIEW})
     @GetMapping("/live")
     public ResponseEntity<LiveOps> live() {
-        requireAdmin();
         return noStore(ops.live());
     }
 
+    @RequiresAnyPermission({Permission.SERVICE_HOURS_MANAGE, Permission.REPORTS_OPS})
     @GetMapping("/service-hours")
     public ResponseEntity<ServiceHoursView> serviceHours() {
-        requireAdmin();
         return noStore(ops.serviceHoursView());
     }
 
@@ -140,9 +147,10 @@ public class AdminOpsController {
      * equal - that is "always open", which has its own mode, and saving it
      * as a window would read as "closed all day" to anyone looking later.
      */
+    @RequiresPermission(Permission.SERVICE_HOURS_MANAGE)
     @PutMapping("/service-hours/schedule")
     public ResponseEntity<ServiceHoursView> schedule(@Valid @RequestBody ScheduleRequest request) {
-        CurrentAccount admin = requireAdmin();
+        CurrentAccount admin = caller();
         if (request.mode() == ServiceHoursMode.SCHEDULED && request.opensAt().equals(request.closesAt())) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Bad Request",
                     "Opening and closing times are the same. Choose \"Always open\" for bookings at every hour.");
@@ -157,9 +165,10 @@ public class AdminOpsController {
      * shown it - "paused" with no reason reads as broken. until is optional;
      * without it bookings stay paused until somebody resumes them.
      */
+    @RequiresPermission(Permission.SERVICE_HOURS_MANAGE)
     @PostMapping("/service-hours/pause")
     public ResponseEntity<ServiceHoursView> pause(@Valid @RequestBody PauseRequest request) {
-        CurrentAccount admin = requireAdmin();
+        CurrentAccount admin = caller();
         Instant now = Instant.now();
         if (request.until() != null && !request.until().isAfter(now)) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Bad Request", "The resume time must be in the future.");
@@ -172,9 +181,10 @@ public class AdminOpsController {
         return noStore(ops.serviceHoursView());
     }
 
+    @RequiresPermission(Permission.SERVICE_HOURS_MANAGE)
     @PostMapping("/service-hours/resume")
     public ResponseEntity<ServiceHoursView> resume() {
-        CurrentAccount admin = requireAdmin();
+        CurrentAccount admin = caller();
         serviceHours.resume(admin.accountId());
         return noStore(ops.serviceHoursView());
     }
@@ -189,12 +199,12 @@ public class AdminOpsController {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(body);
     }
 
-    private CurrentAccount requireAdmin() {
-        CurrentAccount caller = CurrentAccountContext.get()
-                .orElseThrow(() -> ApiException.unauthorized("Authentication required"));
-        if (caller.role() != AccountRole.ADMIN) {
-            throw ApiException.forbidden("Admin role required");
-        }
-        return caller;
+    /**
+     * Who is acting, for the records that say who decided. Whether she may is
+     * already settled: the endpoint's permission was checked before it ran
+     * (staff's StaffPermissionInterceptor).
+     */
+    private static CurrentAccount caller() {
+        return CurrentAccountContext.get().orElseThrow(StaffContext::signInRequired);
     }
 }

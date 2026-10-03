@@ -14,7 +14,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Every migration, two ways, in throwaway schemas of the local database:
  * from empty to the latest, and from production's shape today (V54) with the
  * data V55-V60 change - an RC photo and a police check recorded without
- * evidence - to the latest.
+ * evidence - to the latest. V61 (staff accounts) is also run over a database
+ * holding a phone-login ADMIN account, as production's does.
  * <p>
  * Plain JDBC and Flyway, no Spring context: this is about the SQL. Needs the
  * local Postgres (DB_HOST/DB_PORT/DB_NAME/DB_USERNAME/DB_PASSWORD, defaulted
@@ -51,7 +52,7 @@ class MigrationPathTest {
         var result = flyway(null).migrate();
 
         assertThat(result.success).isTrue();
-        assertThat(result.targetSchemaVersion).isEqualTo("60");
+        assertThat(result.targetSchemaVersion).isEqualTo("61");
         assertThat(jdbc.queryForObject("select count(*) from information_schema.tables where table_schema = ? and table_name in"
                         + " ('partner_documents','police_verifications','insurance_policies','trip_coverages','tax_invoices')",
                 Integer.class, schema)).isEqualTo(5);
@@ -71,7 +72,7 @@ class MigrationPathTest {
         var result = flyway(null).migrate();
 
         assertThat(result.success).isTrue();
-        assertThat(result.targetSchemaVersion).isEqualTo("60");
+        assertThat(result.targetSchemaVersion).isEqualTo("61");
         // V55: her RC photo is a document of its own now, waiting for an operator to date it.
         assertThat(jdbc.queryForMap("select type, status, document_key from " + schema + ".partner_documents where account_id = ?",
                 partnerWithRc))
@@ -110,7 +111,7 @@ class MigrationPathTest {
         jdbc.update(currentRc, alreadyHasOne, "checklist-rc");
         jdbc.update(currentRc, alreadyCopied, "same-rc");
 
-        assertThat(flyway(null).migrate().targetSchemaVersion).isEqualTo("60");
+        assertThat(flyway(null).migrate().targetSchemaVersion).isEqualTo("61");
 
         // Nothing on her checklist: the late photo becomes her RC, waiting for review.
         assertThat(jdbc.queryForMap("select document_key, status, superseded_at from " + schema
@@ -125,5 +126,34 @@ class MigrationPathTest {
         // Already copied: not copied again.
         assertThat(jdbc.queryForObject("select count(*) from " + schema + ".partner_documents where account_id = ?",
                 Integer.class, alreadyCopied)).isEqualTo(1);
+    }
+
+    @Test
+    void staffTablesArriveBesideTheOldAdminAccountWithoutTouchingIt() {
+        assertThat(flyway("60").migrate().targetSchemaVersion).isEqualTo("60");
+        UUID legacyAdmin = UUID.randomUUID();
+        jdbc.update("insert into " + schema + ".accounts (id, phone_number, role, created_at, updated_at)"
+                + " values (?, '+910000000000', 'ADMIN', now(), now())", legacyAdmin);
+
+        var result = flyway(null).migrate();
+
+        assertThat(result.success).isTrue();
+        assertThat(result.targetSchemaVersion).isEqualTo("61");
+        assertThat(jdbc.queryForObject("select count(*) from information_schema.tables where table_schema = ? and table_name in"
+                        + " ('staff_members','staff_invites','staff_recovery_codes','staff_sessions')",
+                Integer.class, schema)).isEqualTo(4);
+        // The old account is left exactly as it was: the first OWNER invitation
+        // links to it later (OwnerBootstrap); no SQL guesses who it belongs to.
+        assertThat(jdbc.queryForMap("select phone_number, role from " + schema + ".accounts where id = ?", legacyAdmin))
+                .containsEntry("phone_number", "+910000000000").containsEntry("role", "ADMIN");
+        // An auditor without an end date is refused by the database itself.
+        UUID staffAccount = UUID.randomUUID();
+        jdbc.update("insert into " + schema + ".accounts (id, role, created_at, updated_at) values (?, 'ADMIN', now(), now())",
+                staffAccount);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> jdbc.update("insert into " + schema + ".staff_members"
+                        + " (id, account_id, email, display_name, role, status, password_hash, password_changed_at, totp_secret,"
+                        + " created_at, updated_at) values (gen_random_uuid(), ?, 'ca@example.com', 'CA', 'AUDITOR', 'ACTIVE',"
+                        + " 'x', now(), 'y', now(), now())", staffAccount))
+                .hasMessageContaining("chk_staff_auditor_expires");
     }
 }

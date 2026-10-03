@@ -42,7 +42,7 @@ class AddedPhoneAndGoogleRoleTest {
         accounts = mock(AccountRepository.class);
         otp = mock(OtpService.class);
         auth = new AuthService(accounts, mock(SessionService.class), otp, mock(JwtService.class),
-                mock(DomainEventPublisher.class), "test");
+                mock(DomainEventPublisher.class), "test", false);
         googleAccountId = UUID.randomUUID();
         googleAccount = AccountEntity.forGoogleSignIn("rider@example.com", AccountRole.CUSTOMER);
         when(accounts.findById(googleAccountId)).thenReturn(Optional.of(googleAccount));

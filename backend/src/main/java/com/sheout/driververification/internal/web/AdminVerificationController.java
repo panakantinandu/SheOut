@@ -1,8 +1,12 @@
 package com.sheout.driververification.internal.web;
 
+import com.sheout.staff.Permission;
+import com.sheout.staff.RequiresPermission;
+import com.sheout.staff.StaffContext;
 import com.sheout.auth.AccountRole;
 import com.sheout.auth.AuthApi;
 import com.sheout.auth.CurrentAccount;
+import com.sheout.auth.CurrentAccountContext;
 import com.sheout.driververification.InsuranceUseType;
 import com.sheout.driververification.PartnerDocumentSource;
 import com.sheout.driververification.PartnerDocumentStatus;
@@ -58,20 +62,21 @@ public class AdminVerificationController {
         this.backgroundChecks = backgroundChecks;
     }
 
+    @RequiresPermission(Permission.VERIFICATION_REVIEW)
     @GetMapping("/api/v1/admin/verification/queue")
     public ResponseEntity<List<QueueItem>> queue(
             @RequestParam(name = "status", defaultValue = "UNDER_REVIEW") VerificationStatus status) {
-        requireAdmin();
         List<QueueItem> items = verificationService.findByGenderStatus(status).stream()
                 .map(this::toQueueItem)
                 .toList();
         return ResponseEntity.ok(items);
     }
 
+    @RequiresPermission(Permission.VERIFICATION_REVIEW)
     @PostMapping("/api/v1/admin/verification/{accountId}/gender-review")
     public ResponseEntity<VerificationSummary> reviewGender(@PathVariable UUID accountId,
                                                               @Valid @RequestBody ReviewRequest request) {
-        CurrentAccount admin = requireAdmin();
+        CurrentAccount admin = caller();
         Result<VerificationSummary, VerificationError> result = verificationService.reviewGenderVerification(
                 accountId, admin.accountId(), request.decision(), request.reason());
         if (result.isFailure()) {
@@ -80,10 +85,11 @@ public class AdminVerificationController {
         return ResponseEntity.ok(result.value());
     }
 
+    @RequiresPermission(Permission.VERIFICATION_POLICE_RECORD)
     @PostMapping("/api/v1/admin/verification/{accountId}/police-review")
     public ResponseEntity<VerificationSummary> reviewPolice(@PathVariable UUID accountId,
                                                               @Valid @RequestBody PoliceReviewRequest request) {
-        CurrentAccount admin = requireAdmin();
+        CurrentAccount admin = caller();
         Result<VerificationSummary, VerificationError> result = verificationService.reviewPoliceVerification(
                 accountId, admin.accountId(), new PoliceVerificationService.PoliceDecision(request.decision(),
                         request.method(), request.certificateNumber(), request.issuingAuthority(), request.issuedOn(),
@@ -103,10 +109,11 @@ public class AdminVerificationController {
      * that make it checkable; rejecting needs a reason - see
      * PartnerDocumentService.review.
      */
+    @RequiresPermission(Permission.VERIFICATION_REVIEW)
     @PostMapping("/api/v1/admin/verification/documents/{documentId}/review")
     public ResponseEntity<PartnerDocumentSummary> reviewDocument(@PathVariable UUID documentId,
                                                                  @Valid @RequestBody DocumentReviewRequest request) {
-        CurrentAccount admin = requireAdmin();
+        CurrentAccount admin = caller();
         Result<PartnerDocumentSummary, VerificationError> result = partnerDocuments.review(documentId, admin.accountId(),
                 request.decision(), request.reason(),
                 new PartnerDocumentService.DocumentFacts(request.documentNumber(), request.issuedOn(),
@@ -122,6 +129,7 @@ public class AdminVerificationController {
      * obtained, or a background report. Goes to the same review as one she
      * uploaded, so a second pair of eyes is not skipped by the route it came in.
      */
+    @RequiresPermission(Permission.VERIFICATION_REVIEW)
     @PostMapping(value = "/api/v1/admin/verification/{accountId}/documents/{type}", consumes = "multipart/form-data")
     public ResponseEntity<PartnerDocumentSummary> uploadDocument(
             @PathVariable UUID accountId, @PathVariable PartnerDocumentType type,
@@ -130,7 +138,7 @@ public class AdminVerificationController {
             @RequestParam(value = "issuedOn", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate issuedOn,
             @RequestParam(value = "validUntil", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate validUntil,
             @RequestParam(value = "insuranceUseType", required = false) InsuranceUseType insuranceUseType) {
-        CurrentAccount admin = requireAdmin();
+        CurrentAccount admin = caller();
         if (verificationService.findByAccountId(accountId).map(v -> v.role() != AccountRole.DRIVER).orElse(true)) {
             throw VerificationController.toApiException(VerificationError.NOT_A_PARTNER);
         }
@@ -149,9 +157,10 @@ public class AdminVerificationController {
      * audit trail before the link is returned, so every opening of a police
      * certificate - or any other document - has a name and a time on it.
      */
+    @RequiresPermission(Permission.DOCUMENTS_VIEW)
     @GetMapping("/api/v1/admin/verification/documents/{documentId}/link")
     public ResponseEntity<DocumentLink> documentLink(@PathVariable UUID documentId) {
-        CurrentAccount admin = requireAdmin();
+        CurrentAccount admin = caller();
         return verificationService.openPartnerDocument(documentId, admin.accountId())
                 .map(url -> ResponseEntity.ok(new DocumentLink(url)))
                 .orElseThrow(() -> ApiException.notFound("No file for that document"));
@@ -161,9 +170,9 @@ public class AdminVerificationController {
     }
 
     /** Which verification provider is set up, so the console offers "Request a background check" only when one is. */
+    @RequiresPermission(Permission.VERIFICATION_REVIEW)
     @GetMapping("/api/v1/admin/verification/provider")
     public ResponseEntity<ProviderStatus> provider() {
-        requireAdmin();
         return ResponseEntity.ok(new ProviderStatus(backgroundChecks.providerName(), backgroundChecks.providerConfigured()));
     }
 
@@ -172,9 +181,10 @@ public class AdminVerificationController {
      * answer comes back as a report for an operator to read; it decides
      * nothing on its own. PROVIDER_NOT_CONFIGURED with the manual default.
      */
+    @RequiresPermission(Permission.VERIFICATION_POLICE_RECORD)
     @PostMapping("/api/v1/admin/verification/{accountId}/background-check")
     public ResponseEntity<PartnerDocumentSummary> requestBackgroundCheck(@PathVariable UUID accountId) {
-        CurrentAccount admin = requireAdmin();
+        CurrentAccount admin = caller();
         Result<PartnerDocumentSummary, VerificationError> result =
                 backgroundChecks.requestCheck(accountId, admin.accountId());
         if (result.isFailure()) {
@@ -196,12 +206,13 @@ public class AdminVerificationController {
             InsuranceUseType insuranceUseType) {
     }
 
-    private CurrentAccount requireAdmin() {
-        CurrentAccount caller = VerificationController.requireAuthenticated();
-        if (caller.role() != AccountRole.ADMIN) {
-            throw ApiException.forbidden("Admin role required");
-        }
-        return caller;
+    /**
+     * Who is acting, for the records that say who decided. Whether she may is
+     * already settled: the endpoint's permission was checked before it ran
+     * (staff's StaffPermissionInterceptor).
+     */
+    private static CurrentAccount caller() {
+        return CurrentAccountContext.get().orElseThrow(StaffContext::signInRequired);
     }
 
     private QueueItem toQueueItem(VerificationSummary summary) {

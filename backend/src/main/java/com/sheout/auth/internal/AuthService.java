@@ -40,6 +40,7 @@ public class AuthService implements AuthApi {
     private final JwtService jwtService;
     private final DomainEventPublisher eventPublisher;
     private final String termsVersion;
+    private final boolean adminPhoneLoginEnabled;
 
     public AuthService(AccountRepository accountRepository,
                         SessionService sessions,
@@ -49,13 +50,18 @@ public class AuthService implements AuthApi {
                         // The wording she agreed to. Bumped when the documents
                         // change, so an old acceptance is not read as consent
                         // to something she never saw.
-                        @Value("${sheout.legal.terms-version:2026-09-20}") String termsVersion) {
+                        @Value("${sheout.legal.terms-version:2026-09-20}") String termsVersion,
+                        // Off in production: staff sign in with email, password
+                        // and an authenticator code (the staff module). On only
+                        // for local development and the switch-over.
+                        @Value("${sheout.admin.phone-login-enabled:false}") boolean adminPhoneLoginEnabled) {
         this.accountRepository = accountRepository;
         this.sessions = sessions;
         this.otpService = otpService;
         this.jwtService = jwtService;
         this.eventPublisher = eventPublisher;
         this.termsVersion = termsVersion;
+        this.adminPhoneLoginEnabled = adminPhoneLoginEnabled;
     }
 
     /**
@@ -83,6 +89,9 @@ public class AuthService implements AuthApi {
         // Rate limits are checked by AuthController before this is reached -
         // see OtpRateLimiter - because a refusal has to carry a Retry-After,
         // which a Result error cannot.
+        if (role == AccountRole.ADMIN && !adminPhoneLoginEnabled) {
+            return Result.failure(AuthError.ADMIN_PHONE_LOGIN_DISABLED);
+        }
         boolean delivered = otpService.requestCode(phoneNumber, role);
         if (!delivered) {
             return Result.failure(AuthError.OTP_DELIVERY_FAILED);
@@ -108,6 +117,11 @@ public class AuthService implements AuthApi {
      */
     @Transactional
     public Result<AuthenticatedSession, AuthError> verifyOtp(String phoneNumber, String code, AccountRole role, String userAgent) {
+        // Before the code is looked at, so a code requested while the switch
+        // was on cannot be spent after it was turned off.
+        if (role == AccountRole.ADMIN && !adminPhoneLoginEnabled) {
+            return Result.failure(AuthError.ADMIN_PHONE_LOGIN_DISABLED);
+        }
         OtpService.VerificationOutcome outcome = otpService.verifyCode(phoneNumber, role, code);
         if (outcome == OtpService.VerificationOutcome.NOT_FOUND_OR_EXPIRED) {
             return Result.failure(AuthError.OTP_NOT_FOUND_OR_EXPIRED);
@@ -406,21 +420,46 @@ public class AuthService implements AuthApi {
 
     @Override
     @Transactional
-    public Optional<AccountSummary> grantAdminRole(String phoneNumber) {
-        // A number can hold one account per app. An admin account already on
-        // it is the answer; otherwise the number's first account is promoted,
-        // which is the one this chose before accounts were per app.
-        List<AccountEntity> onThisNumber = accountRepository.findByPhoneNumberOrderByCreatedAtAsc(phoneNumber);
-        Optional<AccountEntity> target = onThisNumber.stream()
+    public UUID createStaffAccount() {
+        // No AccountRegistered: nothing about a rider or partner (a
+        // verification record, a profile, a referral code) applies to staff.
+        return accountRepository.save(AccountEntity.forStaff()).getId();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<UUID> findAdminAccountByPhone(String phoneNumber) {
+        return accountRepository.findByPhoneNumberOrderByCreatedAtAsc(phoneNumber).stream()
                 .filter(a -> a.getRole() == AccountRole.ADMIN)
-                .findFirst()
-                .or(() -> onThisNumber.stream().findFirst());
-        return target.map(account -> {
-            if (account.getRole() != AccountRole.ADMIN) {
-                account.promoteToAdmin();
-                accountRepository.save(account);
-            }
-            return toSummary(account);
-        });
+                .map(AccountEntity::getId)
+                .findFirst();
+    }
+
+    @Override
+    public UUID openStaffSession(UUID accountId, String userAgent) {
+        AccountEntity account = accountRepository.findById(accountId)
+                .filter(a -> a.getRole() == AccountRole.ADMIN)
+                .orElseThrow(() -> new IllegalArgumentException("Not a staff account: " + accountId));
+        return sessions.open(account.getId(), AccountRole.ADMIN, userAgent);
+    }
+
+    @Override
+    public Optional<SessionRevocation> checkSession(UUID sessionId) {
+        return sessions.checkLive(sessionId);
+    }
+
+    @Override
+    public boolean endSession(UUID accountId, UUID sessionId, SessionRevocation reason) {
+        return sessions.revokeOwn(accountId, sessionId, reason);
+    }
+
+    @Override
+    public int endAllSessions(UUID accountId, SessionRevocation reason) {
+        return sessions.revokeAll(accountId, reason);
+    }
+
+    @Override
+    public List<AccountSession> liveSessions(UUID accountId, UUID currentSessionId) {
+        return sessions.liveSessions(accountId, currentSessionId);
     }
 }

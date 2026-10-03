@@ -56,6 +56,7 @@ the build on a cross-module `internal` import - not a rewrite.
 | `notifications` **(implemented)** | `com.sheout.notifications`         | The in-app inbox, push (Firebase Cloud Messaging), SMS (Twilio) and email (SMTP), all triggered by domain events; SOS alerts to emergency contacts and operators. |
 | `insurance` **(implemented)** | `com.sheout.insurance`        | Master policies (entered in the console), each trip's cover opened and closed from booking's events, the daily bordereau, premiums as a platform cost, partners' group-cover enrolment, and accident reports/claims. See "Insurance" below. |
 | `admin`                 | `com.sheout.admin`                 | Internal operator tooling, composes other modules' public APIs. |
+| `staff` **(implemented)** | `com.sheout.staff`               | The people who run the console: email + password + authenticator sign-in, invitations, cookie sessions, the role/permission catalogue every console endpoint is checked against. See "Staff accounts and roles" below. |
 
 `com.sheout.platform` is **not** a domain module - it's cross-cutting
 technical infrastructure (currently just the health-check endpoint).
@@ -154,11 +155,11 @@ they're easy to revisit rather than discovered later:
   both `VERIFIED` for a driver** - since the spec says a driver can't go
   online on gender verification alone. No event is published on rejection
   (not asked for).
-- **No admin account provisioning exists yet** - the `admin` module isn't
-  built, so there's no way to create an ADMIN account through the API. To
-  exercise the review endpoints today, manually set a row's `role` to
-  `ADMIN` in the `accounts` table.
-  **Security fix found during live testing:** `AuthController` originally
+- **Operators are staff accounts now, not phone accounts.** See "Staff
+  accounts and roles". ADMIN phone-and-code sign-in is refused while
+  `ADMIN_PHONE_LOGIN_ENABLED` is off (production), and an ADMIN account is
+  created only by the staff module, for someone who accepted an invitation.
+  **Security fix found during live testing (earlier):** `AuthController` originally
   trusted the client-supplied `role` on signup with no restriction at all -
   meaning any phone number could self-serve an ADMIN token by simply
   passing `role: "ADMIN"` to `/api/v1/auth/otp/request` /`/verify`. Caught
@@ -183,6 +184,150 @@ they're easy to revisit rather than discovered later:
   lives in booking/dispatch, which don't exist yet** - `VerificationApi`
   exposes the status for them to check once built; nothing enforces it end
   to end today.
+
+## Staff accounts and roles
+
+The ops console can see every woman's identity documents, police
+certificates, addresses, live location, phone number and payment details,
+and it can block accounts and mark payouts paid. So the people who use it
+are **staff accounts** (the `staff` module), not riders with a role flag:
+one stolen login must never expose everything or move money. The plain-words
+version for the founder is [docs/ADMIN_SECURITY.md](docs/ADMIN_SECURITY.md).
+
+This is **Phase 1** of four. What is not built yet is listed at the end.
+
+### Roles
+
+Roles are fixed in code (`staff.StaffRole`), never edited from the console.
+Code checks **permissions**, never role names; the full matrix is
+[`backend/src/test/resources/staff/permission-matrix.txt`](backend/src/test/resources/staff/permission-matrix.txt),
+and `PermissionMatrixTest` fails if a role changes without that file
+changing in the same commit.
+
+| Role | Who | Can | Cannot |
+|---|---|---|---|
+| `OWNER` | Founders, 1-2 people | Everything, including staff, configuration, insurance, campaigns, marking payouts paid | Disable or demote themselves; the last active owner cannot be disabled or demoted |
+| `MANAGER` | Operations head | Every queue, verification, SOS and safety, block/unblock, ops and finance reports, service hours, content, announcements; invite/disable/re-role employees | Create managers or owners, re-enable anyone, change insurance, campaigns or system settings, mark payouts paid |
+| `VERIFICATION_AGENT` | Onboarding | IDs, selfies, partner documents, police evidence | Payments, payouts, trips, riders' accounts |
+| `SUPPORT_AGENT` | Customer care | Support tickets | Documents, police certificates, trips outside tickets |
+| `SAFETY_RESPONDER` | 24x7 safety desk | SOS alerts, trip alerts, route reviews | Payments, documents, the live map of all trips |
+| `FINANCE` | Accounts | Payout requests, insurance premium report, policies (read) | Documents; marking payouts paid (owner only until the two-person rule, Phase 3) |
+| `MARKETPLACE_MODERATOR` | Seller desk | Seller shops | Rides, partners, payments, documents |
+| `AUDITOR` | The CA, time-limited | Finance reports, invoices and payments, read-only | Change anything; access ends on its date by itself |
+
+### How it works
+
+- **Sign-in:** work email + password + a 6-digit authenticator code, in one
+  step, answered with one sentence for every wrong answer. **No SMS** for
+  staff. Passwords: 12+ characters, not on the bundled common-password
+  list (also with digits or symbols tacked on), Argon2id-hashed, no forced
+  rotation. Ten single-use recovery codes, stored as HMACs, stand in for a
+  lost phone. Five wrong answers lock the account for 15 minutes; per-email
+  and per-address rate limits give unknown emails the same refusals.
+- **Invitations, never sign-up:** an owner or manager invites by email; the
+  link works once, for 24 hours; the invitee chooses a password, then scans
+  a QR code and types back a code, then saves recovery codes. Only then
+  does the account exist. No default passwords anywhere. Without SMTP the
+  link is shown once to the inviter to pass on privately.
+- **First owner:** with no active OWNER, each start invites
+  `SHEOUT_OWNER_BOOTSTRAP_EMAIL` (emailed, or written to the log at INFO when
+  email is not set up). Once an owner exists the variable does nothing.
+- **Sessions:** an HttpOnly, Secure, SameSite=Strict cookie sent only to
+  `/api/v1/admin`; the page cannot read it and nothing is kept in
+  localStorage. Every change needs the session's CSRF token and must not
+  come from another site. 30 minutes idle (the console's own polling does
+  not count) and 8 hours in all - owners 15 minutes idle, the safety desk
+  60 minutes and 12 hours; the console warns two minutes before.
+  Each session is an `account_sessions` row too, so it is listed, ended and
+  checked like any other - an ended session is refused on its next request.
+- **Authorisation:** every `/api/v1/admin/**` endpoint declares
+  `@RequiresPermission`, `@RequiresAnyPermission`, `@StaffSignedIn` or
+  `@StaffPublic`; one with none stops the server starting
+  (`AdminEndpointGuard`). `StaffPermissionInterceptor` checks it before the
+  endpoint runs; `StaffContext.require(...)` checks what depends on the data
+  (which role is being granted).
+- **Offboarding:** disabling someone ends every session and SOS push
+  registration at once; only an owner can re-enable. Changing a role ends
+  her sessions too. An owner can reset someone's password and
+  authenticator: the old ones stop working and she gets a link to choose new
+  ones for the same account.
+- **The old way in is closed:** `ADMIN_PHONE_LOGIN_ENABLED=false`
+  (production) refuses phone-code sign-in as ADMIN and ignores any ADMIN
+  bearer token still held. `AdminBootstrap` (promote a phone number to
+  ADMIN) is gone.
+
+### Setting up the first owner on Render
+
+1. Set `STAFF_SECRETS_KEY` (`openssl rand -base64 32`) and keep a copy
+   somewhere safe. Set `SHEOUT_OWNER_BOOTSTRAP_EMAIL` to the founder's work
+   email and `STAFF_CONSOLE_URL` to the console's address. Optionally keep
+   `ADMIN_BOOTSTRAP_PHONE` set to the old operator number so her history
+   stays hers.
+2. Deploy. Without SMTP, open the service log and find the line
+   `STAFF OWNER INVITATION for ...`; with SMTP it is emailed.
+3. Open the link within 24 hours, choose a password, scan the QR code, save
+   the recovery codes. Then invite a second owner from Staff.
+
+### Configuration
+
+| Key | Default | What |
+|---|---|---|
+| `STAFF_SECRETS_KEY` | none (required) | Encrypts authenticator secrets, keys recovery-code hashes |
+| `SHEOUT_OWNER_BOOTSTRAP_EMAIL` | blank | First-owner invitation, only while no active owner exists |
+| `STAFF_CONSOLE_URL` | `http://localhost:8080/admin/` | Base of invitation links |
+| `STAFF_INVITE_HOURS` | 24 | How long an invitation link works |
+| `STAFF_SESSION_IDLE_MINUTES` / `STAFF_SESSION_ABSOLUTE_HOURS` | 30 / 8 | Idle sign-out and longest sign-in, every role without its own |
+| `STAFF_SESSION_IDLE_MINUTES_OWNER` / `STAFF_SESSION_ABSOLUTE_HOURS_OWNER` | 15 / 8 | Owners |
+| `STAFF_SESSION_IDLE_MINUTES_SAFETY_RESPONDER` / `STAFF_SESSION_ABSOLUTE_HOURS_SAFETY_RESPONDER` | 60 / 12 | The night-shift safety desk |
+| `STAFF_AUDITOR_DEFAULT_DAYS` | 30 | An auditor invited without an end date |
+| `REFUND_LIMIT_SUPPORT` / `REFUND_LIMIT_MANAGER` / `REFUND_LIMIT_FINANCE` | 200 / 1000 / 200 (₹) | Refunds without an owner's approval (`staff.RefundLimits`); owners unlimited |
+| `STAFF_IP_ALLOWLIST_<ROLE>` | blank (off) | Addresses or CIDR ranges a role may use the console from, e.g. `_OWNER`, `_FINANCE`; checked at sign-in and on every request |
+| `STAFF_LOGIN_MAX_FAILURES` / `STAFF_LOGIN_LOCK_MINUTES` | 5 / 15 | Lockout |
+| `STAFF_LOGIN_PER_ADDRESS` | 20 | Sign-in attempts per network address per 15 minutes |
+| `STAFF_COOKIE_SECURE` | true | Off only for plain-HTTP testing on a host that is not localhost |
+| `ADMIN_PHONE_LOGIN_ENABLED` | false (true in the local profile) | The old phone-code console sign-in |
+| `ADMIN_BOOTSTRAP_PHONE` | blank | Old operator account the first owner adopts; grants nothing |
+
+### Flagged assumptions
+
+- **Each staff member is backed by an `accounts` row** (role ADMIN, no
+  phone, no email). Every module already records "who decided" by account
+  id and pushes SOS alerts to ADMIN devices; this kept all of that working
+  without touching those modules. There is nothing to sign in to an app with.
+- **Permissions beyond the brief's list** were needed for surfaces the
+  console already has: `support.work`, `users.view`, `campaigns.manage`
+  (owner only - it spends money), `service.hours.manage` (owner and manager
+  - pausing bookings is an emergency control), `content.manage`,
+  `announcements.send`.
+- **Until the two-person rule (Phase 3), only an OWNER can mark a payout
+  paid** (it needs both `payouts.prepare` and `payouts.approve`).
+- **Phase 1 is not yet scoped by data**: a safety responder does not get the
+  live map of all trips (it needs `trips.view` too), and support agents do
+  not see trips outside tickets, by keeping those endpoints from them, not
+  by filtering. Masked phone numbers and addresses come in Phase 2, so roles
+  that may open a list see the numbers in it today.
+- **Without SMTP an invitation link is shown to whoever sent it.** That
+  person could accept it themselves. It is a link to an account of a role
+  they could already grant; once audit exists (Phase 2) it is visible.
+- **The console still loads Firebase's messaging script** from gstatic, for
+  SOS push to operators' browsers. Phase 4 adds Server-Sent Events; until
+  then removing it would remove SOS alerts to a closed tab.
+- **Finance's refund limit was not given**, so it is the support limit
+  (₹200) until decided. Nothing issues refunds from the console yet: the
+  refund endpoint arrives with Phase 3's approvals and checks
+  `RefundLimits` before paying.
+- **Polling requests are marked by the console** (`X-Staff-Background`).
+  Idle time is a safeguard against a forgotten tab, not against an attacker
+  who has the session already.
+
+### Not built yet (later phases)
+
+Phase 2: masking and reveal-with-reason, step-up re-authentication, data
+scoping for agents, the hash-chained audit log, alerts to owners (failed
+sign-ins, role changes, new devices). Phase 3: four-eyes approvals, refund
+limits, the payout two-person rule, config history. Phase 4: role
+dashboards, live ops board with SSE, queue assignment and SLAs, passkeys for
+owners, a separate admin hostname. (The IP allowlist is built and off.)
 
 ## Partner documents and expiry
 
@@ -937,9 +1082,13 @@ redis-cli -p 6379 flushall          # or memurai-cli
 cd backend && mvn spring-boot:run
 ```
 
-Then sign in once with each test number you use, and make the operator
-account an admin by starting the backend once with
-`ADMIN_BOOTSTRAP_PHONE=<that number>` (see `AdminBootstrap`). There are no
+Then start the backend once with `SHEOUT_OWNER_BOOTSTRAP_EMAIL=<you@example.com>`:
+with no owner yet, it writes an OWNER invitation link to the log (local has no
+mail server). Open it, choose a password, scan the QR code with an
+authenticator app, and you are the first owner; invite everyone else from the
+console's Staff page. Local scripts that still sign in to the console API
+with a phone number work only because `application-local.yml` turns
+`ADMIN_PHONE_LOGIN_ENABLED` on. There are no
 insurance policies after a reset - add one in the console's Insurance page
 only for local testing, and never on a shared environment. The load test
 (`loadtest/sheout-load.mjs`) seeds its own partners' consent, police check

@@ -73,6 +73,23 @@
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
 
+        <!-- Staff passwords are hashed with Argon2id (staff.internal.PasswordHasher).
+             Spring Security's Argon2PasswordEncoder does the hashing and needs
+             BouncyCastle's implementation of the algorithm underneath it. -->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk18on</artifactId>
+            <version>1.78</version>
+        </dependency>
+
+        <!-- The QR code a new staff member scans into an authenticator app,
+             drawn on the server so the console loads no third-party script. -->
+        <dependency>
+            <groupId>com.google.zxing</groupId>
+            <artifactId>core</artifactId>
+            <version>3.5.3</version>
+        </dependency>
+
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>

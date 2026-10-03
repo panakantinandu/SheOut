@@ -1,5 +1,8 @@
 package com.sheout.admin.internal.web;
 
+import com.sheout.staff.Permission;
+import com.sheout.staff.RequiresPermission;
+import com.sheout.staff.StaffContext;
 import com.sheout.admin.internal.AccountOpsRow;
 import com.sheout.admin.internal.AdminService;
 import com.sheout.admin.internal.BookingOpsRow;
@@ -44,16 +47,16 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * Operator console API. Every endpoint requires ADMIN.
+ * Operator console API. Every endpoint names the permission it needs
+ * (staff.RequiresPermission), checked before it runs.
  * <p>
  * These are 403s, not 404s, and that is the deliberate opposite of what
  * BookingController/PaymentController do for per-resource checks. The rule
  * this codebase follows is about not leaking whether a specific id exists:
  * a non-participant asking about one booking gets 404 so it cannot be told
- * apart from a booking that never existed. requireAdmin here is a pure role
- * gate on a whole surface - it runs before any id is looked at, and refusing
- * it reveals nothing about any particular resource, exactly like
- * BookingController's retained "DRIVER role required" 403.
+ * apart from a booking that never existed. A permission is a gate on a
+ * whole surface - it is checked before any id is looked at, and refusing it
+ * reveals nothing about any particular resource.
  * <p>
  * Review approve/reject is NOT proxied here. driver-verification already
  * owns that transition on AdminVerificationController
@@ -84,19 +87,19 @@ public class AdminController {
      * as zeroes until then, which is the honest state rather than a missing
      * feature.
      */
+    @RequiresPermission(Permission.REPORTS_OPS)
     @GetMapping("/verification/drop-off")
     public ResponseEntity<VerificationDropOff> verificationDropOff(
             @RequestParam(required = false) AccountRole role,
             @RequestParam(required = false) Integer days) {
-        requireAdmin();
         return ResponseEntity.ok(adminService.verificationDropOff(
                 role == null ? AccountRole.CUSTOMER : role,
                 days == null ? 30 : Math.min(Math.max(days, 1), 365)));
     }
 
+    @RequiresPermission(Permission.VERIFICATION_REVIEW)
     @GetMapping("/verification/review-queue")
     public ResponseEntity<List<ReviewQueueRow>> reviewQueue() {
-        requireAdmin();
         return ResponseEntity.ok(adminService.reviewQueue());
     }
 
@@ -118,9 +121,9 @@ public class AdminController {
      * whose submission predates the requirement. The console says which of
      * those it is rather than showing a gap.
      */
+    @RequiresPermission(Permission.DOCUMENTS_VIEW)
     @GetMapping("/verification/{accountId}/document")
     public ResponseEntity<DocumentResponse> document(@PathVariable UUID accountId) {
-        requireAdmin();
         return adminService.documentUrl(accountId)
                 .map(url -> ResponseEntity.ok(
                         new DocumentResponse(accountId, url, adminService.rcDocumentUrl(accountId).orElse(null),
@@ -128,15 +131,16 @@ public class AdminController {
                 .orElseThrow(() -> ApiException.notFound("No document submitted for this account"));
     }
 
+    @RequiresPermission(Permission.SOS_RESPOND)
     @GetMapping("/sos/active")
     public ResponseEntity<List<SosAlertRow>> activeAlerts() {
-        requireAdmin();
         return ResponseEntity.ok(adminService.activeAlerts());
     }
 
+    @RequiresPermission(Permission.SOS_RESPOND)
     @PostMapping("/sos/{alertId}/resolve")
     public ResponseEntity<SosAlertSummary> resolveAlert(@PathVariable UUID alertId) {
-        CurrentAccount admin = requireAdmin();
+        CurrentAccount admin = caller();
         Result<SosAlertSummary, SosError> result = adminService.resolveAlert(alertId, admin.accountId());
         if (result.isFailure()) {
             throw switch (result.error()) {
@@ -148,10 +152,10 @@ public class AdminController {
         return ResponseEntity.ok(result.value());
     }
 
+    @RequiresPermission(Permission.TRIPS_VIEW)
     @GetMapping("/bookings/recent")
     public ResponseEntity<List<BookingOpsRow>> recentBookings(
             @RequestParam(name = "limit", defaultValue = "50") int limit) {
-        requireAdmin();
         int capped = Math.clamp(limit, 1, MAX_RECENT_BOOKINGS);
         return ResponseEntity.ok(adminService.recentBookings(capped));
     }
@@ -162,6 +166,7 @@ public class AdminController {
      * fifty-first and no way to narrow them. That endpoint stays for now
      * because the console's own rollout is a separate deploy from this one.
      */
+    @RequiresPermission(Permission.TRIPS_VIEW)
     @GetMapping("/bookings")
     public ResponseEntity<PageResponse<BookingOpsRow>> bookings(
             @RequestParam(required = false) Integer page,
@@ -171,7 +176,6 @@ public class AdminController {
             @RequestParam(required = false) Instant to,
             @RequestParam(required = false) Set<BookingCategory> category,
             @RequestParam(required = false) @Size(max = 100) String q) {
-        requireAdmin();
         Pageable pageable = PageRequest.of(
                 PageResponse.normalizePage(page), PageResponse.normalizePageSize(pageSize));
         return ResponseEntity.ok(PageResponse.from(
@@ -192,18 +196,19 @@ public class AdminController {
      * template and costs money per message, so it is for a safety advisory,
      * not for news.
      */
+    @RequiresPermission(Permission.ANNOUNCEMENTS_SEND)
     @PostMapping("/announcements")
     public ResponseEntity<Announcement> broadcast(@Valid @RequestBody BroadcastRequest request) {
-        CurrentAccount caller = requireAdmin();
+        CurrentAccount caller = caller();
         return ResponseEntity.ok(announcements.broadcast(
                 request.title().trim(), request.body().trim(), request.audience(),
                 Boolean.TRUE.equals(request.sendSms()), caller.accountId()));
     }
 
     /** What has been broadcast, newest first, with what actually went out. */
+    @RequiresPermission(Permission.ANNOUNCEMENTS_SEND)
     @GetMapping("/announcements")
     public ResponseEntity<List<Announcement>> announcementHistory() {
-        requireAdmin();
         return ResponseEntity.ok(announcements.history(50));
     }
 
@@ -216,6 +221,7 @@ public class AdminController {
     ) {
     }
 
+    @RequiresPermission(Permission.USERS_VIEW)
     @GetMapping("/accounts")
     public ResponseEntity<PageResponse<AccountOpsRow>> accounts(
             @RequestParam(required = false) Integer page,
@@ -223,7 +229,6 @@ public class AdminController {
             @RequestParam(required = false) @Size(max = 100) String q,
             @RequestParam(required = false) AccountRole role,
             @RequestParam(required = false) Boolean blocked) {
-        requireAdmin();
         Pageable pageable = PageRequest.of(
                 PageResponse.normalizePage(page), PageResponse.normalizePageSize(pageSize));
         return ResponseEntity.ok(PageResponse.from(
@@ -243,11 +248,12 @@ public class AdminController {
      * options - it is a guardrail against the single misclick that locks
      * the operations team out of its own console.
      */
+    @RequiresPermission(Permission.USERS_BLOCK)
     @PostMapping("/accounts/{accountId}/block")
     public ResponseEntity<AccountOpsRow> block(
             @PathVariable UUID accountId,
             @Valid @RequestBody BlockRequest request) {
-        CurrentAccount caller = requireAdmin();
+        CurrentAccount caller = caller();
         if (accountId.equals(caller.accountId())) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Bad Request", "You cannot block your own account");
         }
@@ -261,9 +267,9 @@ public class AdminController {
                 .orElseThrow(() -> ApiException.notFound("No such account")));
     }
 
+    @RequiresPermission(Permission.USERS_BLOCK)
     @PostMapping("/accounts/{accountId}/unblock")
     public ResponseEntity<AccountOpsRow> unblock(@PathVariable UUID accountId) {
-        requireAdmin();
         return ResponseEntity.ok(adminService.unblock(accountId)
                 .orElseThrow(() -> ApiException.notFound("No such account")));
     }
@@ -286,9 +292,9 @@ public class AdminController {
      * next door, taken by an operator who can see the figures this row
      * carries.
      */
+    @RequiresPermission(Permission.USERS_BLOCK)
     @GetMapping("/trust/review-queue")
     public ResponseEntity<List<TrustReviewRow>> trustReviewQueue() {
-        requireAdmin();
         return ResponseEntity.ok(adminService.trustReviewQueue());
     }
 
@@ -302,9 +308,9 @@ public class AdminController {
      * and comes back, which is what a review queue should do.
      */
     /** Trips driven measurably shorter than quoted, awaiting a person. See AdminService.routeReviewQueue. */
+    @RequiresPermission(Permission.SOS_RESPOND)
     @GetMapping("/route-review/queue")
     public ResponseEntity<List<RouteReviewRow>> routeReviewQueue() {
-        requireAdmin();
         return ResponseEntity.ok(adminService.routeReviewQueue());
     }
 
@@ -313,10 +319,11 @@ public class AdminController {
      * decided and is required; the fare and both accounts are untouched -
      * anything further (a refund, a word with the partner) is its own step.
      */
+    @RequiresPermission(Permission.SOS_RESPOND)
     @PostMapping("/route-review/{bookingId}/reviewed")
     public ResponseEntity<RouteReviewRow> markRouteReviewed(@PathVariable UUID bookingId,
                                                            @Valid @RequestBody RouteReviewRequest request) {
-        CurrentAccount admin = requireAdmin();
+        CurrentAccount admin = caller();
         Result<RouteReviewRow, com.sheout.booking.BookingError> result =
                 adminService.recordRouteReview(bookingId, admin.accountId(), request.note());
         if (result.isFailure()) {
@@ -328,9 +335,9 @@ public class AdminController {
     public record RouteReviewRequest(@NotBlank @Size(max = 1000) String note) {
     }
 
+    @RequiresPermission(Permission.USERS_BLOCK)
     @PostMapping("/accounts/{accountId}/clear-review-flag")
     public ResponseEntity<AccountOpsRow> clearReviewFlag(@PathVariable UUID accountId) {
-        requireAdmin();
         AccountOpsRow target = adminService.findAccountRow(accountId)
                 .orElseThrow(() -> ApiException.notFound("No such account"));
         adminService.clearReviewFlag(accountId, target.role());
@@ -341,13 +348,13 @@ public class AdminController {
     public record BlockRequest(@NotBlank @Size(max = 500) String reason) {
     }
 
-    private CurrentAccount requireAdmin() {
-        CurrentAccount caller = CurrentAccountContext.get()
-                .orElseThrow(() -> ApiException.unauthorized("Authentication required"));
-        if (caller.role() != AccountRole.ADMIN) {
-            throw ApiException.forbidden("Admin role required");
-        }
-        return caller;
+    /**
+     * Who is acting, for the records that say who decided. Whether she may is
+     * already settled: the endpoint's permission was checked before it ran
+     * (staff's StaffPermissionInterceptor).
+     */
+    private static CurrentAccount caller() {
+        return CurrentAccountContext.get().orElseThrow(StaffContext::signInRequired);
     }
 
     /** rcUrl is null for riders and for partners who submitted before the RC was required. */

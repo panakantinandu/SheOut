@@ -1,5 +1,7 @@
 package com.sheout.admin.internal.web;
 
+import com.sheout.staff.Permission;
+import com.sheout.staff.RequiresPermission;
 import com.sheout.assistant.AssistantAdminApi;
 import com.sheout.auth.AccountRole;
 import com.sheout.auth.CurrentAccount;
@@ -22,13 +24,9 @@ public class AdminAssistantController {
         this.assistant = assistant;
     }
 
+    @RequiresPermission(Permission.REPORTS_OPS)
     @GetMapping("/usage")
     public ResponseEntity<AssistantAdminApi.Usage> usage(@RequestParam(defaultValue = "30") int days) {
-        CurrentAccount caller = CurrentAccountContext.get()
-                .orElseThrow(() -> ApiException.unauthorized("Authentication required"));
-        if (caller.role() != AccountRole.ADMIN) {
-            throw ApiException.forbidden("Admin only");
-        }
         return ResponseEntity.ok(assistant.usage(days));
     }
 }

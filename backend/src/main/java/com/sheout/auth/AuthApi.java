@@ -59,22 +59,39 @@ public interface AuthApi {
     boolean samePerson(UUID accountA, UUID accountB);
 
     /**
-     * Grants ADMIN to the existing account holding this phone number, or
-     * returns empty if no such account exists. Idempotent: an account that
-     * is already ADMIN is returned unchanged.
-     * <p>
-     * This is the ONLY way an ADMIN account can come into being. Signup
-     * deliberately refuses role=ADMIN (see AuthController's
-     * requireSelfServiceRole, added after that was found to be a live
-     * privilege-escalation hole), which left no path at all - admin
-     * endpoints existed but nothing could legitimately reach them. The
-     * caller is admin's own startup bootstrap, driven by a deploy-time
-     * env var rather than by anything a request can influence.
-     * <p>
-     * An already-issued token keeps its old role claim, so a promoted
-     * account must sign in again before it can call admin endpoints.
+     * A new ADMIN account to stand for a member of staff in other modules'
+     * "who did this" columns. It has no phone number and no email, so nobody
+     * can sign in to an app with it; staff credentials live in the staff
+     * module, which is the only caller. Signup still refuses role=ADMIN (see
+     * AuthController's requireSelfServiceRole).
      */
-    Optional<AccountSummary> grantAdminRole(String phoneNumber);
+    UUID createStaffAccount();
+
+    /**
+     * The ADMIN account that signs in with this phone number, if there is
+     * one: the first OWNER taking over the account she used before staff
+     * sign-in existed, so her earlier decisions stay hers.
+     */
+    Optional<UUID> findAdminAccountByPhone(String phoneNumber);
+
+    /**
+     * Opens a session for a staff account's console sign-in. It is an
+     * ordinary session row, so it is listed, checked and ended exactly like
+     * a rider's - blocking or a revocation takes effect on the next request.
+     */
+    UUID openStaffSession(UUID accountId, String userAgent);
+
+    /** Empty when the session is live; otherwise why it ended. */
+    Optional<SessionRevocation> checkSession(UUID sessionId);
+
+    /** Ends one of this account's sessions. False when it is not one of hers. */
+    boolean endSession(UUID accountId, UUID sessionId, SessionRevocation reason);
+
+    /** Ends every live session on the account; returns how many. */
+    int endAllSessions(UUID accountId, SessionRevocation reason);
+
+    /** The account's live sessions, newest activity first. */
+    List<AccountSession> liveSessions(UUID accountId, UUID currentSessionId);
 
     /**
      * A page of accounts, searchable by phone or email and narrowable by
@@ -102,7 +119,7 @@ public interface AuthApi {
      * which is the more useful record of why it is blocked now.
      * <p>
      * Returns Optional rather than a Result because there is exactly one
-     * failure worth distinguishing, matching grantAdminRole above. AuthError
+     * failure worth distinguishing. AuthError
      * is internal to this module and not widened to the public interface
      * for one method.
      */

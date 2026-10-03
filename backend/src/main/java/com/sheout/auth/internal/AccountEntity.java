@@ -102,13 +102,14 @@ public class AccountEntity extends BaseEntity {
     }
 
     /**
-     * Only AuthService.grantAdminRole calls this. A role is otherwise fixed
-     * for the life of an account - a number holds one account per app, each
-     * with its own role (see V26) - so this is deliberately not a general
-     * setter.
+     * The account standing for a member of staff in other modules' "who did
+     * this" columns. No phone number and no email: there is nothing anybody
+     * could sign in to an app with. Her credentials live in the staff module.
      */
-    void promoteToAdmin() {
-        this.role = AccountRole.ADMIN;
+    static AccountEntity forStaff() {
+        AccountEntity entity = new AccountEntity();
+        entity.role = AccountRole.ADMIN;
+        return entity;
     }
 
     /** Idempotent: the first acceptance is the one that counts, and stands. */

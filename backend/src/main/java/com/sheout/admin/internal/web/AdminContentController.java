@@ -1,5 +1,9 @@
 package com.sheout.admin.internal.web;
 
+import com.sheout.staff.Permission;
+import com.sheout.staff.RequiresPermission;
+import com.sheout.staff.StaffContext;
+import com.sheout.staff.StaffDirectory;
 import com.sheout.auth.AccountRole;
 import com.sheout.auth.AccountSummary;
 import com.sheout.auth.AuthApi;
@@ -43,22 +47,25 @@ public class AdminContentController {
 
     private final ContentApi contentApi;
     private final AuthApi authApi;
+    private final StaffDirectory staffDirectory;
 
-    public AdminContentController(ContentApi contentApi, AuthApi authApi) {
+    public AdminContentController(ContentApi contentApi, AuthApi authApi, StaffDirectory staffDirectory) {
+        this.staffDirectory = staffDirectory;
         this.contentApi = contentApi;
         this.authApi = authApi;
     }
 
     /** Every editable block, ordered by key, so the console can group by the first segment. */
+    @RequiresPermission(Permission.CONTENT_MANAGE)
     @GetMapping
     public ResponseEntity<List<ContentRow>> all() {
-        requireAdmin();
         return ResponseEntity.ok(contentApi.getContentByPrefix("").stream().map(this::toRow).toList());
     }
 
+    @RequiresPermission(Permission.CONTENT_MANAGE)
     @PutMapping("/{key}")
     public ResponseEntity<ContentRow> update(@PathVariable String key, @Valid @RequestBody UpdateRequest request) {
-        CurrentAccount admin = requireAdmin();
+        CurrentAccount admin = caller();
         Result<ContentBlock, ContentError> result =
                 contentApi.updateContent(key, request.value(), request.version(), admin.accountId());
         if (result.isFailure()) {
@@ -76,16 +83,17 @@ public class AdminContentController {
     private ContentRow toRow(ContentBlock b) {
         return new ContentRow(b.key(), b.value(), b.description(), b.version(), b.updatedAt(), b.updatedBy() == null
                 ? null
-                : authApi.findAccount(b.updatedBy()).map(AccountSummary::phoneNumber).orElse(null));
+                : staffDirectory.label(b.updatedBy())
+                        .orElseGet(() -> authApi.findAccount(b.updatedBy()).map(AccountSummary::phoneNumber).orElse(null)));
     }
 
-    private CurrentAccount requireAdmin() {
-        CurrentAccount caller = CurrentAccountContext.get()
-                .orElseThrow(() -> ApiException.unauthorized("Authentication required"));
-        if (caller.role() != AccountRole.ADMIN) {
-            throw ApiException.forbidden("Admin role required");
-        }
-        return caller;
+    /**
+     * Who is acting, for the records that say who decided. Whether she may is
+     * already settled: the endpoint's permission was checked before it ran
+     * (staff's StaffPermissionInterceptor).
+     */
+    private static CurrentAccount caller() {
+        return CurrentAccountContext.get().orElseThrow(StaffContext::signInRequired);
     }
 
     public record UpdateRequest(@NotBlank @Size(max = 2000) String value, @NotNull Long version) {

@@ -28,10 +28,18 @@ public enum AuthError {
      * Signup tried to create a NEW account with role=ADMIN. Refused at
      * account creation rather than on any request carrying role=ADMIN,
      * because an existing ADMIN still has to be able to sign in - see
-     * AuthService.verifyOtp. ADMIN is granted only by
-     * AuthApi.grantAdminRole, driven by admin's deploy-time bootstrap.
+     * AuthService.verifyOtp. ADMIN accounts are created only by the staff
+     * module, for a member of staff who accepted an invitation.
      */
     ADMIN_SELF_SIGNUP_FORBIDDEN,
+
+    /**
+     * A phone-and-code sign-in as ADMIN while ADMIN_PHONE_LOGIN_ENABLED is
+     * off, which is always in production: staff sign in to the console with
+     * a work email, a password and an authenticator code. Refused for every
+     * number alike, before any code is sent or checked.
+     */
+    ADMIN_PHONE_LOGIN_DISABLED,
 
     /**
      * A Google sign-in's email matches an account that also has a phone
