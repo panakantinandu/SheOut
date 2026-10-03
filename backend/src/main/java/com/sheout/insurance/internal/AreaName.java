@@ -17,21 +17,8 @@ final class AreaName {
     }
 
     static String coarse(String label) {
-        if (label == null || label.isBlank()) {
-            return null;
-        }
-        String[] parts = label.split(",");
-        StringBuilder out = new StringBuilder();
-        int kept = 0;
-        for (int i = parts.length - 1; i >= 0 && kept < 2; i--) {
-            String part = parts[i].trim();
-            if (part.isEmpty() || part.chars().anyMatch(Character::isDigit) || part.equalsIgnoreCase("India")) {
-                continue;
-            }
-            out.insert(0, kept == 0 ? part : part + ", ");
-            kept++;
-        }
-        String area = out.toString();
-        return area.isEmpty() ? null : area.length() > 200 ? area.substring(0, 200) : area;
+        // One heuristic for every "area, not the house" in SheOut - the
+        // console's masking uses the same one.
+        return com.sheout.sharedkernel.privacy.Masking.area(label);
     }
 }

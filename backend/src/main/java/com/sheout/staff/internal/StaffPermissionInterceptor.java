@@ -1,9 +1,13 @@
 package com.sheout.staff.internal;
 
 import com.sheout.sharedkernel.web.ApiException;
+import com.sheout.staff.AuditedRead;
+import com.sheout.staff.Export;
 import com.sheout.staff.Permission;
 import com.sheout.staff.RequiresAnyPermission;
 import com.sheout.staff.RequiresPermission;
+import com.sheout.staff.RequiresStepUp;
+import com.sheout.staff.StaffAudit;
 import com.sheout.staff.StaffContext;
 import com.sheout.staff.StaffPrincipal;
 import com.sheout.staff.StaffPublic;
@@ -16,30 +20,44 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.servlet.HandlerMapping;
 
 import java.util.Arrays;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 
 /**
- * THE authorisation check for the console: the one place a console endpoint's
- * declared permission is compared with what the signed-in member of staff
- * holds. It replaces the twenty-odd requireAdmin() copies that each said "is
- * this an ADMIN" and nothing more.
+ * THE authorisation check for the console, and the writer of most of its
+ * audit log.
  * <p>
- * Runs before the endpoint, its arguments or its request body are looked at,
- * so a refused request reveals nothing about any record.
+ * Before the endpoint: the declared permission (deny by default - an
+ * undeclared console endpoint is refused, and AdminEndpointGuard stops the
+ * server starting with one), then for the sensitive ones a fresh
+ * authenticator code on this session. Runs before arguments or bodies are
+ * read, so a refusal reveals nothing about any record. Every refusal is
+ * written to the audit log as DENIED.
  * <p>
- * DENY BY DEFAULT. A console endpoint with no declaration is refused here,
- * and AdminEndpointGuard stops the server starting with one in the first
- * place.
- * <p>
- * Refusals are logged with who, what was needed and where; Phase 2 writes
- * each to the audit log as well.
+ * After the endpoint: every console change (anything but GET) is recorded
+ * with how it ended, and so is every read marked {@link AuditedRead} or
+ * {@link Export}. Staff-module endpoints record themselves, with more detail
+ * than a URL holds (before and after of a role change), so they are skipped
+ * here. A marked read that is a timed refresh (X-Staff-Background) is not
+ * recorded again: the person looked once.
  */
 @Component
 class StaffPermissionInterceptor implements HandlerInterceptor {
 
     private static final Logger log = LoggerFactory.getLogger(StaffPermissionInterceptor.class);
+    private static final String AUDITED = StaffAuditLog.AUDITED_ATTRIBUTE;
+
+    private final StaffAuditLog audit;
+    private final StaffSessionService sessions;
+
+    StaffPermissionInterceptor(StaffAuditLog audit, StaffSessionService sessions) {
+        this.audit = audit;
+        this.sessions = sessions;
+    }
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
@@ -72,13 +90,99 @@ class StaffPermissionInterceptor implements HandlerInterceptor {
         if (declared.any() != null && Arrays.stream(declared.any()).noneMatch(staff::has)) {
             throw refused(staff, declared.any()[0], request);
         }
+        if (needsStepUp(method) && !staff.legacy() && !sessions.steppedUp(staff.sessionId())) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "STEP_UP_REQUIRED",
+                    "Enter the code from your authenticator app to continue.");
+        }
         return true;
     }
 
-    private static ApiException refused(StaffPrincipal staff, Permission needed, HttpServletRequest request) {
+    @Override
+    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) {
+        if (!(handler instanceof HandlerMethod method) || request.getAttribute(AUDITED) != null) {
+            return;
+        }
+        Optional<StaffPrincipal> staff = StaffContext.current();
+        if (staff.isEmpty() || !StaffSessionFilter.isConsoleApi(request)
+                || method.getBeanType().getPackageName().startsWith("com.sheout.staff")) {
+            return;
+        }
+        int status = ex != null && response.getStatus() < 400 ? 500 : response.getStatus();
+        boolean ok = status < 400;
+        Export export = method.getMethodAnnotation(Export.class);
+        AuditedRead read = method.getMethodAnnotation(AuditedRead.class);
+        boolean background = "1".equals(request.getHeader(StaffSessionFilter.BACKGROUND_HEADER));
+        String action;
+        if (export != null) {
+            action = "export." + export.value();
+        } else if (!"GET".equals(request.getMethod())) {
+            action = request.getMethod() + " " + pattern(request);
+        } else if (read != null && !background) {
+            action = read.value();
+        } else {
+            return;
+        }
+        if (status == 403 && !ok) {
+            // A refusal from the endpoint itself (not ours): still worth a line.
+            record(staff.get(), action, firstPermission(method), StaffAudit.Result.DENIED, request);
+            return;
+        }
+        record(staff.get(), action, firstPermission(method), ok ? StaffAudit.Result.OK : StaffAudit.Result.FAILED, request);
+    }
+
+    private void record(StaffPrincipal staff, String action, Permission permission, StaffAudit.Result result,
+                        HttpServletRequest request) {
+        try {
+            String[] target = target(request);
+            audit.record(new StaffAudit.Entry(action, permission, result, target[0], target[1], null, null), staff);
+        } catch (RuntimeException e) {
+            // The request already happened; failing to record it must be loud, not fatal.
+            log.error("Could not write staff audit row for {} {}: {}", request.getMethod(), request.getRequestURI(), e.getMessage());
+        }
+    }
+
+    private ApiException refused(StaffPrincipal staff, Permission needed, HttpServletRequest request) {
         log.warn("Staff {} ({}) refused {} {}: needs {}", staff.staffId(), staff.role(), request.getMethod(),
                 request.getRequestURI(), needed.key());
+        request.setAttribute(AUDITED, Boolean.TRUE);
+        String[] target = target(request);
+        try {
+            audit.record(new StaffAudit.Entry(StaffActions.PERMISSION_DENIED, needed, StaffAudit.Result.DENIED, target[0],
+                    target[1], null, request.getMethod() + " " + pattern(request)), staff);
+        } catch (RuntimeException e) {
+            log.error("Could not write the audit row for a refusal: {}", e.getMessage());
+        }
         return StaffContext.forbidden(needed);
+    }
+
+    static boolean needsStepUp(HandlerMethod method) {
+        return method.hasMethodAnnotation(RequiresStepUp.class) || method.hasMethodAnnotation(Export.class)
+                || method.getBeanType().isAnnotationPresent(RequiresStepUp.class);
+    }
+
+    private static Permission firstPermission(HandlerMethod method) {
+        Declared d = Declared.of(method);
+        if (d.all() != null && d.all().length > 0) {
+            return d.all()[0];
+        }
+        return d.any() != null && d.any().length > 0 ? d.any()[0] : null;
+    }
+
+    private static String pattern(HttpServletRequest request) {
+        Object pattern = request.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
+        return pattern != null ? pattern.toString() : request.getRequestURI();
+    }
+
+    /** The record a request was about: its first path variable, named by type ("accountId" -> ACCOUNT). */
+    @SuppressWarnings("unchecked")
+    private static String[] target(HttpServletRequest request) {
+        Object vars = request.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
+        if (vars instanceof Map<?, ?> map && !map.isEmpty()) {
+            Map.Entry<String, String> first = ((Map<String, String>) map).entrySet().iterator().next();
+            String type = first.getKey().replaceAll("Id$", "").replaceAll("([a-z])([A-Z])", "$1_$2").toUpperCase(Locale.ROOT);
+            return new String[]{type, first.getValue()};
+        }
+        return new String[]{null, null};
     }
 
     /** 401, saying why when a session existed and ended - the console shows it on the sign-in screen. */

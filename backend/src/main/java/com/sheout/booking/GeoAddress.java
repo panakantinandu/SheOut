@@ -1,5 +1,7 @@
 package com.sheout.booking;
 
+import com.sheout.sharedkernel.privacy.Pii;
+
 /**
  * Resolved coordinates + a display label - owned by this module, per your
  * explicit instruction, rather than by {@code users}' saved addresses.
@@ -18,5 +20,5 @@ package com.sheout.booking;
  * label+lat+lng shape (or geocode on read). Left as a follow-up, not
  * silently worked around.
  */
-public record GeoAddress(String label, double lat, double lng) {
+public record GeoAddress(@Pii(Pii.Kind.ADDRESS) String label, double lat, double lng) {
 }

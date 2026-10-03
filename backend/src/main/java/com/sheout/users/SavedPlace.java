@@ -1,5 +1,7 @@
 package com.sheout.users;
 
+import com.sheout.sharedkernel.privacy.Pii;
+
 /**
  * A place she saved - Home or Work - as a label with a point on the map.
  * <p>
@@ -13,7 +15,8 @@ package com.sheout.users;
  * but it cannot be tapped into a booking, which is exactly what it was worth
  * before.
  */
-public record SavedPlace(String label, Double lat, Double lng) {
+public record SavedPlace(@Pii(Pii.Kind.ADDRESS) String label, @Pii(Pii.Kind.COORDINATE) Double lat,
+                         @Pii(Pii.Kind.COORDINATE) Double lng) {
 
     public boolean hasPoint() {
         return lat != null && lng != null;

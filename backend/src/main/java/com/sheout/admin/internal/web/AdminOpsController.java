@@ -1,5 +1,7 @@
 package com.sheout.admin.internal.web;
 
+import com.sheout.staff.WorkAssignments;
+import com.sheout.staff.AuditedRead;
 import com.sheout.staff.Permission;
 import com.sheout.staff.RequiresPermission;
 import com.sheout.staff.RequiresAnyPermission;
@@ -54,9 +56,11 @@ public class AdminOpsController {
     private final AdminOpsService ops;
     private final ServiceHoursApi serviceHours;
     private final com.sheout.users.DriverProfileApi driverProfiles;
+    private final WorkAssignments work;
 
     public AdminOpsController(AdminOpsService ops, ServiceHoursApi serviceHours,
-                              com.sheout.users.DriverProfileApi driverProfiles) {
+                              com.sheout.users.DriverProfileApi driverProfiles, WorkAssignments work) {
+        this.work = work;
         this.ops = ops;
         this.serviceHours = serviceHours;
         this.driverProfiles = driverProfiles;
@@ -70,13 +74,15 @@ public class AdminOpsController {
     @RequiresPermission(Permission.VERIFICATION_REVIEW)
     @GetMapping("/profile-changes")
     public ResponseEntity<java.util.List<com.sheout.users.ProfileChangeReview>> profileChanges() {
-        return noStore(driverProfiles.findPendingProfileChanges());
+        return noStore(work.visibleQueue(driverProfiles.findPendingProfileChanges(),
+                com.sheout.users.ProfileChangeReview::accountId, WorkAssignments.Kind.VERIFICATION, Permission.VERIFICATION_ALL));
     }
 
     @RequiresPermission(Permission.VERIFICATION_REVIEW)
     @PostMapping("/profile-changes/{changeId}/approve")
     public ResponseEntity<Void> approveProfileChange(@PathVariable UUID changeId) {
         CurrentAccount admin = caller();
+        mayDecide(changeId);
         decided(driverProfiles.decideProfileChange(changeId, true, admin.accountId(), null));
         return ResponseEntity.noContent().build();
     }
@@ -86,8 +92,17 @@ public class AdminOpsController {
     @PostMapping("/profile-changes/{changeId}/reject")
     public ResponseEntity<Void> rejectProfileChange(@PathVariable UUID changeId, @Valid @RequestBody DecisionRequest request) {
         CurrentAccount admin = caller();
+        mayDecide(changeId);
         decided(driverProfiles.decideProfileChange(changeId, false, admin.accountId(), request.note()));
         return ResponseEntity.noContent().build();
+    }
+
+    /** A partner's profile change is verification work: an agent decides only for partners she holds. */
+    private void mayDecide(UUID changeId) {
+        driverProfiles.findPendingProfileChanges().stream()
+                .filter(change -> change.changeId().equals(changeId))
+                .findFirst()
+                .ifPresent(change -> work.requireMayOpen(WorkAssignments.Kind.VERIFICATION, change.accountId(), Permission.VERIFICATION_ALL));
     }
 
     public record DecisionRequest(@NotBlank @Size(max = 500) String note) {
@@ -124,6 +139,7 @@ public class AdminOpsController {
     }
 
     @RequiresPermission(Permission.TRIPS_VIEW)
+    @AuditedRead("trips.detail.view")
     @GetMapping("/bookings/{bookingId}")
     public ResponseEntity<BookingDetail> bookingDetail(@PathVariable UUID bookingId) {
         return noStore(ops.bookingDetail(bookingId).orElseThrow(() -> ApiException.notFound("No such booking")));
@@ -131,6 +147,7 @@ public class AdminOpsController {
 
     /** Partners online and trips under way, for the console's Live page; it asks every few seconds. */
     @RequiresPermission({Permission.TRIPS_VIEW, Permission.TRIPS_LIVE_VIEW})
+    @AuditedRead("trips.live.board")
     @GetMapping("/live")
     public ResponseEntity<LiveOps> live() {
         return noStore(ops.live());

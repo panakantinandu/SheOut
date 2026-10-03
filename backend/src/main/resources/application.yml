@@ -589,6 +589,14 @@ sheout:
       safety-absolute-hours: ${STAFF_SESSION_ABSOLUTE_HOURS_SAFETY_RESPONDER:12}
     # An auditor invited without an end date gets this many days.
     auditor-default-days: ${STAFF_AUDITOR_DEFAULT_DAYS:30}
+    # How long re-entering the authenticator code covers sensitive actions
+    # (reveals, documents, staff changes, payouts, exports).
+    step-up-minutes: ${STAFF_STEP_UP_MINUTES:5}
+    # How long after an alert closes the safety desk can still see that trip
+    # and call the people in it.
+    alert-access-minutes: ${STAFF_ALERT_ACCESS_MINUTES:30}
+    # When the audit log's chain is checked each night (India time).
+    audit-check-cron: ${STAFF_AUDIT_CHECK_CRON:0 30 3 * * *}
     # Rupees a role may refund on its own; above it needs an owner. Owners
     # have no limit. Enforced by the refund endpoint when it arrives.
     refund-limit:

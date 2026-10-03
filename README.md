@@ -194,7 +194,8 @@ are **staff accounts** (the `staff` module), not riders with a role flag:
 one stolen login must never expose everything or move money. The plain-words
 version for the founder is [docs/ADMIN_SECURITY.md](docs/ADMIN_SECURITY.md).
 
-This is **Phase 1** of four. What is not built yet is listed at the end.
+Phases 1 (accounts, sign-in, permissions) and 2 (masking, step-up, scoping,
+audit, alerts) are built. What is not built yet is listed at the end.
 
 ### Roles
 
@@ -256,6 +257,51 @@ changing in the same commit.
   bearer token still held. `AdminBootstrap` (promote a phone number to
   ADMIN) is gone.
 
+### Phase 2: protection
+
+- **Masked by default.** Every console response passes through one Jackson
+  module (`staff.internal.ConsoleMasking`): any field named like a phone
+  holding 10-13 digits shows as `98•••••210`; fields marked
+  `@Pii(ADDRESS)` (trip pickup and drop, saved home and work) show as their
+  area ("Banjara Hills, Hyderabad"), home/work coordinates to about a
+  kilometre, PAN as `•••••1234F`, bank account and UPI as the last four -
+  except for roles that send payouts (`payouts.prepare`). Owners see the
+  masked form too. Nothing changes in the apps: masking applies only when a
+  member of staff is on the request.
+- **Reveal with a reason.** `POST /api/v1/admin/reveal` shows one value:
+  it needs `pii.phone.reveal` or `pii.address.reveal`, a fresh
+  authenticator code, a typed reason, and the record within reach. The
+  reason is kept in the audit log.
+- **Step-up.** Endpoints marked `@RequiresStepUp` (reveals, opening an ID
+  or police document, marking payouts paid, every staff change, insurance
+  policy changes) and every `@Export` need the authenticator code entered
+  on this session in the last 5 minutes (`STAFF_STEP_UP_MINUTES`); the
+  console asks in a layer of its own and repeats the request.
+- **Scoping.** A verification agent opens only partners she has taken from
+  the queue (`/api/v1/admin/work/verification/{id}/take`), and two agents
+  can never hold the same one; `verification.all` (managers, owners) opens
+  any. A support agent sees unassigned tickets and her own, opens only her
+  own, and can only take one herself; `support.all` sees and assigns all.
+  The safety desk reaches a trip, its live position
+  (`/api/v1/admin/alerts/trips/{id}/live`) and the phone numbers of the
+  people in it only while an SOS or trip alert on it is open or closed less
+  than 30 minutes ago (`STAFF_ALERT_ACCESS_MINUTES`).
+- **Audit log.** `staff_audit_events`: every console change, every marked
+  read (`@AuditedRead`: documents, trip detail, the live board, the audit
+  log itself), every export, every refusal (`permission.denied`), every
+  sign-in, failure and lock, every reveal with its reason, every staff
+  change with before and after. The verification module's operator entries
+  are copied in, so document views are here too. A database trigger refuses
+  UPDATE, DELETE and TRUNCATE; each row stores the hash of the one before,
+  and a nightly job (`STAFF_AUDIT_CHECK_CRON`, 03:30 IST) recomputes the
+  chain. The Audit page (owners, `audit.view`) shows alerts first, filters
+  by person, action and dates, and exports CSV (step-up, audited, alerted).
+- **Alerts to owners** - push to their browsers, email when SMTP is set, and
+  a row the Audit page shows: an account locked by failed sign-ins, any
+  invitation, role change, disable, re-enable or reset, any export, more
+  than 20 reveals in 10 minutes by one person, a sign-in from a browser not
+  seen before (she is told too), and a broken chain.
+
 ### Setting up the first owner on Render
 
 1. Set `STAFF_SECRETS_KEY` (`openssl rand -base64 32`) and keep a copy
@@ -287,6 +333,9 @@ changing in the same commit.
 | `STAFF_COOKIE_SECURE` | true | Off only for plain-HTTP testing on a host that is not localhost |
 | `ADMIN_PHONE_LOGIN_ENABLED` | false (true in the local profile) | The old phone-code console sign-in |
 | `ADMIN_BOOTSTRAP_PHONE` | blank | Old operator account the first owner adopts; grants nothing |
+| `STAFF_STEP_UP_MINUTES` | 5 | How long a re-entered code covers sensitive actions |
+| `STAFF_ALERT_ACCESS_MINUTES` | 30 | How long after an alert closes the safety desk keeps reach |
+| `STAFF_AUDIT_CHECK_CRON` | `0 30 3 * * *` | When the audit chain is checked (India time) |
 
 ### Flagged assumptions
 
@@ -316,16 +365,24 @@ changing in the same commit.
   (₹200) until decided. Nothing issues refunds from the console yet: the
   refund endpoint arrives with Phase 3's approvals and checks
   `RefundLimits` before paying.
+- **The audit table is owned by the app's own database role on Render**, so
+  a role without UPDATE/DELETE on it is not available there: the trigger
+  stops the app and casual edits, and the hash chain is what catches
+  someone with the database password who drops the trigger first.
+- **Masking is by field name and marking.** A phone number typed into free
+  text (a ticket description, a note) is not masked.
+- **New-browser detection uses the User-Agent**, which can be copied: a
+  tripwire for the ordinary case, not a defence on its own.
+- **Without SMTP, alerts reach owners by push and the Audit page only.**
 - **Polling requests are marked by the console** (`X-Staff-Background`).
   Idle time is a safeguard against a forgotten tab, not against an attacker
   who has the session already.
 
 ### Not built yet (later phases)
 
-Phase 2: masking and reveal-with-reason, step-up re-authentication, data
-scoping for agents, the hash-chained audit log, alerts to owners (failed
-sign-ins, role changes, new devices). Phase 3: four-eyes approvals, refund
-limits, the payout two-person rule, config history. Phase 4: role
+Phase 3: four-eyes approvals (exports, payouts, refunds above the limits,
+manager/owner changes, configuration), the refund endpoint itself, the
+payout two-person rule, config history. Phase 4: role
 dashboards, live ops board with SSE, queue assignment and SLAs, passkeys for
 owners, a separate admin hostname. (The IP allowlist is built and off.)
 

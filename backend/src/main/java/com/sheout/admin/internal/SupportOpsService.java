@@ -82,6 +82,12 @@ public class SupportOpsService {
         return supportApi.getTicket(ticketId, adminAccountId, AccountRole.ADMIN).map(this::toDetail);
     }
 
+    /** Who holds a ticket now, if anybody; empty Optional inside when nobody does. */
+    public Optional<Optional<UUID>> holder(UUID ticketId, UUID adminAccountId) {
+        return supportApi.getTicket(ticketId, adminAccountId, AccountRole.ADMIN)
+                .map(detail -> Optional.ofNullable(detail.ticket().assignedAdminId()));
+    }
+
     public Result<SupportTicketMessage, SupportError> addMessage(UUID ticketId, UUID adminAccountId, String message,
                                                                  boolean internalOnly) {
         return supportApi.addMessage(ticketId, adminAccountId, AccountRole.ADMIN, message, internalOnly);

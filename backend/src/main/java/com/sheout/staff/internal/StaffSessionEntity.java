@@ -48,6 +48,9 @@ class StaffSessionEntity {
     @Column(name = "push_token", length = 500)
     private String pushToken;
 
+    @Column(name = "step_up_at")
+    private Instant stepUpAt;
+
     protected StaffSessionEntity() {
     }
 
@@ -75,6 +78,18 @@ class StaffSessionEntity {
         }
         lastActivityAt = now;
         return true;
+    }
+
+    void steppedUp(Instant at) {
+        this.stepUpAt = at;
+    }
+
+    boolean steppedUpWithin(Instant now, Duration window) {
+        return stepUpAt != null && stepUpAt.plus(window).isAfter(now);
+    }
+
+    Instant getStepUpAt() {
+        return stepUpAt;
     }
 
     void rememberPushToken(String token) {

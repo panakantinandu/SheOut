@@ -1,5 +1,7 @@
 package com.sheout.driververification.internal;
 
+import com.sheout.staff.Permission;
+import com.sheout.staff.StaffAudit;
 import com.sheout.driververification.PartnerDocumentType;
 import com.sheout.driververification.VerificationAuditEntry;
 import org.springframework.stereotype.Component;
@@ -44,15 +46,31 @@ public class VerificationAudit {
     static final String PROVIDER_RESULT_RECEIVED = "PROVIDER_RESULT_RECEIVED";
 
     private final VerificationAuditRepository repository;
+    private final StaffAudit staffAudit;
 
-    VerificationAudit(VerificationAuditRepository repository) {
+    VerificationAudit(VerificationAuditRepository repository, StaffAudit staffAudit) {
         this.repository = repository;
+        this.staffAudit = staffAudit;
     }
 
+    /**
+     * Written here, for her verification history, and - when an operator did
+     * it - into the staff audit log too, so one log answers "what did this
+     * member of staff do", document views included. The staff copy carries no
+     * detail text: that can quote her document, and the staff log is read by
+     * people with no business reading it.
+     */
     void record(UUID accountId, UUID actorId, String actorRole, String action, UUID documentId,
                 PartnerDocumentType documentType, String detail) {
         repository.save(new VerificationAuditEntity(accountId, actorId, actorRole, action, documentId, documentType,
                 detail, Instant.now()));
+        if (ACTOR_OPERATOR.equals(actorRole)) {
+            staffAudit.record(new StaffAudit.Entry("verification." + action.toLowerCase(java.util.Locale.ROOT),
+                    action.equals(DOCUMENT_VIEWED) ? Permission.DOCUMENTS_VIEW : Permission.VERIFICATION_REVIEW,
+                    StaffAudit.Result.OK, documentId != null ? "DOCUMENT" : "ACCOUNT",
+                    String.valueOf(documentId != null ? documentId : accountId), null,
+                    documentType == null ? null : "{\"documentType\":\"" + documentType + "\",\"accountId\":\"" + accountId + "\"}"));
+        }
     }
 
     /** Account deletion: see VerificationAuditEntity.clearDetail. */

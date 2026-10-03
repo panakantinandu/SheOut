@@ -33,6 +33,11 @@ public enum Permission {
     DOCUMENTS_VIEW("documents.view"),
     /** Download documents rather than view them one at a time. */
     DOCUMENTS_DOWNLOAD("documents.download"),
+    /**
+     * Every partner's verification, not only the ones she has taken from the
+     * queue. Without it an agent works the unassigned queue and her own.
+     */
+    VERIFICATION_ALL("verification.all"),
 
     // ---- personal details ---------------------------------------------------
     /** See a full phone number rather than the masked one. */
@@ -55,6 +60,11 @@ public enum Permission {
     // ---- customer care ------------------------------------------------------
     /** Read and answer support tickets. */
     SUPPORT_WORK("support.work"),
+    /**
+     * Every ticket, and handing tickets to other people. Without it an agent
+     * sees the unassigned tickets and her own, and can only take one herself.
+     */
+    SUPPORT_ALL("support.all"),
 
     // ---- money --------------------------------------------------------------
     /** Issue a refund or goodwill credit, up to the role's configured limit. */

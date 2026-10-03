@@ -31,6 +31,8 @@ class StaffSettings {
     final int loginsPerAddress;
     /** An auditor invited or moved to AUDITOR with no end date gets this many days. */
     final Duration auditorDefaultAccess;
+    /** How long a re-entered authenticator code covers sensitive actions. */
+    final Duration stepUpWindow;
     /** How stale last-activity may get before a request writes it again. */
     final Duration activityWriteEvery = Duration.ofSeconds(20);
 
@@ -49,7 +51,9 @@ class StaffSettings {
                   @Value("${sheout.staff.login.max-failures:5}") int maxFailedLogins,
                   @Value("${sheout.staff.login.lock-minutes:15}") long lockMinutes,
                   @Value("${sheout.staff.login.per-address:20}") int loginsPerAddress,
-                  @Value("${sheout.staff.auditor-default-days:30}") long auditorDefaultDays) {
+                  @Value("${sheout.staff.auditor-default-days:30}") long auditorDefaultDays,
+                  @Value("${sheout.staff.step-up-minutes:5}") long stepUpMinutes) {
+        this.stepUpWindow = minutes(stepUpMinutes);
         this.consoleUrl = consoleUrl.endsWith("/") ? consoleUrl : consoleUrl + "/";
         for (StaffRole role : StaffRole.values()) {
             idle.put(role, minutes(idleMinutes));

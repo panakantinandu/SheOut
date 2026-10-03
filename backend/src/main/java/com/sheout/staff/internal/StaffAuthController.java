@@ -116,6 +116,34 @@ class StaffAuthController {
         return ResponseEntity.ok(me(member, session, signIn.unusedRecoveryCodes(member)));
     }
 
+    record StepUpRequest(@NotBlank @Size(max = 10) String code) {
+    }
+
+    record StepUpResponse(java.time.Instant validUntil) {
+    }
+
+    /**
+     * Her authenticator code again, so the next five minutes of sensitive
+     * actions on this session go through. Wrong codes are limited per person.
+     */
+    @StaffSignedIn
+    @PostMapping("/step-up")
+    ResponseEntity<StepUpResponse> stepUp(@Valid @RequestBody StepUpRequest body) {
+        StaffPrincipal principal = StaffContext.requireSignedIn();
+        if (principal.legacy()) {
+            return ResponseEntity.ok(new StepUpResponse(java.time.Instant.now().plus(settings.stepUpWindow)));
+        }
+        String key = "staff-stepup:" + principal.staffId();
+        rateLimiter.tryConsume(key, settings.maxFailedLogins, WINDOW).orThrow("TOO_MANY_ATTEMPTS", TOO_MANY);
+        StaffMemberEntity member = management.find(principal.staffId()).orElseThrow(StaffContext::signInRequired);
+        if (!signIn.stepUp(member, principal, body.code())) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "WRONG_CODE",
+                    "That code is not right. Use the newest code from your authenticator app.");
+        }
+        rateLimiter.release(key);
+        return ResponseEntity.ok(new StepUpResponse(java.time.Instant.now().plus(settings.stepUpWindow)));
+    }
+
     @StaffSignedIn
     @PostMapping("/logout")
     ResponseEntity<Void> signOut(HttpServletResponse response) {

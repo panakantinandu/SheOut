@@ -15,6 +15,7 @@ verification.review             Y    Y    Y    .    .    .    .    .
 verification.police.record      Y    Y    Y    .    .    .    .    .
 documents.view                  Y    Y    Y    .    .    .    .    .
 documents.download              Y    .    .    .    .    .    .    .
+verification.all                Y    Y    .    .    .    .    .    .
 pii.phone.reveal                Y    Y    .    .    Y    .    .    .
 pii.address.reveal              Y    Y    .    .    .    .    .    .
 users.view                      Y    Y    .    .    .    .    .    .
@@ -23,6 +24,7 @@ trips.view                      Y    Y    .    .    .    .    .    .
 trips.live.view                 Y    Y    .    .    Y    .    .    .
 sos.respond                     Y    Y    .    .    Y    .    .    .
 support.work                    Y    Y    .    Y    .    .    .    .
+support.all                     Y    Y    .    .    .    .    .    .
 refunds.issue                   Y    Y    .    Y    .    Y    .    .
 payouts.prepare                 Y    .    .    .    .    Y    .    .
 payouts.approve                 Y    Y    .    .    .    .    .    .

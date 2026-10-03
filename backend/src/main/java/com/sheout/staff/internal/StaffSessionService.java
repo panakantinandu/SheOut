@@ -180,6 +180,21 @@ class StaffSessionService {
         return authApi.liveSessions(member.getAccountId(), currentSessionId);
     }
 
+    /** She re-entered her authenticator code on this session just now. */
+    @Transactional
+    void markSteppedUp(UUID sessionId) {
+        sessions.findById(sessionId).ifPresent(session -> {
+            session.steppedUp(Instant.now());
+            sessions.save(session);
+        });
+    }
+
+    /** Whether this session's last re-entered code is recent enough for a sensitive action. */
+    @Transactional(readOnly = true)
+    boolean steppedUp(UUID sessionId) {
+        return sessions.findById(sessionId).map(s -> s.steppedUpWithin(Instant.now(), settings.stepUpWindow)).orElse(false);
+    }
+
     @Transactional
     void rememberPushToken(UUID sessionId, String token) {
         sessions.findById(sessionId).ifPresent(session -> {

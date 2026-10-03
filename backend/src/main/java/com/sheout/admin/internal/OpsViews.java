@@ -1,5 +1,7 @@
 package com.sheout.admin.internal;
 
+import com.sheout.sharedkernel.privacy.Pii;
+
 import com.sheout.auth.AccountRole;
 import com.sheout.booking.BookingCategory;
 import com.sheout.booking.BookingOpsFacts;
@@ -76,7 +78,7 @@ public final class OpsViews {
             boolean payoutBankOnFile,
             String payoutAccountMasked,
             String payoutIfsc,
-            String payoutUpi,
+            @Pii(Pii.Kind.BANK) String payoutUpi,
             ShiftCheckState shiftCheck,
             int implausibleJumpsToday
     ) {

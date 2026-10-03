@@ -1032,6 +1032,25 @@
     width: 100%; padding: 9px 11px; border: 1px solid var(--line); border-radius: 8px; font: inherit; background: var(--panel); color: var(--text); }
   .staff-invite .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0 12px; }
   .who .role-chip { display: inline-block; margin-top: 2px; }
+
+  /* ---------- reveal, step-up, audit (phase 2) ---------- */
+  .masked { letter-spacing: .02em; }
+  .reveal-btn { margin-left: 6px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel);
+    color: var(--brand); font: inherit; font-size: 11.5px; font-weight: 650; cursor: pointer; }
+  .reveal-form { display: inline-flex; gap: 6px; align-items: center; margin-left: 6px; flex-wrap: wrap; }
+  .reveal-form input { width: 220px; max-width: 60vw; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; font: inherit; font-size: 12.5px;
+    background: var(--panel); color: var(--text); }
+  .reveal-form button { padding: 3px 10px; font-size: 12px; }
+  .step-overlay { z-index: 90; }
+  .step-overlay input { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; font: inherit; font-size: 18px;
+    letter-spacing: .2em; background: var(--panel); color: var(--text); }
+  .audit-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; margin-bottom: 12px; }
+  .audit-filters label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; font-weight: 600; }
+  .audit-filters input, .audit-filters select { padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; font: inherit;
+    background: var(--panel); color: var(--text); }
+  table.mini td.why { max-width: 260px; }
+  .result-DENIED { color: var(--red); font-weight: 650; }
+  .result-FAILED { color: var(--amber); font-weight: 650; }
 </style>
 </head>
 <body>
@@ -1188,6 +1207,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M2 21v-2a4 4 0 0 1 4-4h6"/><path d="M16 11l2 2 4-4"/><path d="M15 21v-2a3 3 0 0 1 2-2.8"/></svg>
         <span class="nl">Staff</span> <span class="count" id="cStaff" hidden></span>
       </button>
+      <button data-tab="audit" aria-current="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6l1 2h3a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h3z"/><path d="M8 11h8M8 15h5"/><circle cx="17" cy="16" r="2.5"/></svg>
+        <span class="nl">Audit</span> <span class="count urgent" id="cAudit" hidden></span>
+      </button>
       <button data-tab="account" aria-current="false">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><circle cx="12" cy="16" r="1.5"/></svg>
         <span class="nl">My account</span>
@@ -1266,6 +1289,8 @@
 
 <div class="toasts" id="toasts"></div>
 <div id="modalRoot"></div>
+<!-- Its own layer, so asking for the code never closes the dialog she is working in. -->
+<div id="stepRoot"></div>
 <div class="session-warn" id="sessionWarn" role="alert" hidden>
   <span id="sessionWarnText"></span>
   <button class="btn btn-primary" id="sessionStay" type="button">Stay signed in</button>
@@ -1490,6 +1515,55 @@ async function handleStatus(res, quiet401) {
   }
 }
 
+/** An Error that also carries the server's error code ("STEP_UP_REQUIRED", "NOT_YOURS"...). */
+function codedError(message, code, status) {
+  return Object.assign(new Error(message), { code, status });
+}
+
+/**
+ * Some actions need her authenticator code again (reveals, documents, staff
+ * changes, payouts, exports). The server says STEP_UP_REQUIRED; she is asked
+ * for the code in a layer of its own, and the request is made again.
+ */
+async function stepUpThenRetry(res, retry) {
+  if (res.status !== 403) return null;
+  const body = await res.clone().json().catch(() => null);
+  if (!body || body.error !== 'STEP_UP_REQUIRED') return null;
+  if (!(await askStepUp())) throw codedError('Not confirmed.', 'STEP_UP_CANCELLED', 403);
+  return retry();
+}
+
+function askStepUp() {
+  return new Promise(resolve => {
+    const root = $('stepRoot');
+    root.innerHTML = `<div class="overlay step-overlay"><div class="modal">
+      <div class="modal-head"><h3>Confirm it's you</h3>
+        <p>Enter the 6-digit code from your authenticator app. It covers sensitive actions for the next five minutes.</p></div>
+      <div class="modal-body"><input id="stepCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" aria-label="Authenticator code">
+        <p class="field-err" id="stepErr" hidden></p></div>
+      <div class="modal-foot"><button class="btn" type="button" data-step-cancel>Cancel</button>
+        <button class="btn btn-primary" type="button" data-step-go>Confirm</button></div></div></div>`;
+    const done = ok => { root.innerHTML = ''; resolve(ok); };
+    const go = async () => {
+      const res = await fetch(API + '/admin/auth/step-up', {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', ...staffHeaders('POST', false) },
+        body: JSON.stringify({ code: $('stepCode').value.trim() }),
+      });
+      if (res.ok) return done(true);
+      if (res.status === 401) { done(false); return handleStatus(res, false).catch(() => {}); }
+      const body = await res.json().catch(() => null);
+      $('stepErr').textContent = (body && body.message) || 'That did not work.';
+      $('stepErr').hidden = false;
+      $('stepCode').select();
+    };
+    root.querySelector('[data-step-cancel]').addEventListener('click', () => done(false));
+    root.querySelector('[data-step-go]').addEventListener('click', go);
+    $('stepCode').addEventListener('keydown', e => { if (e.key === 'Enter') go(); if (e.key === 'Escape') done(false); });
+    $('stepCode').focus();
+  });
+}
+
 async function api(path, options = {}) {
   const { background, quiet401, ...init } = options;
   const method = (init.method || 'GET').toUpperCase();
@@ -1504,8 +1578,10 @@ async function api(path, options = {}) {
     }
   });
   await handleStatus(res, quiet401);
+  const retried = await stepUpThenRetry(res, () => api(path, options));
+  if (retried !== null) return retried;
   const body = res.status === 204 ? null : await res.json().catch(() => null);
-  if (!res.ok) throw new Error((body && body.message) || `Request failed (${res.status})`);
+  if (!res.ok) throw codedError((body && body.message) || `Request failed (${res.status})`, body && body.error, res.status);
   if (!isBackground) noteActivity();
   return body;
 }
@@ -2004,7 +2080,7 @@ const VIEWS = {
         : '<span class="badge b-grey">None</span>';
       return '—';
     },
-    onRowClick: r => openDriver(r),
+    onRowClick: async r => { if (await takeForReview(r.accountId)) openDriver(r); },
     openLabel: 'Review',
   },
 
@@ -2158,9 +2234,10 @@ const VIEWS = {
     load: () => api('/admin/sos/active'),
     cell: (r, key) => {
       if (key === 'customer') return `<span class="strong">${esc(r.customerName || 'Unknown')}</span> ${r.raisedBy === 'PARTNER' ? '<span class="badge b-role-driver">Partner</span>' : '<span class="badge b-role-customer">Rider</span>'}${r.customerBlocked ? ' <span class="badge b-blocked">Blocked</span>' : ''}`;
-      if (key === 'phone') return `<span class="num">${esc(r.customerPhone)}</span>`;
+      if (key === 'phone') return telLink(r.customerPhone, { subject: 'ACCOUNT_PHONE', accountId: r.customerAccountId, bookingId: r.bookingId || undefined });
       if (key === 'location') return `<a href="https://maps.google.com/?q=${r.lat},${r.lng}" target="_blank" rel="noreferrer">Open map</a>
-        <div class="subtle num">${r.lat.toFixed(4)}, ${r.lng.toFixed(4)}</div>`;
+        <div class="subtle num">${r.lat.toFixed(4)}, ${r.lng.toFixed(4)}</div>
+        ${r.bookingId && can('trips.live.view') ? `<button class="btn" type="button" data-alert-live="${escValue(r.bookingId)}">Where is the trip now</button>` : ''}`;
       if (key === 'contacts') {
         const ok = r.contactsNotified, bad = r.contactsFailed;
         const tone = ok > 0 ? 'b-green' : 'b-red';
@@ -2388,7 +2465,7 @@ const VIEWS = {
       { key: 'requestedAt', label: 'Waiting', sort: r => new Date(r.requestedAt).getTime() },
     ],
     load: () => api('/admin/profile-changes'),
-    onRowClick: r => openProfileChange(r),
+    onRowClick: async r => { if (await takeForReview(r.accountId)) openProfileChange(r); },
     openLabel: 'Review change',
     cell: (r, key) => {
       if (key === 'who') return `<span class="strong">${esc(r.currentName || 'Name not set')}</span><div class="subtle num">${esc(r.phoneNumber)}</div>`;
@@ -2454,6 +2531,17 @@ const VIEWS = {
     columns: [],
     load: () => api('/admin/staff'),
     paint: paintStaff,
+  },
+
+  audit: {
+    title: 'Audit',
+    desc: 'Everything staff have done in this console, newest first: sign-ins, every change, every document opened, every phone number or address revealed and why, and every refusal. Rows cannot be edited or deleted, and each is chained to the one before, so a changed row shows up in the check.',
+    cardTitle: 'Audit log',
+    hint: 'Owners only. Looking at this page is recorded too.',
+    custom: true,
+    columns: [],
+    load: () => Promise.all([api('/admin/audit' + auditQuery()), api('/admin/audit/verify'), api('/admin/staff')]),
+    paint: paintAudit,
   },
 
   account: {
@@ -3378,9 +3466,77 @@ function expiryText(validUntil, status) {
 async function apiUpload(path, form) {
   const res = await fetch(API + path, { method: 'POST', body: form, credentials: 'same-origin', headers: staffHeaders('POST', false) });
   await handleStatus(res, false);
+  const retried = await stepUpThenRetry(res, () => apiUpload(path, form));
+  if (retried !== null) return retried;
   const body = await res.json().catch(() => null);
   if (!res.ok) throw new Error((body && body.message) || `Upload failed (${res.status})`);
   return body;
+}
+
+/**
+ * Where a trip with an open alert is right now - for the safety desk, which
+ * sees no other trips. The server refuses a trip whose alert closed more than
+ * 30 minutes ago.
+ */
+document.addEventListener('click', async e => {
+  const btn = e.target.closest('[data-alert-live]');
+  if (!btn) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const bookingId = btn.dataset.alertLive;
+  const paint = async () => {
+    let t;
+    try { t = await api(`/admin/alerts/trips/${bookingId}/live`); } catch (err) {
+      if (err.message !== 'unauthorized') toast('bad', 'Not available', err.message);
+      return;
+    }
+    const b = t.booking;
+    openModal(`<div class="modal-head"><h3>Trip in an alert ${badge(t.status)}</h3><p>Checked ${esc(time(t.at))}</p></div>
+      <div class="modal-body"><dl class="kv">
+        <dt>Rider</dt><dd>${esc(t.riderName || 'Name not set')} ${revealButton({ subject: 'ACCOUNT_PHONE', accountId: t.riderId, bookingId })}</dd>
+        ${t.partnerId ? `<dt>Partner</dt><dd>${esc(t.partnerName || 'Name not set')} ${revealButton({ subject: 'ACCOUNT_PHONE', accountId: t.partnerId, bookingId })}</dd>` : ''}
+        <dt>From</dt><dd>${esc(b.pickup.label)}</dd><dt>To</dt><dd>${esc(b.drop.label)}</dd>
+        <dt>Partner now</dt><dd>${t.partnerNow ? `${esc(agoText(t.partnerNow.recordedAt))} ago &middot; ${mapsLink(t.partnerNow.lat, t.partnerNow.lng)}
+          <div class="subtle num">${t.partnerNow.lat.toFixed(5)}, ${t.partnerNow.lng.toFixed(5)}</div>` : '<span class="subtle">No position reported</span>'}</dd>
+      </dl></div>
+      <div class="modal-foot"><button class="btn" type="button" data-cancel>Close</button>
+        <button class="btn btn-primary" type="button" id="liveAgain">Refresh</button></div>`, { wide: true });
+    $('modalRoot').querySelector('[data-cancel]').addEventListener('click', closeModal);
+    $('liveAgain').addEventListener('click', paint);
+  };
+  paint();
+}, true);
+
+/**
+ * Verification is "take, review, decide": an agent opens only the accounts
+ * she holds, so opening one from a queue takes it first (or says who has it).
+ * Managers and owners (verification.all) open anything without taking.
+ */
+async function takeForReview(accountId) {
+  if (can('verification.all')) return true;
+  try {
+    await api(`/admin/work/verification/${accountId}/take`, { method: 'POST' });
+    return true;
+  } catch (err) {
+    if (err.message !== 'unauthorized') toast('bad', 'Not available', err.message);
+    return false;
+  }
+}
+
+/** A partner's documents: the full account page for those who may read accounts, the documents alone otherwise. */
+async function openPartnerWork(accountId) {
+  if (!(await takeForReview(accountId))) return;
+  if (can('users.view')) return openAccount(accountId, false, 'documents');
+  openModal(`<div class="modal-head"><h3>Partner documents</h3><p>You hold this partner until you give her back to the queue.</p></div>
+    <div class="modal-body"><div id="workDocs"></div><h4 class="sub-h">History</h4><div id="workAudit"></div></div>
+    <div class="modal-foot"><button class="btn" type="button" id="workRelease">Give back to the queue</button>
+      <button class="btn btn-primary" type="button" data-cancel>Close</button></div>`, { xwide: true });
+  $('modalRoot').querySelector('[data-cancel]').addEventListener('click', () => { closeModal(); render(); });
+  $('workRelease').addEventListener('click', async () => {
+    try { await api(`/admin/work/verification/${accountId}/release`, { method: 'POST' }); closeModal(); render(); }
+    catch (err) { if (err.message !== 'unauthorized') toast('bad', 'Could not give it back', err.message); }
+  });
+  paintPartnerDocs($('workDocs'), accountId, $('workAudit'));
 }
 
 /** Opens one file into a box - and onto her audit trail, which is the point. */
@@ -3816,7 +3972,7 @@ function docQueueView({ queue, title, desc, cardTitle, empty, dateLabel, date })
         : r.online ? '<span class="badge b-green">Online</span>' : '<span class="badge b-grey">Offline</span>';
       return '—';
     },
-    onRowClick: r => openAccount(r.accountId, false, 'documents'),
+    onRowClick: r => openPartnerWork(r.accountId),
     openLabel: 'Open documents',
   };
 }
@@ -3840,6 +3996,7 @@ const ENROLMENT_TONE = { PENDING_ENROLMENT: 'amber', ENROLLED: 'green', EXITED: 
 async function apiDownload(path, fallbackName) {
   const res = await fetch(API + path, { credentials: 'same-origin', headers: staffHeaders('GET', false) });
   await handleStatus(res, false);
+  if (res.status === 403 && (await stepUpThenRetry(res, async () => apiDownload(path, fallbackName).then(() => true))) !== null) return;
   if (!res.ok) {
     const body = await res.json().catch(() => null);
     throw new Error((body && body.message) || `Download failed (${res.status})`);
@@ -4131,6 +4288,21 @@ async function openTicket(id, keep = {}) {
     [d, ops] = await Promise.all([api(`/admin/support/tickets/${id}`), operators()]);
   } catch (err) {
     if (err.message === 'unauthorized') return;
+    // An agent opens only tickets she holds: offer to take this one.
+    if (err.code === 'NOT_YOURS') {
+      openModal(`<div class="modal-head"><h3>Take this ticket?</h3>
+          <p>Support agents open the tickets they hold. Taking it puts your name on it, and nobody else on the desk can open it until you give it back.</p></div>
+        <div class="modal-foot"><button class="btn" data-cancel type="button">Not now</button>
+          <button class="btn btn-primary" type="button" id="takeTicket">Take it</button></div>`);
+      $('modalRoot').querySelector('[data-cancel]').addEventListener('click', closeModal);
+      $('takeTicket').addEventListener('click', async () => {
+        try {
+          await api(`/admin/support/tickets/${id}/assign`, { method: 'POST', body: JSON.stringify({ assigneeAdminId: me.accountId }) });
+          openTicket(id, keep);
+        } catch (e2) { if (e2.message !== 'unauthorized') toast('bad', 'Could not take it', e2.message); }
+      });
+      return;
+    }
     openModal(`<div class="modal-body">${stateBlock({ icon: ICON_ERROR, title: 'Could not load this ticket', text: err.message }, 'error')}</div>
       <div class="modal-foot"><button class="btn" data-cancel type="button">Close</button></div>`, { wide: true });
     $('modalRoot').querySelector('[data-cancel]').addEventListener('click', closeModal);
@@ -4149,7 +4321,7 @@ async function openTicket(id, keep = {}) {
     </div>
     <div class="modal-body">
       <dl class="kv">
-        <dt>Raised by</dt><dd>${roleBadge(t.role)} ${esc(t.raisedByName || 'Name not set')} <span class="subtle num">${esc(t.raisedByPhone)}</span>${t.raisedByBlocked ? ' <span class="badge b-blocked">Blocked</span>' : ''}</dd>
+        <dt>Raised by</dt><dd>${roleBadge(t.role)} ${esc(t.raisedByName || 'Name not set')} <span class="subtle">${telLink(t.raisedByPhone, { subject: 'ACCOUNT_PHONE', accountId: t.raisedByAccountId, bookingId: t.linkedBookingId || undefined })}</span>${t.raisedByBlocked ? ' <span class="badge b-blocked">Blocked</span>' : ''}</dd>
         <dt>Assigned to</dt><dd>${t.assignedAdminPhone ? `<span class="num">${esc(t.assignedAdminPhone)}</span>` : '<span class="subtle">Unassigned</span>'}</dd>
         <dt>Last update</dt><dd>${time(t.lastActivityAt)}</dd>
         ${t.resolvedAt ? `<dt>Resolved</dt><dd>${time(t.resolvedAt)}${t.resolvedByPhone ? ` by <span class="num">${esc(t.resolvedByPhone)}</span>` : ''}</dd>` : ''}
@@ -4187,7 +4359,8 @@ async function openTicket(id, keep = {}) {
           <div class="top"><h4>Assignment</h4></div>
           <select id="assignSelect" ${closed ? 'disabled' : ''}>
             <option value="">Unassigned</option>
-            ${ops.map(o => `<option value="${esc(o.accountId)}" ${o.accountId === t.assignedAdminId ? 'selected' : ''}>${esc(o.phoneNumber)}</option>`).join('')}
+            ${(can('support.all') ? ops : ops.filter(o => o.accountId === me.accountId))
+              .map(o => `<option value="${esc(o.accountId)}" ${o.accountId === t.assignedAdminId ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}
           </select>
           <div class="row"><button class="btn" id="changeAssign" type="button" ${closed ? 'disabled' : ''}>Save assignment</button></div>
         </div>
@@ -4868,7 +5041,58 @@ function agoText(iso) {
   if (s < 86400) return `${Math.round(s / 3600)} hr`;
   return `${Math.round(s / 86400)} d`;
 }
-const telLink = p => p ? `<a href="tel:${escValue(p)}" class="num">${esc(p)}</a>` : '<span class="subtle">—</span>';
+/**
+ * A phone number as the console now gets it: masked (98•••••210). With what
+ * it is about - whose number, through which trip - and the permission, a
+ * Show button asks for a reason, then the server's reveal (a fresh code, an
+ * audit row) puts the real number, callable, in its place.
+ */
+const isMasked = v => typeof v === 'string' && v.includes('\u2022');
+const telLink = (p, reveal) => {
+  if (!p) return '<span class="subtle">—</span>';
+  if (!isMasked(p)) return `<a href="tel:${escValue(p)}" class="num">${esc(p)}</a>`;
+  return `<span class="num masked">${esc(p)}</span>${reveal && can('pii.phone.reveal') ? revealButton(reveal) : ''}`;
+};
+/** An address shown as its area, with Show for the full one when allowed. */
+const addrText = (text, reveal) => `<span>${esc(text)}</span>${text && reveal && can('pii.address.reveal') ? revealButton(reveal) : ''}`;
+const revealButton = reveal => `<button type="button" class="reveal-btn" data-reveal="${escValue(JSON.stringify(reveal))}">Show</button>`;
+
+document.addEventListener('click', e => {
+  const btn = e.target.closest('[data-reveal]');
+  if (!btn) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const request = JSON.parse(btn.dataset.reveal);
+  const form = document.createElement('span');
+  form.className = 'reveal-form';
+  form.innerHTML = `<input maxlength="300" placeholder="Why do you need it? (kept in the audit log)" aria-label="Reason">
+    <button class="btn btn-primary" type="button">Show</button><button class="btn" type="button">Cancel</button>`;
+  btn.replaceWith(form);
+  const [input, go, cancel] = form.querySelectorAll('input, button');
+  input.focus();
+  cancel.addEventListener('click', ev => { ev.stopPropagation(); form.replaceWith(btn); });
+  const submit = async ev => {
+    if (ev) ev.stopPropagation();
+    const reason = input.value.trim();
+    if (reason.length < 5) { input.focus(); input.placeholder = 'Say why, in a few words'; return; }
+    try {
+      const out = await api('/admin/reveal', { method: 'POST', body: JSON.stringify({ ...request, reason }) });
+      const shown = document.createElement('span');
+      shown.innerHTML = request.subject.endsWith('PHONE')
+        ? `<a href="tel:${escValue(out.value)}" class="num">${esc(out.value)}</a> <a class="btn" href="tel:${escValue(out.value)}">Call</a>`
+        : esc(out.value);
+      const masked = form.previousElementSibling;
+      if (masked && (masked.classList.contains('masked') || masked.tagName === 'SPAN')) masked.remove();
+      form.replaceWith(shown);
+    } catch (err) {
+      if (err.message === 'unauthorized') return;
+      toast('bad', 'Not shown', err.message);
+    }
+  };
+  go.addEventListener('click', submit);
+  input.addEventListener('keydown', ev => { if (ev.key === 'Enter') submit(ev); });
+  form.addEventListener('click', ev => ev.stopPropagation());
+}, true);
 const mapsLink = (lat, lng, text = 'Open in Google Maps') => (Number.isFinite(lat) && Number.isFinite(lng))
   ? `<a href="https://www.google.com/maps/search/?api=1&amp;query=${lat},${lng}" target="_blank" rel="noopener noreferrer">${esc(text)}</a>` : '';
 const VEHICLE_TEXT = { BIKE: 'Bike / scooter', AUTO: 'Auto', CAB: 'Cab' };
@@ -5031,9 +5255,9 @@ async function loadAccount(accountId, startTab = 'overview') {
   const head = `<div class="dx-head">${photo}<div class="who">
       <h3>${esc(a.name || 'Name not set')} ${roleBadge(a.role)} ${a.blocked ? '<span class="badge b-blocked">Blocked</span>' : '<span class="badge b-green">Active</span>'}
         ${t.flagged ? '<span class="badge b-amber">In trust review</span>' : ''}</h3>
-      <p>${telLink(a.phoneNumber)}${a.email ? ' &middot; ' + esc(a.email) : ''} &middot; joined ${esc(time(a.createdAt))} &middot; last active ${d.lastActiveAt ? esc(agoText(d.lastActiveAt)) + ' ago' : '—'}</p>
+      <p>${telLink(a.phoneNumber, { subject: 'ACCOUNT_PHONE', accountId: a.accountId })}${a.email ? ' &middot; ' + esc(a.email) : ''} &middot; joined ${esc(time(a.createdAt))} &middot; last active ${d.lastActiveAt ? esc(agoText(d.lastActiveAt)) + ' ago' : '—'}</p>
       <div class="dx-actions">
-        ${a.phoneNumber ? `<a class="btn" href="tel:${escValue(a.phoneNumber)}">Call</a>` : ''}
+        ${a.phoneNumber && !isMasked(a.phoneNumber) ? `<a class="btn" href="tel:${escValue(a.phoneNumber)}">Call</a>` : ''}
         ${d.documentSubmitted ? '<button class="btn" type="button" data-dx-docs>ID documents</button>' : ''}
         ${a.blocked
           ? '<button class="btn" type="button" data-dx-unblock>Unblock</button>'
@@ -5090,15 +5314,16 @@ async function loadAccount(accountId, startTab = 'overview') {
       </div>`;
   } else {
     const contacts = d.emergencyContacts || [];
-    const place = p => p && p.label ? `${esc(p.label)}${p.lat != null ? ' &middot; ' + mapsLink(p.lat, p.lng, 'map') : ''}` : '<span class="subtle">Not saved</span>';
+    // Area only, and the point to about a kilometre; Show for the full address.
+    const place = (p, subject) => p && p.label ? `${addrText(p.label, { subject, accountId: a.accountId })}${p.lat != null ? ' &middot; ' + mapsLink(p.lat, p.lng, 'map (approximate)') : ''}` : '<span class="subtle">Not saved</span>';
     roleCards = `<div class="dx-card"><h4>Emergency contacts <span class="right subtle">${contacts.length} saved</span></h4>
-        ${contacts.length ? `<ul class="contact-list">${contacts.map(c => `<li><span class="grow"><b>${esc(c.name)}</b> <span class="subtle">${esc(c.relationship)}</span></span>${telLink(c.phoneNumber)}</li>`).join('')}</ul>`
+        ${contacts.length ? `<ul class="contact-list">${contacts.map((c, i) => `<li><span class="grow"><b>${esc(c.name)}</b> <span class="subtle">${esc(c.relationship)}</span></span>${telLink(c.phoneNumber, { subject: 'EMERGENCY_CONTACT_PHONE', accountId: a.accountId, index: i })}</li>`).join('')}</ul>`
           : '<p class="subtle">None saved. Her SOS reaches SheOut operations only.</p>'}
       </div>
       <div class="dx-card"><h4>Wallet &amp; places</h4><dl class="kv">
         <dt>Wallet balance</dt><dd class="num strong">${rupees(d.riderWalletBalance)}</dd>
-        <dt>Home</dt><dd>${place(d.home)}</dd>
-        <dt>Work</dt><dd>${place(d.work)}</dd>
+        <dt>Home</dt><dd>${place(d.home, 'HOME_ADDRESS')}</dd>
+        <dt>Work</dt><dd>${place(d.work, 'WORK_ADDRESS')}</dd>
       </dl></div>`;
   }
 
@@ -5207,7 +5432,7 @@ async function loadBooking(bookingId) {
     ? `<div class="dx-card"><h4>${label}</h4><p class="subtle">${b.status === 'REQUESTED' ? 'Still looking for a partner.' : 'No partner was assigned.'}</p></div>`
     : `<div class="dx-card"><h4>${label} <span class="right"><button class="btn" type="button" data-open-account="${escValue(p.accountId)}">Open profile</button></span></h4><dl class="kv">
         <dt>Name</dt><dd>${esc(p.name || 'Name not set')} ${p.blocked ? '<span class="badge b-blocked">Blocked</span>' : ''}</dd>
-        <dt>Phone</dt><dd>${telLink(p.phone)}</dd>
+        <dt>Phone</dt><dd>${telLink(p.phone, { subject: 'ACCOUNT_PHONE', accountId: p.accountId, bookingId: b.id })}</dd>
         ${p.vehicleType ? `<dt>Vehicle</dt><dd>${esc(VEHICLE_TEXT[p.vehicleType] || humanize(p.vehicleType))} <span class="num">${esc(p.vehicleRegistrationNumber)}</span></dd>` : ''}
         <dt>Record</dt><dd>${esc(p.trustStats ? p.trustStats.totalBookings : 0)} trips &middot; ${ratingCell(p.trustStats || {})}</dd>
       </dl></div>`;
@@ -5250,7 +5475,7 @@ async function loadBooking(bookingId) {
 
   const routeCard = `<div class="dx-card full"><h4>Route <span class="right subtle">
         <a href="https://www.google.com/maps/dir/?api=1&amp;origin=${b.pickup.lat},${b.pickup.lng}&amp;destination=${b.drop.lat},${b.drop.lng}" target="_blank" rel="noopener noreferrer">Directions in Google Maps</a></span></h4>
-      <dl class="kv"><dt>Pickup</dt><dd>${esc(b.pickup.label)}</dd><dt>Drop</dt><dd>${esc(b.drop.label)}</dd>
+      <dl class="kv"><dt>Pickup</dt><dd>${addrText(b.pickup.label, { subject: 'PICKUP_ADDRESS', bookingId: b.id })}</dd><dt>Drop</dt><dd>${addrText(b.drop.label, { subject: 'DROP_ADDRESS', bookingId: b.id })}</dd>
       ${d.partnerNow ? `<dt>Partner now</dt><dd>${esc(agoText(d.partnerNow.recordedAt))} ago &middot; ${mapsLink(d.partnerNow.lat, d.partnerNow.lng)}</dd>` : ''}</dl>
       <div class="tmap dx-map" id="tripMap"></div>
       <p class="subtle">${(d.trail || []).length > 1 ? 'Purple: the road actually driven, from the partner\'s phone. Grey dashes: pickup to drop.' : 'Grey dashes: pickup to drop. The road driven appears here once a trip has started.'}</p>
@@ -5490,8 +5715,8 @@ function paintLive(d) {
       <td>${badge(t.status)}${t.sosActive ? ' <span class="badge b-red">SOS</span>' : ''}${(t.alerts || []).map(a => ' ' + alertBadge(a)).join('')}</td>
       <td class="num ${t.status === 'REQUESTED' && (Date.now() - new Date(t.statusSince).getTime()) > 120000 ? 'strong' : ''}">${isStuck(t) ? `<span class="pill bad" title="No change for over 3 hours">Looks stuck · ${esc(agoText(t.statusSince))}</span>` : esc(agoText(t.statusSince))}</td>
       <td>${esc(serviceText(t.category))}</td>
-      <td>${esc(t.riderName || 'Name not set')}<div class="subtle">${telLink(t.riderPhone)}</div></td>
-      <td>${t.partnerName ? `${esc(t.partnerName)}<div class="subtle">${telLink(t.partnerPhone)}</div>` : '<span class="subtle">Searching…</span>'}</td>
+      <td>${esc(t.riderName || 'Name not set')}<div class="subtle">${telLink(t.riderPhone, { subject: 'ACCOUNT_PHONE', accountId: t.riderId, bookingId: t.bookingId })}</div></td>
+      <td>${t.partnerName ? `${esc(t.partnerName)}<div class="subtle">${telLink(t.partnerPhone, { subject: 'ACCOUNT_PHONE', accountId: t.partnerId, bookingId: t.bookingId })}</div>` : '<span class="subtle">Searching…</span>'}</td>
       <td class="route-cell"><div>${esc(t.pickup && t.pickup.label)}</div><div class="subtle">&rarr; ${esc(t.drop && t.drop.label)}</div></td>
       <td class="num">${rupees(t.fareEstimate)}</td></tr>`).join('')
     : `<tr><td colspan="7"><div class="subtle">No trips under way right now.</div></td></tr>`;
@@ -5500,7 +5725,7 @@ function paintLive(d) {
   const sortedPartners = partners.slice().sort((a, b) => (isStale(a) - isStale(b)) || ((b.tripId ? 1 : 0) - (a.tripId ? 1 : 0)));
   $('livePartners').innerHTML = sortedPartners.length ? sortedPartners.map(p => `<tr data-open-account="${escValue(p.accountId)}">
       <td class="strong">${esc(p.name || 'Name not set')}</td>
-      <td>${telLink(p.phone)}</td>
+      <td>${telLink(p.phone, { subject: 'ACCOUNT_PHONE', accountId: p.accountId })}</td>
       <td>${esc(VEHICLE_TEXT[p.vehicleType] || humanize(p.vehicleType) || '—')} <span class="subtle num">${esc(p.vehicleRegistrationNumber)}</span></td>
       <td>${isStale(p) ? `<span class="pill warn">${esc(agoText(p.lastFixAt))} ago</span>` : `<span class="subtle">${esc(agoText(p.lastFixAt))} ago</span>`}</td>
       <td>${p.tripId ? `<a href="#" data-open-booking="${escValue(p.tripId)}">On a trip</a>` : isStale(p) ? '<span class="subtle">Not reporting</span>' : '<span class="badge b-green">Free</span>'}</td></tr>`).join('')
@@ -5882,6 +6107,64 @@ async function staffSessionsDialog(member) {
       closeModal();
       toast('ok', `${member.displayName} is signed out everywhere`);
     } catch (err) { if (err.message !== 'unauthorized') toast('bad', 'Could not sign her out', err.message); }
+  });
+}
+
+// ---- audit ------------------------------------------------------------------
+const auditFilter = { staffId: '', action: '', from: '', to: '' };
+function auditQuery() {
+  const p = new URLSearchParams();
+  Object.entries(auditFilter).forEach(([k, v]) => { if (v) p.set(k, v); });
+  const q = p.toString();
+  return q ? '?' + q : '';
+}
+
+function auditRows(rows) {
+  return rows.length ? `<div class="scroll"><table class="mini"><thead><tr><th>When</th><th>Who</th><th>What</th><th>Record</th><th>Why / detail</th><th>From</th></tr></thead>
+    <tbody>${rows.map(r => `<tr>
+      <td class="num">${esc(time(r.at))}<div class="subtle">#${esc(r.seq)}</div></td>
+      <td>${esc(r.who)}<div class="subtle">${esc(r.role ? humanize(r.role) : '')}</div></td>
+      <td><span class="result-${esc(r.result)}">${esc(r.action)}</span>${r.result !== 'OK' ? ` <span class="pill ${r.result === 'DENIED' ? 'bad' : 'warn'}">${esc(r.result)}</span>` : ''}
+        ${r.permission ? `<div class="subtle">${esc(r.permission)}</div>` : ''}</td>
+      <td>${r.targetType ? `${esc(humanize(r.targetType))}<div class="subtle num">${esc(r.targetId)}</div>` : '—'}</td>
+      <td class="why">${r.reason ? `<b>${esc(r.reason)}</b>` : ''}${r.detail ? `<div class="subtle">${esc(r.detail)}</div>` : ''}</td>
+      <td>${esc(r.ipAddress)}<div class="subtle">${esc(r.device)}</div></td></tr>`).join('')}</tbody></table></div>`
+    : '<p class="subtle">Nothing matches.</p>';
+}
+
+function paintAudit([page, chain, staff]) {
+  $('cAudit').hidden = !page.alerts.length;
+  $('cAudit').textContent = page.alerts.length || '';
+  $('panel').innerHTML = `<div id="auditRoot">
+    ${chain.intact
+      ? `<div class="banner banner-ok" role="status"><strong>The log is intact.</strong> All ${esc(chain.rowsChecked)} rows were checked against their chain just now.</div>`
+      : `<div class="alert-banner" role="alert">The audit log has been tampered with: row ${esc(chain.brokenAt)} - ${esc(chain.problem)}. Every owner has been alerted.</div>`}
+    <div class="dx-card full"><h4>Alerts in the last 7 days <span class="right subtle">${page.alerts.length}</span></h4>${auditRows(page.alerts)}</div>
+    <div class="dx-card full"><h4>Log</h4>
+      <form class="audit-filters" id="auditForm">
+        <div><label for="afStaff">Person</label><select id="afStaff"><option value="">Everyone</option>
+          ${staff.members.map(m => `<option value="${escValue(m.id)}" ${auditFilter.staffId === m.id ? 'selected' : ''}>${esc(m.displayName)} (${esc(m.roleLabel)})</option>`).join('')}</select></div>
+        <div><label for="afAction">Action starts with</label><input id="afAction" placeholder="e.g. pii. or staff. or export." value="${escValue(auditFilter.action)}"></div>
+        <div><label for="afFrom">From</label><input id="afFrom" type="date" value="${escValue(auditFilter.from)}"></div>
+        <div><label for="afTo">To</label><input id="afTo" type="date" value="${escValue(auditFilter.to)}"></div>
+        <div><button class="btn btn-primary" type="submit">Show</button></div>
+        <div><button class="btn" type="button" id="auditCsv">Download CSV</button></div>
+      </form>
+      ${auditRows(page.rows)}
+    </div></div>`;
+  $('auditForm').addEventListener('submit', e => {
+    e.preventDefault();
+    auditFilter.staffId = $('afStaff').value;
+    auditFilter.action = $('afAction').value.trim();
+    auditFilter.from = $('afFrom').value;
+    auditFilter.to = $('afTo').value;
+    render();
+  });
+  $('auditCsv').addEventListener('click', async () => {
+    const ok = await confirmAction({ title: 'Download the audit log?', message: 'An export: you will be asked for your authenticator code, it is recorded, and every owner is told.', confirmLabel: 'Download' });
+    if (!ok) return;
+    try { await apiDownload('/admin/audit/export.csv' + auditQuery(), 'sheout-staff-audit.csv'); }
+    catch (err) { if (err.message !== 'unauthorized') toast('bad', 'Not downloaded', err.message); }
   });
 }
 
@@ -7003,6 +7286,7 @@ const TAB_ACCESS = {
   content: anyOf('content.manage'),
   assistant: anyOf('reports.ops'),
   staff: anyOf('staff.manage.employee', 'staff.manage.manager', 'staff.manage.owner'),
+  audit: anyOf('audit.view'),
 };
 function canOpen(name) {
   return !!me && !!TAB_ACCESS[name] && TAB_ACCESS[name]();

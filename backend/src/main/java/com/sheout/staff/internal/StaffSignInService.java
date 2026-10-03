@@ -1,6 +1,8 @@
 package com.sheout.staff.internal;
 
 import com.sheout.sharedkernel.Result;
+import com.sheout.staff.StaffAudit;
+import com.sheout.staff.StaffPrincipal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -44,11 +46,16 @@ class StaffSignInService {
     private final StaffSessionService sessions;
     private final StaffSettings settings;
     private final StaffIpAllowlist allowlist;
+    private final StaffAuditLog audit;
+    private final StaffKnownDevices devices;
 
     StaffSignInService(StaffMemberRepository members, StaffRecoveryCodeRepository recoveryCodes,
                        StaffPasswords passwords, StaffSecrets secrets, StaffSessionService sessions,
-                       StaffSettings settings, StaffIpAllowlist allowlist) {
+                       StaffSettings settings, StaffIpAllowlist allowlist, StaffAuditLog audit,
+                       StaffKnownDevices devices) {
         this.allowlist = allowlist;
+        this.audit = audit;
+        this.devices = devices;
         this.members = members;
         this.recoveryCodes = recoveryCodes;
         this.passwords = passwords;
@@ -93,24 +100,31 @@ class StaffSignInService {
         if (!passwordRight || factor == SecondFactor.WRONG) {
             boolean lockedNow = member.recordFailure(now, settings.maxFailedLogins, settings.lockFor);
             members.save(member);
+            // Which part was wrong goes in the log for the owners, never in the answer.
+            String which = !passwordRight ? "password" : "authenticator or recovery code";
             if (lockedNow) {
-                // Phase 2 turns this into an alert to every owner.
                 log.warn("Staff sign-in locked for {} after {} wrong attempts", member.getId(), settings.maxFailedLogins);
+                audit.record(failure(StaffActions.SIGN_IN_LOCKED, member, "wrong " + which + "; locked for "
+                        + settings.lockFor.toMinutes() + " minutes"), actor(member));
                 return Result.failure(SignInError.LOCKED);
             }
+            audit.record(failure(StaffActions.SIGN_IN_FAILED, member, "wrong " + which), actor(member));
             return Result.failure(SignInError.INCORRECT);
         }
 
         // Every answer was right. Only now is it safe to say why she still
         // cannot come in: she has proved who she is.
         if (member.getStatus() != StaffStatus.ACTIVE) {
+            audit.record(failure(StaffActions.SIGN_IN_REFUSED, member, "disabled"), actor(member));
             return Result.failure(SignInError.DISABLED);
         }
         if (member.accessExpired(now)) {
+            audit.record(failure(StaffActions.SIGN_IN_REFUSED, member, "access ended"), actor(member));
             return Result.failure(SignInError.ACCESS_ENDED);
         }
         if (!allowlist.allows(member.getRole(), ipAddress)) {
             log.warn("Staff {} ({}) signed in correctly from a network outside the role's allowlist", member.getId(), member.getRole());
+            audit.record(failure(StaffActions.SIGN_IN_REFUSED, member, "network not on the role's allowlist"), actor(member));
             return Result.failure(SignInError.NETWORK_NOT_ALLOWED);
         }
         if (factor.step().isPresent()) {
@@ -121,7 +135,48 @@ class StaffSignInService {
         }
         members.save(member);
         StaffSessionService.Opened opened = sessions.open(member, userAgent, ipAddress);
+        StaffPrincipal principal = StaffSessionService.principalFor(member, opened.session());
+        audit.record(new StaffAudit.Entry(StaffActions.SIGN_IN, null, StaffAudit.Result.OK, "STAFF", member.getId().toString(),
+                null, factor.step().isEmpty() ? "with a recovery code" : null), principal);
+        if (devices.rememberAndCheckNew(member.getId(), userAgent)) {
+            audit.record(new StaffAudit.Entry(StaffActions.NEW_DEVICE, null, StaffAudit.Result.OK, "STAFF",
+                    member.getId().toString(), null, StaffKnownDevices.describe(userAgent)), principal);
+        }
         return Result.success(new SignedIn(member, opened, factor.step().isEmpty(), unusedRecoveryCodes(member)));
+    }
+
+    /**
+     * Step-up: her authenticator code again, on a session already open, before
+     * a sensitive action. A recovery code does not count - it is for getting
+     * back in, not for vouching that her phone is in her hand.
+     */
+    @Transactional
+    boolean stepUp(StaffMemberEntity member, StaffPrincipal principal, String code) {
+        StaffMemberEntity locked = members.findByIdForUpdate(member.getId()).orElseThrow();
+        String typed = code == null ? "" : code.replaceAll("\\s", "");
+        OptionalLong step = locked.hasSecondFactor()
+                ? Totp.verify(secrets.decrypt(locked.getTotpSecret()), typed, Instant.now(), locked.getTotpLastStep())
+                : OptionalLong.empty();
+        if (step.isEmpty()) {
+            audit.record(new StaffAudit.Entry(StaffActions.STEP_UP_FAILED, null, StaffAudit.Result.FAILED, "STAFF",
+                    member.getId().toString(), null, null), principal);
+            return false;
+        }
+        locked.acceptTotpStep(step.getAsLong());
+        members.save(locked);
+        sessions.markSteppedUp(principal.sessionId());
+        audit.record(new StaffAudit.Entry(StaffActions.STEP_UP, null, StaffAudit.Result.OK, "STAFF",
+                member.getId().toString(), null, null), principal);
+        return true;
+    }
+
+    private static StaffAudit.Entry failure(String action, StaffMemberEntity member, String detail) {
+        return new StaffAudit.Entry(action, null, StaffAudit.Result.FAILED, "STAFF", member.getId().toString(), null, detail);
+    }
+
+    /** The account the attempt was made against: there is no session yet. */
+    private static StaffPrincipal actor(StaffMemberEntity member) {
+        return new StaffPrincipal(member.getId(), member.getAccountId(), member.getRole(), null, member.getDisplayName(), false);
     }
 
     /** The authenticator step matched, a recovery code was spent, or neither. */

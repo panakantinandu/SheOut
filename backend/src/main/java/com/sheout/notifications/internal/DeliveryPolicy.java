@@ -61,6 +61,7 @@ record DeliveryPolicy(boolean push, boolean emailFallback, boolean smsFallback, 
             case PARTNER_DOCUMENT_EXPIRED, PARTNER_DOCUMENT_REJECTED -> PUSH_AND_EMAIL;
             // Operators on duty, like an SOS: push, every device.
             case TRIP_WATCH_ALERT -> PUSH_ONLY;
+            case STAFF_SECURITY_ALERT -> PUSH_ONLY;
             // "Are you all right?" mid-trip. If push cannot reach her phone
             // - no data - a text is exactly when it matters.
             case TRIP_CHECK_IN -> PUSH_THEN_SMS;

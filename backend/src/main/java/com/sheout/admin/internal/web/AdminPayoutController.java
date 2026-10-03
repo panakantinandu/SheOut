@@ -1,5 +1,8 @@
 package com.sheout.admin.internal.web;
 
+import com.sheout.staff.RequiresStepUp;
+import com.sheout.sharedkernel.privacy.Pii;
+
 import com.sheout.staff.Permission;
 import com.sheout.staff.RequiresPermission;
 import com.sheout.staff.RequiresAnyPermission;
@@ -75,6 +78,7 @@ public class AdminPayoutController {
     }
 
     @RequiresPermission({Permission.PAYOUTS_PREPARE, Permission.PAYOUTS_APPROVE})
+    @RequiresStepUp
     @PostMapping("/{requestId}/mark-paid")
     public ResponseEntity<PayoutRow> markPaid(@PathVariable UUID requestId, @Valid @RequestBody MarkPaidRequest request) {
         CurrentAccount admin = caller();
@@ -130,7 +134,8 @@ public class AdminPayoutController {
      */
     public record PayoutRow(UUID id, UUID driverAccountId, String driverName, String driverPhone,
                             boolean driverPanOnFile, BigDecimal amount,
-                            PayoutStatus status, String accountHolderName, String accountNumber, String ifsc, String upiVpa,
+                            PayoutStatus status, String accountHolderName, @Pii(Pii.Kind.BANK) String accountNumber, String ifsc,
+                            @Pii(Pii.Kind.BANK) String upiVpa,
                             Instant requestedAt, Instant paidAt, String paidByPhone, String paymentReference,
                             BigDecimal driverAvailableBalance) {
     }

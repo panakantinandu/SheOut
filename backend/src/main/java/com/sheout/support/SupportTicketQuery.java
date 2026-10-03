@@ -20,8 +20,23 @@ public record SupportTicketQuery(
         Set<SupportTicketCategory> categories,
         Set<SupportTicketPriority> priorities,
         Instant from,
-        Instant to
+        Instant to,
+        /**
+         * When set, only tickets nobody has taken and tickets this operator
+         * holds - a support agent's view. Null for everyone's.
+         */
+        UUID unassignedOrHeldBy
 ) {
+
+    public SupportTicketQuery(UUID raisedBy, Set<SupportTicketStatus> statuses, Set<SupportTicketCategory> categories,
+                              Set<SupportTicketPriority> priorities, Instant from, Instant to) {
+        this(raisedBy, statuses, categories, priorities, from, to, null);
+    }
+
+    /** The same search, narrowed to unassigned tickets and this operator's own. */
+    public SupportTicketQuery onlyUnassignedOrHeldBy(UUID operatorAccountId) {
+        return new SupportTicketQuery(raisedBy, statuses, categories, priorities, from, to, operatorAccountId);
+    }
 
     public static SupportTicketQuery forRaiser(UUID raisedBy) {
         return new SupportTicketQuery(raisedBy, null, null, null, null, null);

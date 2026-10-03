@@ -37,6 +37,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -70,6 +71,10 @@ public class AdminSupportController {
             @RequestParam(required = false) Instant from,
             @RequestParam(required = false) Instant to) {
         SupportTicketQuery query = new SupportTicketQuery(null, status, category, priority, from, to);
+        // An agent's queue: what nobody has taken, and her own.
+        if (!StaffContext.has(Permission.SUPPORT_ALL)) {
+            query = query.onlyUnassignedOrHeldBy(caller().accountId());
+        }
         return ResponseEntity.ok(PageResponse.from(
                 supportOps.tickets(query, PageRequest.of(
                         PageResponse.normalizePage(page), PageResponse.normalizePageSize(pageSize))),
@@ -93,6 +98,7 @@ public class AdminSupportController {
     @GetMapping("/tickets/{ticketId}")
     public ResponseEntity<SupportTicketOpsDetail> ticket(@PathVariable UUID ticketId) {
         CurrentAccount admin = caller();
+        requireHeld(ticketId, admin);
         return ResponseEntity.ok(supportOps.ticket(ticketId, admin.accountId())
                 .orElseThrow(() -> ApiException.notFound("No such ticket")));
     }
@@ -103,6 +109,7 @@ public class AdminSupportController {
     public ResponseEntity<SupportTicketMessage> message(@PathVariable UUID ticketId,
                                                         @Valid @RequestBody MessageRequest request) {
         CurrentAccount admin = caller();
+        requireHeld(ticketId, admin);
         Result<SupportTicketMessage, SupportError> result = supportOps.addMessage(
                 ticketId, admin.accountId(), request.message(), Boolean.TRUE.equals(request.internalOnly()));
         if (result.isFailure()) {
@@ -116,6 +123,7 @@ public class AdminSupportController {
     public ResponseEntity<SupportTicketSummary> status(@PathVariable UUID ticketId,
                                                        @Valid @RequestBody StatusRequest request) {
         CurrentAccount admin = caller();
+        requireHeld(ticketId, admin);
         return respond(supportOps.updateStatus(ticketId, request.status(), admin.accountId()));
     }
 
@@ -125,7 +133,33 @@ public class AdminSupportController {
     public ResponseEntity<SupportTicketSummary> assign(@PathVariable UUID ticketId,
                                                        @RequestBody AssignRequest request) {
         CurrentAccount admin = caller();
+        if (!StaffContext.has(Permission.SUPPORT_ALL)) {
+            // An agent takes an unassigned ticket, or gives back her own - nothing else.
+            Optional<UUID> holder = supportOps.holder(ticketId, admin.accountId())
+                    .orElseThrow(() -> ApiException.notFound("No such ticket"));
+            boolean takingFree = admin.accountId().equals(request.assigneeAdminId()) && holder.isEmpty();
+            boolean givingBack = request.assigneeAdminId() == null && holder.map(admin.accountId()::equals).orElse(false);
+            if (!takingFree && !givingBack) {
+                throw new ApiException(HttpStatus.FORBIDDEN, "NOT_YOURS",
+                        "You can take a ticket nobody has, or give back your own. A manager reassigns the rest.");
+            }
+        }
         return respond(supportOps.assign(ticketId, request.assigneeAdminId(), admin.accountId()));
+    }
+
+    /**
+     * A support agent opens and works only tickets she holds - and through
+     * them, the trip a ticket is about. support.all (managers, owners) opens any.
+     */
+    private void requireHeld(UUID ticketId, CurrentAccount admin) {
+        if (StaffContext.has(Permission.SUPPORT_ALL)) {
+            return;
+        }
+        Optional<UUID> holder = supportOps.holder(ticketId, admin.accountId())
+                .orElseThrow(() -> ApiException.notFound("No such ticket"));
+        if (!holder.map(admin.accountId()::equals).orElse(false)) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "NOT_YOURS", "Take this ticket before opening it.");
+        }
     }
 
     private ResponseEntity<SupportTicketSummary> respond(Result<SupportTicketSummary, SupportError> result) {

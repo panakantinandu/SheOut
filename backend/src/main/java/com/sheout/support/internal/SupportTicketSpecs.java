@@ -39,6 +39,10 @@ final class SupportTicketSpecs {
             }
             if (query.from() != null) predicates.add(cb.greaterThanOrEqualTo(root.get("createdAt"), query.from()));
             if (query.to() != null) predicates.add(cb.lessThanOrEqualTo(root.get("createdAt"), query.to()));
+            if (query.unassignedOrHeldBy() != null) {
+                predicates.add(cb.or(cb.isNull(root.get("assignedAdminId")),
+                        cb.equal(root.get("assignedAdminId"), query.unassignedOrHeldBy())));
+            }
             return cb.and(predicates.toArray(new Predicate[0]));
         };
     }

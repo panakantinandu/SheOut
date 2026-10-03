@@ -1,5 +1,8 @@
 package com.sheout.admin.internal.web;
 
+import com.sheout.staff.WorkAssignments;
+import com.sheout.staff.RequiresStepUp;
+import com.sheout.staff.AuditedRead;
 import com.sheout.staff.Permission;
 import com.sheout.staff.RequiresPermission;
 import com.sheout.staff.StaffContext;
@@ -72,8 +75,10 @@ public class AdminController {
 
     private final AdminService adminService;
     private final AnnouncementApi announcements;
+    private final WorkAssignments work;
 
-    public AdminController(AdminService adminService, AnnouncementApi announcements) {
+    public AdminController(AdminService adminService, AnnouncementApi announcements, WorkAssignments work) {
+        this.work = work;
         this.announcements = announcements;
         this.adminService = adminService;
     }
@@ -100,7 +105,7 @@ public class AdminController {
     @RequiresPermission(Permission.VERIFICATION_REVIEW)
     @GetMapping("/verification/review-queue")
     public ResponseEntity<List<ReviewQueueRow>> reviewQueue() {
-        return ResponseEntity.ok(adminService.reviewQueue());
+        return ResponseEntity.ok(work.visibleQueue(adminService.reviewQueue(), ReviewQueueRow::accountId, WorkAssignments.Kind.VERIFICATION, Permission.VERIFICATION_ALL));
     }
 
     /**
@@ -122,8 +127,11 @@ public class AdminController {
      * those it is rather than showing a gap.
      */
     @RequiresPermission(Permission.DOCUMENTS_VIEW)
+    @RequiresStepUp
+    @AuditedRead("documents.view")
     @GetMapping("/verification/{accountId}/document")
     public ResponseEntity<DocumentResponse> document(@PathVariable UUID accountId) {
+        work.requireMayOpen(WorkAssignments.Kind.VERIFICATION, accountId, Permission.VERIFICATION_ALL);
         return adminService.documentUrl(accountId)
                 .map(url -> ResponseEntity.ok(
                         new DocumentResponse(accountId, url, adminService.rcDocumentUrl(accountId).orElse(null),

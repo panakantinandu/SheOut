@@ -5,6 +5,7 @@ import com.sheout.sharedkernel.web.ApiException;
 import com.sheout.staff.Permission;
 import com.sheout.staff.RequiresAnyPermission;
 import com.sheout.staff.RequiresPermission;
+import com.sheout.staff.RequiresStepUp;
 import com.sheout.staff.StaffContext;
 import com.sheout.staff.StaffPrincipal;
 import com.sheout.staff.StaffRole;
@@ -79,6 +80,7 @@ class StaffManagementController {
                          Instant accessExpiresAt) {
     }
 
+    @RequiresStepUp
     @PostMapping("/invites")
     ResponseEntity<StaffViews.InviteSent> invite(@Valid @RequestBody InviteRequest body) {
         StaffPrincipal me = StaffContext.require(body.role().managedBy());
@@ -103,12 +105,14 @@ class StaffManagementController {
     record DisableRequest(@NotBlank @Size(max = 500) String reason) {
     }
 
+    @RequiresStepUp
     @PostMapping("/{staffId}/disable")
     ResponseEntity<StaffViews.Member> disable(@PathVariable UUID staffId, @Valid @RequestBody DisableRequest body) {
         return answer(management.disable(StaffContext.requireSignedIn(), staffId, body.reason().trim()));
     }
 
     @RequiresPermission(STAFF_MANAGE_OWNER)
+    @RequiresStepUp
     @PostMapping("/{staffId}/enable")
     ResponseEntity<StaffViews.Member> enable(@PathVariable UUID staffId) {
         return answer(management.enable(StaffContext.requireSignedIn(), staffId));
@@ -117,6 +121,7 @@ class StaffManagementController {
     record RoleRequest(@NotNull StaffRole role, Instant accessExpiresAt) {
     }
 
+    @RequiresStepUp
     @PostMapping("/{staffId}/role")
     ResponseEntity<StaffViews.Member> changeRole(@PathVariable UUID staffId, @Valid @RequestBody RoleRequest body) {
         return answer(management.changeRole(StaffContext.requireSignedIn(), staffId, body.role(),
@@ -148,6 +153,7 @@ class StaffManagementController {
         return ResponseEntity.ok(new StaffViews.Sessions(sessions.live(target, null)));
     }
 
+    @RequiresStepUp
     @PostMapping("/{staffId}/sessions/end-all")
     ResponseEntity<Void> endSessions(@PathVariable UUID staffId) {
         Result<Integer, StaffManagementService.ManageError> result = management.endSessions(StaffContext.requireSignedIn(), staffId);
@@ -163,6 +169,7 @@ class StaffManagementController {
      * recovery codes are for.
      */
     @RequiresPermission(STAFF_MANAGE_OWNER)
+    @RequiresStepUp
     @PostMapping("/{staffId}/reset-second-factor")
     ResponseEntity<StaffViews.InviteSent> resetSecondFactor(@PathVariable UUID staffId) {
         StaffPrincipal me = StaffContext.require(Permission.STAFF_MANAGE_OWNER);

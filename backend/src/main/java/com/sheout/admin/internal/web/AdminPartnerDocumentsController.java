@@ -1,5 +1,6 @@
 package com.sheout.admin.internal.web;
 
+import com.sheout.staff.WorkAssignments;
 import com.sheout.staff.Permission;
 import com.sheout.staff.RequiresPermission;
 import com.sheout.admin.internal.DocumentQueueRow;
@@ -29,13 +30,17 @@ public class AdminPartnerDocumentsController {
 
     private final PartnerVerificationOpsService ops;
 
-    public AdminPartnerDocumentsController(PartnerVerificationOpsService ops) {
+    private final WorkAssignments work;
+
+    public AdminPartnerDocumentsController(PartnerVerificationOpsService ops, WorkAssignments work) {
         this.ops = ops;
+        this.work = work;
     }
 
     @RequiresPermission(Permission.VERIFICATION_REVIEW)
     @GetMapping("/api/v1/admin/partners/{accountId}/verification")
     public ResponseEntity<PartnerVerificationView> partner(@PathVariable UUID accountId) {
+        work.requireMayOpen(WorkAssignments.Kind.VERIFICATION, accountId, Permission.VERIFICATION_ALL);
         return ops.partner(accountId).map(ResponseEntity::ok)
                 .orElseThrow(() -> ApiException.notFound("No verification record for this account"));
     }
@@ -44,7 +49,7 @@ public class AdminPartnerDocumentsController {
     @RequiresPermission(Permission.VERIFICATION_REVIEW)
     @GetMapping("/api/v1/admin/verification/document-queue")
     public ResponseEntity<List<DocumentQueueRow>> queue(@RequestParam PartnerVerificationOpsService.Queue queue) {
-        return ResponseEntity.ok(ops.documentQueue(queue));
+        return ResponseEntity.ok(work.visibleQueue(ops.documentQueue(queue), DocumentQueueRow::accountId, WorkAssignments.Kind.VERIFICATION, Permission.VERIFICATION_ALL));
     }
 
 }

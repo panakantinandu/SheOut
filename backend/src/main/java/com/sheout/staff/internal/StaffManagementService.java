@@ -4,6 +4,7 @@ import com.sheout.auth.SessionRevocation;
 import com.sheout.notifications.OperatorDeviceApi;
 import com.sheout.sharedkernel.Result;
 import com.sheout.staff.Permission;
+import com.sheout.staff.StaffAudit;
 import com.sheout.staff.StaffContext;
 import com.sheout.staff.StaffDirectory;
 import com.sheout.staff.StaffPrincipal;
@@ -45,9 +46,11 @@ class StaffManagementService implements StaffDirectory {
     private final StaffMemberRepository members;
     private final StaffSessionService sessions;
     private final OperatorDeviceApi operatorDevices;
+    private final StaffAuditLog audit;
 
     StaffManagementService(StaffMemberRepository members, StaffSessionService sessions,
-                           OperatorDeviceApi operatorDevices) {
+                           OperatorDeviceApi operatorDevices, StaffAuditLog audit) {
+        this.audit = audit;
         this.members = members;
         this.sessions = sessions;
         this.operatorDevices = operatorDevices;
@@ -103,6 +106,8 @@ class StaffManagementService implements StaffDirectory {
         sessions.endAll(target, SessionRevocation.ACCESS_CHANGED);
         operatorDevices.forgetOperatorDevices(target.getAccountId());
         log.info("Staff {} ({}) disabled by {}", target.getId(), target.getRole(), by.staffId());
+        audit.record(new StaffAudit.Entry(StaffActions.DISABLE, target.getRole().managedBy(), StaffAudit.Result.OK,
+                "STAFF", target.getId().toString(), reason, "{\"status\":[\"ACTIVE\",\"DISABLED\"]}"));
         return Result.success(target);
     }
 
@@ -121,6 +126,8 @@ class StaffManagementService implements StaffDirectory {
         target.enable();
         members.save(target);
         log.info("Staff {} ({}) re-enabled by {}", target.getId(), target.getRole(), by.staffId());
+        audit.record(new StaffAudit.Entry(StaffActions.ENABLE, Permission.STAFF_MANAGE_OWNER, StaffAudit.Result.OK,
+                "STAFF", target.getId().toString(), null, "{\"status\":[\"DISABLED\",\"ACTIVE\"]}"));
         return Result.success(target);
     }
 
@@ -155,6 +162,8 @@ class StaffManagementService implements StaffDirectory {
         members.save(target);
         sessions.endAll(target, SessionRevocation.ACCESS_CHANGED);
         log.info("Staff {} role {} -> {} by {}", target.getId(), from, newRole, by.staffId());
+        audit.record(new StaffAudit.Entry(StaffActions.ROLE_CHANGE, newRole.managedBy(), StaffAudit.Result.OK, "STAFF",
+                target.getId().toString(), null, "{\"role\":[\"" + from + "\",\"" + newRole + "\"]}"));
         return Result.success(target);
     }
 
@@ -168,6 +177,8 @@ class StaffManagementService implements StaffDirectory {
         StaffContext.require(found.get().getRole().managedBy());
         int ended = sessions.endAll(found.get(), SessionRevocation.SIGNED_OUT);
         log.info("Staff {} signed out everywhere by {} ({} sessions)", staffId, by.staffId(), ended);
+        audit.record(new StaffAudit.Entry(StaffActions.SESSIONS_ENDED_BY_OTHER, found.get().getRole().managedBy(),
+                StaffAudit.Result.OK, "STAFF", staffId.toString(), null, "{\"sessions\":" + ended + "}"));
         return Result.success(ended);
     }
 

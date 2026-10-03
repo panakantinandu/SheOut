@@ -5,6 +5,7 @@ import com.sheout.auth.SessionRevocation;
 import com.sheout.notifications.StaffEmailApi;
 import com.sheout.sharedkernel.Result;
 import com.sheout.sharedkernel.logging.Redact;
+import com.sheout.staff.StaffAudit;
 import com.sheout.staff.StaffRole;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,10 +46,15 @@ class StaffInviteService {
     private final AuthApi authApi;
     private final StaffEmailApi email;
     private final StaffSettings settings;
+    private final StaffAuditLog audit;
+    private final StaffKnownDevices devices;
 
     StaffInviteService(StaffInviteRepository invites, StaffMemberRepository members, StaffPasswords passwords,
                        StaffSecrets secrets, StaffSignInService signIn, StaffSessionService sessions,
-                       AuthApi authApi, StaffEmailApi email, StaffSettings settings) {
+                       AuthApi authApi, StaffEmailApi email, StaffSettings settings, StaffAuditLog audit,
+                       StaffKnownDevices devices) {
+        this.audit = audit;
+        this.devices = devices;
         this.invites = invites;
         this.members = members;
         this.passwords = passwords;
@@ -108,6 +114,8 @@ class StaffInviteService {
                         + "The link works once. If you were not expecting this email, ignore it.");
         log.info("Staff invite {} for {} as {} by {} ({})", invite.getId(), Redact.email(address), role,
                 invitedByStaffId, emailed ? "emailed" : "email not sent - link returned to the inviter");
+        audit.record(new StaffAudit.Entry(StaffActions.INVITE, role.managedBy(), StaffAudit.Result.OK, "INVITE",
+                invite.getId().toString(), null, "{\"role\":\"" + role + "\",\"emailed\":" + emailed + "}"));
         return Result.success(new Sent(invite, link, emailed));
     }
 
@@ -165,6 +173,8 @@ class StaffInviteService {
                         + link + "\n\nIf you did not ask for this, tell an owner straight away.");
         log.info("Staff second-factor reset for {} by {} ({})", member.getId(), byStaffId,
                 emailed ? "emailed" : "email not sent - link returned to the owner");
+        audit.record(new StaffAudit.Entry(StaffActions.SECOND_FACTOR_RESET, com.sheout.staff.Permission.STAFF_MANAGE_OWNER,
+                StaffAudit.Result.OK, "STAFF", member.getId().toString(), null, null));
         return Result.success(new Sent(invite, link, emailed));
     }
 
@@ -242,6 +252,10 @@ class StaffInviteService {
         invites.save(invite);
         List<String> codes = signIn.issueRecoveryCodes(member);
         StaffSessionService.Opened opened = sessions.open(member, userAgent, ipAddress);
+        devices.rememberAndCheckNew(member.getId(), userAgent);
+        audit.record(new StaffAudit.Entry(StaffActions.JOIN, null, StaffAudit.Result.OK, "STAFF", member.getId().toString(),
+                null, invite.isReset() ? "set new credentials after a reset" : "joined as " + member.getRole()),
+                StaffSessionService.principalFor(member, opened.session()));
         log.info("Staff {} {} as {}", member.getId(), invite.isReset() ? "set new credentials" : "joined", member.getRole());
         return Result.success(new Joined(member, codes, opened));
     }
@@ -251,6 +265,8 @@ class StaffInviteService {
         return invites.findById(inviteId).filter(i -> i.getStatus() == StaffInviteEntity.Status.PENDING).map(i -> {
             i.revoke();
             invites.save(i);
+            audit.record(new StaffAudit.Entry(StaffActions.INVITE_REVOKE, i.getRole().managedBy(), StaffAudit.Result.OK,
+                    "INVITE", i.getId().toString(), null, null));
             return true;
         }).orElse(false);
     }

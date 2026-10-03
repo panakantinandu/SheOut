@@ -1,5 +1,7 @@
 package com.sheout.insurance.internal.web;
 
+import com.sheout.staff.RequiresStepUp;
+import com.sheout.staff.Export;
 import com.sheout.staff.Permission;
 import com.sheout.staff.RequiresPermission;
 import com.sheout.staff.RequiresAnyPermission;
@@ -70,6 +72,7 @@ public class AdminInsuranceController {
     }
 
     @RequiresPermission(Permission.INSURANCE_MANAGE)
+    @RequiresStepUp
     @PostMapping("/api/v1/admin/insurance/policies")
     public ResponseEntity<PolicyView> createPolicy(@RequestBody PolicyRequest request) {
         CurrentAccount admin = caller();
@@ -77,18 +80,21 @@ public class AdminInsuranceController {
     }
 
     @RequiresPermission(Permission.INSURANCE_MANAGE)
+    @RequiresStepUp
     @PutMapping("/api/v1/admin/insurance/policies/{id}")
     public ResponseEntity<PolicyView> updatePolicy(@PathVariable UUID id, @RequestBody PolicyRequest request) {
         return ResponseEntity.ok(view(orThrow(insurance.updatePolicy(id, request.toInput()))));
     }
 
     @RequiresPermission(Permission.INSURANCE_MANAGE)
+    @RequiresStepUp
     @PostMapping("/api/v1/admin/insurance/policies/{id}/activate")
     public ResponseEntity<PolicyView> activate(@PathVariable UUID id) {
         return ResponseEntity.ok(view(orThrow(insurance.setActive(id, true))));
     }
 
     @RequiresPermission(Permission.INSURANCE_MANAGE)
+    @RequiresStepUp
     @PostMapping("/api/v1/admin/insurance/policies/{id}/deactivate")
     public ResponseEntity<PolicyView> deactivate(@PathVariable UUID id) {
         return ResponseEntity.ok(view(orThrow(insurance.setActive(id, false))));
@@ -105,6 +111,7 @@ public class AdminInsuranceController {
 
     /** One day's covered trips, as the configured reporter produces them (a CSV by default). */
     @RequiresPermission(Permission.INSURANCE_MANAGE)
+    @Export("insurance.bordereau")
     @GetMapping("/api/v1/admin/insurance/bordereau")
     public ResponseEntity<byte[]> bordereau(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         Result<InsurerReporter.Report, String> result = insurance.bordereau(date);
@@ -151,6 +158,7 @@ public class AdminInsuranceController {
      * enrol her - and what the partner consent says it receives.
      */
     @RequiresPermission(Permission.INSURANCE_MANAGE)
+    @Export("insurance.movements")
     @GetMapping("/api/v1/admin/insurance/enrolments/movements")
     public ResponseEntity<byte[]> movements(@RequestParam String month) {
         YearMonth ym = parseMonth(month);

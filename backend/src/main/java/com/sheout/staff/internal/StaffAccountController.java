@@ -40,9 +40,12 @@ class StaffAccountController {
     private final OperatorDeviceApi operatorDevices;
     private final StaffSettings settings;
     private final RateLimiter rateLimiter;
+    private final StaffAuditLog audit;
 
     StaffAccountController(StaffManagementService management, StaffSessionService sessions, StaffSignInService signIn,
-                           OperatorDeviceApi operatorDevices, StaffSettings settings, RateLimiter rateLimiter) {
+                           OperatorDeviceApi operatorDevices, StaffSettings settings, RateLimiter rateLimiter,
+                           StaffAuditLog audit) {
+        this.audit = audit;
         this.management = management;
         this.sessions = sessions;
         this.signIn = signIn;
@@ -63,6 +66,7 @@ class StaffAccountController {
         if (!sessions.endOne(member(me), sessionId)) {
             throw ApiException.notFound("No such session");
         }
+        mine(StaffActions.SESSION_ENDED, me, sessionId.toString());
         if (sessionId.equals(me.sessionId())) {
             StaffCookies.clear(response, settings.cookieSecure);
         }
@@ -73,7 +77,9 @@ class StaffAccountController {
     @PostMapping("/sessions/end-all")
     ResponseEntity<Void> endAll(HttpServletResponse response) {
         StaffPrincipal me = StaffContext.requireSignedIn();
-        sessions.endAll(member(me), com.sheout.auth.SessionRevocation.SIGNED_OUT);
+        int ended = sessions.endAll(member(me), com.sheout.auth.SessionRevocation.SIGNED_OUT);
+        audit.record(new com.sheout.staff.StaffAudit.Entry(StaffActions.SESSION_ENDED, null, com.sheout.staff.StaffAudit.Result.OK,
+                "STAFF", String.valueOf(me.staffId()), null, "{\"everywhere\":true,\"sessions\":" + ended + "}"), me);
         StaffCookies.clear(response, settings.cookieSecure);
         return ResponseEntity.noContent().build();
     }
@@ -91,6 +97,7 @@ class StaffAccountController {
         if (result.isFailure()) {
             throw new ApiException(HttpStatus.BAD_REQUEST, result.error().error().name(), result.error().message());
         }
+        mine(StaffActions.PASSWORD_CHANGE, me, String.valueOf(me.staffId()));
         return ResponseEntity.noContent().build();
     }
 
@@ -109,6 +116,7 @@ class StaffAccountController {
         if (result.isFailure()) {
             throw new ApiException(HttpStatus.BAD_REQUEST, result.error().error().name(), result.error().message());
         }
+        mine(StaffActions.RECOVERY_CODES, me, String.valueOf(me.staffId()));
         return ResponseEntity.ok(new RecoveryCodes(result.value()));
     }
 
@@ -132,6 +140,10 @@ class StaffAccountController {
         StaffPrincipal me = StaffContext.requireSignedIn();
         operatorDevices.unregisterOperatorDevice(me.accountId(), body.token().trim());
         return ResponseEntity.noContent().build();
+    }
+
+    private void mine(String action, StaffPrincipal me, String targetId) {
+        audit.record(com.sheout.staff.StaffAudit.Entry.ok(action, null, "STAFF", targetId), me);
     }
 
     private StaffMemberEntity member(StaffPrincipal me) {

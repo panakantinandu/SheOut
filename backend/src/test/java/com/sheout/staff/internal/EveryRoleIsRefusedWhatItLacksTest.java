@@ -57,12 +57,15 @@ class EveryRoleIsRefusedWhatItLacksTest {
 
     private StaffTestSupport staff;
     private final Map<StaffRole, StaffTestSupport.Session> sessions = new EnumMap<>(StaffRole.class);
+    private final List<UUID> staffIds = new ArrayList<>();
 
     @BeforeAll
     void everyRoleSignedIn() {
         staff = new StaffTestSupport(invites, jdbc, mvc, json);
         for (StaffRole role : StaffRole.values()) {
-            sessions.put(role, staff.join(role).session());
+            StaffTestSupport.Member member = staff.join(role);
+            sessions.put(role, member.session());
+            staffIds.add(member.staffId());
         }
     }
 
@@ -84,6 +87,7 @@ class EveryRoleIsRefusedWhatItLacksTest {
     void everyRoleIsRefusedEveryEndpointItLacksThePermissionFor() throws Exception {
         List<String> failures = new ArrayList<>();
         int refusalsChecked = 0;
+        long deniedBefore = deniedRows();
         int allowedChecked = 0;
         for (Map.Entry<RequestMappingInfo, HandlerMethod> entry : mappings.getHandlerMethods().entrySet()) {
             RequestMappingInfo info = entry.getKey();
@@ -126,6 +130,14 @@ class EveryRoleIsRefusedWhatItLacksTest {
         System.out.println("Forbidden attempts checked: " + refusalsChecked + ", allowed reads checked: " + allowedChecked);
         assertThat(failures).isEmpty();
         assertThat(refusalsChecked).isGreaterThan(400);
+        // Every one of those refusals is in the audit log, with the permission it lacked.
+        assertThat(deniedRows() - deniedBefore).isEqualTo(refusalsChecked);
+    }
+
+    private long deniedRows() {
+        return jdbc.queryForObject("select count(*) from staff_audit_events where action = 'permission.denied'"
+                + " and result = 'DENIED' and permission is not null and staff_id = any(?)", Long.class,
+                (Object) staffIds.toArray(new UUID[0]));
     }
 
     @Test

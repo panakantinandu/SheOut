@@ -79,6 +79,7 @@ final class StaffTestSupport {
         StaffInviteService.Joined joined = invites.confirmAuthenticator(token, codeNow(enrolment.secret()), "JUnit", "127.0.0.1")
                 .value();
         accounts.add(joined.member().getAccountId());
+        markSteppedUp(joined.opened().session().getCsrfToken());
         return new Member(joined.member().getId(), joined.member().getAccountId(), joined.member().getEmail(), role,
                 enrolment.secret(), joined.recoveryCodes(),
                 new Session(joined.opened().cookieValue(), joined.opened().session().getCsrfToken()));
@@ -112,7 +113,21 @@ final class StaffTestSupport {
         if (response.getStatus() != 200) {
             throw new AssertionError("Sign-in failed: " + response.getStatus() + " " + response.getContentAsString());
         }
-        return sessionFrom(response);
+        Session session = sessionFrom(response);
+        markSteppedUp(session.csrf());
+        return session;
+    }
+
+    /**
+     * Tests are about one rule at a time, so a session starts as if she had
+     * just re-entered her code; the step-up tests clear it to see the refusal.
+     */
+    void markSteppedUp(String csrf) {
+        jdbc.update("update staff_sessions set step_up_at = now() where csrf_token = ?", csrf);
+    }
+
+    void clearStepUp(Session session) {
+        jdbc.update("update staff_sessions set step_up_at = null where csrf_token = ?", session.csrf());
     }
 
     Session sessionFrom(MockHttpServletResponse response) throws Exception {
@@ -124,7 +139,7 @@ final class StaffTestSupport {
     }
 
     JsonNode body(MockHttpServletResponse response) throws Exception {
-        return json.readTree(response.getContentAsString());
+        return json.readTree(response.getContentAsString(java.nio.charset.StandardCharsets.UTF_8));
     }
 
     void cleanUp() {
@@ -138,6 +153,7 @@ final class StaffTestSupport {
             jdbc.update("delete from staff_members where lower(email) = lower(?)", email);
         }
         for (UUID account : accounts) {
+            jdbc.update("delete from staff_work_assignments where staff_account_id = ?", account);
             jdbc.update("delete from accounts where id = ?", account);
         }
         jdbc.execute("select 1");

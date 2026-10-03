@@ -1,5 +1,6 @@
 package com.sheout.driververification.internal.web;
 
+import com.sheout.staff.WorkAssignments;
 import com.sheout.staff.Permission;
 import com.sheout.staff.RequiresPermission;
 import com.sheout.staff.StaffContext;
@@ -50,7 +51,10 @@ public class ShiftCheckController {
     private final RateLimiter rateLimiter;
     private final AuthApi authApi;
 
-    public ShiftCheckController(ShiftCheckService service, RateLimiter rateLimiter, AuthApi authApi) {
+    private final WorkAssignments work;
+
+    public ShiftCheckController(ShiftCheckService service, RateLimiter rateLimiter, AuthApi authApi, WorkAssignments work) {
+        this.work = work;
         this.service = service;
         this.rateLimiter = rateLimiter;
         this.authApi = authApi;
@@ -90,7 +94,8 @@ public class ShiftCheckController {
     @RequiresPermission(Permission.VERIFICATION_REVIEW)
     @GetMapping("/api/v1/admin/shift-checks")
     public ResponseEntity<List<QueueRow>> queue() {
-        return ResponseEntity.ok(service.reviewQueue().stream()
+        return ResponseEntity.ok(work.visibleQueue(service.reviewQueue(), ShiftCheckService.ReviewItem::accountId,
+                        WorkAssignments.Kind.VERIFICATION, Permission.VERIFICATION_ALL).stream()
                 .map(item -> new QueueRow(item, authApi.findAccount(item.accountId()).map(AccountSummary::phoneNumber).orElse(null)))
                 .toList());
     }
@@ -104,6 +109,8 @@ public class ShiftCheckController {
     public ResponseEntity<ShiftCheckService.ReviewItem> review(@PathVariable UUID checkId,
                                                                @Valid @RequestBody ReviewRequest request) {
         CurrentAccount admin = caller();
+        service.reviewQueue().stream().filter(item -> item.checkId().equals(checkId)).findFirst()
+                .ifPresent(item -> work.requireMayOpen(WorkAssignments.Kind.VERIFICATION, item.accountId(), Permission.VERIFICATION_ALL));
         return ResponseEntity.ok(orThrow(service.review(checkId, admin.accountId(), request.decision(), request.note())));
     }
 

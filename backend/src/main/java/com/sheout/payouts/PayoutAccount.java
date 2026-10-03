@@ -1,5 +1,7 @@
 package com.sheout.payouts;
 
+import com.sheout.sharedkernel.privacy.Pii;
+
 import java.time.Instant;
 
 /**
@@ -8,9 +10,9 @@ import java.time.Instant;
  */
 public record PayoutAccount(
         String accountHolderName,
-        String accountNumber,
+        @Pii(Pii.Kind.BANK) String accountNumber,
         String ifsc,
-        String upiVpa,
+        @Pii(Pii.Kind.BANK) String upiVpa,
         Instant updatedAt
 ) {
 

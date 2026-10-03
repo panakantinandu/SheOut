@@ -60,6 +60,14 @@ public enum NotificationType {
 
     TRIP_WATCH_ALERT,
 
+    /**
+     * To an owner: something in the console needs her attention now - an
+     * account locked by failed sign-ins, a role changed, an export, a burst of
+     * reveals, a new browser, the audit log failing its check. Push only:
+     * email goes separately (StaffEmailApi) and the alert is in the audit log.
+     */
+    STAFF_SECURITY_ALERT,
+
     TRIP_CHECK_IN,
 
     PARTNER_LEFT,

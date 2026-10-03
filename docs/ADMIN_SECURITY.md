@@ -63,6 +63,50 @@ up for review.
 - The sign-in is kept in a way the page itself cannot read, so even a bug
   in the page cannot leak it.
 
+## Personal details are hidden until someone gives a reason
+
+Everywhere in the console, phone numbers show as `98•••••210` and addresses
+as their area ("Banjara Hills, Hyderabad"). That includes you. To see one in
+full, a person must:
+
+1. be in a role allowed to (owners and the operations manager; the safety
+   desk for phone numbers only),
+2. type the code from their authenticator app again (good for 5 minutes),
+3. type why they need it.
+
+The safety desk can only do this for people in a trip with an open SOS or
+trip alert, or one closed in the last 30 minutes. Every reveal, with its
+reason, goes in the audit log; more than 20 in 10 minutes by one person
+alerts you straight away.
+
+## The code again, before anything serious
+
+Opening an ID or police document, marking a payout paid, changing anyone's
+role or access, changing an insurance policy, and every download of data
+all ask for the authenticator code again, even in the middle of a shift.
+A session left open on a shared desk is not enough on its own.
+
+## Everyone sees only their own work
+
+A verification agent "takes" a partner from the queue before opening her
+documents, and nobody else can open that partner meanwhile. A support agent
+sees unassigned tickets and her own. The operations manager and owners see
+everything and can hand work back to the queue.
+
+## The audit log
+
+Owners have an **Audit** page: who did what, when, from where, and why -
+every change, every document opened, every reveal, every refusal, every
+sign-in. Nobody can edit or delete a line, and each line is sealed to the
+one before it, so a line changed behind the scenes (by someone with the
+database password) is detected by a check that runs every night. If that
+check ever fails, you are alerted at once.
+
+You are also alerted (on your browser, and by email once email is set up)
+when an account is locked after wrong passwords, someone's role or access
+changes, data is downloaded, someone reveals a lot of details quickly, or
+someone signs in from a browser they have not used before.
+
 ## When someone leaves
 
 Open **Staff**, choose **Disable**, and type why. They are signed out of
@@ -89,10 +133,10 @@ This is phase 1 of 4.
 
 1. **Done:** staff accounts, authenticator codes, invitations, safe sessions,
    roles checked on every request, phone sign-in for the console switched off.
-2. Phone numbers and addresses masked until someone gives a reason to see
-   them; asking for the code again before sensitive actions; agents seeing
-   only the work assigned to them; a tamper-evident record of every look
-   and every action; alerts to owners.
+2. **Done:** phone numbers and addresses masked until someone gives a reason;
+   the code again before sensitive actions; agents seeing only their own
+   work; a tamper-evident record of every look and every action; alerts to
+   owners.
 3. Two people needed to mark payouts paid, approve big refunds, add a
    manager or owner, or change commission, fares, insurance or GST.
 4. Dashboards for each role, a live operations board with instant SOS

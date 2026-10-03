@@ -1,6 +1,9 @@
 package com.sheout.driververification.internal.web;
 
+import com.sheout.staff.RequiresStepUp;
+import com.sheout.staff.AuditedRead;
 import com.sheout.staff.Permission;
+import com.sheout.staff.WorkAssignments;
 import com.sheout.staff.RequiresPermission;
 import com.sheout.staff.StaffContext;
 import com.sheout.auth.AccountRole;
@@ -53,9 +56,12 @@ public class AdminVerificationController {
     private final AuthApi authApi;
     private final PartnerDocumentService partnerDocuments;
     private final BackgroundCheckService backgroundChecks;
+    private final WorkAssignments work;
 
     public AdminVerificationController(VerificationService verificationService, AuthApi authApi,
-                                       PartnerDocumentService partnerDocuments, BackgroundCheckService backgroundChecks) {
+                                       PartnerDocumentService partnerDocuments, BackgroundCheckService backgroundChecks,
+                                       WorkAssignments work) {
+        this.work = work;
         this.verificationService = verificationService;
         this.authApi = authApi;
         this.partnerDocuments = partnerDocuments;
@@ -69,7 +75,8 @@ public class AdminVerificationController {
         List<QueueItem> items = verificationService.findByGenderStatus(status).stream()
                 .map(this::toQueueItem)
                 .toList();
-        return ResponseEntity.ok(items);
+        return ResponseEntity.ok(work.visibleQueue(items, QueueItem::accountId, WorkAssignments.Kind.VERIFICATION,
+                Permission.VERIFICATION_ALL));
     }
 
     @RequiresPermission(Permission.VERIFICATION_REVIEW)
@@ -77,6 +84,7 @@ public class AdminVerificationController {
     public ResponseEntity<VerificationSummary> reviewGender(@PathVariable UUID accountId,
                                                               @Valid @RequestBody ReviewRequest request) {
         CurrentAccount admin = caller();
+        mayOpen(accountId);
         Result<VerificationSummary, VerificationError> result = verificationService.reviewGenderVerification(
                 accountId, admin.accountId(), request.decision(), request.reason());
         if (result.isFailure()) {
@@ -90,6 +98,7 @@ public class AdminVerificationController {
     public ResponseEntity<VerificationSummary> reviewPolice(@PathVariable UUID accountId,
                                                               @Valid @RequestBody PoliceReviewRequest request) {
         CurrentAccount admin = caller();
+        mayOpen(accountId);
         Result<VerificationSummary, VerificationError> result = verificationService.reviewPoliceVerification(
                 accountId, admin.accountId(), new PoliceVerificationService.PoliceDecision(request.decision(),
                         request.method(), request.certificateNumber(), request.issuingAuthority(), request.issuedOn(),
@@ -114,6 +123,7 @@ public class AdminVerificationController {
     public ResponseEntity<PartnerDocumentSummary> reviewDocument(@PathVariable UUID documentId,
                                                                  @Valid @RequestBody DocumentReviewRequest request) {
         CurrentAccount admin = caller();
+        mayOpenDocument(documentId);
         Result<PartnerDocumentSummary, VerificationError> result = partnerDocuments.review(documentId, admin.accountId(),
                 request.decision(), request.reason(),
                 new PartnerDocumentService.DocumentFacts(request.documentNumber(), request.issuedOn(),
@@ -139,6 +149,7 @@ public class AdminVerificationController {
             @RequestParam(value = "validUntil", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate validUntil,
             @RequestParam(value = "insuranceUseType", required = false) InsuranceUseType insuranceUseType) {
         CurrentAccount admin = caller();
+        mayOpen(accountId);
         if (verificationService.findByAccountId(accountId).map(v -> v.role() != AccountRole.DRIVER).orElse(true)) {
             throw VerificationController.toApiException(VerificationError.NOT_A_PARTNER);
         }
@@ -158,9 +169,12 @@ public class AdminVerificationController {
      * certificate - or any other document - has a name and a time on it.
      */
     @RequiresPermission(Permission.DOCUMENTS_VIEW)
+    @RequiresStepUp
+    @AuditedRead("documents.view")
     @GetMapping("/api/v1/admin/verification/documents/{documentId}/link")
     public ResponseEntity<DocumentLink> documentLink(@PathVariable UUID documentId) {
         CurrentAccount admin = caller();
+        mayOpenDocument(documentId);
         return verificationService.openPartnerDocument(documentId, admin.accountId())
                 .map(url -> ResponseEntity.ok(new DocumentLink(url)))
                 .orElseThrow(() -> ApiException.notFound("No file for that document"));
@@ -185,12 +199,25 @@ public class AdminVerificationController {
     @PostMapping("/api/v1/admin/verification/{accountId}/background-check")
     public ResponseEntity<PartnerDocumentSummary> requestBackgroundCheck(@PathVariable UUID accountId) {
         CurrentAccount admin = caller();
+        mayOpen(accountId);
         Result<PartnerDocumentSummary, VerificationError> result =
                 backgroundChecks.requestCheck(accountId, admin.accountId());
         if (result.isFailure()) {
             throw VerificationController.toApiException(result.error());
         }
         return ResponseEntity.ok(result.value());
+    }
+
+    /**
+     * An agent works only the partners she has taken from the queue; managers
+     * and owners (verification.all) any. See staff.WorkAssignments.
+     */
+    private void mayOpen(UUID accountId) {
+        work.requireMayOpen(WorkAssignments.Kind.VERIFICATION, accountId, Permission.VERIFICATION_ALL);
+    }
+
+    private void mayOpenDocument(UUID documentId) {
+        partnerDocuments.find(documentId).ifPresent(document -> mayOpen(document.accountId()));
     }
 
     public record ProviderStatus(String name, boolean configured) {

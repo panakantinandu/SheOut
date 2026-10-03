@@ -1,5 +1,7 @@
 package com.sheout.users;
 
+import com.sheout.sharedkernel.privacy.Pii;
+
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
@@ -25,7 +27,7 @@ public record DriverProfileSummary(
          * dispatch and does not include it. Anything new that hands a
          * DriverProfileSummary to a customer has to leave this out.
          */
-        String panNumber,
+        @Pii(Pii.Kind.PAN) String panNumber,
         OnlineStatus onlineStatus,
         boolean verified,
         /**
