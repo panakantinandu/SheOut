@@ -194,8 +194,9 @@ are **staff accounts** (the `staff` module), not riders with a role flag:
 one stolen login must never expose everything or move money. The plain-words
 version for the founder is [docs/ADMIN_SECURITY.md](docs/ADMIN_SECURITY.md).
 
-Phases 1 (accounts, sign-in, permissions) and 2 (masking, step-up, scoping,
-audit, alerts) are built. What is not built yet is listed at the end.
+Phases 1 (accounts, sign-in, permissions), 2 (masking, step-up, scoping,
+audit, alerts) and 3 (two people for money, access, configuration and data)
+are built. What is not built yet is listed at the end.
 
 ### Roles
 
@@ -302,6 +303,37 @@ changing in the same commit.
   than 20 reveals in 10 minutes by one person, a sign-in from a browser not
   seen before (she is told too), and a broken chain.
 
+### Phase 3: two people for money, access, configuration and data
+
+One person asks; somebody else holding the approving permission approves on
+the console's **Approvals** page (`/api/v1/admin/approvals`); only then does
+the owning module do it (`staff.Approvals`, `staff.ApprovalExecutor`).
+Nobody approves their own request - except that while there is exactly one
+active owner, an owner may approve her own; each such approval is marked,
+recorded (`approval.self`) and alerted. Requests expire after 72 hours
+(`STAFF_APPROVAL_HOURS`). Deciding and doing are separate commits: an
+approved action that then fails is marked FAILED with the reason.
+
+| Action | Asked by | Approved by |
+|---|---|---|
+| Marking a payout paid | `payouts.prepare` (finance, owners) records the transfer reference | `payouts.approve` (manager, owners) |
+| A refund above the issuer's own limit | `refunds.issue` | `refunds.approve` (owners) |
+| Inviting a manager or owner; moving anyone into or out of those roles | `staff.manage.owner` | `staff.manage.owner` (another owner) |
+| Resetting someone's password and authenticator | `staff.manage.owner` | another owner |
+| Creating, changing, switching an insurance policy on or off | `insurance.manage` | another `insurance.manage` holder |
+| Any export (`@Export`: bordereau, cover movements, the audit CSV) | whoever may download it | `data.export` (owners) |
+
+- **Refunds** (`POST /api/v1/admin/refunds`) are credited to the rider's
+  SheOut wallet (a `REFUND` entry, once per refund). Up to the issuer's own
+  limit (`REFUND_LIMIT_*`) they happen at once; above it they become a
+  request. A refund for a trip is never more, in all, than she paid for it,
+  and never takes her wallet past its cap. A support agent refunds only the
+  rider of a ticket she holds.
+- **Exports** are approved for one exact download (path and parameters),
+  usable once, by the person who asked, within 24 hours.
+- **Configuration history**: an insurance-policy request keeps the policy as
+  it was (`before_json`) beside the change; the Approvals page shows both.
+
 ### Setting up the first owner on Render
 
 1. Set `STAFF_SECRETS_KEY` (`openssl rand -base64 32`) and keep a copy
@@ -336,6 +368,7 @@ changing in the same commit.
 | `STAFF_STEP_UP_MINUTES` | 5 | How long a re-entered code covers sensitive actions |
 | `STAFF_ALERT_ACCESS_MINUTES` | 30 | How long after an alert closes the safety desk keeps reach |
 | `STAFF_AUDIT_CHECK_CRON` | `0 30 3 * * *` | When the audit chain is checked (India time) |
+| `STAFF_APPROVAL_HOURS` | 72 | How long a four-eyes request may wait before it expires |
 
 ### Flagged assumptions
 
@@ -374,15 +407,22 @@ changing in the same commit.
 - **New-browser detection uses the User-Agent**, which can be copied: a
   tripwire for the ordinary case, not a defence on its own.
 - **Without SMTP, alerts reach owners by push and the Audit page only.**
+- **Refunds go to the rider's SheOut wallet, not back to her card or UPI.**
+  That needs Razorpay's refund API, which is not built.
+- **Payouts are approved one at a time**, not as a batch: finance records
+  each transfer's reference, and each is approved.
+- **Commission, fares and GST are not editable in the console** - they are
+  Render environment settings, and Render access is the owners' - so there
+  is nothing in the console for four-eyes to guard there. Insurance policies
+  are the configuration the console changes, and they are guarded.
+- **Only one new insurance policy can wait for approval at a time.**
 - **Polling requests are marked by the console** (`X-Staff-Background`).
   Idle time is a safeguard against a forgotten tab, not against an attacker
   who has the session already.
 
 ### Not built yet (later phases)
 
-Phase 3: four-eyes approvals (exports, payouts, refunds above the limits,
-manager/owner changes, configuration), the refund endpoint itself, the
-payout two-person rule, config history. Phase 4: role
+Phase 4: role
 dashboards, live ops board with SSE, queue assignment and SLAs, passkeys for
 owners, a separate admin hostname. (The IP allowlist is built and off.)
 

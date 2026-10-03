@@ -2,6 +2,7 @@ package com.sheout.staff.internal;
 
 import com.sheout.sharedkernel.Result;
 import com.sheout.sharedkernel.web.ApiException;
+import com.sheout.staff.Approvals;
 import com.sheout.staff.Permission;
 import com.sheout.staff.RequiresAnyPermission;
 import com.sheout.staff.RequiresPermission;
@@ -50,10 +51,12 @@ class StaffManagementController {
     private final StaffInviteService invites;
     private final StaffSessionService sessions;
     private final StaffSettings settings;
+    private final Approvals approvals;
 
     StaffManagementController(StaffManagementService management, StaffInviteService invites,
-                              StaffSessionService sessions, StaffSettings settings) {
+                              StaffSessionService sessions, StaffSettings settings, Approvals approvals) {
         this.settings = settings;
+        this.approvals = approvals;
         this.management = management;
         this.invites = invites;
         this.sessions = sessions;
@@ -82,8 +85,23 @@ class StaffManagementController {
 
     @RequiresStepUp
     @PostMapping("/invites")
-    ResponseEntity<StaffViews.InviteSent> invite(@Valid @RequestBody InviteRequest body) {
+    ResponseEntity<?> invite(@Valid @RequestBody InviteRequest body) {
         StaffPrincipal me = StaffContext.require(body.role().managedBy());
+        // A new manager or owner needs a second owner's yes (Phase 3).
+        if (StaffApprovalExecutors.privileged(body.role())) {
+            String email = StaffSignInService.normaliseEmail(body.email());
+            if (management.byEmail(email).isPresent()) {
+                throw StaffAuthController.inviteFailure(StaffInviteService.InviteFailure.of(StaffInviteService.InviteError.EMAIL_ON_STAFF));
+            }
+            if (approvals.pending(Approvals.Kind.STAFF_PRIVILEGED, email)) {
+                throw new ApiException(HttpStatus.CONFLICT, "ALREADY_ASKED", "An invitation for this address is already waiting for approval.");
+            }
+            return ResponseEntity.accepted().body(approvals.submit(new Approvals.Request(Approvals.Kind.STAFF_PRIVILEGED,
+                    "Invite " + email + " as " + StaffRoleLabels.label(body.role()),
+                    Approvals.payload(new StaffApprovalExecutors.PrivilegedChange("INVITE", email, body.displayName().trim(),
+                            body.role(), null, null, me.staffId(), me.displayName())),
+                    null, Permission.STAFF_MANAGE_OWNER, "INVITE", email, null)));
+        }
         var result = invites.invite(body.email(), body.displayName(), body.role(),
                 accessEnd(body.role(), body.accessExpiresAt()), me.staffId(), me.displayName());
         if (result.isFailure()) {
@@ -123,9 +141,31 @@ class StaffManagementController {
 
     @RequiresStepUp
     @PostMapping("/{staffId}/role")
-    ResponseEntity<StaffViews.Member> changeRole(@PathVariable UUID staffId, @Valid @RequestBody RoleRequest body) {
-        return answer(management.changeRole(StaffContext.requireSignedIn(), staffId, body.role(),
-                accessEnd(body.role(), body.accessExpiresAt())));
+    ResponseEntity<?> changeRole(@PathVariable UUID staffId, @Valid @RequestBody RoleRequest body) {
+        StaffPrincipal me = StaffContext.requireSignedIn();
+        StaffMemberEntity target = management.find(staffId).orElseThrow(() -> ApiException.notFound("No such member of staff"));
+        StaffContext.require(target.getRole().managedBy());
+        StaffContext.require(body.role().managedBy());
+        Instant ends = accessEnd(body.role(), body.accessExpiresAt());
+        // Into or out of manager or owner: a second owner decides (Phase 3).
+        if (StaffApprovalExecutors.privileged(body.role()) || StaffApprovalExecutors.privileged(target.getRole())) {
+            if (target.getId().equals(me.staffId())) {
+                throw manageFailure(StaffManagementService.ManageError.SELF);
+            }
+            if (target.getRole() == body.role()) {
+                throw manageFailure(StaffManagementService.ManageError.ALREADY);
+            }
+            if (approvals.pending(Approvals.Kind.STAFF_PRIVILEGED, staffId.toString())) {
+                throw new ApiException(HttpStatus.CONFLICT, "ALREADY_ASKED", "A role change for this person is already waiting for approval.");
+            }
+            return ResponseEntity.accepted().body(approvals.submit(new Approvals.Request(Approvals.Kind.STAFF_PRIVILEGED,
+                    "Change " + target.getDisplayName() + " from " + StaffRoleLabels.label(target.getRole()) + " to "
+                            + StaffRoleLabels.label(body.role()),
+                    Approvals.payload(new StaffApprovalExecutors.PrivilegedChange("ROLE", null, null, body.role(), ends,
+                            staffId, me.staffId(), me.displayName())),
+                    "{\"role\":\"" + target.getRole() + "\"}", Permission.STAFF_MANAGE_OWNER, "STAFF", staffId.toString(), null)));
+        }
+        return answer(management.changeRole(me, staffId, body.role(), ends));
     }
 
     /**
@@ -171,7 +211,7 @@ class StaffManagementController {
     @RequiresPermission(STAFF_MANAGE_OWNER)
     @RequiresStepUp
     @PostMapping("/{staffId}/reset-second-factor")
-    ResponseEntity<StaffViews.InviteSent> resetSecondFactor(@PathVariable UUID staffId) {
+    ResponseEntity<?> resetSecondFactor(@PathVariable UUID staffId) {
         StaffPrincipal me = StaffContext.require(Permission.STAFF_MANAGE_OWNER);
         StaffMemberEntity target = management.find(staffId).orElseThrow(() -> ApiException.notFound("No such member of staff"));
         if (target.getId().equals(me.staffId())) {
@@ -180,11 +220,14 @@ class StaffManagementController {
         if (target.getStatus() != StaffStatus.ACTIVE) {
             throw new ApiException(HttpStatus.CONFLICT, "STAFF_DISABLED", "Re-enable this account first.");
         }
-        var result = invites.resetSecondFactor(target, me.staffId(), me.displayName());
-        if (result.isFailure()) {
-            throw StaffAuthController.inviteFailure(result.error());
+        if (approvals.pending(Approvals.Kind.SECOND_FACTOR_RESET, staffId.toString())) {
+            throw new ApiException(HttpStatus.CONFLICT, "ALREADY_ASKED", "A reset for this person is already waiting for approval.");
         }
-        return ResponseEntity.ok(sent(result.value()));
+        // Someone else's sign-in, wiped and re-issued: a second owner decides (Phase 3).
+        return ResponseEntity.accepted().body(approvals.submit(new Approvals.Request(Approvals.Kind.SECOND_FACTOR_RESET,
+                "Reset the password and authenticator of " + target.getDisplayName() + " (" + StaffRoleLabels.label(target.getRole()) + ")",
+                Approvals.payload(new StaffApprovalExecutors.Reset(staffId)), null, Permission.STAFF_MANAGE_OWNER,
+                "STAFF", staffId.toString(), null)));
     }
 
     private static StaffViews.InviteSent sent(StaffInviteService.Sent sent) {

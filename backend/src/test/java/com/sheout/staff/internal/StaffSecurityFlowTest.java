@@ -307,10 +307,16 @@ class StaffSecurityFlowTest {
                 .contentType(MediaType.APPLICATION_JSON).content("{\"role\":\"OWNER\"}")).andReturn().getResponse().getStatus())
                 .as("promoting yourself").isEqualTo(403);
 
-        // A role change ends her sessions: the new role starts with a new sign-in.
+        // Out of manager is a second owner's decision (Phase 3); once approved, her
+        // sessions end and the new role starts with a new sign-in.
         MockHttpServletResponse changed = mvc.perform(owner.session().on(post("/api/v1/admin/staff/" + manager.staffId() + "/role"))
                 .contentType(MediaType.APPLICATION_JSON).content("{\"role\":\"SUPPORT_AGENT\"}")).andReturn().getResponse();
-        assertThat(changed.getStatus()).isEqualTo(200);
+        assertThat(changed.getStatus()).isEqualTo(202);
+        assertThat(mvc.perform(manager.session().on(get("/api/v1/admin/auth/me"))).andReturn().getResponse().getStatus())
+                .as("nothing happens until approved").isEqualTo(200);
+        StaffTestSupport.Member second = staff.join(StaffRole.OWNER);
+        assertThat(mvc.perform(second.session().on(post("/api/v1/admin/approvals/" + staff.body(changed).get("approvalId").asText() + "/approve")))
+                .andReturn().getResponse().getStatus()).isEqualTo(200);
         assertThat(mvc.perform(manager.session().on(get("/api/v1/admin/auth/me"))).andReturn().getResponse().getStatus()).isEqualTo(401);
     }
 
@@ -319,14 +325,18 @@ class StaffSecurityFlowTest {
         StaffTestSupport.Member owner = staff.join(StaffRole.OWNER);
         StaffTestSupport.Member agent = staff.join(StaffRole.SUPPORT_AGENT);
 
-        MockHttpServletResponse reset = mvc.perform(owner.session().on(post("/api/v1/admin/staff/" + agent.staffId() + "/reset-second-factor")))
+        MockHttpServletResponse asked = mvc.perform(owner.session().on(post("/api/v1/admin/staff/" + agent.staffId() + "/reset-second-factor")))
                 .andReturn().getResponse();
+        assertThat(asked.getStatus()).as("a second owner decides").isEqualTo(202);
+        StaffTestSupport.Member second = staff.join(StaffRole.OWNER);
+        MockHttpServletResponse reset = mvc.perform(second.session().on(post("/api/v1/admin/approvals/"
+                + staff.body(asked).get("approvalId").asText() + "/approve"))).andReturn().getResponse();
         assertThat(reset.getStatus()).isEqualTo(200);
         assertThat(mvc.perform(agent.session().on(get("/api/v1/admin/auth/me"))).andReturn().getResponse().getStatus()).isEqualTo(401);
         assertThat(staff.signIn(agent.email(), StaffTestSupport.PASSWORD, staff.freshCode(agent)).getStatus())
                 .as("the old password and authenticator").isEqualTo(401);
 
-        StaffTestSupport.Member renewed = staff.accept(staff.body(reset).get("link").asText(), StaffRole.SUPPORT_AGENT);
+        StaffTestSupport.Member renewed = staff.accept(staff.body(reset).get("oneTimeValue").asText(), StaffRole.SUPPORT_AGENT);
         assertThat(renewed.staffId()).isEqualTo(agent.staffId());
         assertThat(renewed.accountId()).isEqualTo(agent.accountId());
         assertThat(staff.signIn(renewed)).isNotNull();

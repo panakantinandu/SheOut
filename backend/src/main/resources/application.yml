@@ -595,6 +595,8 @@ sheout:
     # How long after an alert closes the safety desk can still see that trip
     # and call the people in it.
     alert-access-minutes: ${STAFF_ALERT_ACCESS_MINUTES:30}
+    # How long a four-eyes request may wait for a decision before it expires.
+    approval-hours: ${STAFF_APPROVAL_HOURS:72}
     # When the audit log's chain is checked each night (India time).
     audit-check-cron: ${STAFF_AUDIT_CHECK_CRON:0 30 3 * * *}
     # Rupees a role may refund on its own; above it needs an owner. Owners

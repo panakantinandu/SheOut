@@ -216,6 +216,34 @@ public class RiderWalletService {
         return Result.success(wallet.getBalance());
     }
 
+    /**
+     * A refund from the console, into her wallet. Once per refundId: a retry
+     * or a second click is the same refund, not another one. Never past the
+     * wallet's cap - a refund is not a way round the limit on what a prepaid
+     * balance may hold.
+     */
+    @Transactional
+    public Result<BigDecimal, PaymentError> creditRefund(UUID customerAccountId, UUID refundId, UUID bookingId, BigDecimal amount) {
+        RiderWalletEntity wallet = lockedWallet(customerAccountId);
+        if (entries.existsByRefundIdAndType(refundId, RiderWalletEntryEntity.Type.REFUND)) {
+            return Result.success(wallet.getBalance());
+        }
+        if (amount == null || amount.signum() <= 0 || wallet.getBalance().add(amount).compareTo(MAX_BALANCE) > 0) {
+            return Result.failure(PaymentError.INVALID_AMOUNT);
+        }
+        wallet.credit(amount);
+        wallets.save(wallet);
+        entries.save(RiderWalletEntryEntity.refund(customerAccountId, amount, wallet.getBalance(), refundId, bookingId));
+        log.info("Refund {} credited to the wallet of {} - {}", refundId, customerAccountId, amount);
+        return Result.success(wallet.getBalance());
+    }
+
+    /** What has been refunded for one trip so far, to keep the total within what she paid. */
+    @Transactional(readOnly = true)
+    public BigDecimal refundedForBooking(UUID bookingId) {
+        return entries.sumByBookingIdAndType(bookingId, RiderWalletEntryEntity.Type.REFUND);
+    }
+
     private void credit(WalletTopupEntity topup, String razorpayPaymentId, PaymentMethod method) {
         topup.markCaptured(razorpayPaymentId, method);
         topups.save(topup);

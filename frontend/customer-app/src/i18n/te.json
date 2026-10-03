@@ -933,6 +933,7 @@
     "upiApps": "PhonePe, Google Pay, Paytm లేదా ఏదైనా UPI యాప్"
   },
   "wallet": {
+    "refund": "SheOut నుండి రీఫండ్",
     "loadError": "మీ వాలెట్ లోడ్ చేయలేకపోయాం.",
     "capHint": "మీ వాలెట్‌లో గరిష్ఠంగా ₹{{max}} ఉండవచ్చు. మీరు ₹{{room}} వరకు జోడించవచ్చు.",
     "rangeHint": "₹{{min}} నుండి ₹{{max}} మధ్య మొత్తం నమోదు చేయండి.",

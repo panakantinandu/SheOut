@@ -52,7 +52,7 @@ class MigrationPathTest {
         var result = flyway(null).migrate();
 
         assertThat(result.success).isTrue();
-        assertThat(result.targetSchemaVersion).isEqualTo("62");
+        assertThat(result.targetSchemaVersion).isEqualTo("63");
         assertThat(jdbc.queryForObject("select count(*) from information_schema.tables where table_schema = ? and table_name in"
                         + " ('partner_documents','police_verifications','insurance_policies','trip_coverages','tax_invoices')",
                 Integer.class, schema)).isEqualTo(5);
@@ -72,7 +72,7 @@ class MigrationPathTest {
         var result = flyway(null).migrate();
 
         assertThat(result.success).isTrue();
-        assertThat(result.targetSchemaVersion).isEqualTo("62");
+        assertThat(result.targetSchemaVersion).isEqualTo("63");
         // V55: her RC photo is a document of its own now, waiting for an operator to date it.
         assertThat(jdbc.queryForMap("select type, status, document_key from " + schema + ".partner_documents where account_id = ?",
                 partnerWithRc))
@@ -111,7 +111,7 @@ class MigrationPathTest {
         jdbc.update(currentRc, alreadyHasOne, "checklist-rc");
         jdbc.update(currentRc, alreadyCopied, "same-rc");
 
-        assertThat(flyway(null).migrate().targetSchemaVersion).isEqualTo("62");
+        assertThat(flyway(null).migrate().targetSchemaVersion).isEqualTo("63");
 
         // Nothing on her checklist: the late photo becomes her RC, waiting for review.
         assertThat(jdbc.queryForMap("select document_key, status, superseded_at from " + schema
@@ -138,7 +138,7 @@ class MigrationPathTest {
         var result = flyway(null).migrate();
 
         assertThat(result.success).isTrue();
-        assertThat(result.targetSchemaVersion).isEqualTo("62");
+        assertThat(result.targetSchemaVersion).isEqualTo("63");
         assertThat(jdbc.queryForObject("select count(*) from information_schema.tables where table_schema = ? and table_name in"
                         + " ('staff_members','staff_invites','staff_recovery_codes','staff_sessions')",
                 Integer.class, schema)).isEqualTo(4);

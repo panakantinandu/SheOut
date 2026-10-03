@@ -202,6 +202,12 @@ public class PayoutService implements PayoutApi {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public Optional<PayoutRequestSummary> findRequest(UUID requestId) {
+        return requests.findById(requestId).map(PayoutService::toSummary);
+    }
+
+    @Override
     @Transactional
     public Result<PayoutRequestSummary, PayoutError> markPaid(UUID requestId, UUID adminAccountId, String paymentReference) {
         String reference = trimToNull(paymentReference);

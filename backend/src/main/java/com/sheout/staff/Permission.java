@@ -69,6 +69,8 @@ public enum Permission {
     // ---- money --------------------------------------------------------------
     /** Issue a refund or goodwill credit, up to the role's configured limit. */
     REFUNDS_ISSUE("refunds.issue"),
+    /** Approve a refund above the issuer's own limit. Owners only. */
+    REFUNDS_APPROVE("refunds.approve"),
     /** Prepare payout requests for payment. */
     PAYOUTS_PREPARE("payouts.prepare"),
     /** Approve prepared payouts as paid. */

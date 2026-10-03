@@ -292,6 +292,8 @@ public class PaymentController {
                     "Add between " + rupees(RiderWalletService.MIN_TOPUP) + " and " + rupees(RiderWalletService.MAX_TOPUP)
                             + ", keeping your balance at or under " + rupees(RiderWalletService.MAX_BALANCE) + ".");
             case TOPUP_NOT_FOUND -> ApiException.notFound("No such top-up");
+            case REFUND_EXCEEDS_PAYMENT -> new ApiException(HttpStatus.CONFLICT, "REFUND_EXCEEDS_PAYMENT",
+                    "A refund cannot be more than what was paid for the trip.");
         };
     }
 

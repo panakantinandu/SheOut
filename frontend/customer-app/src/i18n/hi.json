@@ -933,6 +933,7 @@
     "upiApps": "PhonePe, Google Pay, Paytm या कोई भी UPI ऐप"
   },
   "wallet": {
+    "refund": "SheOut से रिफ़ंड",
     "loadError": "आपका वॉलेट लोड नहीं हो सका।",
     "capHint": "आपके वॉलेट में ज़्यादा से ज़्यादा ₹{{max}} रह सकते हैं। आप ₹{{room}} तक जोड़ सकती हैं।",
     "rangeHint": "₹{{min}} से ₹{{max}} के बीच राशि डालें।",

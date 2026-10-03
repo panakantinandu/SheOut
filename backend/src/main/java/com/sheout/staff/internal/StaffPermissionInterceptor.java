@@ -26,6 +26,7 @@ import java.util.Arrays;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * THE authorisation check for the console, and the writer of most of its
@@ -53,10 +54,13 @@ class StaffPermissionInterceptor implements HandlerInterceptor {
 
     private final StaffAuditLog audit;
     private final StaffSessionService sessions;
+    private final ApprovalService approvals;
 
-    StaffPermissionInterceptor(StaffAuditLog audit, StaffSessionService sessions) {
+    StaffPermissionInterceptor(StaffAuditLog audit, StaffSessionService sessions,
+                               @org.springframework.context.annotation.Lazy ApprovalService approvals) {
         this.audit = audit;
         this.sessions = sessions;
+        this.approvals = approvals;
     }
 
     @Override
@@ -93,6 +97,22 @@ class StaffPermissionInterceptor implements HandlerInterceptor {
         if (needsStepUp(method) && !staff.legacy() && !sessions.steppedUp(staff.sessionId())) {
             throw new ApiException(HttpStatus.FORBIDDEN, "STEP_UP_REQUIRED",
                     "Enter the code from your authenticator app to continue.");
+        }
+        // An export needs a second person's approval of exactly this download,
+        // used once (Phase 3). Asked for on the Approvals page.
+        if (method.hasMethodAnnotation(Export.class) && !staff.legacy()) {
+            String path = request.getRequestURI() + (request.getQueryString() == null ? "" : "?" + request.getQueryString());
+            String approval = request.getParameter("approval");
+            UUID approvalId = null;
+            try {
+                approvalId = approval == null ? null : UUID.fromString(approval);
+            } catch (IllegalArgumentException ignored) {
+                // A malformed id is no approval.
+            }
+            if (approvalId == null || !approvals.consumeExport(approvalId, staff, path)) {
+                throw new ApiException(HttpStatus.FORBIDDEN, "APPROVAL_REQUIRED",
+                        "Downloads of data need a second person's approval. Ask for it, then download it from the Approvals page.");
+            }
         }
         return true;
     }

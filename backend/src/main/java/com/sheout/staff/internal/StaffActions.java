@@ -35,6 +35,13 @@ final class StaffActions {
     static final String AUDIT_VIEW = "audit.view";
     static final String AUDIT_CHAIN_OK = "audit.chain.ok";
     static final String AUDIT_CHAIN_BROKEN = "audit.chain.broken";
+    static final String APPROVAL_REQUEST = "approval.request";
+    static final String APPROVAL_APPROVE = "approval.approve";
+    static final String APPROVAL_REJECT = "approval.reject";
+    static final String APPROVAL_SELF = "approval.self";
+    static final String APPROVAL_CANCEL = "approval.cancel";
+    static final String APPROVAL_DONE = "approval.done";
+    static final String APPROVAL_FAILED = "approval.failed";
 
     /** Changes to who may do what: every owner hears about each one. */
     static final Set<String> CHANGES_ACCESS = Set.of(INVITE, DISABLE, ENABLE, ROLE_CHANGE, SECOND_FACTOR_RESET);

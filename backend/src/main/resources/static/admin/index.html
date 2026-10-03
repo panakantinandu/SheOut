@@ -1207,6 +1207,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M2 21v-2a4 4 0 0 1 4-4h6"/><path d="M16 11l2 2 4-4"/><path d="M15 21v-2a3 3 0 0 1 2-2.8"/></svg>
         <span class="nl">Staff</span> <span class="count" id="cStaff" hidden></span>
       </button>
+      <button data-tab="approvals" aria-current="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3"/><circle cx="16" cy="8" r="3"/><path d="M2 20v-1a5 5 0 0 1 9-3"/><path d="M13 16l2 2 4-4"/></svg>
+        <span class="nl">Approvals</span> <span class="count urgent" id="cApprovals" hidden></span>
+      </button>
       <button data-tab="audit" aria-current="false">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6l1 2h3a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h3z"/><path d="M8 11h8M8 15h5"/><circle cx="17" cy="16" r="2.5"/></svg>
         <span class="nl">Audit</span> <span class="count urgent" id="cAudit" hidden></span>
@@ -1583,6 +1587,12 @@ async function api(path, options = {}) {
   const body = res.status === 204 ? null : await res.json().catch(() => null);
   if (!res.ok) throw codedError((body && body.message) || `Request failed (${res.status})`, body && body.error, res.status);
   if (!isBackground) noteActivity();
+  if (res.status === 202 && body && body.approvalRequired) {
+    toast('ok', 'Sent for approval', `${body.summary}. A second person approves it on the Approvals page.`);
+    refreshApprovalCount();
+    closeModal();
+    throw codedError(APPROVAL_SENT, 'APPROVAL_PENDING', 202);
+  }
   return body;
 }
 
@@ -1597,7 +1607,15 @@ async function inBackground(fn) {
 }
 
 // ---- toasts ---------------------------------------------------------------
+/**
+ * An action that needs a second person comes back 202 with the request it
+ * created. api() says so in a green toast and stops the caller with this
+ * sentence, which the callers' own "could not ..." toasts then skip - the
+ * action did not fail, it is waiting.
+ */
+const APPROVAL_SENT = 'Sent for approval.';
 function toast(kind, title, detail) {
+  if (kind === 'bad' && detail === APPROVAL_SENT) return;
   const el = document.createElement('div');
   el.className = 'toast ' + (kind === 'ok' ? 'ok' : 'bad');
   el.innerHTML = `<div><strong>${esc(title)}</strong>${detail ? `<span>${esc(detail)}</span>` : ''}</div>`;
@@ -2369,9 +2387,9 @@ const VIEWS = {
       }
       if (key === 'act') return r.status === 'PAID'
         ? `<span class="badge b-green">Paid</span><div class="subtle">${time(r.paidAt)}</div><div class="subtle">Ref <span class="num">${esc(r.paymentReference)}</span></div><div class="subtle">by <span class="num">${esc(r.paidByPhone || '—')}</span></div>`
-        : can('payouts.prepare') && can('payouts.approve')
-          ? `<button class="btn btn-approve" data-markpaid="${esc(r.id)}" type="button">Mark paid</button>`
-          : '<span class="subtle">An owner marks it paid</span>';
+        : can('payouts.prepare')
+          ? `<button class="btn btn-approve" data-markpaid="${esc(r.id)}" type="button">Record payment</button>`
+          : '<span class="subtle">Finance records it, then it is approved</span>';
       return '—';
     },
   },
@@ -2531,6 +2549,17 @@ const VIEWS = {
     columns: [],
     load: () => api('/admin/staff'),
     paint: paintStaff,
+  },
+
+  approvals: {
+    title: 'Approvals',
+    desc: 'What one person cannot do alone: marking payouts paid, refunds above the limit, adding or changing a manager or owner, resetting a sign-in, changing an insurance policy, and every download of data. One person asks; somebody else approves; only then does it happen. Nobody approves their own request.',
+    cardTitle: 'Approvals',
+    hint: 'Requests expire after 72 hours',
+    custom: true,
+    columns: [],
+    load: () => api('/admin/approvals'),
+    paint: paintApprovals,
   },
 
   audit: {
@@ -3474,6 +3503,53 @@ async function apiUpload(path, form) {
 }
 
 /**
+ * A refund or goodwill credit to her SheOut wallet. Up to the role's own limit
+ * it happens at once; above it, it goes to an owner for approval (the server
+ * decides which and says so).
+ */
+document.addEventListener('click', async e => {
+  const btn = e.target.closest('[data-refund]');
+  if (!btn) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const body = { customerAccountId: btn.dataset.refund };
+  if (btn.dataset.refundTicket) body.ticketId = btn.dataset.refundTicket;
+  const booking = btn.dataset.refundBooking || null;
+  const back = $('modalRoot').innerHTML;
+  const layer = document.createElement('div');
+  layer.innerHTML = `<div class="overlay step-overlay"><div class="modal">
+    <div class="modal-head"><h3>Refund or credit</h3><p>Paid into her SheOut wallet. Above your own limit it goes to an owner to approve.</p></div>
+    <div class="modal-body">
+      <label for="rfAmount">Amount (\u20b9)</label><input id="rfAmount" type="number" min="1" max="10000" step="1">
+      ${booking ? `<label class="check"><input type="checkbox" id="rfTrip" checked> For the trip this is about (never more than she paid for it)</label>` : ''}
+      <label for="rfReason">Why</label><textarea id="rfReason" maxlength="300" placeholder="e.g. Partner took a longer route; refund the difference"></textarea>
+      <p class="field-err" id="rfErr" hidden></p>
+    </div>
+    <div class="modal-foot"><button class="btn" type="button" data-rf-cancel>Cancel</button>
+      <button class="btn btn-primary" type="button" data-rf-go>Refund</button></div></div></div>`;
+  $('stepRoot').before(layer);
+  const close = () => layer.remove();
+  layer.querySelector('[data-rf-cancel]').addEventListener('click', close);
+  layer.querySelector('[data-rf-go]').addEventListener('click', async () => {
+    body.amount = Number(layer.querySelector('#rfAmount').value);
+    body.reason = layer.querySelector('#rfReason').value.trim();
+    if (booking && layer.querySelector('#rfTrip') && layer.querySelector('#rfTrip').checked) body.bookingId = booking;
+    const err = layer.querySelector('#rfErr');
+    if (!(body.amount >= 1) || body.reason.length < 5) { err.textContent = 'Enter an amount and say why.'; err.hidden = false; return; }
+    try {
+      const out = await api('/admin/refunds', { method: 'POST', body: JSON.stringify(body) });
+      close();
+      toast('ok', 'Refunded', `${rupees(out.amount)} is in her SheOut wallet.`);
+    } catch (e2) {
+      if (e2.code === 'APPROVAL_PENDING') { close(); if (back && !$('modalRoot').innerHTML) $('modalRoot').innerHTML = ''; return; }
+      if (e2.message === 'unauthorized') return;
+      err.textContent = e2.message; err.hidden = false;
+    }
+  });
+  layer.querySelector('#rfAmount').focus();
+}, true);
+
+/**
  * Where a trip with an open alert is right now - for the safety desk, which
  * sees no other trips. The server refuses a trip whose alert closed more than
  * 30 minutes ago.
@@ -3997,6 +4073,19 @@ async function apiDownload(path, fallbackName) {
   const res = await fetch(API + path, { credentials: 'same-origin', headers: staffHeaders('GET', false) });
   await handleStatus(res, false);
   if (res.status === 403 && (await stepUpThenRetry(res, async () => apiDownload(path, fallbackName).then(() => true))) !== null) return;
+  if (res.status === 403) {
+    const refused = await res.clone().json().catch(() => null);
+    if (refused && refused.error === 'APPROVAL_REQUIRED') {
+      const ok = await confirmAction({
+        title: 'Ask for this download to be approved?',
+        message: 'Downloads of data need a second person. Once it is approved you can download it once, within a day, from the Approvals page.',
+        confirmLabel: 'Ask for approval', withReason: true, reasonRequired: true,
+        reasonLabel: 'Why is it needed?', reasonPlaceholder: "e.g. The insurer's daily file for 3 October", reasonMaxLength: 500,
+      });
+      if (!ok) throw codedError('Not asked.', 'APPROVAL_NOT_ASKED', 403);
+      await api('/admin/approvals/exports', { method: 'POST', body: JSON.stringify({ path: API + path, reason: ok.reason }) });
+    }
+  }
   if (!res.ok) {
     const body = await res.json().catch(() => null);
     throw new Error((body && body.message) || `Download failed (${res.status})`);
@@ -4354,6 +4443,8 @@ async function openTicket(id, keep = {}) {
           ${closed ? '<p>Closed is final. Nothing more can change on this ticket.</p>' : `
           <select id="statusSelect">${TICKET_NEXT[t.status].map(s => `<option value="${s}">${esc(STATUS_TEXT[s])}</option>`).join('')}</select>
           <div class="row"><button class="btn" id="changeStatus" type="button">Change status</button></div>`}
+          ${t.role === 'CUSTOMER' && can('refunds.issue') && !closed ? `<div class="row"><button class="btn" type="button" data-refund="${escValue(t.raisedByAccountId)}"
+            data-refund-ticket="${escValue(t.id)}" data-refund-booking="${escValue(t.linkedBookingId || '')}">Refund or credit</button></div>` : ''}
         </div>
         <div class="check">
           <div class="top"><h4>Assignment</h4></div>
@@ -5259,6 +5350,7 @@ async function loadAccount(accountId, startTab = 'overview') {
       <div class="dx-actions">
         ${a.phoneNumber && !isMasked(a.phoneNumber) ? `<a class="btn" href="tel:${escValue(a.phoneNumber)}">Call</a>` : ''}
         ${d.documentSubmitted ? '<button class="btn" type="button" data-dx-docs>ID documents</button>' : ''}
+        ${a.role === 'CUSTOMER' && can('refunds.issue') ? `<button class="btn" type="button" data-refund="${escValue(a.accountId)}">Refund or credit</button>` : ''}
         ${a.blocked
           ? '<button class="btn" type="button" data-dx-unblock>Unblock</button>'
           : '<button class="btn btn-reject" type="button" data-dx-block>Block</button>'}
@@ -6110,6 +6202,83 @@ async function staffSessionsDialog(member) {
   });
 }
 
+// ---- approvals ----------------------------------------------------------------
+const APPROVAL_STATUS = { PENDING: ['amber', 'Waiting'], APPROVED: ['green', 'Approved'], EXECUTED: ['green', 'Done'],
+  FAILED: ['red', 'Approved, not done'], REJECTED: ['grey', 'Rejected'], CANCELLED: ['grey', 'Withdrawn'], EXPIRED: ['grey', 'Expired'] };
+const KIND_TEXT = { PAYOUT_MARK_PAID: 'Payout', REFUND: 'Refund', STAFF_PRIVILEGED: 'Manager or owner', SECOND_FACTOR_RESET: 'Sign-in reset',
+  INSURANCE_POLICY: 'Insurance policy', EXPORT: 'Download' };
+
+async function refreshApprovalCount() {
+  if (!me || me.legacy) return;
+  try {
+    const page = await api('/admin/approvals', { background: true });
+    $('cApprovals').textContent = page.waiting.length || '';
+    $('cApprovals').hidden = !page.waiting.length;
+  } catch (e) { /* the next render sets it */ }
+}
+
+function approvalRows(rows, waiting) {
+  if (!rows.length) return '<p class="subtle">None.</p>';
+  return `<div class="scroll"><table class="mini"><thead><tr><th>What</th><th>Asked by</th><th>Why</th><th>When</th><th>Status</th><th></th></tr></thead>
+    <tbody>${rows.map((r, i) => {
+      const [tone, text] = APPROVAL_STATUS[r.status] || ['grey', r.status];
+      const before = r.beforeJson ? `<details><summary class="subtle">Before and after</summary><div class="subtle num">before: ${esc(r.beforeJson)}</div><div class="subtle num">change: ${esc(r.payload)}</div></details>` : '';
+      return `<tr><td><span class="pill">${esc(KIND_TEXT[r.kind] || r.kind)}</span> <b>${esc(r.summary)}</b>${before}</td>
+        <td>${esc(r.requestedBy)}${r.yours ? ' <span class="pill">You</span>' : ''}</td>
+        <td class="why">${esc(r.reason || '')}</td>
+        <td class="num">${esc(time(r.requestedAt))}${r.status === 'PENDING' ? `<div class="subtle">expires ${esc(time(r.expiresAt))}</div>` : ''}</td>
+        <td><span class="badge b-${tone}">${esc(text)}</span>${r.selfApproved ? ' <span class="pill warn">Approved by the asker (only owner)</span>' : ''}
+          ${r.decidedBy ? `<div class="subtle">${esc(r.decidedBy)} &middot; ${esc(time(r.decidedAt))}</div>` : ''}
+          ${r.decisionNote ? `<div class="subtle">"${esc(r.decisionNote)}"</div>` : ''}${r.result ? `<div class="subtle">${esc(r.result)}</div>` : ''}</td>
+        <td><div class="staff-actions">
+          ${waiting ? `<button class="btn btn-approve" type="button" data-appr-go="${escValue(r.id)}">Approve</button>
+            <button class="btn btn-reject" type="button" data-appr-no="${escValue(r.id)}">Reject</button>` : ''}
+          ${!waiting && r.yours && r.status === 'PENDING' ? `<button class="btn" type="button" data-appr-cancel="${escValue(r.id)}">Withdraw</button>` : ''}
+          ${r.downloadPath ? `<button class="btn btn-primary" type="button" data-appr-dl="${escValue(r.downloadPath)}">Download</button>` : ''}
+        </div></td></tr>`;
+    }).join('')}</tbody></table></div>`;
+}
+
+function paintApprovals(page) {
+  $('cApprovals').textContent = page.waiting.length || '';
+  $('cApprovals').hidden = !page.waiting.length;
+  $('panel').innerHTML = `<div id="approvalsRoot">
+    ${page.soleOwner ? '<div class="banner banner-info"><span><strong>You are the only owner,</strong> so you may approve your own requests. Each one is marked and every such approval is in the audit log. Add a second owner so nobody has to.</span></div>' : ''}
+    <div class="dx-card full"><h4>Waiting for you <span class="right subtle">${page.waiting.length}</span></h4>${approvalRows(page.waiting, true)}</div>
+    <div class="dx-card full"><h4>Your requests</h4>${approvalRows(page.mine, false)}</div>
+    ${page.recent.length ? `<div class="dx-card full"><h4>Recently decided</h4>${approvalRows(page.recent, false)}</div>` : ''}
+  </div>`;
+  $('approvalsRoot').addEventListener('click', async e => {
+    const go = e.target.closest('[data-appr-go]'), no = e.target.closest('[data-appr-no]');
+    const cancel = e.target.closest('[data-appr-cancel]'), dl = e.target.closest('[data-appr-dl]');
+    try {
+      if (go || no) {
+        const ok = await confirmAction({
+          title: go ? 'Approve this?' : 'Reject this?',
+          message: go ? 'It happens as soon as you approve, and you are recorded as having approved it.' : 'Nothing happens, and whoever asked is shown your note.',
+          confirmLabel: go ? 'Approve' : 'Reject', tone: go ? 'approve' : 'reject', withReason: true,
+          reasonLabel: 'Note (optional)', reasonPlaceholder: go ? 'e.g. Checked the UTR against the bank statement' : 'e.g. The reference does not match the statement', reasonMaxLength: 500,
+        });
+        if (!ok) return;
+        const out = await api(`/admin/approvals/${(go || no).getAttribute(go ? 'data-appr-go' : 'data-appr-no')}/${go ? 'approve' : 'reject'}`,
+          { method: 'POST', body: JSON.stringify({ note: ok.reason }) });
+        toast(out.status === 'FAILED' ? 'bad' : 'ok', go ? (out.status === 'FAILED' ? 'Approved, but it could not be done' : 'Approved') : 'Rejected', out.message);
+        if (out.oneTimeValue) showInviteLink(out.oneTimeValue, 'them', 'link');
+        render();
+      } else if (cancel) {
+        await api(`/admin/approvals/${cancel.dataset.apprCancel}/cancel`, { method: 'POST' });
+        toast('ok', 'Withdrawn');
+        render();
+      } else if (dl) {
+        await apiDownload(dl.dataset.apprDl.replace(/^\/api\/v1/, ''), 'sheout-export.csv');
+        render();
+      }
+    } catch (err) {
+      if (err.message !== 'unauthorized') toast('bad', 'That did not work', err.message);
+    }
+  });
+}
+
 // ---- audit ------------------------------------------------------------------
 const auditFilter = { staffId: '', action: '', from: '', to: '' };
 function auditQuery() {
@@ -6806,9 +6975,9 @@ $('rows').addEventListener('click', async e => {
       row.upiVpa ? `UPI ${row.upiVpa}` : null,
     ].filter(Boolean).join(' or ');
     const ok = await confirmAction({
-      title: `Mark ${rupees(row.amount)} to ${who} as paid?`,
-      message: `Only once the money has actually been sent to ${where}. This does not send anything - it records that you did, and it cannot be undone from the console.`,
-      confirmLabel: 'Mark paid',
+      title: `Record ${rupees(row.amount)} to ${who} as sent?`,
+      message: `Only once the money has actually been sent to ${where}. This does not send anything. A manager or owner then approves it, and only then is it marked paid.`,
+      confirmLabel: 'Send for approval',
       tone: 'approve',
       withReason: true,
       reasonRequired: true,
@@ -7221,6 +7390,7 @@ async function refreshBadges() {
 }
 
 async function refreshBadgesNow() {
+  refreshApprovalCount();
   const q = (path, ok = true) => (ok ? api(path) : Promise.resolve(null))
     .catch((err) => { if (err.message === 'unauthorized') throw err; return null; });
   const set = (id, v) => { if (v !== null && v !== undefined) $(id).textContent = v; };
@@ -7287,6 +7457,7 @@ const TAB_ACCESS = {
   assistant: anyOf('reports.ops'),
   staff: anyOf('staff.manage.employee', 'staff.manage.manager', 'staff.manage.owner'),
   audit: anyOf('audit.view'),
+  approvals: () => !!me && !me.legacy,
 };
 function canOpen(name) {
   return !!me && !!TAB_ACCESS[name] && TAB_ACCESS[name]();

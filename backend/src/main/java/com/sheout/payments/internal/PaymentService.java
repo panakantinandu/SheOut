@@ -695,6 +695,23 @@ public class PaymentService implements PaymentApi {
     }
 
     @Override
+    @Transactional
+    public Result<BigDecimal, PaymentError> refundToWallet(UUID customerAccountId, UUID refundId, UUID bookingId,
+                                                           BigDecimal amount) {
+        if (bookingId != null) {
+            Result<PaymentSummary, PaymentError> paid = getPaymentStatus(bookingId);
+            if (paid.isFailure() || paid.value().status() != PaymentStatus.CAPTURED) {
+                return Result.failure(PaymentError.NOT_CAPTURED);
+            }
+            BigDecimal already = riderWalletService.refundedForBooking(bookingId);
+            if (already.add(amount).compareTo(paid.value().amount()) > 0) {
+                return Result.failure(PaymentError.REFUND_EXCEEDS_PAYMENT);
+            }
+        }
+        return riderWalletService.creditRefund(customerAccountId, refundId, bookingId, amount);
+    }
+
+    @Override
     public BigDecimal riderWalletBalance(UUID customerAccountId) {
         return riderWalletService.getWallet(customerAccountId).balance();
     }

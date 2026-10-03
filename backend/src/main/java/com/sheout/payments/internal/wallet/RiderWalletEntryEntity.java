@@ -21,7 +21,9 @@ public class RiderWalletEntryEntity extends BaseEntity {
         /** A trip she paid from her balance. Negative. */
         TRIP_PAYMENT,
         /** Her SheOut Seller listing fee, paid from her balance. Negative. */
-        LISTING_FEE
+        LISTING_FEE,
+        /** Money SheOut gave back - a refund for a trip, or goodwill - issued from the console. Positive. */
+        REFUND
     }
 
     @Column(nullable = false)
@@ -45,6 +47,10 @@ public class RiderWalletEntryEntity extends BaseEntity {
     /** The payment a LISTING_FEE entry paid. */
     private UUID paymentId;
 
+    /** The refund a REFUND entry paid: one entry per refund, however often it is retried. */
+    @Column(name = "refund_id")
+    private UUID refundId;
+
     protected RiderWalletEntryEntity() {
         // JPA
     }
@@ -66,6 +72,18 @@ public class RiderWalletEntryEntity extends BaseEntity {
         e.type = Type.TRIP_PAYMENT;
         e.amount = amount.negate();
         e.balanceAfter = balanceAfter;
+        e.bookingId = bookingId;
+        return e;
+    }
+
+    static RiderWalletEntryEntity refund(UUID customerAccountId, BigDecimal amount, BigDecimal balanceAfter,
+                                         UUID refundId, UUID bookingId) {
+        RiderWalletEntryEntity e = new RiderWalletEntryEntity();
+        e.customerAccountId = customerAccountId;
+        e.type = Type.REFUND;
+        e.amount = amount;
+        e.balanceAfter = balanceAfter;
+        e.refundId = refundId;
         e.bookingId = bookingId;
         return e;
     }

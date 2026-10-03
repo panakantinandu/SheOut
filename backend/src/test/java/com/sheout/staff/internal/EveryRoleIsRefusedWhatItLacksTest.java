@@ -149,7 +149,8 @@ class EveryRoleIsRefusedWhatItLacksTest {
         assertRefused(StaffRole.SAFETY_RESPONDER, HttpMethod.GET, "/api/v1/admin/payouts");
         assertRefused(StaffRole.SAFETY_RESPONDER, HttpMethod.GET, "/api/v1/admin/live");
         assertRefused(StaffRole.FINANCE, HttpMethod.GET, "/api/v1/admin/verification/documents/" + UUID.randomUUID() + "/link");
-        assertRefused(StaffRole.FINANCE, HttpMethod.POST, "/api/v1/admin/payouts/" + UUID.randomUUID() + "/mark-paid");
+        // Finance records a payment; marking it paid takes someone else's approval (StaffApprovalFlowTest).
+        assertRefused(StaffRole.FINANCE, HttpMethod.POST, "/api/v1/admin/insurance/policies");
         assertRefused(StaffRole.MANAGER, HttpMethod.POST, "/api/v1/admin/payouts/" + UUID.randomUUID() + "/mark-paid");
         assertRefused(StaffRole.MANAGER, HttpMethod.POST, "/api/v1/admin/insurance/policies");
         assertRefused(StaffRole.MARKETPLACE_MODERATOR, HttpMethod.GET, "/api/v1/admin/sos/active");

@@ -75,6 +75,11 @@ class StaffManagementService implements StaffDirectory {
     }
 
     @Transactional(readOnly = true)
+    Optional<StaffMemberEntity> byEmail(String email) {
+        return members.findByEmail(email);
+    }
+
+    @Transactional(readOnly = true)
     Optional<StaffMemberEntity> byAccount(UUID accountId) {
         return members.findByAccountId(accountId);
     }

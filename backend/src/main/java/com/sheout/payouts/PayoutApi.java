@@ -52,4 +52,7 @@ public interface PayoutApi {
 
     /** For account deletion, which is refused while SheOut still owes her a requested payout. */
     boolean hasPendingPayout(UUID driverAccountId);
+
+    /** One payout request, for the console to describe before asking for it to be marked paid. */
+    Optional<PayoutRequestSummary> findRequest(UUID requestId);
 }

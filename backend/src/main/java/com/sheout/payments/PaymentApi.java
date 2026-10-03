@@ -24,6 +24,15 @@ public interface PaymentApi {
     /** A rider's SheOut wallet balance; zero when she has never topped up. For the console. */
     java.math.BigDecimal riderWalletBalance(UUID customerAccountId);
 
+    /**
+     * A refund or goodwill credit from the console, into the rider's SheOut
+     * wallet. With a trip: only for a captured payment, and never more in all
+     * than she paid for it. Idempotent by refundId. Who may issue how much is
+     * the console's rule (staff.RefundLimits and its approvals), not this one's.
+     */
+    Result<java.math.BigDecimal, PaymentError> refundToWallet(UUID customerAccountId, UUID refundId, UUID bookingId,
+                                                              java.math.BigDecimal amount);
+
     // ------------------------------------------------------------ listing fees
 
     /**

@@ -93,6 +93,26 @@ documents, and nobody else can open that partner meanwhile. A support agent
 sees unassigned tickets and her own. The operations manager and owners see
 everything and can hand work back to the queue.
 
+## Two people for anything serious
+
+Some things one person can never do alone. One person asks; someone else
+approves on the **Approvals** page; only then does it happen:
+
+- marking a payout paid (finance records the bank reference; the operations
+  manager or an owner approves),
+- a refund above the person's own limit (₹200 for support, ₹1,000 for the
+  manager; above that, an owner approves),
+- adding or changing a manager or owner, or resetting someone's sign-in,
+- changing an insurance policy (the page keeps what it was before),
+- every download of data (approved once, downloaded once, within a day).
+
+While you are the only owner, you may approve your own requests - otherwise
+nothing could ever be paid - but each one is marked "approved by the asker",
+recorded, and alerted. A second owner removes that.
+
+Refunds go into the rider's SheOut wallet, never more than she paid for the
+trip.
+
 ## The audit log
 
 Owners have an **Audit** page: who did what, when, from where, and why -
@@ -137,8 +157,10 @@ This is phase 1 of 4.
    the code again before sensitive actions; agents seeing only their own
    work; a tamper-evident record of every look and every action; alerts to
    owners.
-3. Two people needed to mark payouts paid, approve big refunds, add a
-   manager or owner, or change commission, fares, insurance or GST.
+3. **Done:** two people needed to mark payouts paid, approve big refunds, add
+   or change a manager or owner, reset a sign-in, change an insurance
+   policy, or download data. (Commission, fares and GST are set in Render,
+   not in the console.)
 4. Dashboards for each role, a live operations board with instant SOS
    alerts, work queues with assignment and time limits, passkeys for owners.
 

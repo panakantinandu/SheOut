@@ -2,6 +2,8 @@ package com.sheout.insurance.internal.web;
 
 import com.sheout.staff.RequiresStepUp;
 import com.sheout.staff.Export;
+import com.sheout.staff.Approvals;
+import com.sheout.staff.ApprovalExecutor;
 import com.sheout.staff.Permission;
 import com.sheout.staff.RequiresPermission;
 import com.sheout.staff.RequiresAnyPermission;
@@ -56,8 +58,11 @@ public class AdminInsuranceController {
     private final InsuranceService insurance;
     private final DriverProfileApi driverProfiles;
     private final AuthApi auth;
+    private final Approvals approvals;
 
-    public AdminInsuranceController(InsuranceService insurance, DriverProfileApi driverProfiles, AuthApi auth) {
+    public AdminInsuranceController(InsuranceService insurance, DriverProfileApi driverProfiles, AuthApi auth,
+                                    Approvals approvals) {
+        this.approvals = approvals;
         this.insurance = insurance;
         this.driverProfiles = driverProfiles;
         this.auth = auth;
@@ -71,33 +76,98 @@ public class AdminInsuranceController {
         return ResponseEntity.ok(insurance.allPolicies().stream().map(this::view).toList());
     }
 
+    /**
+     * Policy changes need a second owner (Phase 3): each endpoint checks the
+     * change can be made, then asks; InsurancePolicyChanges makes it when
+     * approved. The request keeps the policy as it was (before) and the
+     * change (payload): approved requests are the policies' change history.
+     */
     @RequiresPermission(Permission.INSURANCE_MANAGE)
     @RequiresStepUp
     @PostMapping("/api/v1/admin/insurance/policies")
-    public ResponseEntity<PolicyView> createPolicy(@RequestBody PolicyRequest request) {
-        CurrentAccount admin = caller();
-        return ResponseEntity.ok(view(orThrow(insurance.createPolicy(request.toInput(), admin.accountId()))));
+    public ResponseEntity<Approvals.Submitted> createPolicy(@RequestBody PolicyRequest request) {
+        insurance.problemWith(request.toInput()).ifPresent(problem -> orThrow(Result.failure(problem)));
+        return ask("CREATE", null, request, null, "Add a " + request.kind() + " policy from " + request.insurerName()
+                + " (" + request.masterPolicyNumber() + ")");
     }
 
     @RequiresPermission(Permission.INSURANCE_MANAGE)
     @RequiresStepUp
     @PutMapping("/api/v1/admin/insurance/policies/{id}")
-    public ResponseEntity<PolicyView> updatePolicy(@PathVariable UUID id, @RequestBody PolicyRequest request) {
-        return ResponseEntity.ok(view(orThrow(insurance.updatePolicy(id, request.toInput()))));
+    public ResponseEntity<Approvals.Submitted> updatePolicy(@PathVariable UUID id, @RequestBody PolicyRequest request) {
+        InsurancePolicyEntity current = existing(id);
+        if (current.isActive()) {
+            orThrow(Result.failure(InsuranceService.PolicyError.ACTIVE_POLICY_LOCKED));
+        }
+        insurance.problemWith(request.toInput()).ifPresent(problem -> orThrow(Result.failure(problem)));
+        return ask("UPDATE", id, request, current, "Change policy " + current.getMasterPolicyNumber());
     }
 
     @RequiresPermission(Permission.INSURANCE_MANAGE)
     @RequiresStepUp
     @PostMapping("/api/v1/admin/insurance/policies/{id}/activate")
-    public ResponseEntity<PolicyView> activate(@PathVariable UUID id) {
-        return ResponseEntity.ok(view(orThrow(insurance.setActive(id, true))));
+    public ResponseEntity<Approvals.Submitted> activate(@PathVariable UUID id) {
+        InsurancePolicyEntity current = existing(id);
+        return ask("ACTIVATE", id, null, current, "Switch ON " + current.getKind() + " policy " + current.getMasterPolicyNumber());
     }
 
     @RequiresPermission(Permission.INSURANCE_MANAGE)
     @RequiresStepUp
     @PostMapping("/api/v1/admin/insurance/policies/{id}/deactivate")
-    public ResponseEntity<PolicyView> deactivate(@PathVariable UUID id) {
-        return ResponseEntity.ok(view(orThrow(insurance.setActive(id, false))));
+    public ResponseEntity<Approvals.Submitted> deactivate(@PathVariable UUID id) {
+        InsurancePolicyEntity current = existing(id);
+        return ask("DEACTIVATE", id, null, current, "Switch OFF " + current.getKind() + " policy " + current.getMasterPolicyNumber());
+    }
+
+    /** What an approved policy change carries. */
+    public record PolicyChange(String action, UUID policyId, PolicyRequest policy) {
+    }
+
+    private ResponseEntity<Approvals.Submitted> ask(String action, UUID id, PolicyRequest request, InsurancePolicyEntity before,
+                                                    String summary) {
+        String target = id == null ? "new" : id.toString();
+        if (approvals.pending(Approvals.Kind.INSURANCE_POLICY, target)) {
+            throw new ApiException(HttpStatus.CONFLICT, "ALREADY_ASKED", "A change to this policy is already waiting for approval.");
+        }
+        return ResponseEntity.accepted().body(approvals.submit(new Approvals.Request(Approvals.Kind.INSURANCE_POLICY, summary,
+                Approvals.payload(new PolicyChange(action, id, request)),
+                before == null ? null : Approvals.payload(view(before)), Permission.INSURANCE_MANAGE, "INSURANCE_POLICY", target, null)));
+    }
+
+    private InsurancePolicyEntity existing(UUID id) {
+        return insurance.allPolicies().stream().filter(p -> p.getId().equals(id)).findFirst()
+                .orElseThrow(() -> ApiException.notFound("No such policy"));
+    }
+
+    /** Carries out an approved policy change, as the approving owner. */
+    @org.springframework.context.annotation.Bean
+    static ApprovalExecutor insurancePolicyChanges(InsuranceService insurance) {
+        return new ApprovalExecutor() {
+            @Override
+            public Approvals.Kind kind() {
+                return Approvals.Kind.INSURANCE_POLICY;
+            }
+
+            @Override
+            public Outcome execute(String payload) {
+                PolicyChange change = Approvals.read(payload, PolicyChange.class);
+                Result<InsurancePolicyEntity, InsuranceService.PolicyError> result = switch (change.action()) {
+                    case "CREATE" -> insurance.createPolicy(change.policy().toInput(), StaffContext.requireSignedIn().accountId());
+                    case "UPDATE" -> insurance.updatePolicy(change.policyId(), change.policy().toInput());
+                    case "ACTIVATE" -> insurance.setActive(change.policyId(), true);
+                    default -> insurance.setActive(change.policyId(), false);
+                };
+                if (result.isFailure()) {
+                    try {
+                        orThrow(result);
+                    } catch (ApiException e) {
+                        return Outcome.failed(e.getMessage());
+                    }
+                }
+                InsurancePolicyEntity p = result.value();
+                return Outcome.done("Policy " + p.getMasterPolicyNumber() + " is " + (p.isActive() ? "active" : "not active") + ".");
+            }
+        };
     }
 
     // ------------------------------------------------------------ status, files

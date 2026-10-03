@@ -15,4 +15,11 @@ interface RiderWalletEntryRepository extends JpaRepository<RiderWalletEntryEntit
     boolean existsByBookingIdAndType(UUID bookingId, RiderWalletEntryEntity.Type type);
 
     boolean existsByPaymentIdAndType(UUID paymentId, RiderWalletEntryEntity.Type type);
+
+    boolean existsByRefundIdAndType(UUID refundId, RiderWalletEntryEntity.Type type);
+
+    @org.springframework.data.jpa.repository.Query("select coalesce(sum(e.amount), 0) from RiderWalletEntryEntity e"
+            + " where e.bookingId = :bookingId and e.type = :type")
+    java.math.BigDecimal sumByBookingIdAndType(@org.springframework.data.repository.query.Param("bookingId") UUID bookingId,
+                                               @org.springframework.data.repository.query.Param("type") RiderWalletEntryEntity.Type type);
 }

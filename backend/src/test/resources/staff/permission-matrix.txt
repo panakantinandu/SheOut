@@ -26,6 +26,7 @@ sos.respond                     Y    Y    .    .    Y    .    .    .
 support.work                    Y    Y    .    Y    .    .    .    .
 support.all                     Y    Y    .    .    .    .    .    .
 refunds.issue                   Y    Y    .    Y    .    Y    .    .
+refunds.approve                 Y    .    .    .    .    .    .    .
 payouts.prepare                 Y    .    .    .    .    Y    .    .
 payouts.approve                 Y    Y    .    .    .    .    .    .
 payments.view                   Y    Y    .    .    .    Y    .    Y

@@ -85,6 +85,13 @@ class StaffAlerts {
                             who + " revealed more than " + REVEAL_BURST + " phone numbers or addresses in "
                                     + REVEAL_WINDOW.toMinutes() + " minutes.", null);
                 }
+            } else if (action.equals(StaffActions.APPROVAL_REQUEST)) {
+                raise("approval.request", row, "An approval is needed",
+                        who + " asked for a second person's approval: " + summaryIn(row.detail()) + ".", null);
+            } else if (action.equals(StaffActions.APPROVAL_SELF)) {
+                raise("approval.self", row, "An owner approved her own request",
+                        who + " approved their own request, allowed only while SheOut has one owner: "
+                                + Optional.ofNullable(row.detail()).orElse("") + ". Add a second owner.", null);
             } else if (action.equals(StaffActions.NEW_DEVICE)) {
                 raise("device.new", row, "Sign-in from a new browser",
                         who + " signed in from a browser not seen before: " + Optional.ofNullable(row.detail()).orElse("unknown") + ".",
@@ -118,6 +125,14 @@ class StaffAlerts {
         }
         return members.findById(staffId).map(m -> m.getDisplayName() + " (" + StaffRoleLabels.label(m.getRole()) + ")")
                 .orElse("A staff member");
+    }
+
+    private static String summaryIn(String detail) {
+        if (detail == null) {
+            return "";
+        }
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("\"summary\":\"((?:[^\"\\\\]|\\\\.)*)\"").matcher(detail);
+        return m.find() ? m.group(1).replace("\\\"", "\"") : detail;
     }
 
     /** "Operations manager" from an invitation row's {"role":"MANAGER",...}. */

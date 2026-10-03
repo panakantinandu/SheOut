@@ -26,5 +26,8 @@ public enum PaymentError {
     INVALID_AMOUNT,
 
     /** No top-up with that id belongs to this rider. */
-    TOPUP_NOT_FOUND
+    TOPUP_NOT_FOUND,
+
+    /** A refund for a trip would take back more than she paid for it. */
+    REFUND_EXCEEDS_PAYMENT
 }

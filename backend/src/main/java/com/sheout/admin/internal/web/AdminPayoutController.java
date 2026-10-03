@@ -3,6 +3,7 @@ package com.sheout.admin.internal.web;
 import com.sheout.staff.RequiresStepUp;
 import com.sheout.sharedkernel.privacy.Pii;
 
+import com.sheout.staff.Approvals;
 import com.sheout.staff.Permission;
 import com.sheout.staff.RequiresPermission;
 import com.sheout.staff.RequiresAnyPermission;
@@ -58,8 +59,10 @@ public class AdminPayoutController {
     private final PayoutApi payoutApi;
     private final DriverProfileApi driverProfileApi;
     private final AuthApi authApi;
+    private final Approvals approvals;
 
-    public AdminPayoutController(PayoutApi payoutApi, DriverProfileApi driverProfileApi, AuthApi authApi) {
+    public AdminPayoutController(PayoutApi payoutApi, DriverProfileApi driverProfileApi, AuthApi authApi, Approvals approvals) {
+        this.approvals = approvals;
         this.payoutApi = payoutApi;
         this.driverProfileApi = driverProfileApi;
         this.authApi = authApi;
@@ -77,22 +80,29 @@ public class AdminPayoutController {
                 this::toRow));
     }
 
-    @RequiresPermission({Permission.PAYOUTS_PREPARE, Permission.PAYOUTS_APPROVE})
+    /**
+     * Finance has sent the money and records the transfer reference; a
+     * manager or owner must approve before the payout is marked paid (Phase 3,
+     * the two-person rule). The answer is the waiting approval request.
+     */
+    @RequiresPermission(Permission.PAYOUTS_PREPARE)
     @RequiresStepUp
     @PostMapping("/{requestId}/mark-paid")
-    public ResponseEntity<PayoutRow> markPaid(@PathVariable UUID requestId, @Valid @RequestBody MarkPaidRequest request) {
-        CurrentAccount admin = caller();
-        Result<PayoutRequestSummary, PayoutError> result = payoutApi.markPaid(requestId, admin.accountId(), request.paymentReference());
-        if (result.isFailure()) {
-            throw switch (result.error()) {
-                case REQUEST_NOT_FOUND -> ApiException.notFound("No such payout request");
-                case ALREADY_PAID -> new ApiException(HttpStatus.CONFLICT, "ALREADY_PAID", "This payout is already marked paid.");
-                case REFERENCE_REQUIRED -> new ApiException(HttpStatus.BAD_REQUEST, "REFERENCE_REQUIRED",
-                        "Enter the bank or UPI transaction reference.");
-                default -> new ApiException(HttpStatus.BAD_REQUEST, "Bad Request", "This payout could not be updated.");
-            };
+    public ResponseEntity<Approvals.Submitted> markPaid(@PathVariable UUID requestId, @Valid @RequestBody MarkPaidRequest request) {
+        PayoutRequestSummary payout = payoutApi.findRequest(requestId)
+                .orElseThrow(() -> ApiException.notFound("No such payout request"));
+        if (payout.status() == PayoutStatus.PAID) {
+            throw new ApiException(HttpStatus.CONFLICT, "ALREADY_PAID", "This payout is already marked paid.");
         }
-        return ResponseEntity.ok(toRow(result.value()));
+        if (approvals.pending(Approvals.Kind.PAYOUT_MARK_PAID, requestId.toString())) {
+            throw new ApiException(HttpStatus.CONFLICT, "ALREADY_ASKED", "This payout is already waiting for approval.");
+        }
+        String name = driverProfileApi.findByAccountId(payout.driverAccountId()).map(DriverProfileSummary::name).orElse("a partner");
+        String reference = request.paymentReference().trim();
+        return ResponseEntity.accepted().body(approvals.submit(new Approvals.Request(Approvals.Kind.PAYOUT_MARK_PAID,
+                "Mark ₹" + payout.amount().toPlainString() + " to " + name + " as paid (reference " + reference + ")",
+                Approvals.payload(new com.sheout.admin.internal.AdminApprovalExecutors.PayoutPaid(requestId, reference)),
+                null, Permission.PAYOUTS_APPROVE, "PAYOUT", requestId.toString(), null)));
     }
 
     private PayoutRow toRow(PayoutRequestSummary r) {

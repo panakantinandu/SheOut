@@ -314,6 +314,14 @@ public class InsuranceService implements InsuranceApi {
         return Result.success(policies.save(p));
     }
 
+    /**
+     * What would be wrong with this policy, before anyone is asked to approve
+     * it - so an approver is never handed something that cannot be saved.
+     */
+    public Optional<PolicyError> problemWith(PolicyInput in) {
+        return Optional.ofNullable(check(in));
+    }
+
     private static PolicyError check(PolicyInput in) {
         if (in.kind() == null || blank(in.insurerName()) || blank(in.masterPolicyNumber()) || in.sumInsured() == null
                 || in.sumInsured().signum() <= 0 || in.premiumPerUnit() == null || in.premiumPerUnit().signum() < 0

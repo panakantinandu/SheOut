@@ -334,7 +334,7 @@ export function Wallet() {
                 className={`flex items-center gap-3 p-4 ${entry.bookingId ? 'cursor-pointer' : ''}`}
                 onClick={entry.bookingId ? () => navigate(`/tracking/${entry.bookingId}`) : undefined}
               >
-                {entry.type === 'TOPUP' ? (
+                {entry.type === 'TOPUP' || entry.type === 'REFUND' ? (
                   <IconCircle tone="soft" size="sm" color="green" icon={<ArrowDownLeft />} />
                 ) : entry.type === 'LISTING_FEE' ? (
                   <IconCircle tone="soft" size="sm" color="primary" icon={<Store />} />
@@ -345,7 +345,9 @@ export function Wallet() {
                   <p className="truncate text-sm font-medium text-text-primary">
                     {entry.type === 'TOPUP'
                       ? t('wallet.moneyAdded')
-                      : entry.type === 'LISTING_FEE'
+                      : entry.type === 'REFUND'
+                        ? t('wallet.refund')
+                        : entry.type === 'LISTING_FEE'
                         ? t('payments.listingFee')
                         : t('wallet.tripPayment')}
                   </p>
