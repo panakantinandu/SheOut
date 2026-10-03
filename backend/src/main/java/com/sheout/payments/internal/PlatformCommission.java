@@ -32,7 +32,12 @@ public class PlatformCommission {
 
     private final BigDecimal percent;
 
-    PlatformCommission(@Value("${PLATFORM_COMMISSION_PERCENT:18.00}") BigDecimal percent) {
+    PlatformCommission(@Value("${PLATFORM_COMMISSION_PERCENT:18.00}") BigDecimal percent,
+                       // The 2025 Motor Vehicle Aggregator Guidelines: a partner
+                       // driving her own vehicle receives at least 80% of the
+                       // fare. Configurable because the rule, and which partners
+                       // it covers, may change; 20% is today's ceiling.
+                       @Value("${PLATFORM_COMMISSION_MAX_PERCENT:20.00}") BigDecimal maxPercent) {
         if (percent.compareTo(BigDecimal.ZERO) < 0 || percent.compareTo(HUNDRED) > 0) {
             // A commission above 100% would pay a partner a negative amount,
             // and below zero would pay her more than the rider paid. Both are
@@ -40,6 +45,14 @@ public class PlatformCommission {
             // discovering in somebody's earnings.
             throw new IllegalArgumentException(
                     "PLATFORM_COMMISSION_PERCENT must be between 0 and 100, got " + percent);
+        }
+        if (percent.compareTo(maxPercent) > 0) {
+            // Refused at startup, not clamped: a commission quietly cut to the
+            // ceiling would be a number nobody chose. Somebody sets it again.
+            throw new IllegalArgumentException("PLATFORM_COMMISSION_PERCENT is " + percent
+                    + "%, above PLATFORM_COMMISSION_MAX_PERCENT (" + maxPercent + "%). Partners using their own"
+                    + " vehicle must receive at least 80% of the fare under the 2025 Motor Vehicle Aggregator"
+                    + " Guidelines, so SheOut's commission cannot exceed 20%.");
         }
         this.percent = percent.setScale(2, RoundingMode.HALF_UP);
         log.info("Platform commission: {}% of every captured fare", this.percent);

@@ -484,6 +484,60 @@ passenger cover on every trip.)
   events), the same shape as booking and campaigns. There is no bean cycle:
   claims live in their own bean for that reason.
 
+## Commission ceiling and GST
+
+**The partner keeps at least 80%.** MVAG 2025 says partners using their own
+vehicle receive at least 80% of the fare. `PlatformCommission` used to
+accept anything from 0 to 100; it now refuses to start if
+`PLATFORM_COMMISSION_PERCENT` is above `PLATFORM_COMMISSION_MAX_PERCENT`
+(default `20.00`), naming the rule.
+
+**One price up front; the tax inside it on the receipt.** The booking screen
+shows one all-inclusive price, as before. With GST on, each captured payment
+is split into its taxable value and tax at the rate for its kind of supply
+(`BIKE`, `AUTO`, `CAB`, `PARCEL`, `SELLER_LISTING_FEE`; `PLATFORM_FEE` is
+configured for when SheOut's own fee is invoiced separately), stored on the
+payment, and a tax invoice is issued: a gapless per-financial-year number
+(`SO/2026-27/000001`, taken under a row lock inside the capture so a failed
+capture gives its number back), SheOut's GSTIN, place of supply (Telangana),
+the SAC code, her name, the taxable value, CGST and SGST. The rider's receipt
+then shows the tax included and "Download tax invoice"
+(`GET /api/v1/payments/bookings/{id}/tax-invoice[.pdf]`, hers only). The PDF
+is drawn by `InvoiceRenderer`; the default `SimplePdfInvoiceRenderer` writes
+a plain one-page PDF with no library.
+
+**GST is off by default (`GST_ENABLED=false`) and every rate is empty.** With
+it on and the GSTIN, legal name, any rate or any SAC code missing, the server
+refuses to start and lists what is missing. `FARES_TAX_INCLUSIVE=false` is
+refused rather than built, because tax added on top would change what riders
+pay.
+
+> **Before `GST_ENABLED` is turned on, SheOut's CA must sign off:** the rate
+> for each kind of supply, the SAC codes, **who the supplier is** - whether
+> SheOut is liable as the e-commerce operator under Section 9(5) for
+> app-booked passenger transport (and the rate that then applies), or only
+> for its platform fee - and the invoice format and numbering. **The answer
+> changes if SheOut moves to a subscription model**, where it charges
+> partners a fee instead of a commission and may no longer be the supplier
+> of the ride at all.
+
+### Flagged assumptions
+
+- **Tax is worked out on what the rider paid** (`amount`), after any
+  promotion; a trip a promotion paid in full gets no invoice. Whether a
+  SheOut-funded promotion reduces the taxable value is for the CA.
+- **The tax comes out of SheOut's side.** Prices are inclusive and the
+  partner's share is still computed on the whole fare exactly as before, so
+  with GST on the tax is borne from SheOut's commission. Who bears it is a
+  business decision for the founder and CA.
+- **Intra-state only**: every trip starts in Telangana, so the tax is split
+  into CGST and SGST and IGST is always zero.
+- **Lunch Box is taxed as a parcel** until the CA says otherwise; the apps do
+  not offer it.
+- **Not built**: e-invoicing (IRN/QR from the GST portal), credit notes for
+  refunds, and invoicing the partner for SheOut's commission. A renderer for
+  an e-invoicing provider is a new `InvoiceRenderer`.
+
 ## What riders and partners see
 
 **Rider app.** The booking screen shows one all-inclusive price, unchanged -

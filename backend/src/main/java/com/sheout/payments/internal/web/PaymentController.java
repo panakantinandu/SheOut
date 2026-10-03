@@ -54,10 +54,50 @@ public class PaymentController {
 
     private final PaymentService paymentService;
     private final BookingApi bookingApi;
+    private final com.sheout.payments.internal.tax.GstService gst;
+    private final com.sheout.payments.internal.tax.InvoiceRenderer invoiceRenderer;
 
-    public PaymentController(PaymentService paymentService, BookingApi bookingApi) {
+    public PaymentController(PaymentService paymentService, BookingApi bookingApi,
+                             com.sheout.payments.internal.tax.GstService gst,
+                             com.sheout.payments.internal.tax.InvoiceRenderer invoiceRenderer) {
         this.paymentService = paymentService;
         this.bookingApi = bookingApi;
+        this.gst = gst;
+        this.invoiceRenderer = invoiceRenderer;
+    }
+
+    /**
+     * The tax invoice for her trip - 404 while GST is off (none is issued)
+     * and for a trip whose payment was not captured. Hers alone: it carries
+     * her name, so the partner is refused like anybody else.
+     */
+    @GetMapping("/bookings/{bookingId}/tax-invoice")
+    public ResponseEntity<TaxInvoiceView> taxInvoice(@PathVariable UUID bookingId) {
+        requireCustomerOf(bookingId);
+        return gst.invoiceForBooking(bookingId)
+                .map(i -> ResponseEntity.ok(new TaxInvoiceView(i.getInvoiceNumber(), i.getIssuedAt(), i.getSupplierGstin(),
+                        i.getSupplierName(), i.getPlaceOfSupply(), i.getSacCode(), i.getTaxableValue(),
+                        i.getTaxRatePercent(), i.getCgstAmount(), i.getSgstAmount(), i.getIgstAmount(), i.getTotalAmount())))
+                .orElseThrow(() -> ApiException.notFound("No tax invoice for this trip"));
+    }
+
+    @GetMapping("/bookings/{bookingId}/tax-invoice.pdf")
+    public ResponseEntity<byte[]> taxInvoicePdf(@PathVariable UUID bookingId) {
+        requireCustomerOf(bookingId);
+        var invoice = gst.invoiceForBooking(bookingId)
+                .orElseThrow(() -> ApiException.notFound("No tax invoice for this trip"));
+        return ResponseEntity.ok()
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + invoice.getInvoiceNumber().replace('/', '-') + ".pdf\"")
+                .contentType(org.springframework.http.MediaType.parseMediaType(invoiceRenderer.contentType()))
+                .body(invoiceRenderer.render(invoice));
+    }
+
+    /** What her receipt shows of the invoice: the tax that was inside her fare. */
+    public record TaxInvoiceView(String invoiceNumber, Instant issuedAt, String supplierGstin, String supplierName,
+                                 String placeOfSupply, String sacCode, BigDecimal taxableValue, BigDecimal taxRatePercent,
+                                 BigDecimal cgstAmount, BigDecimal sgstAmount, BigDecimal igstAmount,
+                                 BigDecimal totalAmount) {
     }
 
     @GetMapping("/bookings/{bookingId}")

@@ -1294,6 +1294,10 @@
     "noBreakdown": "इस यात्रा का विवरण नहीं रखा गया था।",
     "fare": "किराया",
     "promo": "प्रमोशन",
-    "paid": "आपने भरा"
+    "paid": "आपने भरा",
+    "taxIncluded": "इसमें ₹{{amount}} GST शामिल है",
+    "taxSplit": "₹{{taxable}} के कर-योग्य मूल्य पर CGST ₹{{cgst}} + SGST ₹{{sgst}}",
+    "downloadInvoice": "टैक्स इनवॉइस {{number}} डाउनलोड करें",
+    "downloadError": "इनवॉइस डाउनलोड नहीं हो सका। फिर कोशिश करें।"
   }
 }

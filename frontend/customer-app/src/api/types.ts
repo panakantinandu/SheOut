@@ -749,3 +749,19 @@ export interface FareDetails {
   promotionName: string | null;
   amountDue: number;
 }
+
+/** The tax invoice for a trip - exists only once SheOut is GST-registered and GST_ENABLED is on. */
+export interface TaxInvoice {
+  invoiceNumber: string;
+  issuedAt: string;
+  supplierGstin: string;
+  supplierName: string;
+  placeOfSupply: string;
+  sacCode: string;
+  taxableValue: number;
+  taxRatePercent: number;
+  cgstAmount: number;
+  sgstAmount: number;
+  igstAmount: number;
+  totalAmount: number;
+}

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AmountText, Card, useTranslation } from '@sheout/design-system';
-import { getFareDetails } from '../api/client';
-import type { FareDetails } from '../api/types';
+import { downloadTaxInvoice, getFareDetails, getTaxInvoice } from '../api/client';
+import type { FareDetails, TaxInvoice } from '../api/types';
 
 /** "×1.3", for a multiplier that changed the fare; nothing for 1.0. */
 function multiplier(value: number | null): string | null {
@@ -17,14 +17,18 @@ function multiplier(value: number | null): string | null {
  * There is no insurance line, and there never will be: cover is SheOut's
  * cost, paid from its commission, not part of any fare. Taxes, once SheOut
  * is GST-registered, are shown as included in the same price, with the
- * invoice - see TaxInvoiceLines.
+ * invoice, below the total.
  */
 export function FareDetailsCard({ bookingId, children }: { bookingId: string; children?: React.ReactNode }) {
   const { t } = useTranslation();
   const [details, setDetails] = useState<FareDetails | null>(null);
+  const [invoice, setInvoice] = useState<TaxInvoice | null>(null);
+  const [downloadError, setDownloadError] = useState(false);
 
   useEffect(() => {
     getFareDetails(bookingId).then(setDetails).catch(() => setDetails(null));
+    // Only once SheOut is GST-registered and GST is on; null until then, and nothing is shown.
+    getTaxInvoice(bookingId).then(setInvoice).catch(() => setInvoice(null));
   }, [bookingId]);
 
   if (!details) return null;
@@ -68,6 +72,24 @@ export function FareDetailsCard({ bookingId, children }: { bookingId: string; ch
           <AmountText size="sm" exact amount={Number(details.amountDue)} />
         </div>
       </div>
+      {invoice && (
+        <div className="space-y-1 border-t border-border pt-2 text-xs text-text-secondary" data-testid="tax-lines">
+          <p>{t('fareDetails.taxIncluded', { amount: (Number(invoice.cgstAmount) + Number(invoice.sgstAmount) + Number(invoice.igstAmount)).toFixed(2) })}</p>
+          <p>{t('fareDetails.taxSplit', { cgst: Number(invoice.cgstAmount).toFixed(2), sgst: Number(invoice.sgstAmount).toFixed(2), taxable: Number(invoice.taxableValue).toFixed(2) })}</p>
+          <button
+            type="button"
+            className="font-semibold text-primary"
+            onClick={() => {
+              setDownloadError(false);
+              downloadTaxInvoice(bookingId, `${invoice.invoiceNumber.replace(/\//g, '-')}.pdf`).catch(() => setDownloadError(true));
+            }}
+            data-testid="download-invoice"
+          >
+            {t('fareDetails.downloadInvoice', { number: invoice.invoiceNumber })}
+          </button>
+          {downloadError && <p className="text-danger">{t('fareDetails.downloadError')}</p>}
+        </div>
+      )}
       {children}
     </Card>
   );

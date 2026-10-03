@@ -231,4 +231,41 @@ public class PaymentEntity extends BaseEntity {
     public void setCapturedAt(Instant capturedAt) {
         this.capturedAt = capturedAt;
     }
+
+    /**
+     * The GST inside what she paid, once GST is on - see GstService. Null on
+     * every payment captured while it was off. The amount itself never
+     * changes: the price was tax-inclusive, and this records what was in it.
+     */
+    @Column(precision = 10, scale = 2)
+    private BigDecimal taxableValue;
+    @Column(precision = 10, scale = 2)
+    private BigDecimal taxAmount;
+    @Column(precision = 5, scale = 2)
+    private BigDecimal taxRatePercent;
+    @Column(length = 30)
+    private String taxCategory;
+
+    public void recordTax(BigDecimal taxableValue, BigDecimal taxAmount, BigDecimal ratePercent, String category) {
+        this.taxableValue = taxableValue;
+        this.taxAmount = taxAmount;
+        this.taxRatePercent = ratePercent;
+        this.taxCategory = category;
+    }
+
+    public BigDecimal getTaxableValue() {
+        return taxableValue;
+    }
+
+    public BigDecimal getTaxAmount() {
+        return taxAmount;
+    }
+
+    public BigDecimal getTaxRatePercent() {
+        return taxRatePercent;
+    }
+
+    public String getTaxCategory() {
+        return taxCategory;
+    }
 }

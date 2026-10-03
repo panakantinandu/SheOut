@@ -7,6 +7,7 @@ import type {
   CoverSummary,
   FareDetails,
   TripCover,
+  TaxInvoice,
   AccountSession,
   VerificationTurnaround,
   AuthSession,
@@ -1074,4 +1075,31 @@ export const insuranceApi = {
 /** Her receipt's "Fare details". */
 export function getFareDetails(bookingId: string): Promise<FareDetails> {
   return request(`/api/v1/bookings/${bookingId}/fare-details`);
+}
+
+/** The trip's tax invoice, or null when there is none (GST off, or not captured). */
+export async function getTaxInvoice(bookingId: string): Promise<TaxInvoice | null> {
+  try {
+    return await request<TaxInvoice>(`/api/v1/payments/bookings/${bookingId}/tax-invoice`);
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) return null;
+    throw err;
+  }
+}
+
+/** The invoice PDF, fetched with her sign-in and handed to the browser to save. */
+export async function downloadTaxInvoice(bookingId: string, fileName: string): Promise<void> {
+  const token = getStoredToken();
+  const res = await fetch(`${API_BASE}/api/v1/payments/bookings/${bookingId}/tax-invoice.pdf`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new ApiError(`Download failed (${res.status})`, res.status, null);
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
 }

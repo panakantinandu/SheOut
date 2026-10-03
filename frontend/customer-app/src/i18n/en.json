@@ -1294,6 +1294,10 @@
     "noBreakdown": "The breakdown was not kept for this trip.",
     "fare": "Fare",
     "promo": "Promotion",
-    "paid": "You paid"
+    "paid": "You paid",
+    "taxIncluded": "Includes GST of ₹{{amount}}",
+    "taxSplit": "CGST ₹{{cgst}} + SGST ₹{{sgst}} on a taxable value of ₹{{taxable}}",
+    "downloadInvoice": "Download tax invoice {{number}}",
+    "downloadError": "Could not download the invoice. Please try again."
   }
 }

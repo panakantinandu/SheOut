@@ -188,6 +188,10 @@ sheout:
     # (30,7) and VERIFICATION_CONSENT_VERSION (must match the apps' legal
     # content - see design-system/src/legal/content.ts).
 
+  # GST and the commission ceiling are flat env vars read where they are
+  # used - TaxConfiguration (GST_ENABLED, SHEOUT_GSTIN, GST_RATE_*, GST_SAC_*)
+  # and PlatformCommission (PLATFORM_COMMISSION_MAX_PERCENT). See .env.example.
+
   # Insurance - see com.sheout.insurance and the README. Policies themselves
   # are entered in the console; nothing about a policy is configured here.
   insurance:

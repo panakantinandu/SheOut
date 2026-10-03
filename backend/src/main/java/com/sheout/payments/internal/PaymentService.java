@@ -10,6 +10,8 @@ import com.sheout.payments.PaymentApi;
 import com.sheout.payments.PaymentPurpose;
 import com.sheout.payments.UpiQr;
 import com.sheout.payments.internal.gateway.GatewayQr;
+import com.sheout.payments.internal.tax.GstService;
+import com.sheout.payments.internal.tax.TaxCategory;
 import com.sheout.payments.internal.wallet.RiderWalletService;
 import com.sheout.payments.PaymentCaptured;
 import com.sheout.payments.internal.gateway.GatewayPayment;
@@ -54,11 +56,16 @@ public class PaymentService implements PaymentApi {
     private final TransactionTemplate transactions;
     private final BookingApi bookingApi;
     private final RiderWalletService riderWalletService;
+    private final GstService gst;
+    private final com.sheout.users.CustomerProfileApi customerProfiles;
 
     public PaymentService(PaymentRepository paymentRepository, PaymentGateway paymentGateway,
                           PlatformCommission platformCommission, DomainEventPublisher eventPublisher,
                           PlatformTransactionManager transactionManager, BookingApi bookingApi,
-                          RiderWalletService riderWalletService) {
+                          RiderWalletService riderWalletService, GstService gst,
+                          com.sheout.users.CustomerProfileApi customerProfiles) {
+        this.gst = gst;
+        this.customerProfiles = customerProfiles;
         this.bookingApi = bookingApi;
         this.riderWalletService = riderWalletService;
         this.paymentRepository = paymentRepository;
@@ -95,6 +102,27 @@ public class PaymentService implements PaymentApi {
      * capture. Two ways to pay must never mean two answers to what a partner
      * earned, so the settlement is recorded here, once.
      */
+    /** Splits the tax out and issues the invoice - nothing at all while GST is off. See GstService. */
+    private void applyGst(PaymentEntity payment, TaxCategory category, UUID recipient, String description) {
+        if (!gst.enabled()) {
+            return;
+        }
+        String name = recipient == null ? null
+                : customerProfiles.findByAccountId(recipient).map(com.sheout.users.CustomerProfileSummary::name).orElse(null);
+        gst.applyOnCapture(payment.getId(), payment.getBookingId(), payment.getAmount(), category, recipient, name, description)
+                .ifPresent(applied -> payment.recordTax(applied.split().taxableValue(), applied.split().tax(),
+                        applied.ratePercent(), applied.category().name()));
+    }
+
+    private static String tripDescription(com.sheout.booking.BookingCategory category) {
+        return switch (category) {
+            case BIKE -> "Passenger transport - bike taxi, booked through SheOut";
+            case AUTO -> "Passenger transport - auto rickshaw, booked through SheOut";
+            case CAB -> "Passenger transport - cab, booked through SheOut";
+            case PARCEL, LUNCHBOX -> "Parcel delivery, booked through SheOut";
+        };
+    }
+
     private PaymentSummary markCaptured(PaymentEntity payment, PaymentMethod method, String razorpayPaymentId) {
         payment.setMethod(method);
         payment.setStatus(PaymentStatus.CAPTURED);
@@ -106,6 +134,7 @@ public class PaymentService implements PaymentApi {
         if (payment.getPurpose() == PaymentPurpose.SELLER_LISTING_FEE) {
             // SheOut's own fee: nobody's share to settle, and nothing that
             // listens for a trip's capture should hear about it.
+            applyGst(payment, TaxCategory.SELLER_LISTING_FEE, payment.getPayerAccountId(), "SheOut Seller listing fee");
             paymentRepository.save(payment);
             eventPublisher.publish(new ListingFeePaid(payment.getId(), payment.getPayerAccountId(), payment.getSellerId(),
                     payment.getAmount(), method, payment.getCapturedAt()));
@@ -118,6 +147,10 @@ public class PaymentService implements PaymentApi {
         // From the whole fare, not what the rider paid: a promotion is
         // SheOut's cost, never taken out of the partner's share.
         payment.recordSettlement(platformCommission.payoutFrom(payment.getFareAmount()), platformCommission.percent());
+        // GST, when it is on: found inside what she paid, never added to it,
+        // and the partner's share above is worked out exactly as before.
+        bookingApi.findById(payment.getBookingId()).ifPresent(trip -> applyGst(payment,
+                TaxCategory.forTrip(trip.category()), trip.customerId(), tripDescription(trip.category())));
         paymentRepository.save(payment);
         eventPublisher.publish(new PaymentCaptured(
                 payment.getId(), payment.getBookingId(), method, payment.getAmount(),

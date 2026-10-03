@@ -414,6 +414,18 @@ envVarGroups:
       # partner can be shown her own breakdown.
       - key: PLATFORM_COMMISSION_PERCENT
         value: "18.00"
+      # A commission above this refuses to start: partners on their own
+      # vehicle keep at least 80% (MVAG 2025).
+      - key: PLATFORM_COMMISSION_MAX_PERCENT
+        value: "20.00"
+      # GST stays off until the CA signs off rates, SAC codes, Section 9(5)
+      # and the invoice format, and SheOut has a GSTIN. The GSTIN, legal name
+      # and every GST_RATE_*/GST_SAC_* are set in the dashboard then - see
+      # .env.example for the full list of names.
+      - key: GST_ENABLED
+        value: "false"
+      - key: SHEOUT_GSTIN
+        sync: false
 
       # A partner's documents (licence, RC, insurance, PUC, fitness): what
       # each vehicle needs is the defaults in DocumentRequirements and
