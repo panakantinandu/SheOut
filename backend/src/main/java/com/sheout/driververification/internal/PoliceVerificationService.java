@@ -96,6 +96,10 @@ public class PoliceVerificationService {
         return LocalDate.now(clock.withZone(PartnerDocumentService.INDIA));
     }
 
+    int reverifyMonths() {
+        return rules.reverifyMonths();
+    }
+
     /** The last day the earliest re-verification reminder covers, from today. */
     LocalDate reminderWindowEnd(LocalDate today) {
         return rules.reminderDays().isEmpty() ? today : today.plusDays(rules.reminderDays().get(0));

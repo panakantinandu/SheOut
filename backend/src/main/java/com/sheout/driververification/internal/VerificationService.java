@@ -441,6 +441,11 @@ public class VerificationService implements VerificationApi {
     }
 
     @Override
+    public int policeReverifyMonths() {
+        return police.reverifyMonths();
+    }
+
+    @Override
     public List<VerificationSummary> findPoliceReverificationDueWithin(int days) {
         return police.dueWithin(days).stream().map(this::toSummary).toList();
     }

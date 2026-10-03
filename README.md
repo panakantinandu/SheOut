@@ -271,6 +271,24 @@ the server starting.
 - **Every operator view of any partner document is logged**, not only
   police certificates - the cost is a row per view.
 
+### In the console
+
+- **Four queues** under Operations: *Documents to review* (oldest first),
+  *Expiring in 30 days*, *Expired / blocked* and *Police re-verification
+  due*, sortable like the others, read from
+  `GET /api/v1/admin/verification/document-queue?queue=TO_REVIEW|EXPIRING|EXPIRED|POLICE_DUE`.
+- **A partner's detail has three tabs**: Overview, *Documents & police
+  check* (each required document as a card with its number, dates, an
+  amber "Expires in N days" or red "Expired", the file viewer, and
+  Approve/Reject with the fields to correct; the police check form) and
+  *Audit trail*. One fetch, `GET /api/v1/admin/partners/{accountId}/verification`,
+  which carries no file URLs.
+- **The ID review no longer shows the RC or a police Approve button.** The RC
+  is reviewed as a document of its own; the police check is recorded on the
+  Documents tab with its evidence. Approve buttons stay disabled for the
+  same reasons the server refuses (and say which), so the rule is learned
+  before the refusal.
+
 ## Police verification with evidence
 
 The 2025 Motor Vehicle Aggregator Guidelines require police verification of

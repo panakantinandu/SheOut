@@ -141,4 +141,7 @@ public interface VerificationApi {
 
     /** The consent she gave, against the version in force. */
     VerificationConsentStatus consentStatus(UUID accountId);
+
+    /** POLICE_REVERIFY_MONTHS: the console pre-fills the re-verify date with issue date + this. */
+    int policeReverifyMonths();
 }

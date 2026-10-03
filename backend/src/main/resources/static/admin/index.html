@@ -979,6 +979,27 @@
   .ov-live .lbl { color: var(--muted); font-size: 12.5px; margin-left: 4px; }
   .ov-live .sep { width: 1px; height: 22px; background: var(--line); }
   .ov-live .go { margin-left: auto; color: var(--brand); font-weight: 650; font-size: 13px; }
+
+  /* ---- a partner's documents, police check and audit trail ---- */
+  .dx-tabs { display: flex; gap: 4px; margin-top: 14px; border-bottom: 1px solid var(--line); }
+  .dx-tabs button { border: 0; background: none; font: inherit; font-size: 13px; font-weight: 650; color: var(--muted); padding: 8px 12px; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .dx-tabs button[aria-selected="true"] { color: var(--brand); border-bottom-color: var(--brand); }
+  .dx-tabs button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: 6px; }
+  .banner-ok { background: var(--green-bg); border-color: var(--green-line); color: var(--green); }
+  .ready-list { margin: 6px 0 0; padding-left: 18px; color: var(--text); }
+  .ready-list li { margin: 2px 0; }
+  .doc-card .row, .police-panel .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .doc-tools { margin-top: 10px; }
+  .doc-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 10px 0; }
+  .doc-decide, .doc-upload, .police-form { border-top: 1px solid var(--line-soft); margin-top: 12px; padding-top: 10px; }
+  .doc-decide > p, .doc-upload > p { margin: 0; }
+  .field-note { margin: 0 0 10px; font-size: 12.5px; color: var(--red); }
+  .doc-history { margin-top: 10px; font-size: 12.5px; }
+  .doc-history summary { cursor: pointer; color: var(--muted); font-weight: 600; }
+  .police-panel .kv dd .btn { padding: 2px 10px; margin-left: 6px; }
+  .sub-h { margin-top: 14px !important; }
+  .audit-view td { color: var(--muted); }
+  .alert-banner { display: flex; gap: 10px; align-items: center; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--red-line); background: var(--red-bg); color: var(--red); font-weight: 650; margin-bottom: 14px; }
 </style>
 </head>
 <body>
@@ -1057,6 +1078,22 @@
       <button data-tab="queue" aria-current="false">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M6.2 15a3 3 0 0 1 5.6 0"/><path d="M15 10h3M15 14h3"/></svg>
         <span class="nl">Verification Queue</span> <span class="count" id="cQueue"></span>
+      </button>
+      <button data-tab="docreview" aria-current="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="m9 15 2 2 4-4"/></svg>
+        <span class="nl">Documents to review</span> <span class="count" id="cDocReview"></span>
+      </button>
+      <button data-tab="docexpiring" aria-current="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h4"/><path d="M14 2v6h6"/><circle cx="16" cy="16" r="5"/><path d="M16 14v2l1.5 1"/></svg>
+        <span class="nl">Expiring in 30 days</span> <span class="count" id="cDocExpiring"></span>
+      </button>
+      <button data-tab="docexpired" aria-current="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="m9.5 12.5 5 5M14.5 12.5l-5 5"/></svg>
+        <span class="nl">Expired / blocked</span> <span class="count urgent" id="cDocExpired"></span>
+      </button>
+      <button data-tab="policedue" aria-current="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.5-3 8-7 9-4-1-7-4.5-7-9V6z"/><path d="M12 8v4l2 2"/></svg>
+        <span class="nl">Police re-verification due</span> <span class="count" id="cPoliceDue"></span>
       </button>
       <button data-tab="changes" aria-current="false">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="7" r="4"/><path d="M11.5 15H7a4 4 0 0 0-4 4v2"/><path d="M21.4 16.6a1 1 0 0 0-3-3l-4 4a2 2 0 0 0-.5.9l-.8 2.8a.5.5 0 0 0 .6.6l2.8-.8a2 2 0 0 0 .9-.5z"/></svg>
@@ -1729,6 +1766,44 @@ const VIEWS = {
     onRowClick: r => openDriver(r),
     openLabel: 'Review',
   },
+
+  /**
+   * A partner's paperwork, one queue per kind of work. Each row is one
+   * document (or one police check falling due) and opens her Documents
+   * tab, where the file is opened - and recorded as opened - and decided.
+   */
+  docreview: docQueueView({
+    queue: 'TO_REVIEW',
+    title: 'Documents to review',
+    desc: 'Licences, vehicle papers and police certificates partners have sent, oldest first. Open one, read the number and dates off the document, correct what she typed, and approve or reject with a reason she is shown. Nothing is approved automatically.',
+    cardTitle: 'Waiting for a person',
+    empty: { icon: ICON_EMPTY_QUEUE, title: 'Nothing to review', text: 'When a partner sends a document it appears here.' },
+    dateLabel: 'Sent', date: r => r.submittedAt,
+  }),
+  docexpiring: docQueueView({
+    queue: 'EXPIRING',
+    title: 'Expiring in 30 days',
+    desc: 'Approved documents that run out within 30 days. She is reminded 30, 7 and 1 days before; on the date she cannot take a new trip until a renewal is approved. A call now saves her a day off the road.',
+    cardTitle: 'Running out soon',
+    empty: { icon: ICON_EMPTY_LIST, title: 'Nothing expiring soon', text: 'No approved document runs out in the next 30 days.' },
+    dateLabel: 'Valid until', date: r => r.validUntil,
+  }),
+  docexpired: docQueueView({
+    queue: 'EXPIRED',
+    title: 'Expired / blocked',
+    desc: 'Documents that have run out. Each of these partners is blocked from new trips until a renewal is uploaded and approved; one already on a trip finished it.',
+    cardTitle: 'Expired',
+    empty: { icon: ICON_EMPTY_LIST, title: 'No expired documents', text: 'Every partner\'s approved documents are in date.' },
+    dateLabel: 'Expired on', date: r => r.validUntil,
+  }),
+  policedue: docQueueView({
+    queue: 'POLICE_DUE',
+    title: 'Police re-verification due',
+    desc: 'Partners whose police check falls due within 30 days. On the date it goes back to "to be recorded" and she cannot go online until a new certificate is recorded with its evidence.',
+    cardTitle: 'Due soon',
+    empty: { icon: ICON_EMPTY_LIST, title: 'No police check due', text: 'No partner\'s police verification falls due in the next 30 days.' },
+    dateLabel: 'Due on', date: r => r.validUntil,
+  }),
 
   /**
    * SheOut Seller shops, in the same shape as the verification queue: it
@@ -2847,19 +2922,11 @@ function openDriver(r) {
       <div id="livenessBox"></div>
 
       ${isCustomer(r) ? '' : `
-      <label>Vehicle</label>
-      <div class="docs">
-        <div>
-          <div class="doc-label">Vehicle RC
-            <span class="doc-hint">must match ${esc(r.vehicleRegistrationNumber || 'the number on file')}</span>
-          </div>
-          <div class="doc" id="rcBox">
-            ${r.documentSubmitted
-              ? '<div class="skel doc-skel" aria-label="Loading document"></div>'
-              : '<div class="fallback">Nothing uploaded yet.</div>'}
-          </div>
-        </div>
-      </div>`}
+      <!-- Her RC is a document of its own now, with its number and validity
+           date, reviewed beside her licence, insurance and PUC - and opened
+           through a link that records who looked. -->
+      <p class="subtle">Her driving licence, vehicle RC, insurance and PUC are reviewed one by one on her
+        <a href="#" data-open-docs>Documents tab</a>.</p>`}
 
       <div class="check">
         <div class="top"><h4>ID &amp; gender check</h4>${badge(r.genderVerificationStatus)}</div>
@@ -2878,16 +2945,15 @@ function openDriver(r) {
         <div class="top"><h4>Police check</h4><span class="badge b-grey">Not required</span></div>
         <p>Customers are not police-verified — only their ID is checked. Approving the ID check above is all this account needs.</p>
       </div>` : `
+      <!-- No Approve button here any more: a police check is recorded with
+           its evidence - how, the certificate number, the issue date and the
+           certificate itself - and that form is on her Documents tab. -->
       <div class="check">
         <div class="top"><h4>Police check</h4>${policeBadge(r)}</div>
         ${r.genderVerificationStatus !== 'VERIFIED'
-          ? '<p>Run by SheOut operations, not submitted by her. It is recorded here once her ID check above is approved.</p>'
-          : r.policeVerificationStatus === 'PENDING' ? `
-        <p>Run by SheOut operations, not submitted by her. Record the outcome of the police verification for this driver.</p>
-        <div class="row">
-          <button class="btn btn-approve" data-decide="police" data-decision="VERIFIED" type="button">Approve</button>
-          <button class="btn btn-reject" data-decide="police" data-decision="REJECTED" type="button">Reject</button>
-        </div>` : '<p>Recorded.</p>'}
+          ? '<p>Recorded once her ID check above is approved. The police check is on the woman the ID check confirmed.</p>'
+          : `<p>Recorded with its evidence: how it was verified, the certificate number, its issue date, and the certificate itself.</p>
+        <div class="row"><button class="btn btn-primary" data-open-docs type="button">Record the police check</button></div>`}
       </div>`}
     </div>
     <div class="modal-foot"><button class="btn" data-cancel type="button">Close</button></div>
@@ -2895,26 +2961,21 @@ function openDriver(r) {
 
   const root = $('modalRoot');
   root.querySelector('[data-cancel]').addEventListener('click', closeModal);
+  root.querySelectorAll('[data-open-docs]').forEach(el => el.addEventListener('click', e => {
+    e.preventDefault();
+    closeModal();
+    openAccount(r.accountId, false, 'documents');
+  }));
 
   if (r.documentSubmitted) {
     api(`/admin/verification/${r.accountId}/document`)
       .then(out => {
         renderDocument(root.querySelector('#docBox'), out.url, 'Submitted identity document');
         renderLiveSelfie(root, out.liveSelfie);
-        const rcBox = root.querySelector('#rcBox');
-        if (!rcBox) return;
-        if (out.rcUrl) {
-          renderDocument(rcBox, out.rcUrl, 'Vehicle registration certificate');
-        } else {
-          // Says which of the two it is. A partner who submitted before the
-          // RC was required is a different case from one who skipped it, and
-          // an operator deciding whether to chase her needs to know which.
-          rcBox.innerHTML = '<div class="fallback">No RC on file. This partner submitted before it was required — ask her to re-submit both documents before approving.</div>';
-        }
       })
       .catch(err => {
         if (err.message === 'unauthorized') return;
-        ['#docBox', '#rcBox', '#selfieBox'].forEach(sel => {
+        ['#docBox', '#selfieBox'].forEach(sel => {
           const box = root.querySelector(sel);
           if (box) box.innerHTML = `<div class="fallback">Could not load the document: ${esc(err.message)}</div>`;
         });
@@ -2956,6 +3017,534 @@ function openDriver(r) {
       }
     });
   });
+}
+
+// ---- a partner's documents and police check ---------------------------------
+/**
+ * Her licence, vehicle papers and police check, read and decided here.
+ *
+ * Every file is opened through driver-verification's link endpoint, which
+ * writes "who opened which document, when" to her audit trail before it
+ * hands out the signed link - so there is no document URL in any list
+ * response, and no way to look at a police certificate that is not on
+ * record. The rules (what approving needs) are the server's; the buttons
+ * here are disabled for the same reasons, so an operator learns them before
+ * the server refuses, not after.
+ */
+const DOC_TYPE_TEXT = {
+  DRIVING_LICENCE: 'Driving licence', VEHICLE_RC: 'Vehicle RC', VEHICLE_INSURANCE: 'Vehicle insurance',
+  PUC: 'PUC certificate', FITNESS_CERTIFICATE: 'Fitness certificate',
+  POLICE_CERTIFICATE: 'Police certificate', BACKGROUND_CHECK_REPORT: 'Background check report',
+};
+const DOC_STATUS_TEXT = {
+  PENDING: 'Waiting for the provider', UNDER_REVIEW: 'Awaiting review', VERIFIED: 'Approved',
+  REJECTED: 'Rejected', EXPIRED: 'Expired',
+};
+const DOC_STATUS_TONE = { PENDING: 'amber', UNDER_REVIEW: 'amber', VERIFIED: 'green', REJECTED: 'red', EXPIRED: 'red' };
+const INSURANCE_USE_TEXT = { COMMERCIAL: 'Commercial use', PRIVATE: 'Private use', UNKNOWN: 'Not stated' };
+const DOC_SOURCE_TEXT = { PARTNER_UPLOAD: 'Sent by her', OPERATOR_UPLOAD: 'Uploaded by an operator', PROVIDER: 'From the verification provider' };
+const POLICE_METHOD_TEXT = {
+  TS_POLICE_PVC: 'Telangana Police i-Verify certificate',
+  OTHER_STATE_POLICE: "Another state's police certificate",
+  THIRD_PARTY_BGV: 'Third-party background check',
+};
+const AUDIT_ACTION_TEXT = {
+  DOCUMENT_UPLOADED: 'Document sent', DOCUMENT_VERIFIED: 'Document approved', DOCUMENT_REJECTED: 'Document rejected',
+  DOCUMENT_EXPIRED: 'Document expired', DOCUMENT_VIEWED: 'Document opened',
+  RENEWAL_REJECTED_EARLIER_KEPT: 'Renewal rejected; earlier one kept',
+  ID_CHECK_VERIFIED: 'ID check approved', ID_CHECK_REJECTED: 'ID check rejected',
+  POLICE_VERIFIED: 'Police check approved', POLICE_REJECTED: 'Police check rejected',
+  POLICE_REVERIFY_DUE: 'Police check fell due', CONSENT_ACCEPTED: 'Consent given',
+  BACKGROUND_CHECK_SUBMITTED: 'Background check requested', PROVIDER_RESULT_RECEIVED: 'Provider result received',
+};
+const ACTOR_ROLE_TEXT = { PARTNER: 'Her', OPERATOR: 'Operator', SYSTEM: 'SheOut (automatic)', PROVIDER: 'Provider' };
+const docTypeText = v => DOC_TYPE_TEXT[v] || humanize(v);
+
+function docBadge(status) {
+  if (!status) return '<span class="badge b-grey">Not sent</span>';
+  return `<span class="badge b-${DOC_STATUS_TONE[status] || 'grey'}">${esc(DOC_STATUS_TEXT[status] || humanize(status))}</span>`;
+}
+
+/** Today in India as yyyy-mm-dd: validity dates are whole days there, whatever the operator's laptop thinks. */
+function todayInIndia() {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
+}
+function daysFromToday(isoDate) {
+  if (!isoDate) return null;
+  return Math.round((Date.parse(isoDate + 'T00:00:00Z') - Date.parse(todayInIndia() + 'T00:00:00Z')) / 86400000);
+}
+function plainDate(isoDate) {
+  if (!isoDate) return '—';
+  return new Date(isoDate + 'T00:00:00Z').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+}
+function addMonths(isoDate, months) {
+  const d = new Date(isoDate + 'T00:00:00Z');
+  const day = d.getUTCDate();
+  d.setUTCMonth(d.getUTCMonth() + months);
+  // 31 Jan + 1 month is the end of February, not 3 March - the server's LocalDate.plusMonths does the same.
+  if (d.getUTCDate() !== day) d.setUTCDate(0);
+  return d.toISOString().slice(0, 10);
+}
+
+/** "Expires in 12 days" in amber inside 30 days, "Expired" in red once it has - beside the date itself. */
+function expiryText(validUntil, status) {
+  if (!validUntil) return '<span class="subtle">No expiry</span>';
+  const days = daysFromToday(validUntil);
+  const date = `<span class="num">${esc(plainDate(validUntil))}</span>`;
+  if (status === 'EXPIRED' || days < 0) return `${date} <span class="pill bad">Expired</span>`;
+  if (days === 0) return `${date} <span class="pill warn">Expires today</span>`;
+  if (days <= 30) return `${date} <span class="pill warn">Expires in ${days} day${days === 1 ? '' : 's'}</span>`;
+  return date;
+}
+
+/** A multipart upload. api() sends JSON; a file needs the browser to set its own boundary. */
+async function apiUpload(path, form) {
+  const res = await fetch(API + path, { method: 'POST', body: form, headers: token ? { Authorization: 'Bearer ' + token } : {} });
+  if (res.status === 401 || res.status === 403) {
+    signOut('Your session has ended. Sign in again to continue.');
+    throw new Error('unauthorized');
+  }
+  const body = await res.json().catch(() => null);
+  if (!res.ok) throw new Error((body && body.message) || `Upload failed (${res.status})`);
+  return body;
+}
+
+/** Opens one file into a box - and onto her audit trail, which is the point. */
+async function openDocFile(box, documentId, label) {
+  box.hidden = false;
+  box.innerHTML = '<div class="skel doc-skel" aria-label="Loading document"></div>';
+  try {
+    const out = await api(`/admin/verification/documents/${documentId}/link`);
+    await renderDocument(box, out.url, label);
+  } catch (err) {
+    if (err.message === 'unauthorized') return;
+    box.innerHTML = `<div class="fallback">Could not open this document: ${esc(err.message)}</div>`;
+  }
+}
+
+function readinessBlock(r) {
+  if (!r) return '';
+  const warn = (r.warnings || []).map(w => `<li>${esc(w.message)}</li>`).join('');
+  if (r.ready) {
+    return `<div class="banner banner-ok" role="status"><strong>She can take trips.</strong> Everything required is approved and in date.
+      ${warn ? `<ul class="ready-list">${warn}</ul>` : ''}</div>`;
+  }
+  return `<div class="banner banner-err" role="status"><strong>She cannot go online.</strong> In the order she should fix them:
+      <ul class="ready-list">${(r.blockers || []).map(b => `<li>${esc(b.message)}</li>`).join('')}</ul>
+      ${warn ? `<div class="subtle">Also: <ul class="ready-list">${warn}</ul></div>` : ''}</div>`;
+}
+
+/**
+ * One document: where it stands, its facts, the file, and - while it waits
+ * - the operator's reading of it and the decision. Earlier versions fold
+ * away underneath, because "what was approved last time" is a question too.
+ */
+function docCard(v, state, versions) {
+  const current = versions.find(d => !d.supersededAt) || null;
+  // While a renewal waits, the one in force is the earlier approved one.
+  const inForce = state && state.renewalUnderReview ? versions.find(d => d.supersededAt && d.status === 'VERIFIED') : null;
+  const waiting = current && (current.status === 'UNDER_REVIEW' || current.status === 'PENDING');
+  const type = state ? state.type : current.type;
+  const isInsurance = type === 'VEHICLE_INSURANCE';
+  const required = state ? state.required : false;
+  const shown = current || null;
+  const vehicleHint = type === 'VEHICLE_RC' && v.vehicleRegistrationNumber
+    ? `<div class="subtle">Must match the number on her profile: <span class="num">${esc(v.vehicleRegistrationNumber)}</span></div>` : '';
+  const facts = shown ? `<dl class="kv">
+      <dt>Number</dt><dd class="num">${esc(shown.documentNumber)}</dd>
+      <dt>Issued</dt><dd>${esc(plainDate(shown.issuedOn))}</dd>
+      <dt>Valid until</dt><dd>${expiryText(shown.validUntil, shown.status)}</dd>
+      ${isInsurance ? `<dt>Policy use</dt><dd>${shown.insuranceUseType === 'COMMERCIAL' ? '<span class="badge b-green">Commercial use</span>' : `<span class="badge b-red">${esc(INSURANCE_USE_TEXT[shown.insuranceUseType] || 'Not stated')}</span>`}</dd>` : ''}
+      <dt>Sent</dt><dd>${esc(time(shown.submittedAt))} <span class="subtle">${esc(DOC_SOURCE_TEXT[shown.source] || '')}</span></dd>
+      ${shown.reviewedAt ? `<dt>Decided</dt><dd>${esc(time(shown.reviewedAt))}</dd>` : ''}
+      ${shown.status === 'REJECTED' ? `<dt>Reason given</dt><dd>“${esc(shown.rejectionReason)}”</dd>` : ''}
+    </dl>${vehicleHint}` : `<p class="subtle">She has not sent this yet.</p>`;
+  const renewalNote = inForce ? `<p class="subtle">A renewal is waiting below. Until it is decided, the approved one valid until ${esc(plainDate(inForce.validUntil))} keeps her working.</p>` : '';
+  const decide = waiting ? `
+      <div class="doc-decide" data-decide-doc="${escValue(current.id)}">
+        <p class="subtle">Read these off the document and correct what she typed. Approving needs the file, the number${type === 'POLICE_CERTIFICATE' || type === 'BACKGROUND_CHECK_REPORT' ? '' : ' and the valid-until date'}${isInsurance ? ', and a policy for commercial use' : ''}.</p>
+        <div class="doc-fields">
+          <label class="field"><span>Number</span><input data-f="documentNumber" maxlength="64" value="${escValue(current.documentNumber)}"></label>
+          <label class="field"><span>Issued on</span><input type="date" data-f="issuedOn" value="${escValue(current.issuedOn)}"></label>
+          ${type === 'POLICE_CERTIFICATE' || type === 'BACKGROUND_CHECK_REPORT' ? '' : `<label class="field"><span>Valid until</span><input type="date" data-f="validUntil" value="${escValue(current.validUntil)}"></label>`}
+          ${isInsurance ? `<label class="field"><span>Policy use</span><select data-f="insuranceUseType">
+            ${['COMMERCIAL', 'PRIVATE', 'UNKNOWN'].map(u => `<option value="${u}"${(current.insuranceUseType || 'UNKNOWN') === u ? ' selected' : ''}>${esc(INSURANCE_USE_TEXT[u])}</option>`).join('')}
+          </select></label>` : ''}
+        </div>
+        ${isInsurance ? '<p class="field-note" data-insurance-note hidden>A private policy can be refused when she carries paying passengers, so it cannot be approved for rides. Ask her for a commercial policy.</p>' : ''}
+        <div class="row">
+          <button class="btn btn-approve" type="button" data-doc-approve>Approve</button>
+          <button class="btn btn-reject" type="button" data-doc-reject>Reject</button>
+          <span class="subtle" data-doc-why></span>
+        </div>
+      </div>` : '';
+  const older = versions.filter(d => d !== current);
+  const history = older.length ? `<details class="doc-history"><summary>${older.length} earlier version${older.length === 1 ? '' : 's'}</summary>
+      <ul class="contact-list">${older.map(d => `<li><span class="grow">${docBadge(d.status)} <span class="num">${esc(d.documentNumber)}</span>
+        <span class="subtle">sent ${esc(time(d.submittedAt))}${d.validUntil ? ' · valid until ' + esc(plainDate(d.validUntil)) : ''}${d.rejectionReason ? ' · “' + esc(d.rejectionReason) + '”' : ''}</span></span>
+        ${d.fileOnFile ? `<button class="btn" type="button" data-doc-view="${escValue(d.id)}">View</button>` : ''}</li>`).join('')}</ul></details>` : '';
+  const uploadFor = type === 'BACKGROUND_CHECK_REPORT' || type === 'POLICE_CERTIFICATE' ? type : type;
+  return `<div class="dx-card doc-card" data-doc-type="${escValue(type)}">
+      <h4>${esc(docTypeText(type))} ${required ? '' : '<span class="subtle">not required for her vehicle</span>'}
+        <span class="right">${state && state.renewalUnderReview ? '<span class="badge b-green">Approved</span> <span class="badge b-amber">Renewal waiting</span>' : docBadge(shown && shown.status)}</span></h4>
+      ${renewalNote}${facts}
+      <div class="row doc-tools">
+        ${shown && shown.fileOnFile ? `<button class="btn" type="button" data-doc-view="${escValue(shown.id)}">View document</button>` : ''}
+        <button class="btn" type="button" data-doc-upload="${escValue(uploadFor)}">Upload for her</button>
+      </div>
+      <div class="doc" data-doc-box hidden></div>
+      ${decide}${history}
+    </div>`;
+}
+
+/** The fields an upload carries, for whichever document it is. */
+function uploadForm(type) {
+  const expires = !(type === 'POLICE_CERTIFICATE' || type === 'BACKGROUND_CHECK_REPORT');
+  return `<form class="doc-upload" data-upload-form="${escValue(type)}">
+      <div class="doc-fields">
+        <label class="field"><span>File (photo or PDF)</span><input type="file" name="file" accept="image/*,.pdf" required></label>
+        <label class="field"><span>Number</span><input name="documentNumber" maxlength="64"></label>
+        <label class="field"><span>Issued on</span><input type="date" name="issuedOn"></label>
+        ${expires ? '<label class="field"><span>Valid until</span><input type="date" name="validUntil"></label>' : ''}
+        ${type === 'VEHICLE_INSURANCE' ? `<label class="field"><span>Policy use</span><select name="insuranceUseType">
+          <option value="COMMERCIAL">Commercial use</option><option value="PRIVATE">Private use</option><option value="UNKNOWN" selected>Not stated</option></select></label>` : ''}
+      </div>
+      <p class="subtle">It goes to review like one she sent. Her consent is needed first; the server refuses without it.</p>
+      <div class="row"><button class="btn btn-primary" type="submit">Upload</button><button class="btn" type="button" data-upload-cancel>Cancel</button></div>
+    </form>`;
+}
+
+/**
+ * The police check, recorded with its evidence. Approve stays disabled
+ * until every piece is there, for the reason the server would give - and
+ * the server checks again regardless.
+ */
+function policePanel(v) {
+  if (v.genderVerificationStatus !== 'VERIFIED') {
+    return `<div class="dx-card full"><h4>Police check <span class="right">${policeBadge(v)}</span></h4>
+      <p class="subtle">Recorded once her ID check is approved. The police check is on the woman the ID check confirmed.</p></div>`;
+  }
+  const evidence = v.documents.filter(d => !d.supersededAt && (d.type === 'POLICE_CERTIFICATE' || d.type === 'BACKGROUND_CHECK_REPORT')
+    && d.fileOnFile && d.status !== 'REJECTED' && d.status !== 'EXPIRED');
+  const certs = evidence.filter(d => d.type === 'POLICE_CERTIFICATE');
+  const reports = evidence.filter(d => d.type === 'BACKGROUND_CHECK_REPORT');
+  const latest = (v.policeChecks || [])[0];
+  const c = v.consent || {};
+  const consentLine = c.current
+    ? `<span class="badge b-green">Given</span> ${esc(time(c.acceptedAt))} <span class="subtle">version ${esc(c.acceptedVersion)}</span>`
+    : c.acceptedVersion
+      ? `<span class="badge b-amber">Out of date</span> <span class="subtle">She agreed to ${esc(c.acceptedVersion)}; the current wording is ${esc(c.currentVersion)}. She must agree again in the app.</span>`
+      : '<span class="badge b-red">Not given</span> <span class="subtle">She must agree in the app before anything can be recorded.</span>';
+  const evidenceOption = d => `<option value="${escValue(d.id)}">${esc(docTypeText(d.type))} · ${esc(d.documentNumber || 'no number yet')} · sent ${esc(time(d.submittedAt))}</option>`;
+  const issued = certs[0] && certs[0].issuedOn ? certs[0].issuedOn : '';
+  const history = (v.policeChecks || []).map(p => `<li><span class="grow">${badge(p.outcome)} ${esc(time(p.decidedAt))}
+      <span class="subtle">${p.outcome === 'VERIFIED'
+        ? `${esc(POLICE_METHOD_TEXT[p.method] || p.method)} · No. ${esc(p.certificateNumber)} · issued ${esc(plainDate(p.issuedOn))}${p.issuingAuthority ? ' by ' + esc(p.issuingAuthority) : ''} · re-verify by ${esc(plainDate(p.reverifyDueOn))}`
+        : '“' + esc(p.rejectionReason) + '”'}</span></span>
+      ${p.evidenceDocumentId ? `<button class="btn" type="button" data-doc-view="${escValue(p.evidenceDocumentId)}">Evidence</button>` : ''}</li>`).join('');
+  return `<div class="dx-card full police-panel">
+      <h4>Police check <span class="right">${policeBadge(v)}${v.policeReverifyDueOn ? ` <span class="subtle">re-verify by</span> ${expiryText(v.policeReverifyDueOn, null)}` : ''}</span></h4>
+      <dl class="kv">
+        <dt>Her consent</dt><dd>${consentLine}</dd>
+        <dt>Evidence on file</dt><dd>${evidence.length ? evidence.map(d => `<div>${docBadge(d.status)} ${esc(docTypeText(d.type))} <span class="num">${esc(d.documentNumber)}</span>
+          <span class="subtle">${esc(DOC_SOURCE_TEXT[d.source] || '')}, ${esc(time(d.submittedAt))}</span>
+          <button class="btn" type="button" data-doc-view="${escValue(d.id)}">View</button></div>`).join('')
+          : '<span class="subtle">Nothing yet. She can apply on Telangana Police\'s portal (pvc.tspolice.gov.in) and upload it from the app, or upload one SheOut obtained below.</span>'}</dd>
+      </dl>
+      <div class="doc" data-doc-box hidden></div>
+      <div class="row doc-tools">
+        <button class="btn" type="button" data-doc-upload="POLICE_CERTIFICATE">Upload a police certificate</button>
+        <button class="btn" type="button" data-doc-upload="BACKGROUND_CHECK_REPORT">Upload a background report</button>
+        <button class="btn" type="button" data-bgv-request hidden>Request a background check</button>
+      </div>
+      <form class="police-form" data-police-form>
+        <div class="doc-fields">
+          <label class="field"><span>How it was verified</span><select name="method">
+            <option value="">Choose…</option>
+            ${Object.entries(POLICE_METHOD_TEXT).map(([k, t]) => `<option value="${k}">${esc(t)}</option>`).join('')}
+          </select></label>
+          <label class="field"><span>Certificate number</span><input name="certificateNumber" maxlength="64" value="${escValue(certs[0] && certs[0].documentNumber)}"></label>
+          <label class="field"><span>Issuing authority</span><input name="issuingAuthority" maxlength="200" placeholder="e.g. Cyberabad Police"></label>
+          <label class="field"><span>Issue date</span><input type="date" name="issuedOn" value="${escValue(issued)}" max="${todayInIndia()}"></label>
+          <label class="field"><span>Re-verify by <span class="subtle" data-due-auto>(issue date + ${Number(v.policeReverifyMonths)} months)</span></span><input type="date" name="reverifyDueOn"></label>
+          <label class="field"><span>Evidence</span><select name="evidenceDocumentId">
+            <option value="">Choose the certificate…</option>${certs.map(evidenceOption).join('')}${reports.map(evidenceOption).join('')}
+          </select></label>
+          <label class="field"><span>Extra evidence (optional)</span><select name="extraEvidenceDocumentId">
+            <option value="">None</option>${reports.map(evidenceOption).join('')}
+          </select></label>
+        </div>
+        <p class="field-note" data-bgv-note hidden>A third-party background check is accepted on its own only if SheOut's configuration allows it (a legal question still open). Otherwise attach a police certificate as the evidence and the report as extra evidence.</p>
+        <div class="row">
+          <button class="btn btn-approve" type="submit" data-police-approve disabled>Approve police check</button>
+          <button class="btn btn-reject" type="button" data-police-reject>Reject</button>
+          <span class="subtle" data-police-why></span>
+        </div>
+      </form>
+      ${latest ? `<h4 class="sub-h">Recorded checks</h4><ul class="contact-list">${history}</ul>` : ''}
+    </div>`;
+}
+
+function auditTable(rows) {
+  if (!rows || !rows.length) return '<p class="subtle">Nothing recorded yet.</p>';
+  return `<div class="scroll"><table class="mini"><thead><tr><th>When</th><th>Who</th><th>What</th><th>Document</th><th>Detail</th></tr></thead><tbody>
+    ${rows.map(r => `<tr${r.action === 'DOCUMENT_VIEWED' ? ' class="audit-view"' : ''}>
+      <td class="subtle">${esc(time(r.at))}</td>
+      <td>${esc(ACTOR_ROLE_TEXT[r.actorRole] || humanize(r.actorRole))}${r.actor ? ` <span class="num subtle">${esc(r.actor)}</span>` : ''}</td>
+      <td>${esc(AUDIT_ACTION_TEXT[r.action] || humanize(r.action))}</td>
+      <td>${r.documentType ? esc(docTypeText(r.documentType)) : '<span class="subtle">—</span>'}</td>
+      <td class="subtle">${esc(r.detail)}</td></tr>`).join('')}
+  </tbody></table></div>`;
+}
+
+/**
+ * Draws her Documents tab into host and wires it. reload() fetches again
+ * and repaints in place after any decision, so what is on screen is always
+ * what the server now holds.
+ */
+async function paintPartnerDocs(host, accountId, auditHost) {
+  host.innerHTML = '<div class="skel"></div><div class="skel"></div>';
+  let v;
+  try {
+    v = await api(`/admin/partners/${accountId}/verification`);
+  } catch (err) {
+    if (err.message === 'unauthorized') return;
+    host.innerHTML = errorState(err.message);
+    return;
+  }
+  const reload = () => paintPartnerDocs(host, accountId, auditHost);
+  const byType = {};
+  v.documents.forEach(d => { (byType[d.type] = byType[d.type] || []).push(d); });
+  const vehicleDocs = (v.readiness.documents || []).filter(s => s.type !== 'POLICE_CERTIFICATE' && s.type !== 'BACKGROUND_CHECK_REPORT');
+  host.innerHTML = `${readinessBlock(v.readiness)}
+    <div class="dx-grid">
+      ${vehicleDocs.map(s => docCard(v, s, byType[s.type] || [])).join('')}
+      ${policePanel(v)}
+    </div>`;
+  if (auditHost) auditHost.innerHTML = auditTable(v.audit);
+  bindPartnerDocs(host, v, reload);
+}
+
+function bindPartnerDocs(host, v, reload) {
+  // ---- opening a file (recorded)
+  host.querySelectorAll('[data-doc-view]').forEach(btn => btn.addEventListener('click', () => {
+    const card = btn.closest('.dx-card');
+    const box = card.querySelector('[data-doc-box]');
+    const doc = v.documents.find(d => d.id === btn.dataset.docView);
+    openDocFile(box, btn.dataset.docView, doc ? docTypeText(doc.type) : 'Document');
+  }));
+
+  // ---- upload on her behalf
+  host.querySelectorAll('[data-doc-upload]').forEach(btn => btn.addEventListener('click', () => {
+    const card = btn.closest('.dx-card');
+    const existing = card.querySelector('[data-upload-form]');
+    if (existing) existing.remove();
+    btn.closest('.doc-tools').insertAdjacentHTML('afterend', uploadForm(btn.dataset.docUpload));
+    const form = card.querySelector('[data-upload-form]');
+    form.querySelector('[data-upload-cancel]').addEventListener('click', () => form.remove());
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      const data = new FormData(form);
+      ['documentNumber', 'issuedOn', 'validUntil'].forEach(k => { if (data.get(k) === '') data.delete(k); });
+      const submit = form.querySelector('[type="submit"]');
+      submit.disabled = true;
+      try {
+        await apiUpload(`/admin/verification/${v.accountId}/documents/${form.dataset.uploadForm}`, data);
+        toast('ok', 'Uploaded', `${docTypeText(form.dataset.uploadForm)} is waiting for review.`);
+        reload();
+      } catch (err) {
+        submit.disabled = false;
+        if (err.message === 'unauthorized') return;
+        toast('bad', 'Could not upload that', err.message);
+      }
+    });
+  }));
+
+  // ---- a decision on one document
+  host.querySelectorAll('[data-decide-doc]').forEach(panel => {
+    const id = panel.dataset.decideDoc;
+    const field = k => panel.querySelector(`[data-f="${k}"]`);
+    const approve = panel.querySelector('[data-doc-approve]');
+    const why = panel.querySelector('[data-doc-why]');
+    const card = panel.closest('.doc-card');
+    const type = card.dataset.docType;
+    const expires = !(type === 'POLICE_CERTIFICATE' || type === 'BACKGROUND_CHECK_REPORT');
+    const check = () => {
+      const missing = [];
+      if (!field('documentNumber').value.trim()) missing.push('the number');
+      if (expires && !(field('validUntil') && field('validUntil').value)) missing.push('the valid-until date');
+      if (expires && field('validUntil') && field('validUntil').value && field('validUntil').value < todayInIndia()) missing.push('a date that has not passed');
+      const use = field('insuranceUseType');
+      const note = panel.querySelector('[data-insurance-note]');
+      if (use) {
+        const commercial = use.value === 'COMMERCIAL';
+        if (note) note.hidden = commercial;
+        if (!commercial) missing.push('a commercial-use policy');
+      }
+      approve.disabled = missing.length > 0;
+      why.textContent = missing.length ? 'Approve needs ' + missing.join(', ') + '.' : '';
+    };
+    panel.querySelectorAll('[data-f]').forEach(el => el.addEventListener('input', check));
+    check();
+    approve.addEventListener('click', async () => {
+      const body = { decision: 'VERIFIED' };
+      ['documentNumber', 'issuedOn', 'validUntil', 'insuranceUseType'].forEach(k => { const el = field(k); if (el && el.value) body[k] = el.value; });
+      const ok = await confirmAction({
+        title: `Approve her ${docTypeText(type).toLowerCase()}?`,
+        message: `Only if the image shows ${body.documentNumber}${body.validUntil ? `, valid until ${plainDate(body.validUntil)}` : ''}, and it is hers.`,
+        confirmLabel: 'Approve', tone: 'approve',
+      });
+      if (!ok) { openAccount(v.accountId, false, 'documents'); return; }
+      await decideDoc(id, body, v.accountId, 'Approved');
+    });
+    panel.querySelector('[data-doc-reject]').addEventListener('click', async () => {
+      const ok = await confirmAction({
+        title: `Reject her ${docTypeText(type).toLowerCase()}?`,
+        message: 'She is told your reason and asked to send it again. Write it so she knows what to fix.',
+        confirmLabel: 'Reject', tone: 'reject', withReason: true, reasonRequired: true,
+        reasonLabel: 'Reason (required - she is shown this)', reasonPlaceholder: 'e.g. The valid-until date is cut off. Photograph the whole document.',
+        reasonMaxLength: 1000,
+      });
+      if (!ok) { openAccount(v.accountId, false, 'documents'); return; }
+      await decideDoc(id, { decision: 'REJECTED', reason: ok.reason }, v.accountId, 'Rejected');
+    });
+  });
+
+  // ---- the police check
+  const form = host.querySelector('[data-police-form]');
+  if (form) bindPoliceForm(form, v);
+
+  // ---- a provider, if one is configured
+  const bgv = host.querySelector('[data-bgv-request]');
+  if (bgv) {
+    api('/admin/verification/provider').then(p => {
+      if (!p || !p.configured) return;
+      bgv.hidden = false;
+      bgv.textContent = `Request a background check (${p.name})`;
+      bgv.addEventListener('click', async () => {
+        try {
+          await api(`/admin/verification/${v.accountId}/background-check`, { method: 'POST' });
+          toast('ok', 'Background check requested', 'The report will appear here for you to read.');
+          reload();
+        } catch (err) {
+          if (err.message !== 'unauthorized') toast('bad', 'Could not request it', err.message);
+        }
+      });
+    }).catch(() => {});
+  }
+}
+
+async function decideDoc(documentId, body, accountId, verb) {
+  try {
+    await api(`/admin/verification/documents/${documentId}/review`, { method: 'POST', body: JSON.stringify(body) });
+    toast('ok', `Document ${verb.toLowerCase()}`, verb === 'Rejected' ? 'She has been told why.' : 'Recorded on her audit trail.');
+  } catch (err) {
+    if (err.message === 'unauthorized') return;
+    toast('bad', 'Could not save that decision', err.message);
+  }
+  openAccount(accountId, false, 'documents');
+  render({ quiet: true });
+}
+
+function bindPoliceForm(form, v) {
+  const f = name => form.elements[name];
+  const approve = form.querySelector('[data-police-approve]');
+  const why = form.querySelector('[data-police-why]');
+  let dueEdited = false;
+  const autoDue = () => {
+    if (!dueEdited && f('issuedOn').value) f('reverifyDueOn').value = addMonths(f('issuedOn').value, Number(v.policeReverifyMonths) || 12);
+  };
+  const check = () => {
+    const missing = [];
+    if (!(v.consent && v.consent.current)) missing.push('her consent (she gives it in the app)');
+    if (!f('method').value) missing.push('how it was verified');
+    if (!f('certificateNumber').value.trim()) missing.push('the certificate number');
+    if (!f('issuedOn').value) missing.push('the issue date');
+    if (!f('evidenceDocumentId').value) missing.push('the evidence document');
+    if (f('reverifyDueOn').value && f('reverifyDueOn').value <= todayInIndia()) missing.push('a re-verify date after today');
+    form.querySelector('[data-bgv-note]').hidden = f('method').value !== 'THIRD_PARTY_BGV';
+    approve.disabled = missing.length > 0;
+    why.textContent = missing.length ? 'Approve needs ' + missing.join(', ') + '.' : '';
+  };
+  f('issuedOn').addEventListener('input', () => { autoDue(); check(); });
+  f('reverifyDueOn').addEventListener('input', () => { dueEdited = !!f('reverifyDueOn').value; check(); });
+  form.querySelectorAll('select, input').forEach(el => el.addEventListener('input', check));
+  form.querySelectorAll('select').forEach(el => el.addEventListener('change', check));
+  autoDue();
+  check();
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    if (approve.disabled) return;
+    const body = { decision: 'VERIFIED' };
+    ['method', 'certificateNumber', 'issuingAuthority', 'issuedOn', 'reverifyDueOn', 'evidenceDocumentId', 'extraEvidenceDocumentId']
+      .forEach(k => { if (f(k).value) body[k] = f(k).value.trim(); });
+    const ok = await confirmAction({
+      title: 'Approve her police check?',
+      message: `${POLICE_METHOD_TEXT[body.method]}, No. ${body.certificateNumber}, issued ${plainDate(body.issuedOn)}. It falls due again on ${plainDate(body.reverifyDueOn)}. Approve only if the certificate you opened shows exactly this, and it is hers.`,
+      confirmLabel: 'Approve police check', tone: 'approve',
+    });
+    if (!ok) { openAccount(v.accountId, false, 'documents'); return; }
+    await decidePolice(v.accountId, body, 'approved');
+  });
+  form.querySelector('[data-police-reject]').addEventListener('click', async () => {
+    const ok = await confirmAction({
+      title: 'Reject her police check?',
+      message: 'She cannot go online. The reason is kept with the decision and shown to her.',
+      confirmLabel: 'Reject', tone: 'reject', withReason: true, reasonRequired: true,
+      reasonLabel: 'Reason (required)', reasonPlaceholder: 'e.g. The certificate is for a different name', reasonMaxLength: 1000,
+    });
+    if (!ok) { openAccount(v.accountId, false, 'documents'); return; }
+    await decidePolice(v.accountId, { decision: 'REJECTED', reason: ok.reason }, 'rejected');
+  });
+}
+
+async function decidePolice(accountId, body, verb) {
+  try {
+    await api(`/admin/verification/${accountId}/police-review`, { method: 'POST', body: JSON.stringify(body) });
+    toast('ok', `Police check ${verb}`, 'Recorded with its evidence.');
+  } catch (err) {
+    if (err.message === 'unauthorized') return;
+    toast('bad', 'Could not save the police check', err.message);
+  }
+  openAccount(accountId, false, 'documents');
+  render({ quiet: true });
+}
+
+/**
+ * One of the four documents queues. Every row is a partner and one thing
+ * about her paperwork; the date column is whatever that queue is about.
+ */
+function docQueueView({ queue, title, desc, cardTitle, empty, dateLabel, date }) {
+  return {
+    title, desc, cardTitle, empty,
+    hint: 'Select a row to open her documents',
+    columns: [
+      { key: 'name', label: 'Partner', sort: r => (r.name || '').toLowerCase() },
+      { key: 'phone', label: 'Phone', sort: r => r.phoneNumber || '' },
+      { key: 'doc', label: 'Document', sort: r => docTypeText(r.documentType) },
+      { key: 'number', label: 'Number', sort: r => r.documentNumber || '' },
+      { key: 'date', label: dateLabel, sort: r => date(r) || '' },
+      { key: 'now', label: 'Now', sort: r => (r.blocked ? 0 : r.online ? 1 : 2) },
+    ],
+    load: () => api(`/admin/verification/document-queue?queue=${queue}`),
+    cell: (r, key) => {
+      if (key === 'name') return `<span class="strong">${esc(r.name || 'Name not set')}</span><div class="subtle">${esc(VEHICLE_TEXT[r.vehicleType] || humanize(r.vehicleType) || '')}${r.vehicleRegistrationNumber ? ' · ' + esc(r.vehicleRegistrationNumber) : ''}</div>`;
+      if (key === 'phone') return `<span class="num">${esc(r.phoneNumber)}</span>`;
+      if (key === 'doc') return queue === 'POLICE_DUE'
+        ? 'Police check'
+        : `${esc(docTypeText(r.documentType))}${queue === 'TO_REVIEW' ? ' ' + docBadge(r.status) : ''}`;
+      if (key === 'number') return `<span class="num">${esc(r.documentNumber)}</span>`;
+      if (key === 'date') {
+        if (queue === 'TO_REVIEW') { const w = waited(r.submittedAt); return `<span class="subtle">${esc(time(r.submittedAt))}</span> <span class="wait ${w.cls}">${w.text}</span>`; }
+        return expiryText(r.validUntil, queue === 'EXPIRED' ? 'EXPIRED' : null);
+      }
+      if (key === 'now') return r.blocked ? '<span class="badge b-blocked">Blocked</span>'
+        : r.online ? '<span class="badge b-green">Online</span>' : '<span class="badge b-grey">Offline</span>';
+      return '—';
+    },
+    onRowClick: r => openAccount(r.accountId, false, 'documents'),
+    openLabel: 'Open documents',
+  };
 }
 
 // ---- support tickets ------------------------------------------------------
@@ -3883,11 +4472,44 @@ function detailError(title, err) {
 }
 
 // ---- one person -------------------------------------------------------------
-function openAccount(accountId, chained = false) {
-  openDetail(() => loadAccount(accountId), chained);
+/** startTab: 'overview', or for a partner 'documents' / 'audit' - the queues open straight onto her documents. */
+function openAccount(accountId, chained = false, startTab = 'overview') {
+  openDetail(() => loadAccount(accountId, startTab), chained);
 }
 
-async function loadAccount(accountId) {
+/**
+ * A partner's detail has three tabs. Documents and the audit trail are one
+ * fetch, made the first time either is opened, because they are one record.
+ * Arrow keys move between tabs, as a tab list should.
+ */
+function bindDetailTabs(root, accountId, startTab) {
+  const tabs = [...root.querySelectorAll('[data-dx-tab]')];
+  let loaded = false;
+  const select = (name, focus) => {
+    tabs.forEach(t => {
+      const on = t.dataset.dxTab === name;
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+      t.tabIndex = on ? 0 : -1;
+      root.querySelector(`[data-dx-panel="${t.dataset.dxTab}"]`).hidden = !on;
+      if (on && focus) t.focus();
+    });
+    if (name !== 'overview' && !loaded) {
+      loaded = true;
+      paintPartnerDocs(root.querySelector('[data-dx-panel="documents"]'), accountId, root.querySelector('[data-dx-panel="audit"]'));
+    }
+  };
+  tabs.forEach((t, i) => {
+    t.addEventListener('click', () => select(t.dataset.dxTab));
+    t.addEventListener('keydown', e => {
+      if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+      e.preventDefault();
+      select(tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length].dataset.dxTab, true);
+    });
+  });
+  select(tabs.some(t => t.dataset.dxTab === startTab) ? startTab : 'overview');
+}
+
+async function loadAccount(accountId, startTab = 'overview') {
   detailLoading('Loading account…');
   let d;
   try {
@@ -3998,7 +4620,18 @@ async function loadAccount(accountId) {
         ${mapsLink(s.lat, s.lng, 'where')}${s.bookingId ? ` &middot; <a href="#" data-open-booking="${escValue(s.bookingId)}">trip</a>` : ''}</li>`).join('')}
     </ul></div>` : '';
 
-  const root = detailShell(head, `<div class="dx-grid">${verification}${record}${roleCards}${tripsCard}${sosCard}</div>`);
+  const overview = `<div class="dx-grid">${verification}${record}${roleCards}${tripsCard}${sosCard}</div>`;
+  const body = partner ? `
+    <div class="dx-tabs" role="tablist" aria-label="Partner details">
+      <button type="button" role="tab" id="dxt-overview" aria-controls="dxp-overview" data-dx-tab="overview">Overview</button>
+      <button type="button" role="tab" id="dxt-documents" aria-controls="dxp-documents" data-dx-tab="documents">Documents &amp; police check</button>
+      <button type="button" role="tab" id="dxt-audit" aria-controls="dxp-audit" data-dx-tab="audit">Audit trail</button>
+    </div>
+    <div role="tabpanel" id="dxp-overview" aria-labelledby="dxt-overview" data-dx-panel="overview">${overview}</div>
+    <div role="tabpanel" id="dxp-documents" aria-labelledby="dxt-documents" data-dx-panel="documents" hidden></div>
+    <div role="tabpanel" id="dxp-audit" aria-labelledby="dxt-audit" data-dx-panel="audit" hidden></div>` : overview;
+  const root = detailShell(head, body);
+  if (partner) bindDetailTabs(root, a.accountId, startTab);
 
   const docs = root.querySelector('[data-dx-docs]');
   if (docs) docs.addEventListener('click', () => {
@@ -4852,6 +5485,10 @@ const ROW_ACCENT = {
   accounts: (r) => (r.blocked ? 'red' : r.role === 'DRIVER' ? 'blue' : r.role === 'ADMIN' ? 'grey' : 'brand'),
   trust: (r) => (r.blocked ? 'red' : 'amber'),
   routes: () => 'amber',
+  docreview: (r) => (waited(r.submittedAt).mins >= 1440 ? 'red' : 'amber'),
+  docexpiring: (r) => (r.daysLeft != null && r.daysLeft <= 7 ? 'red' : 'amber'),
+  docexpired: () => 'red',
+  policedue: (r) => (r.daysLeft != null && r.daysLeft <= 7 ? 'red' : 'amber'),
   shiftchecks: (r) => (r.check.status === 'NEEDS_REVIEW' ? 'red' : 'grey'),
   feedback: (r) => (r.averageStars == null ? 'grey' : r.averageStars < 3 ? 'red' : r.averageStars < 4 ? 'amber' : 'green'),
   announcements: () => 'brand',
@@ -4866,6 +5503,10 @@ const ROW_ICON = {};
  */
 const ROW_LEAD = {
   queue: (r) => avatar(r.name, r.photoUrl, r.role),
+  docreview: (r) => avatar(r.name, r.photoUrl, 'DRIVER'),
+  docexpiring: (r) => avatar(r.name, r.photoUrl, 'DRIVER'),
+  docexpired: (r) => avatar(r.name, r.photoUrl, 'DRIVER'),
+  policedue: (r) => avatar(r.name, r.photoUrl, 'DRIVER'),
   accounts: (r) => avatar(r.name, r.photoUrl, r.role),
   // Who raised it, by face - the red edge and the badges already say it is an alert.
   sos: (r) => avatar(r.customerName, r.photoUrl, r.raisedBy === 'PARTNER' ? 'DRIVER' : 'CUSTOMER'),
@@ -5011,7 +5652,7 @@ async function render(opts = {}) {
     paintRows(view, rows, narrowed && view.emptyFiltered ? view.emptyFiltered : view.empty);
     paintPager(paged);
 
-    const counts = { changes: 'cChanges', queue: 'cQueue', sos: 'cSos', bookings: 'cBookings', accounts: 'cAccounts', trust: 'cTrust', routes: 'cRoutes', feedback: 'cFeedback', shiftchecks: 'cShift' };
+    const counts = { docreview: 'cDocReview', docexpiring: 'cDocExpiring', docexpired: 'cDocExpired', policedue: 'cPoliceDue', changes: 'cChanges', queue: 'cQueue', sos: 'cSos', bookings: 'cBookings', accounts: 'cAccounts', trust: 'cTrust', routes: 'cRoutes', feedback: 'cFeedback', shiftchecks: 'cShift' };
     // The badge counts everything matching, not the rows on this page -
     // "25" beside Bookings when there are 400 would be a lie. Support is
     // not in this map: its badge counts unresolved tickets whatever the
@@ -5531,6 +6172,9 @@ async function refreshBadges() {
     set('cSellers', sellers);
     set('cShift', shift && shift.length);
     refreshSupportCounts();
+    // Partners' paperwork: what is waiting, and who is off the road for it.
+    q('/admin/verification/document-queue?queue=TO_REVIEW').then(v => set('cDocReview', v && v.length)).catch(() => {});
+    q('/admin/verification/document-queue?queue=EXPIRED').then(v => set('cDocExpired', v && (v.length || ''))).catch(() => {});
     q('/admin/service-hours').then(v => v && refreshHoursBadge(v.status)).catch(() => {});
     q('/admin/profile-changes').then(v => { if (v) $('cChanges').textContent = v.length || ''; }).catch(() => {});
   } catch (e) {
