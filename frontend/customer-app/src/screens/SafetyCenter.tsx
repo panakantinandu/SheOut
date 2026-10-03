@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useGoBack } from '../lib/useGoBack';
 import { Button, Card, IconCircle, SafetyText, TopHeader, showToast, useAppLanguage, useTranslation } from '@sheout/design-system';
 import { DiscreetSosToggle } from '../components/DiscreetSosToggle';
+import { InsuredTripsExplainer } from '../components/InsuredTripsExplainer';
 import { localEmergencyNumber } from '../lib/emergency';
 
 /** What an iPhone Back Tap or Android quick-tap shortcut opens: the SOS countdown. */
@@ -38,6 +39,9 @@ export function SafetyCenter() {
         <p className="font-heading text-title"><SafetyText k="safetyCenter.introTitle" englishClassName="font-normal" /></p>
         <p className="text-sm opacity-90"><SafetyText k="safetyCenter.intro" /></p>
       </Card>
+
+      {/* Only while a passenger policy is in force. */}
+      <InsuredTripsExplainer />
 
       {lng !== 'en' && (
         <p className="rounded-input bg-accent-orange-tint px-4 py-3 text-sm text-text-primary" data-testid="safety-center-review-note">

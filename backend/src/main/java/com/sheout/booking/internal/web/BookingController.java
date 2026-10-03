@@ -266,6 +266,21 @@ public class BookingController {
         return ResponseEntity.ok(booking);
     }
 
+    /**
+     * "Fare details" on her receipt: base fare, distance, time, night and
+     * surge, the minimum-fare note, the promotion, what she paid. One price
+     * up front when she books; the breakdown after. Never an insurance line:
+     * cover is SheOut's cost, not part of any fare.
+     */
+    @GetMapping("/api/v1/bookings/{bookingId}/fare-details")
+    public ResponseEntity<BookingService.FareDetails> fareDetails(@PathVariable UUID bookingId) {
+        CurrentAccount caller = requireAuthenticated();
+        BookingSummary booking = bookingService.findById(bookingId)
+                .orElseThrow(() -> ApiException.notFound("No such booking"));
+        requireParticipant(caller, booking);
+        return ResponseEntity.ok(bookingService.fareDetails(bookingId).orElseThrow());
+    }
+
     @PostMapping("/api/v1/bookings/{bookingId}/accept")
     public ResponseEntity<BookingSummary> accept(@PathVariable UUID bookingId) {
         CurrentAccount caller = requireRole(AccountRole.DRIVER);

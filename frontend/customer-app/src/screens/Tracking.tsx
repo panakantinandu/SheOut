@@ -10,6 +10,8 @@ import { RatingPrompt } from '../components/RatingPrompt';
 import { TripPaymentCard } from '../components/TripPaymentCard';
 import { PromoFareLines } from '../components/PromoFareLines';
 import { ChangeDestination } from '../components/ChangeDestination';
+import { TripInsuranceActions } from '../components/TripInsuranceActions';
+import { FareDetailsCard } from '../components/FareDetailsCard';
 import { apiErrorText } from '../lib/apiErrors';
 import { mapsLink, shareViaDevice } from '../lib/emergency';
 import { activeTripId, markActiveTrip } from '../lib/discreetSos';
@@ -832,6 +834,9 @@ export function Tracking() {
           <AmountText amount={booking.amountDue ?? booking.finalFare ?? booking.fareEstimate} size="lg" />
         </Card>
 
+        {/* "Insured trip" once it starts, if it has cover - and the accident report. */}
+        <TripInsuranceActions bookingId={booking.id} status={booking.status} />
+
         {/* Somewhere else instead, or "drop me here" - asked for, not in the way. */}
         {onTrip && (
           <details className="group rounded-card bg-surface shadow-card" data-testid="trip-more">
@@ -941,6 +946,7 @@ export function Tracking() {
           </div>
         </Card>
       ) : isFinished ? (
+        <>
         <Card
           tone={booking.status === 'CANCELLED' ? 'danger' : 'success'}
           className="flex items-start gap-3"
@@ -977,8 +983,14 @@ export function Tracking() {
                 </Button>
               )}
             </div>
+            <div className="mt-3">
+              <TripInsuranceActions bookingId={booking.id} status={booking.status} />
+            </div>
           </div>
         </Card>
+        {/* Her receipt: how the price she was shown was reached. */}
+        {booking.status === 'COMPLETED' && <FareDetailsCard bookingId={booking.id} />}
+        </>
       ) : (
         <Card className="text-center" data-testid="searching-card">
           {/* Something is happening, and it is looking. Gone the moment the

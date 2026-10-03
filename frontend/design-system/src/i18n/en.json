@@ -145,7 +145,8 @@
       "SAFETY_CONCERN": "Safety concern",
       "APP_ISSUE": "Problem with the app",
       "CANCELLATION_DISPUTE": "A cancellation",
-      "OTHER": "Something else"
+      "OTHER": "Something else",
+      "ACCIDENT_OR_INSURANCE_CLAIM": "Accident or insurance claim"
     },
     "status": {
       "OPEN": "Waiting for support",
@@ -465,5 +466,32 @@
   },
   "paymentFlash": {
     "continue": "Continue"
+  },
+  "insurance": {
+    "chip": "Insured trip · {{amount}} cover",
+    "sheetTitle": "Your trip is insured",
+    "insurer": "Insurer",
+    "policyNumber": "Policy number",
+    "sumInsured": "Cover",
+    "covered": "What is covered",
+    "howToClaim": "How to claim",
+    "call": "Call {{phone}}",
+    "claimsPage": "Claims page",
+    "policySummary": "Policy summary",
+    "paidBySheOut": "SheOut pays for this cover. It is not part of your fare.",
+    "insurerDecides": "SheOut will help you with a claim. The insurer decides it.",
+    "reportAccident": "Report an accident or make a claim"
+  },
+  "accident": {
+    "title": "Report an accident",
+    "emergency": "If anyone is hurt or in danger, call 112 now.",
+    "describe": "What happened?",
+    "placeholder": "Where it happened, who was hurt, and what you need from us.",
+    "send": "Send to SheOut",
+    "sending": "Sending...",
+    "sent": "We have raised this with our team as urgent. They will contact you. You can follow it in Help & Support.",
+    "insurerSteps": "To claim from {{insurer}}:",
+    "noCover": "This trip had no insurance cover on record, so there is no policy to claim on. Our team will still help you.",
+    "error": "Could not send that. Please try again, or call SheOut support."
   }
 }

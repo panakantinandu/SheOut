@@ -546,7 +546,8 @@
     "paidFlash": {
       "title": "Payment received",
       "body": "{{name}} has paid. It's in your SheOut wallet."
-    }
+    },
+    "reportAccident": "Report an accident"
   },
   "earnings": {
     "group": {
@@ -578,7 +579,12 @@
     "viewDetails": "View Details",
     "noResults": "No results match your filters.",
     "nothingFor": "Nothing to show for {{period}}.",
-    "totalsNote": "Totals are worked out from paid trips in this period, not just the ones listed."
+    "totalsNote": "Totals are worked out from paid trips in this period, not just the ones listed.",
+    "fare": "Fare",
+    "commission": "SheOut commission ({{percent}}%)",
+    "yourShare": "Your share",
+    "breakdownUnavailable": "The split for this trip is not available yet.",
+    "insuranceNote": "SheOut pays your trip insurance; nothing is deducted from you."
   },
   "bookings": {
     "tabs": {
@@ -748,5 +754,111 @@
     "reopens": "Bookings open again at {{time}}.",
     "backSoon": "Bookings will be back soon.",
     "currentTripSafe": "A trip you are already on is not affected."
+  },
+  "docs": {
+    "type": {
+      "DRIVING_LICENCE": "Driving licence",
+      "VEHICLE_RC": "Vehicle RC",
+      "VEHICLE_INSURANCE": "Vehicle insurance",
+      "PUC": "PUC certificate",
+      "FITNESS_CERTIFICATE": "Fitness certificate",
+      "POLICE_CERTIFICATE": "Police certificate",
+      "BACKGROUND_CHECK_REPORT": "Background check report"
+    },
+    "status": {
+      "missing": "Not sent",
+      "renewal": "Renewal being checked",
+      "expiringSoon": "Expiring soon",
+      "PENDING": "Waiting",
+      "UNDER_REVIEW": "Being checked",
+      "VERIFIED": "Approved",
+      "REJECTED": "Not accepted",
+      "EXPIRED": "Expired"
+    },
+    "rejectedBecause": "Not accepted: {{reason}}",
+    "validUntil": "Valid until {{date}}",
+    "expiresSoon_one": "Expires on {{date}}, in {{count}} day. Upload the renewed one now.",
+    "expiresSoon_other": "Expires on {{date}}, in {{count}} days. Upload the renewed one now.",
+    "expiredOn": "Expired on {{date}}. Upload the new one to go online.",
+    "privateWarning": "A private policy can be refused when you carry paying passengers. Ask your insurer for a commercial policy.",
+    "upload": "Upload",
+    "reupload": "Upload again",
+    "uploadRenewal": "Upload the renewed one",
+    "needConsentFirst": "Agree to the consent above first.",
+    "chooseFile": "Choose a photo of your {{document}}",
+    "number": "Number on the document",
+    "issuedOn": "Issued on (optional)",
+    "validUntilField": "Valid until",
+    "useQuestion": "What is the policy for?",
+    "use": {
+      "COMMERCIAL": "Commercial use",
+      "PRIVATE": "Private use",
+      "UNKNOWN": "Not sure"
+    },
+    "send": "Send for checking",
+    "cancel": "Cancel",
+    "needFile": "Choose the photo first",
+    "needNumber": "Type the number on it",
+    "needValidUntil": "Add the valid-until date",
+    "needUse": "Say what the policy is for",
+    "sendError": "Could not send that. Please try again.",
+    "notReadyTitle": "Not ready to go online yet",
+    "readyBody": "Everything is approved and in date. You can go online and accept trips.",
+    "checklistTitle": "Your checklist",
+    "consentStep": "Your consent",
+    "consentGiven": "Given",
+    "consentUpdated": "Updated, read again",
+    "consentNeeded": "Needed",
+    "consentGivenOn": "You agreed on {{date}}.",
+    "consentIntro": "Before you send anything, read how SheOut checks your identity, documents and police record, and agree to it.",
+    "consentRead": "Read and agree",
+    "consentAgree": "I agree",
+    "consentError": "Could not save your consent. Please try again.",
+    "idStep": "ID and live selfie",
+    "resubmitId": "Send ID and selfie again",
+    "police": {
+      "check": "Police verification",
+      "verified": "Done",
+      "rejected": "Not accepted",
+      "pending": "Waiting for your certificate",
+      "dueOn": "Due again on {{date}}. Apply for a new certificate before then.",
+      "intro": "Get a Police Verification Certificate from Telangana Police online, then upload it here:",
+      "step1": "Open the Telangana Police portal and sign up with your mobile number.",
+      "step2": "Apply for a Police Verification Certificate for employment, and pay the fee.",
+      "step3": "When the certificate is ready, download it and upload it here.",
+      "openPortal": "Open Telangana Police portal",
+      "orSheOut": "If SheOut gets the certificate for you, our team adds it and you will see it here."
+    },
+    "blocker": {
+      "ID_CHECK": "Finish your ID check to start.",
+      "POLICE_CHECK": "Your police verification is not complete yet.",
+      "POLICE_REVERIFY_DUE": "Your police verification is due again ({{date}}). Upload a new police certificate.",
+      "CONSENT_REQUIRED": "Agree to the verification consent to start.",
+      "DOCUMENT_MISSING": "Upload your {{document}} to go online.",
+      "DOCUMENT_UNDER_REVIEW": "Your {{document}} is being checked. You can go online once it is approved.",
+      "DOCUMENT_REJECTED": "Your {{document}} was not accepted. Upload it again to go online.",
+      "DOCUMENT_EXPIRED": "Your {{document}} expired on {{date}}. Upload the new one to go online.",
+      "DOCUMENT_EXPIRING": "Your {{document}} expires on {{date}}. Upload the renewed one before then.",
+      "INSURANCE_NOT_COMMERCIAL": "Your vehicle insurance is not for commercial use. Upload a commercial policy to go online."
+    },
+    "home": {
+      "blockedTitle": "You can’t go online yet",
+      "soonTitle": "Renew soon",
+      "fix": "Open your checklist",
+      "more_one": "And {{count}} more thing on your checklist.",
+      "more_other": "And {{count}} more things on your checklist."
+    }
+  },
+  "cover": {
+    "title": "Your cover",
+    "kind": {
+      "PARTNER_HEALTH": "Health cover",
+      "PARTNER_TERM_LIFE": "Life cover",
+      "PARTNER_ACCIDENT": "Accident cover"
+    },
+    "with": "{{insurer}}, policy {{policy}}",
+    "memberId": "Your member ID: {{id}}",
+    "claim": "Claims: {{phone}}",
+    "paidBySheOut": "SheOut pays for this cover. Nothing is taken from your earnings."
   }
 }

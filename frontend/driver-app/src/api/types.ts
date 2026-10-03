@@ -451,3 +451,103 @@ export interface SavePayoutAccount {
   /** Keep the bank account on file and ignore the three bank fields - the app cannot resend a number it only sees masked. */
   keepSavedBankAccount?: boolean;
 }
+
+// ---- partner documents, police check, consent, insurance -------------------
+
+export type PartnerDocumentType =
+  | 'DRIVING_LICENCE'
+  | 'VEHICLE_RC'
+  | 'VEHICLE_INSURANCE'
+  | 'PUC'
+  | 'FITNESS_CERTIFICATE'
+  | 'POLICE_CERTIFICATE'
+  | 'BACKGROUND_CHECK_REPORT';
+
+export type PartnerDocumentStatus = 'PENDING' | 'UNDER_REVIEW' | 'VERIFIED' | 'REJECTED' | 'EXPIRED';
+
+export type InsuranceUseType = 'COMMERCIAL' | 'PRIVATE' | 'UNKNOWN';
+
+export type ReadinessCode =
+  | 'ID_CHECK'
+  | 'POLICE_CHECK'
+  | 'POLICE_REVERIFY_DUE'
+  | 'CONSENT_REQUIRED'
+  | 'DOCUMENT_MISSING'
+  | 'DOCUMENT_UNDER_REVIEW'
+  | 'DOCUMENT_REJECTED'
+  | 'DOCUMENT_EXPIRED'
+  | 'DOCUMENT_EXPIRING'
+  | 'INSURANCE_NOT_COMMERCIAL';
+
+/** One reason she cannot work, or a warning. message is the server's English; the app words its own from the rest. */
+export interface ReadinessBlocker {
+  code: ReadinessCode;
+  documentType: PartnerDocumentType | null;
+  date: string | null;
+  message: string;
+}
+
+export interface DocumentState {
+  type: PartnerDocumentType;
+  required: boolean;
+  /** Null when nothing is on file. */
+  status: PartnerDocumentStatus | null;
+  documentNumber: string | null;
+  issuedOn: string | null;
+  validUntil: string | null;
+  rejectionReason: string | null;
+  insuranceUseType: InsuranceUseType | null;
+  submittedAt: string | null;
+  /** A newer upload is waiting while this one still counts. */
+  renewalUnderReview: boolean;
+}
+
+/** GET /api/v1/users/driver/me/readiness - the same answer going online is decided on. */
+export interface PartnerReadiness {
+  ready: boolean;
+  blockers: ReadinessBlocker[];
+  warnings: ReadinessBlocker[];
+  documents: DocumentState[];
+}
+
+export interface ConsentStatus {
+  currentVersion: string;
+  acceptedVersion: string | null;
+  acceptedAt: string | null;
+  current: boolean;
+}
+
+export interface CoverSummary {
+  kind: string;
+  insurerName: string;
+  policyNumber: string;
+  sumInsured: number;
+  coverageSummary: string | null;
+  claimSteps: string | null;
+  claimsPhone: string | null;
+  claimsUrl: string | null;
+  policySummaryUrl: string | null;
+  effectiveTo: string | null;
+  memberId: string | null;
+}
+
+export interface TripCover {
+  bookingId: string;
+  kind: string;
+  insurerName: string;
+  policyNumber: string;
+  sumInsured: number;
+  coverageSummary: string | null;
+  claimSteps: string | null;
+  claimsPhone: string | null;
+  claimsUrl: string | null;
+  policySummaryUrl: string | null;
+  coverageStartedAt: string;
+  coverageEndedAt: string | null;
+}
+
+export interface ClaimResult {
+  ticketId: string;
+  /** Null when the trip had no cover: the accident is reported, there is no policy to claim on. */
+  cover: TripCover | null;
+}

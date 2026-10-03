@@ -694,3 +694,58 @@ export interface SavedPlace {
   lat: number | null;
   lng: number | null;
 }
+
+// ---- insurance and fare details -------------------------------------------
+
+/** The cover a trip had - see GET /api/v1/insurance/trips/{id}. No premium: cover is SheOut's cost, never part of a fare. */
+export interface TripCover {
+  bookingId: string;
+  kind: string;
+  insurerName: string;
+  policyNumber: string;
+  sumInsured: number;
+  coverageSummary: string | null;
+  claimSteps: string | null;
+  claimsPhone: string | null;
+  claimsUrl: string | null;
+  policySummaryUrl: string | null;
+  coverageStartedAt: string;
+  coverageEndedAt: string | null;
+}
+
+export interface CoverSummary {
+  kind: string;
+  insurerName: string;
+  policyNumber: string;
+  sumInsured: number;
+  coverageSummary: string | null;
+  claimSteps: string | null;
+  claimsPhone: string | null;
+  claimsUrl: string | null;
+  policySummaryUrl: string | null;
+  effectiveTo: string | null;
+  memberId: string | null;
+}
+
+export interface ClaimResult {
+  ticketId: string;
+  cover: TripCover | null;
+}
+
+/** GET /api/v1/bookings/{id}/fare-details - how the fare she agreed to was reached. */
+export interface FareDetails {
+  bookingId: string;
+  fare: number;
+  /** False for trips booked before the breakdown was kept, or re-priced by a destination change. */
+  breakdownRecorded: boolean;
+  baseFare: number | null;
+  distanceCharge: number | null;
+  timeCharge: number | null;
+  surgeMultiplier: number | null;
+  nightMultiplier: number | null;
+  minimumFareApplied: boolean;
+  repricedByDestinationChange: boolean;
+  promoDiscount: number;
+  promotionName: string | null;
+  amountDue: number;
+}

@@ -27,6 +27,7 @@ import {
 } from '@sheout/design-system';
 import type { CancellationReason, DropOffReason, MapMarker } from '@sheout/design-system';
 import { ApiError, bookingApi, chatApi, dispatchApi, type AssignedRider } from '../api/client';
+import { TripInsuranceActions } from '../components/TripInsuranceActions';
 import { apiErrorText } from '../lib/apiErrors';
 import type { BookingSummary, PaymentHold, PaymentSummary, TripRoute } from '../api/types';
 import { CollectPaymentCard } from '../components/CollectPaymentCard';
@@ -876,6 +877,7 @@ export function Trip() {
           )}
           <ContactSupportButton phoneNumber={supportPhoneNumber} className="flex-1" />
         </div>
+        {bookingId && <TripInsuranceActions bookingId={bookingId} status={booking.status} />}
 
         {/* Turn-by-turn, over everything. Dialogs below still open above it
             (a rider asking to change destination, the drop-off reason). */}
@@ -1179,6 +1181,7 @@ export function Trip() {
                 {t('trip.cancelTrip')}
               </Button>
             )}
+            {bookingId && <TripInsuranceActions bookingId={bookingId} status={booking.status} />}
             <ContactSupportButton phoneNumber={supportPhoneNumber} />
           </div>
         </>

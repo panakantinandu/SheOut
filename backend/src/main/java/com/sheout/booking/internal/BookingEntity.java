@@ -180,6 +180,10 @@ public class BookingEntity extends BaseEntity {
         }
         this.drop = newDrop;
         this.fareEstimate = newFare;
+        // The old breakdown no longer adds up to the new fare; the receipt
+        // says it was re-priced instead of showing parts of the old one.
+        recordFareBreakdown(null, null, null, null, null, false);
+        this.fareMinimumApplied = null;
         this.quotedDistanceKm = newDistanceKm;
         this.quotedDistanceRouted = routed;
         this.destinationChangedAt = at;
@@ -210,6 +214,54 @@ public class BookingEntity extends BaseEntity {
     public BigDecimal amountDue() {
         BigDecimal fare = finalFare != null ? finalFare : fareEstimate;
         return fare.subtract(getPromoDiscount()).max(BigDecimal.ZERO);
+    }
+
+    /** How the fare was reached - see V58__booking_fare_breakdown.sql. Null fields: not recorded. */
+    @Column(name = "fare_base_fare", precision = 10, scale = 2)
+    private BigDecimal fareBaseFare;
+    @Column(name = "fare_distance_charge", precision = 10, scale = 2)
+    private BigDecimal fareDistanceCharge;
+    @Column(name = "fare_time_charge", precision = 10, scale = 2)
+    private BigDecimal fareTimeCharge;
+    @Column(name = "fare_surge_multiplier", precision = 6, scale = 3)
+    private BigDecimal fareSurgeMultiplier;
+    @Column(name = "fare_night_multiplier", precision = 6, scale = 3)
+    private BigDecimal fareNightMultiplier;
+    @Column(name = "fare_minimum_applied")
+    private Boolean fareMinimumApplied;
+
+    public void recordFareBreakdown(BigDecimal base, BigDecimal distance, BigDecimal time, BigDecimal surge,
+                                    BigDecimal night, boolean minimumApplied) {
+        this.fareBaseFare = base;
+        this.fareDistanceCharge = distance;
+        this.fareTimeCharge = time;
+        this.fareSurgeMultiplier = surge;
+        this.fareNightMultiplier = night;
+        this.fareMinimumApplied = minimumApplied;
+    }
+
+    public BigDecimal getFareBaseFare() {
+        return fareBaseFare;
+    }
+
+    public BigDecimal getFareDistanceCharge() {
+        return fareDistanceCharge;
+    }
+
+    public BigDecimal getFareTimeCharge() {
+        return fareTimeCharge;
+    }
+
+    public BigDecimal getFareSurgeMultiplier() {
+        return fareSurgeMultiplier;
+    }
+
+    public BigDecimal getFareNightMultiplier() {
+        return fareNightMultiplier;
+    }
+
+    public Boolean getFareMinimumApplied() {
+        return fareMinimumApplied;
     }
 
     /** The road distance the fare was priced on, and whether it came from a real route or the fallback estimate. */

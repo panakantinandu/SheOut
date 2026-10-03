@@ -28,6 +28,7 @@ import { EarningsCard } from '../components/home/EarningsCard';
 import { RecentTrips } from '../components/home/RecentTrips';
 import { BrandStrip } from '../components/home/BrandStrip';
 import { ServiceClosedStrip } from '../components/home/ServiceClosedStrip';
+import { ReadinessBanner } from '../components/home/ReadinessBanner';
 import { DRIVER_HOME_MAP_ENABLED, HomeMapCard } from '../components/home/HomeMapCard';
 
 const BOOKINGS_POLL_MS = 5000;
@@ -365,6 +366,12 @@ export function Home() {
       // Being in the wrong part of the world is not an error she can retry
       // away, so it gets a standing explanation rather than a red line that
       // reads like something went wrong.
+      // A document missing, waiting, turned down or expired, or her police
+      // check due: the checklist says which and lets her fix it.
+      if (err instanceof ApiError && err.body?.error === 'NOT_READY') {
+        navigate('/verification');
+        return;
+      }
       if (err instanceof ApiError && err.body?.error === 'OUTSIDE_SERVICE_AREA') {
         setOutOfArea(t('apiError.OUTSIDE_SERVICE_AREA'));
         return;
@@ -434,6 +441,9 @@ export function Home() {
 
       {/* Outside the operating hours, or paused: no offers will come, and she should know why. */}
       <ServiceClosedStrip />
+
+      {/* A missing, rejected or expired document, or a police check due: what to do, before she is refused. */}
+      <ReadinessBanner reloadKey={profile?.updatedAt} />
 
       {/* Where she stands, and the one thing to do about it. */}
       {profileError ? (

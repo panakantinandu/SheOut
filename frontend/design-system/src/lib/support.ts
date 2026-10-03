@@ -14,7 +14,9 @@ export type SupportTicketCategory =
   | 'SAFETY_CONCERN'
   | 'APP_ISSUE'
   | 'CANCELLATION_DISPUTE'
-  | 'OTHER';
+  | 'OTHER'
+  /** Raised by "Report an accident" on a trip, not chosen from the list. */
+  | 'ACCIDENT_OR_INSURANCE_CLAIM';
 
 export type SupportTicketStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
 
@@ -37,6 +39,8 @@ export function supportCategoryLabel(category: string, audience: 'customer' | 'd
       return dsT('support.category.CANCELLATION_DISPUTE', 'A cancellation');
     case 'OTHER':
       return dsT('support.category.OTHER', 'Something else');
+    case 'ACCIDENT_OR_INSURANCE_CLAIM':
+      return dsT('support.category.ACCIDENT_OR_INSURANCE_CLAIM', 'Accident or insurance claim');
     default:
       return humanizeEnum(category);
   }

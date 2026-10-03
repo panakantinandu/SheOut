@@ -3,6 +3,10 @@ import type { LiveSelfieResult, PushApi, SelfieChallenge } from '@sheout/design-
 import { installId, type ReferralSummary, type ReferralWelcomeDetails } from '@sheout/design-system';
 import type {
   ApiErrorResponse,
+  ClaimResult,
+  CoverSummary,
+  FareDetails,
+  TripCover,
   AccountSession,
   VerificationTurnaround,
   AuthSession,
@@ -1040,3 +1044,34 @@ export const marketplaceApi = {
     return request('/api/v1/marketplace/seller/me/listing-fee/confirm', { method: 'POST', body: result });
   },
 };
+
+/**
+ * What she is told about insurance - only ever from a record that exists. A
+ * trip with no cover answers 404, returned here as null: the app then says
+ * nothing about insurance for it.
+ */
+export const insuranceApi = {
+  async tripCover(bookingId: string): Promise<TripCover | null> {
+    try {
+      return await request<TripCover>(`/api/v1/insurance/trips/${bookingId}`);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 404) return null;
+      throw err;
+    }
+  },
+
+  /** For the Safety Center's "Every SheOut trip is insured" - shown only when active. */
+  passengerCover(): Promise<{ active: boolean; cover: CoverSummary | null }> {
+    return request('/api/v1/insurance/passenger-cover');
+  },
+
+  /** Report an accident on a trip that started: a ticket, and the insurer's own steps when there is cover. */
+  reportAccident(bookingId: string, description: string): Promise<ClaimResult> {
+    return request(`/api/v1/insurance/trips/${bookingId}/claim`, { method: 'POST', body: { description } });
+  },
+};
+
+/** Her receipt's "Fare details". */
+export function getFareDetails(bookingId: string): Promise<FareDetails> {
+  return request(`/api/v1/bookings/${bookingId}/fare-details`);
+}

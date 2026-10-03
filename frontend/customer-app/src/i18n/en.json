@@ -833,7 +833,8 @@
     "PHOTO_TOO_LARGE": "That photo is too large. Choose one under 10 MB.",
     "ALREADY_PAID": "Your listing fee is already paid.",
     "INVALID_PRODUCT_TERMS": "Check the stock, ready-in days and minimum order.",
-    "TRIP_ENDS_AFTER_HOURS": "This trip would end well after SheOut's service hours. Choose a nearer drop, or book it when bookings open again."
+    "TRIP_ENDS_AFTER_HOURS": "This trip would end well after SheOut's service hours. Choose a nearer drop, or book it when bookings open again.",
+    "RIDE_INSURANCE_NOT_ACTIVE": "Rides are paused because SheOut cannot insure trips right now. Please try again a little later."
   },
   "picker": {
     "noAddress": "No address found at that point. Move the pin somewhere closer to a road or landmark.",
@@ -1167,7 +1168,8 @@
     "paidFlash": {
       "title": "Payment successful",
       "body": "Paid to {{name}}. Thank you for riding with SheOut!"
-    }
+    },
+    "reportAccident": "Report an accident or make a claim"
   },
   "nav": {
     "home": "Home",
@@ -1265,7 +1267,10 @@
     "title": "Safety Center",
     "pendingReview": "These safety pages are machine-translated and waiting for review by a native speaker. The English is shown under each line until then.",
     "linkCopied": "Link copied",
-    "askHelp": "Ask SheOut Help a question"
+    "askHelp": "Ask SheOut Help a question",
+    "insuredTitle": "Every SheOut trip is insured",
+    "insuredBody": "Each ride is covered for up to {{amount}} by {{insurer}}, from pickup to drop. SheOut pays for it; it is never added to your fare.",
+    "insuredClaim": "If something happens on a trip, use \"Report an accident\" on the trip screen. We will help you claim; the insurer decides the claim."
   },
   "serviceHours": {
     "closedTitle": "Bookings are closed right now",
@@ -1276,5 +1281,19 @@
     "backSoon": "We'll be back soon. Please check again in a little while.",
     "tripsUnaffected": "Trips already under way are not affected.",
     "closingSoon": "Bookings close at {{time}} tonight."
+  },
+  "fareDetails": {
+    "title": "Fare details",
+    "base": "Base fare",
+    "distance": "Distance",
+    "time": "Time",
+    "night": "Night fare {{multiplier}} included",
+    "surge": "Busy-time fare {{multiplier}} included",
+    "minimum": "The minimum fare applied to this trip.",
+    "repriced": "The fare was worked out again when the destination changed.",
+    "noBreakdown": "The breakdown was not kept for this trip.",
+    "fare": "Fare",
+    "promo": "Promotion",
+    "paid": "You paid"
   }
 }

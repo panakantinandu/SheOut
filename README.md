@@ -484,6 +484,44 @@ passenger cover on every trip.)
   events), the same shape as booking and campaigns. There is no bean cycle:
   claims live in their own bean for that reason.
 
+## What riders and partners see
+
+**Rider app.** The booking screen shows one all-inclusive price, unchanged -
+no insurance line, no tax line. Once a trip starts, the trip screen shows an
+"Insured trip · ₹5,00,000 cover" chip **only** if the server returns a cover
+for that trip; tapping it shows the insurer, policy number, what is covered
+and how to claim, and "Report an accident or make a claim". The finished
+trip (opened from My Bookings, which is her receipt) adds *Fare details* -
+base fare, distance, time, night or busy-time multiplier, the minimum-fare
+note, the promotion and what she paid - from `GET /api/v1/bookings/{id}/fare-details`.
+The Safety Center says "Every SheOut trip is insured" only while a passenger
+policy is in force.
+
+**Partner app.** *Verification* is a checklist in the order she does it:
+consent, ID and live selfie, driving licence, vehicle RC, vehicle insurance,
+PUC (and fitness for an auto or cab), police certificate - each with its
+status, the reason if it was turned down, when it runs out, and an upload
+that asks for the number and dates printed on it (and, for insurance,
+commercial or private use). The police step links to Telangana Police's
+portal with three steps. *Home* shows a banner with the first thing stopping
+her and a button to the checklist; a `NOT_READY` refusal opens the checklist.
+*Earnings* shows each trip's fare, SheOut's commission and her share from
+the payment record, and "SheOut pays your trip insurance; nothing is
+deducted from you" only while a passenger policy is in force. *Profile*
+shows "Your cover" only for group covers she is `ENROLLED` in.
+
+### Flagged assumptions
+
+- **The fare breakdown is kept from V58 on.** Trips booked before it, and
+  trips re-priced by a destination change, show the total and say why there
+  is no breakdown.
+- **The rider's receipt is the finished trip screen**, which My Bookings
+  opens; there is no separate receipt page.
+- **The chip and the checklist copy are translated by machine** into Hindi
+  and Telugu, like the rest of the apps' new copy, and need the same
+  native-speaker review. The consent itself is shown in English, as the other
+  legal documents are.
+
 ## Users
 
 Customer and driver profiles - `com.sheout.users`. Deliberately ignorant of

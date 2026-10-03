@@ -308,6 +308,9 @@ public class BookingService implements BookingApi {
         );
         booking.recordQuotedDistance(
                 BigDecimal.valueOf(quote.distanceKm()).setScale(2, java.math.RoundingMode.HALF_UP), quote.routed());
+        // Kept for her receipt's "Fare details" - the same quote, so the parts add up to what she agreed to.
+        booking.recordFareBreakdown(quote.baseFare(), quote.distanceCharge(), quote.timeCharge(),
+                quote.surgeMultiplier(), quote.nightMultiplier(), quote.minimumFareApplied());
         bookingRepository.save(booking);
         eventLog.record(booking.getId(), "REQUESTED", null, BookingStatus.REQUESTED, null);
 
@@ -886,6 +889,26 @@ public class BookingService implements BookingApi {
     @Override
     public Optional<BookingSummary> findById(UUID bookingId) {
         return bookingRepository.findById(bookingId).map(this::toSummary);
+    }
+
+    /**
+     * How a trip's fare was reached, for her receipt. Every part comes from
+     * the quote the booking was priced on (see recordFareBreakdown);
+     * breakdownRecorded is false for a trip booked before it was kept, or
+     * re-priced by a destination change - the total is then all there is.
+     */
+    public record FareDetails(UUID bookingId, BigDecimal fare, boolean breakdownRecorded, BigDecimal baseFare,
+                              BigDecimal distanceCharge, BigDecimal timeCharge, BigDecimal surgeMultiplier,
+                              BigDecimal nightMultiplier, boolean minimumFareApplied, boolean repricedByDestinationChange,
+                              BigDecimal promoDiscount, String promotionName, BigDecimal amountDue) {
+    }
+
+    public Optional<FareDetails> fareDetails(UUID bookingId) {
+        return bookingRepository.findById(bookingId).map(b -> new FareDetails(b.getId(),
+                b.getFinalFare() != null ? b.getFinalFare() : b.getFareEstimate(),
+                b.getFareBaseFare() != null, b.getFareBaseFare(), b.getFareDistanceCharge(), b.getFareTimeCharge(),
+                b.getFareSurgeMultiplier(), b.getFareNightMultiplier(), Boolean.TRUE.equals(b.getFareMinimumApplied()),
+                b.getDestinationChangedAt() != null, b.getPromoDiscount(), b.getPromotionName(), b.amountDue()));
     }
 
     @Override

@@ -29,6 +29,13 @@ import type {
   TripRoute,
   VehicleType,
   VerificationSummary,
+  ClaimResult,
+  ConsentStatus,
+  CoverSummary,
+  InsuranceUseType,
+  PartnerDocumentType,
+  PartnerReadiness,
+  TripCover,
   NotificationView,
   InboxPage,
   PushConfig,
@@ -253,6 +260,15 @@ export const usersApi = {
   },
 
   /**
+   * Everything between her and her next trip, in the order to fix it, and
+   * every document's state for the checklist - the same answer going online
+   * is decided on, so the app and the server cannot disagree about her.
+   */
+  getReadiness(): Promise<PartnerReadiness> {
+    return request('/api/v1/users/driver/me/readiness');
+  },
+
+  /**
    * PUT replaces the whole profile. 400 UNDER_MINIMUM_AGE /
    * INVALID_DATE_OF_BIRTH / INVALID_EMAIL / INVALID_REGISTRATION_NUMBER, 409
    * PROFILE_PHOTO_REQUIRED until a photo has been uploaded.
@@ -382,15 +398,46 @@ export const verificationApi = {
     return request('/api/v1/driver-verification/selfie-challenge', { method: 'POST' });
   },
 
-  /** ID, RC and the live selfie, together: one submission, one review. */
-  uploadDocuments(file: File, rcFile: File, live: LiveSelfieResult): Promise<VerificationSummary> {
+  /**
+   * Her ID and the live selfie: one submission, one review. The RC used to
+   * travel with them; it is its own step on the checklist now (see
+   * uploadPartnerDocument), and the server no longer asks for it here.
+   */
+  uploadDocuments(file: File, live: LiveSelfieResult): Promise<VerificationSummary> {
     const form = new FormData();
     form.append('file', file);
-    form.append('rcFile', rcFile);
     form.append('selfie', live.selfie);
     form.append('livenessFrames', live.livenessFrames);
     form.append('selfieChallengeId', live.challengeId);
     return request('/api/v1/driver-verification/documents', { method: 'POST', body: form });
+  },
+
+  /** The verification consent: the version in force and what she agreed to. */
+  getConsent(): Promise<ConsentStatus> {
+    return request('/api/v1/driver-verification/consent');
+  },
+
+  /** She agrees to the version she was shown. 409 CONSENT_VERSION_OUTDATED if it changed meanwhile. */
+  acceptConsent(version: string): Promise<ConsentStatus> {
+    return request('/api/v1/driver-verification/consent', { method: 'POST', body: { version } });
+  },
+
+  /**
+   * One document from her checklist - licence, RC, insurance, PUC, fitness
+   * or police certificate - with what she reads off it. An operator checks
+   * her answer against the image.
+   */
+  uploadPartnerDocument(
+    type: PartnerDocumentType,
+    file: File,
+    facts: { documentNumber?: string; issuedOn?: string; validUntil?: string; insuranceUseType?: InsuranceUseType }
+  ): Promise<unknown> {
+    const form = new FormData();
+    form.append('file', file);
+    for (const [key, value] of Object.entries(facts)) {
+      if (value) form.append(key, value);
+    }
+    return request(`/api/v1/driver-verification/partner-documents/${type}`, { method: 'POST', body: form });
   },
 
   /** Her start-of-shift check: where it stands, and what happened last time. */
@@ -886,5 +933,36 @@ export const referralsApi = {
   /** A new account enters a friend's code while signing up. 204 on success. */
   apply(code: string): Promise<ReferralWelcomeDetails> {
     return request('/api/v1/referrals/apply', { method: 'POST', body: { code }, headers: installHeader() });
+  },
+};
+
+/**
+ * What she sees of insurance - only ever from a record that exists. A trip
+ * with no cover answers 404, which is returned as null: the app then says
+ * nothing about insurance for it.
+ */
+export const insuranceApi = {
+  /** Her group covers the insurer has confirmed. Empty until one is ENROLLED. */
+  myCovers(): Promise<CoverSummary[]> {
+    return request('/api/v1/insurance/me/covers');
+  },
+
+  /** Whether trips are covered right now - for "SheOut pays your trip insurance". */
+  passengerCover(): Promise<{ active: boolean; cover: CoverSummary | null }> {
+    return request('/api/v1/insurance/passenger-cover');
+  },
+
+  async tripCover(bookingId: string): Promise<TripCover | null> {
+    try {
+      return await request<TripCover>(`/api/v1/insurance/trips/${bookingId}`);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 404) return null;
+      throw err;
+    }
+  },
+
+  /** Report an accident on a trip that started: a support ticket, and the insurer's own claim steps when there is cover. */
+  reportAccident(bookingId: string, description: string): Promise<ClaimResult> {
+    return request(`/api/v1/insurance/trips/${bookingId}/claim`, { method: 'POST', body: { description } });
   },
 };

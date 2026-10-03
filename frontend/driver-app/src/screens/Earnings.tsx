@@ -3,7 +3,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AmountText, PullToRefresh, SkeletonCard, Button, Card, DateRangeFields, IconCircle, ListFilterBar, LoadMore, SelectField, TopHeader, ServiceArt } from '@sheout/design-system';
 import type { DateRangeValue } from '@sheout/design-system';
-import { ApiError, bookingApi } from '../api/client';
+import { ApiError, bookingApi, insuranceApi } from '../api/client';
+import { TripPayoutBreakdown } from '../components/TripPayoutBreakdown';
 import type { BookingCategory, BookingSummary } from '../api/types';
 import { useTranslation } from '@sheout/design-system';
 
@@ -87,6 +88,13 @@ export function Earnings() {
   const [showDetails, setShowDetails] = useState(false);
   const [dates, setDates] = useState<DateRangeValue>({ from: '', to: '' });
   const [group, setGroup] = useState<EarningsGroup | ''>('');
+  /** The trip whose fare, commission and share are open. */
+  const [openTrip, setOpenTrip] = useState<string | null>(null);
+  /** Whether a passenger policy is in force - the insurance line says so only then. */
+  const [coverActive, setCoverActive] = useState(false);
+  useEffect(() => {
+    insuranceApi.passengerCover().then((c) => setCoverActive(c.active)).catch(() => setCoverActive(false));
+  }, []);
   /** How many detail rows are on screen. See DETAIL_PAGE_SIZE. */
   const [detailShown, setDetailShown] = useState(DETAIL_PAGE_SIZE);
 
@@ -285,13 +293,24 @@ export function Earnings() {
                   </p>
                 ) : (
                   trips.slice(0, detailShown).map((b) => (
-                    <div key={b.id} className="flex items-center gap-3 p-4">
-                      <IconCircle tone="soft" size="sm" icon={groupIcon(groupOf(b.category))} />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-text-primary">{b.drop.label}</p>
-                        <p className="text-xs text-text-secondary">{new Date(b.completedAt!).toLocaleString()}</p>
-                      </div>
-                      <AmountText amount={b.finalFare ?? b.fareEstimate} />
+                    // Tapping a trip shows its split - fare, SheOut's
+                    // commission, her share - as the payment recorded it.
+                    <div key={b.id}>
+                      <button
+                        type="button"
+                        className="flex w-full items-center gap-3 p-4 text-left"
+                        aria-expanded={openTrip === b.id}
+                        onClick={() => setOpenTrip((id) => (id === b.id ? null : b.id))}
+                        data-testid={`earning-trip-${b.id}`}
+                      >
+                        <IconCircle tone="soft" size="sm" icon={groupIcon(groupOf(b.category))} />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium text-text-primary">{b.drop.label}</p>
+                          <p className="text-xs text-text-secondary">{new Date(b.completedAt!).toLocaleString()}</p>
+                        </div>
+                        <AmountText amount={b.finalFare ?? b.fareEstimate} />
+                      </button>
+                      {openTrip === b.id && <TripPayoutBreakdown bookingId={b.id} />}
                     </div>
                   ))
                 )}
@@ -309,6 +328,13 @@ export function Earnings() {
           <p className="text-center text-xs text-text-secondary">
             {t('earnings.totalsNote')}
           </p>
+          {/* Only while it is true: with no passenger policy in force there
+              is no trip insurance to say SheOut pays for. */}
+          {coverActive && (
+            <p className="text-center text-xs text-text-secondary" data-testid="earnings-insurance-note">
+              {t('earnings.insuranceNote')}
+            </p>
+          )}
         </>
       )}
     </PullToRefresh>

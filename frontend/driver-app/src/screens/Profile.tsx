@@ -8,6 +8,7 @@ import type { DriverProfileSummary, VehicleType } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { VehicleFields } from '../components/VehicleFields';
 import { PendingChangeCard } from '../components/PendingChangeCard';
+import { YourCoverCard } from '../components/YourCoverCard';
 import { useTranslation } from '@sheout/design-system';
 
 /**
@@ -88,6 +89,9 @@ export function Profile() {
           )}
         </div>
       </Card>
+
+      {/* Health, life or accident cover she is enrolled in - only once the insurer has confirmed her. */}
+      <YourCoverCard />
 
       {/* The photo step, shown first and loudest when it is missing, because
           it is what stands between her and her first booking. Riders check
