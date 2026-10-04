@@ -15,9 +15,29 @@ import java.util.UUID;
 public interface WorkAssignments {
 
     enum Kind {
-        /** subjectId is the partner's account id. */
-        VERIFICATION
+        /** subjectId is the partner's account id. A hold: an agent opens only what she holds. */
+        VERIFICATION,
+        /** subjectId is the SOS alert id. A soft lock: shows who is on it; any responder may still act. */
+        SOS,
+        /** subjectId is the trip alert id. A soft lock, as SOS. */
+        TRIP_ALERT,
+        /** subjectId is the seller id. A soft lock, so two moderators do not review the same shop. */
+        SELLER_REVIEW
     }
+
+    /** Who holds it and since when - the "taken by" and the clock beside a row. */
+    record Held(UUID staffAccountId, java.time.Instant since) {
+    }
+
+    /** Everything held of a kind, with since when. */
+    java.util.Map<UUID, Held> held(Kind kind);
+
+    /**
+     * A manager hands a piece of work to a named member of staff, taking it
+     * from whoever held it. Whether the caller may, and whether the new holder
+     * can do the work, is the endpoint's check.
+     */
+    void assign(Kind kind, UUID subjectId, UUID staffAccountId);
 
     /** Who holds it, by staff account id; empty when nobody does. */
     Optional<UUID> holder(Kind kind, UUID subjectId);

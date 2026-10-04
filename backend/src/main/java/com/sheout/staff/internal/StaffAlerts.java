@@ -96,6 +96,11 @@ class StaffAlerts {
                 raise("device.new", row, "Sign-in from a new browser",
                         who + " signed in from a browser not seen before: " + Optional.ofNullable(row.detail()).orElse("unknown") + ".",
                         row.staffId());
+            } else if ((action.equals(StaffActions.PASSKEY_ADD) || action.equals(StaffActions.PASSKEY_REMOVE)) && "OK".equals(row.result())) {
+                // A passkey is a way in. One added by someone holding a stolen session must not go unnoticed.
+                raise("passkey", row, action.equals(StaffActions.PASSKEY_ADD) ? "A passkey was added" : "A passkey was removed",
+                        who + (action.equals(StaffActions.PASSKEY_ADD) ? " added a passkey: " : " removed a passkey: ")
+                                + Optional.ofNullable(row.detail()).orElse("") + ".", row.staffId());
             } else if (action.equals(StaffActions.AUDIT_CHAIN_BROKEN)) {
                 raise("audit.chain", row, "The audit log failed its check",
                         "Audit rows were changed or deleted: " + Optional.ofNullable(row.detail()).orElse("") + ". Look into it now.", null);

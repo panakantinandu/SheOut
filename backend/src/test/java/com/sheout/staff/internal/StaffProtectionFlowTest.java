@@ -222,9 +222,12 @@ class StaffProtectionFlowTest {
                 Integer.class, agent.staffId().toString())).isEqualTo(1);
 
         // A sign-in from a browser she has not used: recorded and alerted.
+        // (An owner signs in with her passkey: that is what she would use on the new machine too.)
+        JsonNode options = staff.body(mvc.perform(post("/api/v1/admin/auth/passkey/options")).andReturn().getResponse());
         MockHttpServletResponse elsewhere = mvc.perform(post("/api/v1/admin/auth/login").header("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) Firefox/131.0")
                 .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(Map.of("email", owner.email(),
-                        "password", StaffTestSupport.PASSWORD, "code", staff.freshCode(owner))))).andReturn().getResponse();
+                        "password", StaffTestSupport.PASSWORD, "passkeyChallengeId", options.get("challengeId").asText(),
+                        "passkeyCredential", owner.passkey().sign(options.get("publicKey")))))).andReturn().getResponse();
         assertThat(elsewhere.getStatus()).isEqualTo(200);
         assertThat(jdbc.queryForObject("select detail from staff_audit_events where action = 'staff.device.new' and staff_id = ?"
                 + " order by seq desc limit 1", String.class, owner.staffId())).isEqualTo("Firefox on Linux");

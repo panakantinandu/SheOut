@@ -1006,6 +1006,19 @@
   .sub-h { margin-top: 14px !important; }
   .audit-view td { color: var(--muted); }
   .dx-card input[type="date"], .dx-card input[type="month"] { height: 34px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; font: inherit; background: var(--panel); color: var(--text); }
+  .btn-inline { padding: 3px 9px; font-size: 12px; border-radius: 6px; }
+  .passkey-btn { width: 100%; margin-top: 10px; }
+  .dash-cols { margin-top: 16px; }
+  .dash-kv { grid-template-columns: max-content 1fr; }
+  .plain-list { list-style: none; margin: 0; padding: 0; }
+  .plain-list li { padding: 6px 0; border-bottom: 1px solid var(--line); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .plain-list li .btn { margin-left: auto; }
+  table.mini { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.mini th, table.mini td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+  .link-btn { background: none; border: 0; padding: 0; color: var(--brand); cursor: pointer; font: inherit; text-decoration: underline; }
+  .sos-alarm { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 14px 16px; border-radius: 10px; border: 2px solid var(--red); background: var(--red-bg); color: var(--red); margin-bottom: 16px; }
+  .sos-alarm .pulse { width: 12px; height: 12px; border-radius: 50%; background: var(--red); flex: none; }
+  .sos-alarm #alarmOpen { margin-left: auto; }
   .alert-banner { display: flex; gap: 10px; align-items: center; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--red-line); background: var(--red-bg); color: var(--red); font-weight: 650; margin-bottom: 14px; }
 
   /* ---------- staff sign-in, invitations, the session ---------- */
@@ -1067,7 +1080,7 @@
       </div>
       <div id="signInBlock">
       <h2>Sign in</h2>
-      <p class="lead">Your work email, your password, and the 6-digit code from the authenticator app on your phone.</p>
+      <p class="lead">Your work email, your password, and the 6-digit code from the authenticator app on your phone - or your passkey.</p>
       <div class="banner banner-err" id="loginErr" hidden></div>
       <form id="login">
         <!-- Staff never sign in with an SMS code: SIM swaps and phished SMS
@@ -1077,9 +1090,10 @@
         <label for="password">Password</label>
         <input id="password" type="password" autocomplete="current-password" maxlength="128" required>
         <label for="code">Authenticator code</label>
-        <input id="code" autocomplete="one-time-code" placeholder="6-digit code" maxlength="12" required>
+        <input id="code" autocomplete="one-time-code" placeholder="6-digit code" maxlength="12">
         <p class="hint">Lost your phone? Type one of your recovery codes here instead.</p>
         <button class="btn btn-primary" id="loginBtn" type="submit">Sign in</button>
+        <button class="btn passkey-btn" id="loginPasskey" type="button" hidden>Sign in with a passkey instead of the code</button>
       </form>
       </div>
       <!-- An invitation (or a reset) arrives as a link to this page; it is
@@ -1264,6 +1278,7 @@
     </div>
 
     <div class="banner banner-err" id="err" hidden></div>
+    <div id="liveAlarm" hidden></div>
     <div class="banner banner-info" id="ownerBanner" hidden></div>
     <div class="banner banner-info" id="crossLink" hidden></div>
 
@@ -1546,6 +1561,7 @@ function askStepUp() {
       <div class="modal-body"><input id="stepCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" aria-label="Authenticator code">
         <p class="field-err" id="stepErr" hidden></p></div>
       <div class="modal-foot"><button class="btn" type="button" data-step-cancel>Cancel</button>
+        ${me && me.passkey && me.passkey.count > 0 && passkeysSupported() ? '<button class="btn" type="button" data-step-passkey>Use my passkey</button>' : ''}
         <button class="btn btn-primary" type="button" data-step-go>Confirm</button></div></div></div>`;
     const done = ok => { root.innerHTML = ''; resolve(ok); };
     const go = async () => {
@@ -1562,6 +1578,23 @@ function askStepUp() {
       $('stepCode').select();
     };
     root.querySelector('[data-step-cancel]').addEventListener('click', () => done(false));
+    const viaPasskey = root.querySelector('[data-step-passkey]');
+    if (viaPasskey) viaPasskey.addEventListener('click', async () => {
+      try {
+        const answer = await passkeyAnswer('/admin/auth/step-up/passkey-options');
+        const res = await fetch(API + '/admin/auth/step-up', {
+          method: 'POST', credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json', ...staffHeaders('POST', false) },
+          body: JSON.stringify(answer),
+        });
+        if (res.ok) return done(true);
+        const body = await res.json().catch(() => null);
+        $('stepErr').textContent = (body && body.message) || 'That did not work.';
+      } catch (err) {
+        $('stepErr').textContent = passkeyCancelled(err) ? 'The passkey was not used.' : err.message;
+      }
+      $('stepErr').hidden = false;
+    });
     root.querySelector('[data-step-go]').addEventListener('click', go);
     $('stepCode').addEventListener('keydown', e => { if (e.key === 'Enter') go(); if (e.key === 'Escape') done(false); });
     $('stepCode').focus();
@@ -1692,6 +1725,11 @@ function showLoginError(message) {
 $('login').addEventListener('submit', async e => {
   e.preventDefault();
   showLoginError('');
+  if (!$('code').value.trim()) {
+    showLoginError(passkeysSupported() ? 'Enter the code from your authenticator app, or sign in with your passkey.' : 'Enter the code from your authenticator app.');
+    $('code').focus();
+    return;
+  }
   $('loginBtn').disabled = true;
   try {
     const out = await api('/admin/auth/login', {
@@ -1715,6 +1753,37 @@ $('login').addEventListener('submit', async e => {
 });
 
 /**
+ * Email and password, then the passkey instead of the code. Owners sign in
+ * this way once they have one; the challenge is asked for only now, and
+ * names nobody.
+ */
+$('loginPasskey').hidden = !passkeysSupported();
+$('loginPasskey').addEventListener('click', async () => {
+  showLoginError('');
+  if (!$('email').value.trim() || !$('password').value) {
+    showLoginError('Enter your work email and password first, then use your passkey.');
+    return;
+  }
+  $('loginPasskey').disabled = true;
+  try {
+    const answer = await passkeyAnswer('/admin/auth/passkey/options');
+    const out = await api('/admin/auth/login', {
+      method: 'POST',
+      quiet401: true,
+      body: JSON.stringify({ email: $('email').value.trim(), password: $('password').value, ...answer }),
+    });
+    $('password').value = '';
+    $('code').value = '';
+    me = out.me;
+    start();
+  } catch (err) {
+    showLoginError(passkeyCancelled(err) ? 'The passkey was not used. Try again, or use your authenticator code.' : err.message);
+  } finally {
+    $('loginPasskey').disabled = false;
+  }
+});
+
+/**
  * Ends the console here. tellServer: she chose to sign out, so the session is
  * ended on the server too (and this browser stops getting SOS alerts). On a
  * 401 the server has already ended it, so there is nothing to tell.
@@ -1723,6 +1792,7 @@ async function signOut(message, opts = {}) {
   if (opts.tellServer && me) {
     try { await api('/admin/auth/logout', { method: 'POST', quiet401: true }); } catch (e) { /* it is over either way */ }
   }
+  disconnectLive();
   me = null;
   hideSessionWarning();
   $('password').value = '';
@@ -2081,8 +2151,12 @@ const VIEWS = {
       { key: 'submitted', label: 'Submitted', sort: r => new Date(submittedAt(r) || 0).getTime() },
       { key: 'waiting', label: 'Waiting', sort: r => -new Date(submittedAt(r) || 0).getTime() },
       { key: 'doc', label: 'Document', sort: r => (r.documentSubmitted ? 0 : 1) },
+      { key: 'holder', label: 'Taken by', sort: r => ((WORK.verification || {})[r.accountId] || {}).label || '' },
     ],
-    load: () => api('/admin/verification/review-queue'),
+    load: async () => {
+      const [rows] = await Promise.all([api('/admin/verification/review-queue'), loadWork('verification')]);
+      return rows;
+    },
     cell: (r, key) => {
       if (key === 'role') return roleBadge(r.role);
       if (key === 'name') return `<span class="strong">${esc(r.name || 'Name not set')}</span>${r.blocked ? ' <span class="badge b-blocked">Blocked</span>' : ''}`;
@@ -2092,7 +2166,8 @@ const VIEWS = {
         ? '<span class="subtle">Not required</span>'
         : policeBadge(r);
       if (key === 'submitted') return `<span class="subtle">${time(submittedAt(r))}</span>`;
-      if (key === 'waiting') { const w = waited(submittedAt(r)); return `<span class="wait ${w.cls}">${w.text}</span>`; }
+      if (key === 'waiting') return slaClock(submittedAt(r), WORK_SLA && WORK_SLA.verification);
+      if (key === 'holder') return holderCell('verification', r.accountId, { manage: 'verification.all' });
       if (key === 'doc') return r.documentSubmitted
         ? '<span class="badge b-green">Submitted</span>'
         : '<span class="badge b-grey">None</span>';
@@ -2170,8 +2245,12 @@ const VIEWS = {
       { key: 'content', label: 'Products', sort: r => -(r.seller.productCount || 0) },
       { key: 'fee', label: 'Listing fee', sort: r => (r.seller.listingFee && r.seller.listingFee.status) || '' },
       { key: 'waiting', label: 'Submitted', sort: r => -new Date(r.seller.submittedAt || 0).getTime() },
+      { key: 'holder', label: 'Reviewing', sort: r => ((WORK['seller-review'] || {})[r.seller.id] || {}).label || '' },
     ],
-    load: (state) => api(`/admin/sellers${filterQuery(state, { pageSize: PAGE_SIZE })}`),
+    load: async (state) => {
+      const [page] = await Promise.all([api(`/admin/sellers${filterQuery(state, { pageSize: PAGE_SIZE })}`), loadWork('seller-review')]);
+      return page;
+    },
     cell: (r, key) => {
       const s = r.seller;
       if (key === 'shop') return `<span class="strong">${esc(s.businessName)}</span>${s.editedLiveAt ? '<div class="subtle">Changed since approval</div>' : ''}`;
@@ -2184,9 +2263,9 @@ const VIEWS = {
       if (key === 'waiting') {
         if (!s.submittedAt) return '<span class="subtle">Not submitted</span>';
         if (s.status !== 'SUBMITTED_FOR_REVIEW') return `<span class="subtle">${time(s.submittedAt)}</span>`;
-        const w = waited(s.submittedAt);
-        return `<span class="wait ${w.cls}">${w.text}</span>`;
+        return slaClock(s.submittedAt, WORK_SLA && WORK_SLA.sellerReview);
       }
+      if (key === 'holder') return s.status === 'SUBMITTED_FOR_REVIEW' ? holderCell('seller-review', s.id, { soft: true }) : '<span class="subtle">-</span>';
       return '—';
     },
     onRowClick: r => openSeller(r),
@@ -2247,9 +2326,13 @@ const VIEWS = {
       { key: 'delivery', label: 'How it arrived', sort: r => `${r.deliveryChannel}${r.smsFallbackOpened ? 1 : 0}` },
       { key: 'raised', label: 'Raised', sort: r => new Date(r.createdAt || 0).getTime() },
       { key: 'waiting', label: 'Open for', sort: r => -new Date(r.createdAt || 0).getTime() },
+      { key: 'holder', label: 'On it', sort: r => ((WORK.sos || {})[r.id] || {}).label || '' },
       { key: 'act', label: '', sort: null },
     ],
-    load: () => api('/admin/sos/active'),
+    load: async () => {
+      const [rows] = await Promise.all([api('/admin/sos/active'), loadWork('sos')]);
+      return rows;
+    },
     cell: (r, key) => {
       if (key === 'customer') return `<span class="strong">${esc(r.customerName || 'Unknown')}</span> ${r.raisedBy === 'PARTNER' ? '<span class="badge b-role-driver">Partner</span>' : '<span class="badge b-role-customer">Rider</span>'}${r.customerBlocked ? ' <span class="badge b-blocked">Blocked</span>' : ''}`;
       if (key === 'phone') return telLink(r.customerPhone, { subject: 'ACCOUNT_PHONE', accountId: r.customerAccountId, bookingId: r.bookingId || undefined });
@@ -2264,7 +2347,9 @@ const VIEWS = {
       }
       if (key === 'delivery') return sosDelivery(r);
       if (key === 'raised') return `<span class="subtle">${time(r.createdAt)}</span>`;
-      if (key === 'waiting') { const w = waited(r.createdAt); return `<span class="wait ${w.cls}">${w.text}</span>`; }
+      // Nobody on it is what the clock is for; once someone is, it is theirs to see through.
+      if (key === 'waiting') return (WORK.sos || {})[r.id] ? `<span class="wait">${waited(r.createdAt).text}</span>` : slaClock(r.createdAt, WORK_SLA && WORK_SLA.sosAck);
+      if (key === 'holder') return holderCell('sos', r.id, { soft: true, manage: 'support.all' });
       if (key === 'act') return `<button class="btn btn-primary" data-resolve="${r.id}" type="button">Mark resolved</button>`;
       return '—';
     },
@@ -2508,7 +2593,10 @@ const VIEWS = {
     hint: 'Refreshes every 10 seconds',
     custom: true,
     columns: [],
-    load: () => api('/admin/live'),
+    load: async () => {
+      const [live] = await Promise.all([api('/admin/live'), can('sos.respond') ? loadWork('trip-alert') : null]);
+      return live;
+    },
     paint: paintLive,
   },
 
@@ -2580,7 +2668,7 @@ const VIEWS = {
     hint: 'Only you can see this page',
     custom: true,
     columns: [],
-    load: () => Promise.all([api('/admin/auth/me'), api('/admin/me/sessions')]),
+    load: () => Promise.all([api('/admin/auth/me'), api('/admin/me/sessions'), api('/admin/me/passkeys')]),
     paint: paintAccount,
   },
 
@@ -5798,6 +5886,7 @@ function paintLive(d) {
       ${alertBadge(a)}
       <span class="grow"><b>${esc(t.riderName || 'Rider')}</b> with ${esc(t.partnerName || 'no partner')} &middot; ${esc(a.detail)}
         <div class="subtle">raised ${esc(agoText(a.raisedAt))} ago &middot; rider ${telLink(t.riderPhone)}${t.partnerPhone ? ' &middot; partner ' + telLink(t.partnerPhone) : ''}</div></span>
+      <span class="holder">${holderCell('trip-alert', a.id, { soft: true })}</span>
       <button class="btn" type="button" data-open-booking="${escValue(t.bookingId)}">Open trip</button>
       <button class="btn btn-primary" type="button" data-ack-alert="${escValue(a.id)}">Mark checked</button>
     </li>`).join('');
@@ -6338,8 +6427,13 @@ function paintAudit([page, chain, staff]) {
 }
 
 // ---- my account ---------------------------------------------------------------
-function paintAccount([profile, mine]) {
+function paintAccount([profile, mine, keys]) {
   me = { ...me, ...profile };
+  const passkeyRows = keys.passkeys.map(k => `<li><b>${esc(k.label)}</b> <span class="subtle">added ${esc(plainDate(k.createdAt))}${k.lastUsedAt ? ' &middot; last used ' + esc(time(k.lastUsedAt)) : ' &middot; not used yet'}</span>
+      <button class="btn btn-inline btn-reject" type="button" data-remove-passkey="${escValue(k.id)}">Remove</button></li>`).join('');
+  const passkeyNote = keys.required
+    ? 'Your role must sign in with a passkey. Keep two - say this computer and your phone - so losing one is not a lockout.'
+    : keys.recommended ? 'Recommended for your role: a passkey cannot be phished the way a code can.' : 'Optional: sign in and confirm actions with your fingerprint, face or PIN instead of the code.';
   $('panel').innerHTML = `<div id="accountRoot">
     <div class="account-grid">
       <div class="dx-card"><h4>You</h4>
@@ -6365,6 +6459,10 @@ function paintAccount([profile, mine]) {
         <p class="subtle">New phone? Ask an owner to reset your authenticator.</p>
       </div>
     </div>
+    <div class="dx-card full" id="passkeyCard"><h4>Passkeys <span class="right">${passkeysSupported() ? '<button class="btn btn-primary" type="button" id="addPasskey">Add a passkey</button>' : '<span class="subtle">This browser cannot use passkeys</span>'}</span></h4>
+      <p class="subtle">${esc(passkeyNote)}</p>
+      ${keys.passkeys.length ? `<ul class="plain-list">${passkeyRows}</ul>` : `<p class="${keys.required ? 'field-err' : 'subtle'}">You have no passkey yet.</p>`}
+    </div>
     <div class="dx-card full"><h4>Where you are signed in <span class="right"><button class="btn btn-reject" type="button" id="endAllMine">Sign out everywhere</button></span></h4>
       ${sessionRows(mine.sessions, true)}
     </div></div>`;
@@ -6389,7 +6487,25 @@ function paintAccount([profile, mine]) {
       $('modalRoot').querySelector('[data-cancel]').addEventListener('click', () => { closeModal(); render(); });
     } catch (err) { if (err.message !== 'unauthorized') toast('bad', 'No new codes', err.message); }
   });
+  if ($('addPasskey')) $('addPasskey').addEventListener('click', async () => {
+    if (!(await addPasskey())) return;
+    const wasGated = needsPasskeyFirst();
+    me = await api('/admin/auth/me');
+    if (wasGated && !needsPasskeyFirst()) { $('ownerBanner').hidden = true; start(); } else render();
+  });
   $('accountRoot').addEventListener('click', async e => {
+    const removeKey = e.target.closest('[data-remove-passkey]');
+    if (removeKey) {
+      const ok = await confirmAction({ title: 'Remove this passkey?', message: 'It will no longer sign you in. Owners are told.', confirmLabel: 'Remove', tone: 'reject' });
+      if (!ok) return;
+      try {
+        await api(`/admin/me/passkeys/${removeKey.dataset.removePasskey}/remove`, { method: 'POST' });
+        toast('ok', 'Passkey removed');
+        me = await api('/admin/auth/me');
+        render();
+      } catch (err) { if (err.message !== 'unauthorized' && err.code !== 'STEP_UP_CANCELLED') toast('bad', 'Not removed', err.message); }
+      return;
+    }
     const end = e.target.closest('[data-end-session]');
     try {
       if (end) {
@@ -6436,8 +6552,13 @@ async function loadOverview() {
     q('/admin/live', canOpen('live')),
     q('/admin/profile-changes', can('verification.review')),
   ]);
+  const [dashboard, security, insurance] = await Promise.all([
+    q('/admin/dashboard'),
+    q('/admin/dashboard/security', can('staff.manage.owner')),
+    q('/admin/insurance/status', canOpen('insurance')),
+  ]);
   return { queue, sos, support, payouts, bookingsToday, completedToday, noPartnerToday, routes, trust, campaigns,
-    shopsInReview, shopsAwaitingFee, shopsLive, live, changes };
+    shopsInReview, shopsAwaitingFee, shopsLive, live, changes, dashboard, security, insurance };
 }
 
 const OV_EXTRA = {
@@ -6470,6 +6591,64 @@ function liveStrip(live) {
       <span class="badge ${st.closed ? 'b-amber' : 'b-green'}">${esc(st.title)}</span>
       <span class="go">Open live map →</span>
     </button>`;
+}
+
+/**
+ * The role-shaped part of Overview, from /admin/dashboard (and, for owners,
+ * /admin/dashboard/security). Each block is drawn only when the server sent
+ * it: a missing block is "not your role's", never "zero".
+ */
+function roleDashboard(d) {
+  const dash = d.dashboard, sec = d.security;
+  if (!dash && !sec) return '';
+  const n = v => (v === null || v === undefined ? '-' : Number(v).toLocaleString('en-IN'));
+  const blocks = [];
+  if (dash && dash.finance) {
+    const f = dash.finance;
+    const cover = d.insurance ? (d.insurance.passengerCoverActive
+      ? '<span class="badge b-green">Trips insured</span>' : '<span class="badge b-red">Trips NOT insured</span>') : '';
+    blocks.push(`<section class="ov-card" aria-label="Today's money">
+      <div class="hd"><span class="hico">${OV_ICON.wallet}</span><h3>Today's money</h3><span class="tag subtle">${esc(plainDate(f.day))} ${cover}</span></div>
+      <div class="bd"><dl class="kv dash-kv">
+        <dt>Trip fares</dt><dd><b>${rupees(f.fares)}</b> <span class="subtle">from ${n(f.trips)} trip${f.trips === 1 ? '' : 's'}</span></dd>
+        <dt>SheOut's commission</dt><dd><b>${rupees(f.commission)}</b></dd>
+        <dt>Listing fees</dt><dd>${rupees(f.listingFees)}</dd>
+        <dt>Refunds to riders</dt><dd>${rupees(f.refunds)} <span class="subtle">(${n(f.refundCount)})</span></dd>
+        <dt>Payouts waiting</dt><dd><button type="button" class="link-btn" data-go="payouts">${n(f.payoutsDue)} &middot; ${rupees(f.payoutsDueAmount)}</button></dd>
+      </dl></div></section>`);
+  }
+  if (dash && dash.team) {
+    const t = dash.team;
+    const ops = dash.ops || {};
+    const rows = t.agents.map(a => `<tr><td><b>${esc(a.name)}</b><div class="subtle">${esc(humanize(a.role || ''))}</div></td>
+        <td class="num">${n(a.verificationHeld)}</td><td class="num">${n(a.ticketsAssigned)}</td>
+        <td class="num">${a.late ? `<span class="badge b-red">${n(a.late)}</span>` : '0'}</td>
+        <td class="subtle">${a.oldestSince ? esc(waited(a.oldestSince).text) : '-'}</td></tr>`).join('');
+    blocks.push(`<section class="ov-card" aria-label="Team">
+      <div class="hd"><span class="hico">${OV_ICON.user}</span><h3>The team's work</h3>
+        <span class="tag subtle">${n(t.verificationUnassigned)} verifications and ${n(t.ticketsUnassigned)} tickets with nobody &middot; ${n(t.escalations)} high-priority</span></div>
+      <div class="bd">
+        <p class="subtle">Past target: ${n(ops.verificationLate)} verification${ops.verificationLate === 1 ? '' : 's'}, ${n(ops.ticketsLate)} ticket${ops.ticketsLate === 1 ? '' : 's'}, ${n(ops.sosUnattended)} SOS with nobody on it, ${n(ops.tripAlertsUnattended)} trip alert${ops.tripAlertsUnattended === 1 ? '' : 's'} with nobody on it.</p>
+        ${t.agents.length ? `<div class="table-wrap"><table class="mini"><thead><tr><th>Who</th><th>Verifications held</th><th>Tickets</th><th>Late</th><th>Oldest</th></tr></thead><tbody>${rows}</tbody></table></div>`
+          : '<p class="subtle">Nobody on the team yet.</p>'}
+      </div></section>`);
+  }
+  if (sec) {
+    const devices = sec.newDevices7d.slice(0, 6).map(x => `<li><b>${esc(x.name)}</b> <span class="subtle">${esc(humanize(x.role))} &middot; ${esc(time(x.firstSeenAt))}</span></li>`).join('');
+    const online = sec.onlineNow.map(x => `<li><b>${esc(x.name)}</b> <span class="subtle">${esc(humanize(x.role))} &middot; active ${esc(waited(x.lastActivityAt).text)} ago</span></li>`).join('');
+    blocks.push(`<section class="ov-card" aria-label="Security">
+      <div class="hd"><span class="hico">${OV_EXTRA.shield}</span><h3>Security</h3><span class="tag subtle">Owners only</span></div>
+      <div class="bd">
+        <dl class="kv dash-kv">
+          <dt>Failed sign-ins, last 24 hours</dt><dd>${sec.failedSignIns24h ? `<span class="badge b-amber">${n(sec.failedSignIns24h)}</span>` : '0'}${sec.lockedNow ? ` &middot; <span class="badge b-red">${n(sec.lockedNow)} locked now</span>` : ''}</dd>
+          <dt>Waiting for approval</dt><dd><button type="button" class="link-btn" data-go="approvals">${n(sec.pendingApprovals)}</button></dd>
+          <dt>Owners without a passkey</dt><dd>${sec.passkeysMissing ? `<span class="badge b-red">${n(sec.passkeysMissing)}</span>` : '0'}</dd>
+        </dl>
+        <h4 class="sub-h">In the console now (${n(sec.onlineNow.length)})</h4><ul class="plain-list">${online || '<li class="subtle">Nobody else.</li>'}</ul>
+        <h4 class="sub-h">New browsers this week (${n(sec.newDevices7d.length)})</h4><ul class="plain-list">${devices || '<li class="subtle">None.</li>'}</ul>
+      </div></section>`);
+  }
+  return `<div class="ov-cols dash-cols">${blocks.join('')}</div>`;
 }
 
 function paintOverview(d) {
@@ -6515,6 +6694,12 @@ function paintOverview(d) {
   if (payoutItems.length) attention.push(['amber', `${payoutItems.length} payout${payoutItems.length === 1 ? '' : 's'} waiting to be paid, ${rupees(payoutSum)} in all`, 'payouts']);
   if (routesN > 0) attention.push(['blue', `${routesN} trip${routesN === 1 ? '' : 's'} flagged for route review`, 'routes']);
   if (trustN > 0) attention.push(['blue', `${trustN} account${trustN === 1 ? '' : 's'} in trust review`, 'trust']);
+  // Past their targets (WorkSla): late is a fact a person should act on, not a number to scroll past.
+  const late = d.dashboard && d.dashboard.ops;
+  if (late && late.sosUnattended > 0) attention.unshift(['red', `${late.sosUnattended} SOS with nobody on it for over ${minutesText(d.dashboard.sla.sosAck)}`, 'sos']);
+  if (late && late.tripAlertsUnattended > 0) attention.push(['red', `${late.tripAlertsUnattended} trip alert${late.tripAlertsUnattended === 1 ? '' : 's'} with nobody on it for over ${minutesText(d.dashboard.sla.tripAlertAck)}`, 'live']);
+  if (late && late.verificationLate > 0) attention.push(['amber', `${late.verificationLate} verification${late.verificationLate === 1 ? '' : 's'} past the ${minutesText(d.dashboard.sla.verification)} target`, 'queue']);
+  if (late && late.ticketsLate > 0) attention.push(['amber', `${late.ticketsLate} support ticket${late.ticketsLate === 1 ? '' : 's'} past target`, 'support']);
 
   const mrow = (tone, icon, label, sub, value, status) => `<button type="button" class="mrow" data-go="sellers" data-status="${status}">
       <span class="mi ${tone}">${icon}</span>
@@ -6577,7 +6762,8 @@ function paintOverview(d) {
           </div>
         </section>
       </div>
-    </div>`;
+    </div>
+    ${roleDashboard(d)}`;
 }
 
 $('panel').addEventListener('click', (e) => {
@@ -6914,7 +7100,7 @@ async function renderNow(opts = {}) {
 
 /** Changes section; `state`, when given, replaces that section's filters (e.g. arriving from a cross-link). */
 function switchTab(name, state, fromHistory) {
-  if (!VIEWS[name] || !canOpen(name)) name = 'overview';
+  if (!VIEWS[name] || !canOpen(name)) name = homeTab();
   tab = name;
   sort = { key: null, dir: 'asc' };
   if (state) filterState[name] = state;
@@ -7157,13 +7343,14 @@ $('rows').addEventListener('click', async e => {
  * notification, even with the tab in the background. The sidebar count stays
  * the always-on signal; this is the one that interrupts.
  *
- * Firebase's messaging SDK is loaded only when push is switched on, from
- * Google's CDN at one pinned version - the only script origin the console's
- * CSP allows besides its own hashed block, and only that version's path (see
- * SecurityHeadersConfig). The notification itself is shown by /admin/push-sw.js,
+ * Firebase's messaging SDK is loaded only when push is switched on, from a
+ * copy SheOut serves itself (admin/vendor/firebase, one pinned version): the
+ * console runs no script from any other origin (see SecurityHeadersConfig). The notification itself is shown by /admin/push-sw.js,
  * the same handler the two apps use.
  */
-const FIREBASE_BASE = 'https://www.gstatic.com/firebasejs/12.19.0/';
+// Served by SheOut itself (vendor/firebase, Apache-2.0, version 12.19.0):
+// the console loads no script from anywhere else.
+const FIREBASE_BASE = '/admin/vendor/firebase/';
 
 function paintPush(state) {
   const row = $('pushRow');
@@ -7460,8 +7647,12 @@ const TAB_ACCESS = {
   approvals: () => !!me && !me.legacy,
 };
 function canOpen(name) {
+  if (needsPasskeyFirst()) return name === 'account';
   return !!me && !!TAB_ACCESS[name] && TAB_ACCESS[name]();
 }
+
+/** Where the console opens: Overview, or My account while a required passkey is missing. */
+const homeTab = () => (needsPasskeyFirst() ? 'account' : 'overview');
 
 /** Hides the sections, and the headings over them, this role cannot open. */
 function shapeNav() {
@@ -7492,6 +7683,321 @@ function paintOwnerBanner() {
   $('toStaff').addEventListener('click', () => switchTab('staff'));
 }
 
+// ---- work in hand: who holds what, and how long it may wait ---------------
+/**
+ * Who is on each piece of work, per queue, from /admin/work/{queue}, and the
+ * targets from /admin/work/sla. Verification is a hold (only its holder, or
+ * a manager, opens it); SOS, trip alerts and shops are soft locks - they say
+ * who is on it so two people do not phone the same rider, and anyone may
+ * take over when the first cannot answer.
+ */
+const WORK = {};
+let WORK_SLA = null;
+
+async function loadWork(queue) {
+  try { WORK[queue] = await inBackground(() => api(`/admin/work/${queue}`)); } catch (e) { WORK[queue] = WORK[queue] || {}; }
+}
+
+function minutesText(m) {
+  return m < 60 ? `${m} min` : m < 1440 ? `${Math.round(m / 60)} hr` : `${Math.round(m / 1440)} d`;
+}
+
+/** "How long it has waited", red once past its target, amber in the last quarter before. */
+function slaClock(iso, target) {
+  const w = waited(iso);
+  if (!iso || !target) return `<span class="wait ${w.cls}">${w.text}</span>`;
+  const late = w.mins >= target;
+  const near = !late && w.mins >= target * 0.75;
+  return `<span class="wait ${late ? 'bad' : near ? 'warn' : ''}" title="Target: within ${esc(minutesText(target))}">${w.text}${late ? ' &middot; late' : ''}</span>`;
+}
+
+/** Holder, with Take / Take over / Assign as this role allows. */
+function holderCell(queue, subjectId, opts = {}) {
+  const h = (WORK[queue] || {})[subjectId];
+  const manage = opts.manage && can(opts.manage);
+  const assign = manage ? ` <button class="btn btn-inline" type="button" data-work-assign="${queue}" data-subject="${escValue(subjectId)}">${h ? 'Reassign' : 'Assign'}</button>` : '';
+  if (h) {
+    const who = `<span class="badge ${h.you ? 'b-green' : 'b-blue'}">${h.you ? 'You' : esc(h.label)}</span> <span class="subtle">${esc(waited(h.since).text)}</span>`;
+    const over = !h.you && opts.soft ? ` <button class="btn btn-inline" type="button" data-work-take="${queue}" data-subject="${escValue(subjectId)}" data-takeover="1">Take over</button>` : '';
+    return who + over + assign;
+  }
+  return (opts.soft ? `<button class="btn btn-inline" type="button" data-work-take="${queue}" data-subject="${escValue(subjectId)}">I'm on it</button>` : '<span class="subtle">Nobody</span>') + assign;
+}
+
+/** A manager hands one piece of work to a named person who can do it. */
+async function assignWork(queue, subjectId) {
+  let people;
+  try { people = await api(`/admin/work/${queue}/assignees`); } catch (err) { if (err.message !== 'unauthorized') toast('bad', 'Could not load the team', err.message); return; }
+  if (!people.length) return toast('bad', 'Nobody to give it to', 'No active member of staff can do this work.');
+  openModal(`<div class="modal-head"><h3>Give this to someone</h3><p>They see it as theirs at once. It is in the audit log.</p></div>
+    <div class="modal-body"><label for="assignTo">Who</label>
+      <select id="assignTo">${people.map(p => `<option value="${escValue(p.accountId)}">${esc(p.displayName)} (${esc(humanize(p.role))})</option>`).join('')}</select></div>
+    <div class="modal-foot"><button class="btn" type="button" data-cancel>Cancel</button><button class="btn btn-primary" type="button" id="assignGo">Assign</button></div>`);
+  $('modalRoot').querySelector('[data-cancel]').addEventListener('click', closeModal);
+  $('assignGo').addEventListener('click', async () => {
+    try {
+      const out = await api(`/admin/work/${queue}/${subjectId}/assign`, { method: 'POST', body: JSON.stringify({ staffAccountId: $('assignTo').value }) });
+      closeModal();
+      toast('ok', `Given to ${out.label}`);
+      render({ quiet: true });
+    } catch (err) { if (err.message !== 'unauthorized') toast('bad', 'Not assigned', err.message); }
+  });
+}
+
+// Anywhere on the console: a queue row, the live page, a dialog.
+document.addEventListener('click', async e => {
+  const take = e.target.closest('[data-work-take]');
+  const assign = e.target.closest('[data-work-assign]');
+  if (!take && !assign) return;
+  e.preventDefault();
+  e.stopPropagation();
+  if (assign) return assignWork(assign.dataset.workAssign, assign.dataset.subject);
+  const queue = take.dataset.workTake;
+  try {
+    await api(`/admin/work/${queue}/${take.dataset.subject}/take${take.dataset.takeover ? '?takeOver=true' : ''}`, { method: 'POST' });
+    toast('ok', take.dataset.takeover ? 'You took it over' : 'Marked as yours', 'Everyone else sees you are on it.');
+    if (queue === 'sos') acknowledgeSos();
+    render({ quiet: true });
+  } catch (err) { if (err.message !== 'unauthorized') toast('bad', 'Not taken', err.message); }
+}, true);
+
+// ---- passkeys ---------------------------------------------------------------
+/**
+ * Passkeys (WebAuthn) for sign-in and step-up. The server sends options as
+ * JSON with base64url strings; the browser API wants bytes, and gives bytes
+ * back. Nothing about a passkey is stored in the page: the private key never
+ * leaves the person's device.
+ */
+function passkeysSupported() {
+  return !!(window.PublicKeyCredential && navigator.credentials && navigator.credentials.get);
+}
+function b64uToBytes(s) {
+  s = s.replace(/-/g, '+').replace(/_/g, '/');
+  while (s.length % 4) s += '=';
+  return Uint8Array.from(atob(s), c => c.charCodeAt(0));
+}
+function bytesToB64u(buf) {
+  let bin = '';
+  new Uint8Array(buf).forEach(b => { bin += String.fromCharCode(b); });
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function creationOptions(pk) {
+  return { ...pk, challenge: b64uToBytes(pk.challenge), user: { ...pk.user, id: b64uToBytes(pk.user.id) },
+    excludeCredentials: (pk.excludeCredentials || []).map(c => ({ ...c, id: b64uToBytes(c.id) })) };
+}
+function requestOptions(pk) {
+  const out = { ...pk, challenge: b64uToBytes(pk.challenge) };
+  if (pk.allowCredentials) out.allowCredentials = pk.allowCredentials.map(c => ({ ...c, id: b64uToBytes(c.id) }));
+  return out;
+}
+function credentialJson(cred) {
+  const r = cred.response;
+  const response = { clientDataJSON: bytesToB64u(r.clientDataJSON) };
+  if (r.attestationObject) {
+    response.attestationObject = bytesToB64u(r.attestationObject);
+    if (r.getTransports) response.transports = r.getTransports();
+  } else {
+    response.authenticatorData = bytesToB64u(r.authenticatorData);
+    response.signature = bytesToB64u(r.signature);
+    if (r.userHandle) response.userHandle = bytesToB64u(r.userHandle);
+  }
+  return JSON.stringify({ id: cred.id, rawId: bytesToB64u(cred.rawId), type: cred.type, response,
+    clientExtensionResults: cred.getClientExtensionResults ? cred.getClientExtensionResults() : {} });
+}
+/** Asks the device to sign a challenge from `path`; what to send back with the request. */
+async function passkeyAnswer(path) {
+  const options = await api(path, { method: 'POST', quiet401: true });
+  const cred = await navigator.credentials.get({ publicKey: requestOptions(options.publicKey) });
+  return { passkeyChallengeId: options.challengeId, passkeyCredential: credentialJson(cred) };
+}
+function passkeyCancelled(err) {
+  return err && (err.name === 'NotAllowedError' || err.name === 'AbortError');
+}
+
+async function addPasskey() {
+  const label = (prompt('A name for this passkey, so you can tell it apart later (for example "Work laptop"):', 'This device') || '').trim();
+  if (!label) return false;
+  try {
+    const options = await api('/admin/me/passkeys/options', { method: 'POST' });
+    const cred = await navigator.credentials.create({ publicKey: creationOptions(options.publicKey) });
+    await api('/admin/me/passkeys', { method: 'POST', body: JSON.stringify({ challengeId: options.challengeId, credential: credentialJson(cred), label: label.slice(0, 60) }) });
+    toast('ok', 'Passkey added', 'Sign in with it next time. Owners are alerted whenever a passkey is added.');
+    return true;
+  } catch (err) {
+    if (passkeyCancelled(err)) toast('bad', 'No passkey added', 'The device did not create one.');
+    else if (err.message !== 'unauthorized' && err.code !== 'STEP_UP_CANCELLED') toast('bad', 'No passkey added', err.message);
+    return false;
+  }
+}
+
+/** A role that must have a passkey and has none: My account only, until one is added. */
+function needsPasskeyFirst() {
+  return !!(me && !me.legacy && me.passkey && me.passkey.required && me.passkey.count === 0);
+}
+
+// ---- the live channel -------------------------------------------------------
+/**
+ * Server-Sent Events from /admin/events: a new SOS, a new trip alert, an
+ * approval waiting - each only to the roles that act on it. A push is a
+ * nudge: the console then reloads through the ordinary endpoints. When the
+ * channel is down (a proxy that drops it, a browser without EventSource) the
+ * console polls the active SOS list every 15 seconds instead, and raises the
+ * same banner from what it finds.
+ *
+ * The SOS banner stays, and repeats its sound, until someone at this desk
+ * presses Acknowledge - a tab in the background must still be heard.
+ */
+let liveSource = null;
+let liveConnected = false;
+let livePollTimer = null;
+const knownSos = new Set();      // seen on this console
+const ackedSos = new Set();      // acknowledged here
+let alarmTimer = null;
+let audioCtx = null;
+
+function connectLive() {
+  if (!me || me.legacy || liveSource) return;
+  if (can('sos.respond')) pollSos();
+  if (!window.EventSource) { startLivePolling(); return; }
+  liveSource = new EventSource(API + '/admin/events');
+  liveSource.addEventListener('hello', () => { liveConnected = true; stopLivePolling(); paintLiveState(); });
+  liveSource.addEventListener('sos', (e) => {
+    const data = safeJson(e.data);
+    if (data && data.alertId) raiseSos([data.alertId], true);
+    refreshBadges();
+    if (tab === 'sos') render({ quiet: true });
+  });
+  liveSource.addEventListener('trip-alert', (e) => {
+    raiseTripAlert(safeJson(e.data) || {});
+    refreshBadges();
+    if (tab === 'live' || tab === 'overview') render({ quiet: true });
+  });
+  liveSource.addEventListener('approval', () => {
+    refreshApprovalCount();
+    toast('ok', 'A request is waiting for your approval', 'Open Approvals to decide it.');
+    if (tab === 'approvals') render({ quiet: true });
+  });
+  liveSource.addEventListener('signed-out', () => {
+    disconnectLive();
+    // The next request learns why (idle, revoked, disabled) and signs out with that sentence.
+    api('/admin/auth/me').catch(() => {});
+  });
+  liveSource.onerror = () => {
+    // EventSource retries by itself; until it is back, poll.
+    liveConnected = false;
+    paintLiveState();
+    startLivePolling();
+  };
+}
+
+function disconnectLive() {
+  if (liveSource) liveSource.close();
+  liveSource = null;
+  liveConnected = false;
+  stopLivePolling();
+  stopAlarm();
+  knownSos.clear();
+  ackedSos.clear();
+  $('liveAlarm').hidden = true;
+  $('liveAlarm').innerHTML = '';
+}
+
+function safeJson(text) {
+  try { return JSON.parse(text); } catch (e) { return null; }
+}
+
+function paintLiveState() {
+  $('sosPill').title = liveConnected ? 'Open SOS Alerts (live)' : 'Open SOS Alerts (checking every 15 seconds)';
+}
+
+function startLivePolling() {
+  if (livePollTimer || !can('sos.respond')) return;
+  livePollTimer = setInterval(() => { if (me && !liveConnected) pollSos(); }, 15000);
+}
+function stopLivePolling() {
+  if (livePollTimer) clearInterval(livePollTimer);
+  livePollTimer = null;
+}
+
+/** The active list: new ones raise the banner; one resolved elsewhere stops ringing here. */
+async function pollSos() {
+  try {
+    const active = (await inBackground(() => api('/admin/sos/active'))) || [];
+    const open = new Set(active.map(a => a.id));
+    for (const id of [...knownSos]) if (!open.has(id)) { knownSos.delete(id); ackedSos.delete(id); }
+    const fresh = active.map(a => a.id).filter(id => !knownSos.has(id));
+    $('cSos').textContent = active.length;
+    if (fresh.length) raiseSos(fresh, true);
+    else if (![...knownSos].some(id => !ackedSos.has(id))) clearSosBanner();
+  } catch (e) { /* the next tick tries again */ }
+}
+
+function raiseSos(ids, loud) {
+  ids.forEach(id => knownSos.add(id));
+  const waiting = [...knownSos].filter(id => !ackedSos.has(id));
+  if (!waiting.length) return;
+  const host = $('liveAlarm');
+  host.hidden = false;
+  host.innerHTML = `<div class="sos-alarm" role="alert">
+      <span class="pulse"></span>
+      <span><strong>${waiting.length === 1 ? 'SOS raised.' : waiting.length + ' SOS alerts waiting.'}</strong> Someone needs help now.</span>
+      <button class="btn" type="button" id="alarmOpen">Open SOS Alerts</button>
+      <button class="btn" type="button" id="alarmAck">Acknowledge</button>
+    </div>`;
+  $('alarmOpen').addEventListener('click', () => { acknowledgeSos(); switchTab('sos'); });
+  $('alarmAck').addEventListener('click', acknowledgeSos);
+  if (loud) startAlarm();
+}
+
+function acknowledgeSos() {
+  knownSos.forEach(id => ackedSos.add(id));
+  clearSosBanner();
+}
+function clearSosBanner() {
+  stopAlarm();
+  const host = $('liveAlarm');
+  host.hidden = true;
+  host.innerHTML = '';
+}
+
+const TRIP_ALERT_TEXT = {
+  OVERDUE: 'A trip is running far over time',
+  LOCATION_SILENT: "A partner's phone has gone quiet mid-trip",
+  STOPPED: 'A trip has stopped away from the drop',
+  STUCK_ACCEPTED: 'A trip was accepted and never started',
+  GPS_JUMP: "A partner's phone reported an impossible jump",
+};
+function raiseTripAlert(data) {
+  toast('bad', TRIP_ALERT_TEXT[data.kind] || 'A trip needs checking', 'Open Live to check on it.');
+  beep(660, 0.25);
+}
+
+/** Two tones every 4 seconds until acknowledged. No sound file: nothing to fetch, nothing to block. */
+function startAlarm() {
+  if (alarmTimer) return;
+  const ring = () => { beep(880, 0.2); setTimeout(() => beep(660, 0.3), 260); };
+  ring();
+  alarmTimer = setInterval(ring, 4000);
+}
+function stopAlarm() {
+  if (alarmTimer) clearInterval(alarmTimer);
+  alarmTimer = null;
+}
+function beep(freq, seconds) {
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + seconds);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + seconds);
+  } catch (e) { /* no audio here: the banner still stands */ }
+}
+
 function start() {
   $('loginWrap').hidden = true;
   $('app').hidden = false;
@@ -7502,11 +8008,23 @@ function start() {
   $('whoInitials').textContent = name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') || 'S';
   shapeNav();
   paintOwnerBanner();
+  if (needsPasskeyFirst()) {
+    $('sosPill').hidden = true;
+    const host = $('ownerBanner');
+    host.hidden = false;
+    host.innerHTML = `<span><strong>Add a passkey to use the console.</strong> Your role signs in with a passkey - your fingerprint, face or PIN on this computer or your phone. It cannot be phished the way a code can. Until you add one, only this page opens.</span>
+      <button class="btn btn-primary" type="button" id="gateAddPasskey">Add a passkey</button>`;
+    $('gateAddPasskey').addEventListener('click', () => { const add = $('addPasskey'); if (add) add.click(); });
+    tab = 'account';
+    if (location.hash !== '#/account') history.replaceState(null, '', '#/account');
+    render();
+    return;
+  }
   const fromUrl = (location.hash.match(/^#\/([a-z]+)/) || [])[1];
   if (fromUrl && VIEWS[fromUrl] && canOpen(fromUrl) && fromUrl !== tab) {
     switchTab(fromUrl, null, true);
   } else {
-    if (!canOpen(tab)) tab = 'overview';
+    if (!canOpen(tab)) tab = homeTab();
     if (location.hash !== '#/' + tab) history.replaceState(null, '', '#/' + tab);
     render();
   }
@@ -7515,6 +8033,8 @@ function start() {
   if (!badgeTimer) badgeTimer = setInterval(() => { if (me && !document.hidden) refreshBadges(); }, 60000);
   if (can('sos.respond')) setUpPush(false);
   startLiveRefresh();
+  connectLive();
+  inBackground(() => api('/admin/work/sla')).then(v => { WORK_SLA = v; }).catch(() => {});
 }
 
 /**

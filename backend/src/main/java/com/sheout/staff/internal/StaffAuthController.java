@@ -53,10 +53,12 @@ class StaffAuthController {
     private final StaffSettings settings;
     private final RateLimiter rateLimiter;
     private final ClientAddressResolver clientAddress;
+    private final StaffPasskeys passkeys;
 
     StaffAuthController(StaffSignInService signIn, StaffInviteService invites, StaffSessionService sessions,
                         StaffManagementService management, StaffSettings settings, RateLimiter rateLimiter,
-                        ClientAddressResolver clientAddress) {
+                        ClientAddressResolver clientAddress, StaffPasskeys passkeys) {
+        this.passkeys = passkeys;
         this.signIn = signIn;
         this.invites = invites;
         this.sessions = sessions;
@@ -68,7 +70,39 @@ class StaffAuthController {
 
     record SignInRequest(@NotBlank @Size(max = 254) String email,
                          @NotBlank @Size(max = StaffPasswords.MAX_LENGTH) String password,
-                         @NotBlank @Size(max = 20) String code) {
+                         @Size(max = 20) String code,
+                         java.util.UUID passkeyChallengeId,
+                         @Size(max = 20000) String passkeyCredential) {
+
+        StaffSignInService.PasskeyAnswer passkey() {
+            return new StaffSignInService.PasskeyAnswer(passkeyChallengeId, passkeyCredential);
+        }
+    }
+
+    record PasskeyOptions(java.util.UUID challengeId, com.fasterxml.jackson.databind.JsonNode publicKey) {
+
+        static PasskeyOptions of(StaffPasskeys.Ceremony ceremony) {
+            try {
+                com.fasterxml.jackson.databind.JsonNode tree = new com.fasterxml.jackson.databind.ObjectMapper()
+                        .readTree(ceremony.publicKeyJson());
+                return new PasskeyOptions(ceremony.challengeId(), tree.has("publicKey") ? tree.get("publicKey") : tree);
+            } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+                throw new IllegalStateException(e);
+            }
+        }
+    }
+
+    /**
+     * The challenge a passkey sign-in signs. Asked for before the email is
+     * typed in and listing no keys, so it tells nobody whether an address is
+     * on the staff or has a passkey. Limited per address like sign-in itself.
+     */
+    @StaffPublic
+    @PostMapping("/passkey/options")
+    ResponseEntity<PasskeyOptions> signInOptions(HttpServletRequest http) {
+        String ipKey = "staff-passkey-options:ip:" + clientAddress.resolve(http);
+        rateLimiter.tryConsume(ipKey, settings.loginsPerAddress, WINDOW).orThrow("TOO_MANY_ATTEMPTS", TOO_MANY);
+        return ResponseEntity.ok(PasskeyOptions.of(passkeys.startSignIn()));
     }
 
     @StaffPublic
@@ -81,8 +115,11 @@ class StaffAuthController {
         rateLimiter.tryConsume(ipKey, settings.loginsPerAddress, WINDOW).orThrow("TOO_MANY_ATTEMPTS", TOO_MANY);
         rateLimiter.tryConsume(emailKey, settings.maxFailedLogins, settings.lockFor).orThrow("TOO_MANY_ATTEMPTS", TOO_MANY);
 
+        if ((body.code() == null || body.code().isBlank()) && !body.passkey().present()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", "Enter the code from your authenticator app, or use your passkey.");
+        }
         Result<StaffSignInService.SignedIn, StaffSignInService.SignInError> result =
-                signIn.signIn(body.email(), body.password(), body.code(), http.getHeader("User-Agent"), ip);
+                signIn.signIn(body.email(), body.password(), body.code(), body.passkey(), http.getHeader("User-Agent"), ip);
         if (result.isFailure()) {
             throw switch (result.error()) {
                 case INCORRECT -> new ApiException(HttpStatus.UNAUTHORIZED, "STAFF_SIGN_IN_FAILED", INCORRECT);
@@ -93,6 +130,8 @@ class StaffAuthController {
                         "Your access to the console has ended. Ask an owner if you still need it.");
                 case NETWORK_NOT_ALLOWED -> new ApiException(HttpStatus.FORBIDDEN, "STAFF_NETWORK_NOT_ALLOWED",
                         "Your role can sign in to the console only from approved networks.");
+                case USE_PASSKEY -> new ApiException(HttpStatus.FORBIDDEN, "STAFF_USE_PASSKEY",
+                        "Sign in with your passkey. If you no longer have it, use one of your recovery codes instead of the code.");
             };
         }
         rateLimiter.release(ipKey);
@@ -116,7 +155,23 @@ class StaffAuthController {
         return ResponseEntity.ok(me(member, session, signIn.unusedRecoveryCodes(member)));
     }
 
-    record StepUpRequest(@NotBlank @Size(max = 10) String code) {
+    record StepUpRequest(@Size(max = 10) String code, java.util.UUID passkeyChallengeId,
+                         @Size(max = 20000) String passkeyCredential) {
+    }
+
+    /** Her own passkeys, to step up with instead of typing a code. */
+    @StaffSignedIn
+    @PostMapping("/step-up/passkey-options")
+    ResponseEntity<PasskeyOptions> stepUpOptions() {
+        StaffPrincipal principal = StaffContext.requireSignedIn();
+        if (principal.legacy()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "NO_PASSKEY", "Phone sign-in has no passkeys.");
+        }
+        StaffMemberEntity member = management.find(principal.staffId()).orElseThrow(StaffContext::signInRequired);
+        if (passkeys.count(member.getId()) == 0) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "NO_PASSKEY", "You have no passkey yet. Add one in My account.");
+        }
+        return ResponseEntity.ok(PasskeyOptions.of(passkeys.startStepUp(member)));
     }
 
     record StepUpResponse(java.time.Instant validUntil) {
@@ -136,7 +191,8 @@ class StaffAuthController {
         String key = "staff-stepup:" + principal.staffId();
         rateLimiter.tryConsume(key, settings.maxFailedLogins, WINDOW).orThrow("TOO_MANY_ATTEMPTS", TOO_MANY);
         StaffMemberEntity member = management.find(principal.staffId()).orElseThrow(StaffContext::signInRequired);
-        if (!signIn.stepUp(member, principal, body.code())) {
+        if (!signIn.stepUp(member, principal, body.code(),
+                new StaffSignInService.PasskeyAnswer(body.passkeyChallengeId(), body.passkeyCredential()))) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "WRONG_CODE",
                     "That code is not right. Use the newest code from your authenticator app.");
         }
@@ -221,7 +277,8 @@ class StaffAuthController {
 
     private StaffViews.Me me(StaffMemberEntity member, StaffSessionEntity session, int recoveryCodesLeft) {
         Long owners = member.getRole() == StaffRole.OWNER ? management.activeOwners() : null;
-        return StaffViews.Me.of(member, session, recoveryCodesLeft, owners);
+        return StaffViews.Me.of(member, session, recoveryCodesLeft, owners, new StaffViews.PasskeyStatus(
+                passkeys.count(member.getId()), passkeys.required(member.getRole()), passkeys.recommended(member.getRole())));
     }
 
     private static ApiException linkNotValid() {

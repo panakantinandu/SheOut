@@ -180,6 +180,28 @@ class StaffSessionService {
         return authApi.liveSessions(member.getAccountId(), currentSessionId);
     }
 
+    /**
+     * For a connection that stays open (the live channel): is the session it
+     * was opened with still good? Reads only - neither counts as activity nor
+     * ends anything; the next real request does the ending.
+     */
+    @Transactional(readOnly = true)
+    boolean stillValid(UUID sessionId) {
+        Optional<StaffSessionEntity> found = sessions.findById(sessionId);
+        if (found.isEmpty()) {
+            return false;
+        }
+        StaffSessionEntity session = found.get();
+        StaffMemberEntity member = members.findById(session.getStaffId()).orElse(null);
+        Instant now = Instant.now();
+        return member != null
+                && member.getStatus() == StaffStatus.ACTIVE
+                && !member.accessExpired(now)
+                && authApi.checkSession(sessionId).isEmpty()
+                && session.getAbsoluteExpiresAt().isAfter(now)
+                && session.idleExpiresAt().isAfter(now);
+    }
+
     /** She re-entered her authenticator code on this session just now. */
     @Transactional
     void markSteppedUp(UUID sessionId) {

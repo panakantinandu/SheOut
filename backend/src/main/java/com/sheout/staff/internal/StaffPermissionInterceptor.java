@@ -55,9 +55,12 @@ class StaffPermissionInterceptor implements HandlerInterceptor {
     private final StaffAuditLog audit;
     private final StaffSessionService sessions;
     private final ApprovalService approvals;
+    private final StaffPasskeys passkeys;
 
     StaffPermissionInterceptor(StaffAuditLog audit, StaffSessionService sessions,
-                               @org.springframework.context.annotation.Lazy ApprovalService approvals) {
+                               @org.springframework.context.annotation.Lazy ApprovalService approvals,
+                               StaffPasskeys passkeys) {
+        this.passkeys = passkeys;
         this.audit = audit;
         this.sessions = sessions;
         this.approvals = approvals;
@@ -81,6 +84,13 @@ class StaffPermissionInterceptor implements HandlerInterceptor {
             return true;
         }
         StaffPrincipal staff = StaffContext.current().orElseThrow(() -> signInRequired(request));
+        // A role that must have a passkey and has none yet can sign in (with
+        // her code) and reach her own account to add one - nothing else.
+        if (!staff.legacy() && passkeys.required(staff.role()) && !reachableWithoutPasskey(request)
+                && passkeys.count(staff.staffId()) == 0) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "PASSKEY_REQUIRED",
+                    "Your role needs a passkey. Add one in My account to use the console.");
+        }
         if (declared.signedIn()) {
             return true;
         }
@@ -115,6 +125,12 @@ class StaffPermissionInterceptor implements HandlerInterceptor {
             }
         }
         return true;
+    }
+
+    /** Her own sign-in and account pages: where a passkey is added. */
+    private static boolean reachableWithoutPasskey(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        return path.startsWith("/api/v1/admin/auth/") || path.startsWith("/api/v1/admin/me/");
     }
 
     @Override

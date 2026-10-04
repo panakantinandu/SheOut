@@ -23,6 +23,12 @@ paid. It is the most dangerous part of SheOut. The rule this work follows:
 - **Passwords** must be at least 12 characters and cannot be one of the
   passwords attackers try first. Nobody is forced to change theirs every few
   months; that only makes people pick worse ones.
+- **Owners also need a passkey** - the fingerprint, face or PIN unlock on
+  their laptop or phone. Once an owner has one, she signs in with it instead
+  of the 6-digit code. A passkey cannot be phished: it works only on the
+  real console's address, so a look-alike page gets nothing. The operations
+  manager is asked to add one too. Until an owner adds one, only her My
+  account page opens.
 - **A lost phone:** at setup everyone saves 10 one-time recovery codes on
   paper or in a password manager. Each one gets them in once. If they lose
   those too, an owner resets their sign-in and they set it up again.
@@ -93,6 +99,30 @@ documents, and nobody else can open that partner meanwhile. A support agent
 sees unassigned tickets and her own. The operations manager and owners see
 everything and can hand work back to the queue.
 
+## Instant SOS alerts, and who is on it
+
+An open console hears about a new SOS or trip alert the moment it is
+raised - no refresh. The safety desk sees a red banner and hears a
+repeating tone until someone presses **Acknowledge**. Only roles that can
+respond are told; finance or marketplace staff never are. If the instant
+channel fails, the console checks every 15 seconds instead.
+
+Each SOS, trip alert, partner verification and shop review shows who is on
+it ("I'm on it"), and how long it has waited - amber when close to its
+target, red once past it (2 minutes for an SOS to have someone on it, 24
+hours for a verification; you can change them). Someone else can still
+take over an SOS: an emergency never waits for the first person to come
+back. The operations manager can hand any piece of work to a named person.
+
+## Dashboards
+
+Everyone's Overview shows their own work. Owners also see today's money
+(fares, SheOut's commission, refunds, payouts waiting) and a security
+panel: failed sign-ins, locked accounts, approvals waiting, new browsers
+this week, who is in the console right now, and owners without a passkey.
+The operations manager sees the team: what each person holds and how much
+of it is late.
+
 ## Two people for anything serious
 
 Some things one person can never do alone. One person asks; someone else
@@ -137,7 +167,8 @@ them back.
 
 In the Render dashboard, set `SHEOUT_OWNER_BOOTSTRAP_EMAIL` to your work
 email (it is not written anywhere in the code) and `STAFF_SECRETS_KEY` to a
-new random key.
+new random key. After choosing a password and setting up the authenticator,
+add a passkey when the console asks - best two (laptop and phone).
 
 
 When SheOut first starts with these changes, it emails an invitation to the
@@ -147,9 +178,9 @@ Render, the `sheout-backend` service, Logs, and search for
 `STAFF OWNER INVITATION`. Open it within 24 hours. Then invite a second
 owner straight away.
 
-## What is coming next
+## What has been built
 
-This is phase 1 of 4.
+All four phases are built.
 
 1. **Done:** staff accounts, authenticator codes, invitations, safe sessions,
    roles checked on every request, phone sign-in for the console switched off.
@@ -161,8 +192,9 @@ This is phase 1 of 4.
    or change a manager or owner, reset a sign-in, change an insurance
    policy, or download data. (Commission, fares and GST are set in Render,
    not in the console.)
-4. Dashboards for each role, a live operations board with instant SOS
-   alerts, work queues with assignment and time limits, passkeys for owners.
+4. **Done:** dashboards for each role, instant SOS and trip alerts with a
+   banner and sound, work queues with "who is on it", assignment and time
+   targets, passkeys required for owners and recommended for the manager.
 
 ## What you decided (3 October 2026)
 

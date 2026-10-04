@@ -223,6 +223,21 @@ services:
         value: "200"
       - key: REFUND_LIMIT_MANAGER
         value: "1000"
+      # Passkeys: owners must, managers are asked to. RP id / origins
+      # default to STAFF_CONSOLE_URL's host and origin.
+      - key: STAFF_PASSKEY_REQUIRED_ROLES
+        value: "OWNER"
+      - key: STAFF_PASSKEY_RECOMMENDED_ROLES
+        value: "MANAGER"
+      - key: STAFF_PASSKEY_RP_ID
+        sync: false
+      - key: STAFF_PASSKEY_ORIGINS
+        sync: false
+      # Work targets (defaults in application.yml); set to change them.
+      - key: STAFF_SLA_VERIFICATION_HOURS
+        sync: false
+      - key: STAFF_SLA_SOS_ACK_MINUTES
+        sync: false
       # Off for now (founder). Set to addresses/CIDR ranges to turn on.
       - key: STAFF_IP_ALLOWLIST_OWNER
         sync: false

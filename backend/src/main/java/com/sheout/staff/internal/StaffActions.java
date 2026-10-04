@@ -29,9 +29,12 @@ final class StaffActions {
     static final String SESSIONS_ENDED_BY_OTHER = "staff.sessions.end";
     static final String PASSWORD_CHANGE = "staff.password.change";
     static final String RECOVERY_CODES = "staff.recoverycodes.new";
+    static final String PASSKEY_ADD = "staff.passkey.add";
+    static final String PASSKEY_REMOVE = "staff.passkey.remove";
     static final String PERMISSION_DENIED = "permission.denied";
     static final String WORK_TAKE = "work.take";
     static final String WORK_RELEASE = "work.release";
+    static final String WORK_ASSIGN = "work.assign";
     static final String AUDIT_VIEW = "audit.view";
     static final String AUDIT_CHAIN_OK = "audit.chain.ok";
     static final String AUDIT_CHAIN_BROKEN = "audit.chain.broken";

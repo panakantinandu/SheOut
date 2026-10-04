@@ -49,10 +49,13 @@ class StaffInviteService {
     private final StaffAuditLog audit;
     private final StaffKnownDevices devices;
 
+    private final StaffPasskeys passkeys;
+
     StaffInviteService(StaffInviteRepository invites, StaffMemberRepository members, StaffPasswords passwords,
                        StaffSecrets secrets, StaffSignInService signIn, StaffSessionService sessions,
                        AuthApi authApi, StaffEmailApi email, StaffSettings settings, StaffAuditLog audit,
-                       StaffKnownDevices devices) {
+                       StaffKnownDevices devices, StaffPasskeys passkeys) {
+        this.passkeys = passkeys;
         this.audit = audit;
         this.devices = devices;
         this.invites = invites;
@@ -159,6 +162,8 @@ class StaffInviteService {
         });
         member.clearCredentialsForReset();
         members.save(member);
+        // Her passkeys go too: a reset is for a lost or taken device, and that device may hold one.
+        passkeys.removeAll(member.getId());
         sessions.endAll(member, SessionRevocation.ACCESS_CHANGED);
         String token = StaffTokens.newToken();
         StaffInviteEntity invite = invites.save(new StaffInviteEntity(StaffTokens.sha256(token), member.getEmail(),

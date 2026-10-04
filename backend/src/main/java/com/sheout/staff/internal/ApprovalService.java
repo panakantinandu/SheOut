@@ -6,6 +6,7 @@ import com.sheout.staff.Approvals;
 import com.sheout.staff.Permission;
 import com.sheout.staff.StaffAudit;
 import com.sheout.staff.StaffContext;
+import com.sheout.staff.StaffLiveEvents;
 import com.sheout.staff.StaffPrincipal;
 import com.sheout.staff.StaffRole;
 import org.slf4j.Logger;
@@ -53,10 +54,12 @@ class ApprovalService implements Approvals {
     private final StaffManagementService management;
     private final TransactionTemplate tx;
     private final Duration pendingFor;
+    private final StaffLiveEvents live;
 
     ApprovalService(ApprovalRepository approvals, @Lazy List<ApprovalExecutor> executors, StaffAuditLog audit,
-                    StaffManagementService management, TransactionTemplate tx,
+                    StaffManagementService management, TransactionTemplate tx, StaffLiveEvents live,
                     @Value("${sheout.staff.approval-hours:72}") long approvalHours) {
+        this.live = live;
         this.approvals = approvals;
         this.executors = executors;
         this.audit = audit;
@@ -74,6 +77,9 @@ class ApprovalService implements Approvals {
         audit.record(new StaffAudit.Entry(StaffActions.APPROVAL_REQUEST, null, StaffAudit.Result.OK, "APPROVAL",
                 saved.getId().toString(), request.reason(), "{\"kind\":\"" + request.kind() + "\",\"summary\":\""
                 + jsonText(request.summary()) + "\"}"));
+        // Only to those who could approve it; the console then reloads its list.
+        live.publish("approval", request.approverPermission(), "{\"approvalId\":\"" + saved.getId() + "\",\"kind\":\""
+                + saved.getKind() + "\"}");
         return new Submitted(saved.getId(), saved.getKind(), saved.getStatus().name(), saved.getSummary(), true);
     }
 

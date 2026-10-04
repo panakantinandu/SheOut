@@ -77,4 +77,6 @@ with the source handover.
 |---|---|---|---|
 | BouncyCastle `bcprov-jdk18on` | 1.78 | MIT-style (Bouncy Castle Licence) | The Argon2id algorithm under Spring Security's `Argon2PasswordEncoder` (staff passwords) |
 | ZXing `core` | 3.5.3 | Apache 2.0 | Drawing the authenticator QR code on the server, so the console loads no script |
+| Yubico `webauthn-server-core` (+ `yubico-util` BSD 2-Clause; Jackson CBOR, Guava and Apache HttpClient 5, Apache 2.0; upokecenter `cbor` and its `numbers`/`datautilities`, CC0 public domain) | 2.6.0 | BSD 2-Clause | Checking staff passkeys (WebAuthn) at sign-in and step-up |
+| Firebase JS SDK `firebase-app.js`, `firebase-messaging.js` | 12.19.0 | Apache 2.0 | SOS push to operators' browsers; served from `static/admin/vendor/firebase` instead of gstatic |
 | SecLists `10k-most-common.txt`, `100k-most-used-passwords-NCSC.txt` | master, fetched 2026-10-03 | MIT, (c) 2018 Daniel Miessler | `backend/src/main/resources/staff/common-passwords.txt`: passwords staff may not choose |

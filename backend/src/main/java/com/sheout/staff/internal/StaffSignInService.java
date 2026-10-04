@@ -48,11 +48,13 @@ class StaffSignInService {
     private final StaffIpAllowlist allowlist;
     private final StaffAuditLog audit;
     private final StaffKnownDevices devices;
+    private final StaffPasskeys passkeys;
 
     StaffSignInService(StaffMemberRepository members, StaffRecoveryCodeRepository recoveryCodes,
                        StaffPasswords passwords, StaffSecrets secrets, StaffSessionService sessions,
                        StaffSettings settings, StaffIpAllowlist allowlist, StaffAuditLog audit,
-                       StaffKnownDevices devices) {
+                       StaffKnownDevices devices, StaffPasskeys passkeys) {
+        this.passkeys = passkeys;
         this.allowlist = allowlist;
         this.audit = audit;
         this.devices = devices;
@@ -74,7 +76,16 @@ class StaffSignInService {
         /** Right answers, but this (auditor) account's access has ended. */
         ACCESS_ENDED,
         /** Right answers, from a network this role's allowlist does not include. */
-        NETWORK_NOT_ALLOWED
+        NETWORK_NOT_ALLOWED,
+        /** Right password and code, but her role signs in with its passkey once it has one. */
+        USE_PASSKEY
+    }
+
+    /** A signed passkey answer: which ceremony it answers, and the browser's credential as JSON. */
+    record PasskeyAnswer(java.util.UUID challengeId, String credentialJson) {
+        boolean present() {
+            return challengeId != null && credentialJson != null && !credentialJson.isBlank();
+        }
     }
 
     record SignedIn(StaffMemberEntity member, StaffSessionService.Opened opened, boolean usedRecoveryCode,
@@ -83,6 +94,12 @@ class StaffSignInService {
 
     @Transactional
     Result<SignedIn, SignInError> signIn(String email, String password, String code, String userAgent, String ipAddress) {
+        return signIn(email, password, code, null, userAgent, ipAddress);
+    }
+
+    @Transactional
+    Result<SignedIn, SignInError> signIn(String email, String password, String code, PasskeyAnswer passkey,
+                                         String userAgent, String ipAddress) {
         Optional<StaffMemberEntity> found = members.findByEmailForUpdate(normaliseEmail(email));
         if (found.isEmpty()) {
             passwords.matchDecoy(password);
@@ -96,12 +113,15 @@ class StaffSignInService {
         }
 
         boolean passwordRight = passwords.matches(password, member.getPasswordHash());
-        SecondFactor factor = passwordRight ? checkSecondFactor(member, code, now) : SecondFactor.WRONG;
-        if (!passwordRight || factor == SecondFactor.WRONG) {
+        SecondFactor factor = !passwordRight ? SecondFactor.WRONG
+                : passkey != null && passkey.present() ? checkPasskey(member, passkey)
+                : checkSecondFactor(member, code, now);
+        if (!passwordRight || factor.wrong()) {
             boolean lockedNow = member.recordFailure(now, settings.maxFailedLogins, settings.lockFor);
             members.save(member);
             // Which part was wrong goes in the log for the owners, never in the answer.
-            String which = !passwordRight ? "password" : "authenticator or recovery code";
+            String which = !passwordRight ? "password"
+                    : passkey != null && passkey.present() ? "passkey" : "authenticator or recovery code";
             if (lockedNow) {
                 log.warn("Staff sign-in locked for {} after {} wrong attempts", member.getId(), settings.maxFailedLogins);
                 audit.record(failure(StaffActions.SIGN_IN_LOCKED, member, "wrong " + which + "; locked for "
@@ -127,8 +147,17 @@ class StaffSignInService {
             audit.record(failure(StaffActions.SIGN_IN_REFUSED, member, "network not on the role's allowlist"), actor(member));
             return Result.failure(SignInError.NETWORK_NOT_ALLOWED);
         }
+        // An owner with a passkey uses it: a code can be phished, a passkey
+        // cannot. Recovery codes still work - a lost laptop is not a lockout.
+        if (factor.step().isPresent() && passkeys.required(member.getRole()) && passkeys.count(member.getId()) > 0) {
+            audit.record(failure(StaffActions.SIGN_IN_REFUSED, member, "authenticator code where a passkey is required"),
+                    actor(member));
+            return Result.failure(SignInError.USE_PASSKEY);
+        }
         if (factor.step().isPresent()) {
             member.recordSignIn(now, factor.step().getAsLong());
+        } else if (factor.passkey()) {
+            member.recordSignInWithRecoveryCode(now);
         } else {
             member.recordSignInWithRecoveryCode(now);
             log.info("Staff {} signed in with a recovery code", member.getId());
@@ -137,12 +166,12 @@ class StaffSignInService {
         StaffSessionService.Opened opened = sessions.open(member, userAgent, ipAddress);
         StaffPrincipal principal = StaffSessionService.principalFor(member, opened.session());
         audit.record(new StaffAudit.Entry(StaffActions.SIGN_IN, null, StaffAudit.Result.OK, "STAFF", member.getId().toString(),
-                null, factor.step().isEmpty() ? "with a recovery code" : null), principal);
+                null, factor.passkey() ? "with a passkey" : factor.recovery() ? "with a recovery code" : null), principal);
         if (devices.rememberAndCheckNew(member.getId(), userAgent)) {
             audit.record(new StaffAudit.Entry(StaffActions.NEW_DEVICE, null, StaffAudit.Result.OK, "STAFF",
                     member.getId().toString(), null, StaffKnownDevices.describe(userAgent)), principal);
         }
-        return Result.success(new SignedIn(member, opened, factor.step().isEmpty(), unusedRecoveryCodes(member)));
+        return Result.success(new SignedIn(member, opened, factor.recovery(), unusedRecoveryCodes(member)));
     }
 
     /**
@@ -152,7 +181,23 @@ class StaffSignInService {
      */
     @Transactional
     boolean stepUp(StaffMemberEntity member, StaffPrincipal principal, String code) {
+        return stepUp(member, principal, code, null);
+    }
+
+    /** With her passkey instead of a code, when she gives one. */
+    @Transactional
+    boolean stepUp(StaffMemberEntity member, StaffPrincipal principal, String code, PasskeyAnswer passkey) {
         StaffMemberEntity locked = members.findByIdForUpdate(member.getId()).orElseThrow();
+        if (passkey != null && passkey.present()) {
+            boolean ok = passkeys.verify(locked, StaffPasskeys.Purpose.STEP_UP, passkey.challengeId(), passkey.credentialJson());
+            audit.record(new StaffAudit.Entry(ok ? StaffActions.STEP_UP : StaffActions.STEP_UP_FAILED, null,
+                    ok ? StaffAudit.Result.OK : StaffAudit.Result.FAILED, "STAFF", member.getId().toString(), null, "passkey"),
+                    principal);
+            if (ok) {
+                sessions.markSteppedUp(principal.sessionId());
+            }
+            return ok;
+        }
         String typed = code == null ? "" : code.replaceAll("\\s", "");
         OptionalLong step = locked.hasSecondFactor()
                 ? Totp.verify(secrets.decrypt(locked.getTotpSecret()), typed, Instant.now(), locked.getTotpLastStep())
@@ -179,9 +224,19 @@ class StaffSignInService {
         return new StaffPrincipal(member.getId(), member.getAccountId(), member.getRole(), null, member.getDisplayName(), false);
     }
 
-    /** The authenticator step matched, a recovery code was spent, or neither. */
-    private record SecondFactor(OptionalLong step, boolean recovery) {
-        static final SecondFactor WRONG = new SecondFactor(OptionalLong.empty(), false);
+    /** The authenticator step matched, a recovery code was spent, a passkey signed, or none of these. */
+    private record SecondFactor(OptionalLong step, boolean recovery, boolean passkey) {
+        static final SecondFactor WRONG = new SecondFactor(OptionalLong.empty(), false, false);
+        static final SecondFactor PASSKEY = new SecondFactor(OptionalLong.empty(), false, true);
+
+        boolean wrong() {
+            return step.isEmpty() && !recovery && !passkey;
+        }
+    }
+
+    private SecondFactor checkPasskey(StaffMemberEntity member, PasskeyAnswer passkey) {
+        return passkeys.verify(member, StaffPasskeys.Purpose.SIGN_IN, passkey.challengeId(), passkey.credentialJson())
+                ? SecondFactor.PASSKEY : SecondFactor.WRONG;
     }
 
     private SecondFactor checkSecondFactor(StaffMemberEntity member, String code, Instant now) {
@@ -191,9 +246,9 @@ class StaffSignInService {
         String typed = code.replaceAll("\\s", "");
         if (typed.length() == Totp.DIGITS && typed.chars().allMatch(Character::isDigit)) {
             OptionalLong step = Totp.verify(secrets.decrypt(member.getTotpSecret()), typed, now, member.getTotpLastStep());
-            return step.isPresent() ? new SecondFactor(step, false) : SecondFactor.WRONG;
+            return step.isPresent() ? new SecondFactor(step, false, false) : SecondFactor.WRONG;
         }
-        return spendRecoveryCode(member, typed) ? new SecondFactor(OptionalLong.empty(), true) : SecondFactor.WRONG;
+        return spendRecoveryCode(member, typed) ? new SecondFactor(OptionalLong.empty(), true, false) : SecondFactor.WRONG;
     }
 
     /** Checks every unused code, so how many she has left does not change how long a wrong one takes. */

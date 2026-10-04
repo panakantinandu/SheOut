@@ -55,8 +55,13 @@ final class StaffTestSupport {
         }
     }
 
+    /**
+     * passkey: the software passkey this member registered, for a role that
+     * must have one (owners) - signIn(Member) then signs in with it, as the
+     * console would. Null for every other role.
+     */
     record Member(UUID staffId, UUID accountId, String email, StaffRole role, String secret,
-                  List<String> recoveryCodes, Session session) {
+                  List<String> recoveryCodes, Session session, SoftPasskey passkey) {
     }
 
     String newEmail(String hint) {
@@ -80,9 +85,39 @@ final class StaffTestSupport {
                 .value();
         accounts.add(joined.member().getAccountId());
         markSteppedUp(joined.opened().session().getCsrfToken());
+        Session session = new Session(joined.opened().cookieValue(), joined.opened().session().getCsrfToken());
+        SoftPasskey passkey = role == StaffRole.OWNER ? addPasskey(joined.member().getId(), session) : null;
         return new Member(joined.member().getId(), joined.member().getAccountId(), joined.member().getEmail(), role,
-                enrolment.secret(), joined.recoveryCodes(),
-                new Session(joined.opened().cookieValue(), joined.opened().session().getCsrfToken()));
+                enrolment.secret(), joined.recoveryCodes(), session, passkey);
+    }
+
+    /** Registers a new software passkey through My account, as an owner does on her first sign-in. */
+    SoftPasskey addPasskey(UUID staffId, Session session) {
+        try {
+            SoftPasskey passkey = new SoftPasskey(staffId);
+            JsonNode options = body(mvc.perform(session.on(post("/api/v1/admin/me/passkeys/options"))).andReturn().getResponse());
+            MockHttpServletResponse added = mvc.perform(session.on(post("/api/v1/admin/me/passkeys"))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(json.writeValueAsString(Map.of("challengeId", options.get("challengeId").asText(),
+                                    "credential", passkey.register(options.get("publicKey")), "label", "Test laptop"))))
+                    .andReturn().getResponse();
+            if (added.getStatus() != 200) {
+                throw new AssertionError("Adding a passkey failed: " + added.getStatus() + " " + added.getContentAsString());
+            }
+            return passkey;
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    /** Signs in with email, password and a passkey answer, as the console does for an owner. */
+    MockHttpServletResponse signInWithPasskey(String email, String password, SoftPasskey passkey) throws Exception {
+        JsonNode options = body(mvc.perform(post("/api/v1/admin/auth/passkey/options")).andReturn().getResponse());
+        return mvc.perform(post("/api/v1/admin/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of("email", email, "password", password,
+                                "passkeyChallengeId", options.get("challengeId").asText(),
+                                "passkeyCredential", passkey.sign(options.get("publicKey"))))))
+                .andReturn().getResponse();
     }
 
     static String tokenOf(String link) {
@@ -109,7 +144,9 @@ final class StaffTestSupport {
     }
 
     Session signIn(Member member) throws Exception {
-        MockHttpServletResponse response = signIn(member.email(), PASSWORD, freshCode(member));
+        MockHttpServletResponse response = member.passkey() != null
+                ? signInWithPasskey(member.email(), PASSWORD, member.passkey())
+                : signIn(member.email(), PASSWORD, freshCode(member));
         if (response.getStatus() != 200) {
             throw new AssertionError("Sign-in failed: " + response.getStatus() + " " + response.getContentAsString());
         }

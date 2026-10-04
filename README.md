@@ -334,6 +334,49 @@ approved action that then fails is marked FAILED with the reason.
 - **Configuration history**: an insurance-policy request keeps the policy as
   it was (`before_json`) beside the change; the Approvals page shows both.
 
+### Phase 4: live operations, dashboards, queues, passkeys
+
+- **Live channel.** `GET /api/v1/admin/events` is a Server-Sent Events
+  stream (cookie session, `@StaffSignedIn`). It carries nudges only - ids
+  and kinds, never names or places - each to the roles that act on it: a
+  new SOS and a new trip alert to `sos.respond`, an approval waiting to the
+  approving permission (`staff.StaffLiveEvents`). Events go through Redis
+  pub/sub (`sheout:staff-events`), so every instance's consoles hear them;
+  with Redis down an event reaches that instance only and consoles fall
+  back to polling the SOS list every 15 seconds. Each open stream's session
+  is re-checked every 20 seconds (`STAFF_EVENTS_CHECK_MS`) and closed when
+  it ends. The console shows a red SOS banner with a repeating two-tone
+  sound (WebAudio, no file) until someone at that desk presses Acknowledge.
+- **Dashboards.** `GET /api/v1/admin/dashboard` sends each role only its
+  sections: `ops` (SOS, trip alerts, verification and tickets, with what is
+  past target), `finance` (today in India time: fares, commission, listing
+  fees, refunds, payouts waiting - owners, finance, auditors) and `team`
+  (managers and owners: each agent's work in hand and how much is late).
+  `GET /api/v1/admin/dashboard/security` (owners): failed sign-ins in 24
+  hours, accounts locked, approvals waiting, new browsers this week, who is
+  in the console now, owners without a passkey.
+- **Queues.** `/api/v1/admin/work/{verification|sos|trip-alert|seller-review}`:
+  take, give back, and (managers) assign to a named person who can do the
+  work - all audited. Verification is a hold (an agent opens only what she
+  holds); the others are soft locks that show who is on it and can be taken
+  over, because an SOS must never wait for the person who clicked first.
+  Soft locks clear after `STAFF_SOFT_LOCK_HOURS`. Targets (`STAFF_SLA_*`)
+  draw a clock beside each row - amber near, red past - and feed the
+  dashboards. They are targets: nothing is reassigned automatically.
+- **Passkeys** (WebAuthn, Yubico `webauthn-server-core`). Added in My
+  account after a fresh step-up; every add and remove alerts the owners.
+  Roles in `STAFF_PASSKEY_REQUIRED_ROLES` (owners) can do nothing but add
+  one until they have one, and once they have one must sign in with it - the
+  authenticator code alone is refused. Recovery codes still work for
+  everyone. Roles in `STAFF_PASSKEY_RECOMMENDED_ROLES` (managers) are asked.
+  A passkey also does step-up. The sign-in challenge is issued before the
+  email is known and lists no keys, so it tells nobody who is on the staff;
+  passkeys are created discoverable for this reason. A second-factor reset
+  removes them. Only public keys are stored (`staff_passkeys`, V64).
+- The Firebase messaging scripts are now served from the console itself
+  (`static/admin/vendor/firebase`, 12.19.0); the console's CSP allows
+  scripts from its own hashes and `'self'` only.
+
 ### Setting up the first owner on Render
 
 1. Set `STAFF_SECRETS_KEY` (`openssl rand -base64 32`) and keep a copy
@@ -344,7 +387,9 @@ approved action that then fails is marked FAILED with the reason.
 2. Deploy. Without SMTP, open the service log and find the line
    `STAFF OWNER INVITATION for ...`; with SMTP it is emailed.
 3. Open the link within 24 hours, choose a password, scan the QR code, save
-   the recovery codes. Then invite a second owner from Staff.
+   the recovery codes. The console then asks for a passkey (your laptop's
+   fingerprint, face or PIN, or your phone); add one, ideally two. Then
+   invite a second owner from Staff.
 
 ### Configuration
 
@@ -369,6 +414,13 @@ approved action that then fails is marked FAILED with the reason.
 | `STAFF_ALERT_ACCESS_MINUTES` | 30 | How long after an alert closes the safety desk keeps reach |
 | `STAFF_AUDIT_CHECK_CRON` | `0 30 3 * * *` | When the audit chain is checked (India time) |
 | `STAFF_APPROVAL_HOURS` | 72 | How long a four-eyes request may wait before it expires |
+| `STAFF_PASSKEY_REQUIRED_ROLES` / `STAFF_PASSKEY_RECOMMENDED_ROLES` | `OWNER` / `MANAGER` | Comma-separated roles that must / are asked to have a passkey |
+| `STAFF_PASSKEY_RP_ID` / `STAFF_PASSKEY_ORIGINS` | the console URL's host / origin | The site passkeys are bound to. Changing the RP id makes every existing passkey stop working |
+| `STAFF_SLA_VERIFICATION_HOURS` | 24 | Verification waiting target |
+| `STAFF_SLA_SOS_ACK_MINUTES` / `STAFF_SLA_TRIP_ALERT_ACK_MINUTES` | 2 / 10 | How long an SOS / trip alert may go with nobody on it |
+| `STAFF_SLA_SELLER_REVIEW_HOURS` | 48 | Shop review target |
+| `STAFF_SLA_TICKET_HIGH_HOURS` / `_MEDIUM_HOURS` / `_LOW_HOURS` | 4 / 24 / 72 | Support ticket targets by priority |
+| `STAFF_SOFT_LOCK_HOURS` | 12 | When a "taken by" on an SOS, trip alert or shop clears |
 
 ### Flagged assumptions
 
@@ -391,9 +443,27 @@ approved action that then fails is marked FAILED with the reason.
 - **Without SMTP an invitation link is shown to whoever sent it.** That
   person could accept it themselves. It is a link to an account of a role
   they could already grant; once audit exists (Phase 2) it is visible.
-- **The console still loads Firebase's messaging script** from gstatic, for
-  SOS push to operators' browsers. Phase 4 adds Server-Sent Events; until
-  then removing it would remove SOS alerts to a closed tab.
+- **The console keeps Firebase messaging** for SOS push to a closed tab -
+  Server-Sent Events reach only an open console - but serves the scripts
+  itself (Phase 4) rather than loading them from gstatic.
+- **A manager's dashboard leaves out today's money** (the brief's layout),
+  though a manager holds `reports.finance` from Phase 1 and can open the
+  finance reports. It is a layout choice, not a boundary.
+- **SLA targets are defaults of ours**: 2 minutes for an SOS to have
+  someone on it, 10 for a trip alert, 24 hours for verification, 48 for a
+  shop, 4/24/72 hours for high/medium/low tickets. Change them in Render.
+- **"Acknowledged" for an SOS is someone pressing "I'm on it"** (a soft
+  lock). The SOS record itself has no acknowledged state; resolving it is
+  unchanged.
+- **Assigning SOS, trip alerts and shops is a `support.all` holder's**
+  (managers, owners); verification assignment is `verification.all`'s.
+- **An owner who loses every passkey signs in with a recovery code**; she
+  then lands on My account until she adds a new one. If her recovery codes
+  are gone too, another owner resets her sign-in, which removes her
+  passkeys.
+- **The live channel is one HTTP connection per open console.** Render's
+  proxy passes Server-Sent Events; a connection is closed after 30 minutes
+  and the browser reconnects by itself.
 - **Finance's refund limit was not given**, so it is the support limit
   (₹200) until decided. Nothing issues refunds from the console yet: the
   refund endpoint arrives with Phase 3's approvals and checks

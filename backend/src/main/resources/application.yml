@@ -617,6 +617,32 @@ sheout:
       finance: ${STAFF_IP_ALLOWLIST_FINANCE:}
       marketplace-moderator: ${STAFF_IP_ALLOWLIST_MARKETPLACE_MODERATOR:}
       auditor: ${STAFF_IP_ALLOWLIST_AUDITOR:}
+    # How long work may wait before it shows as late - on the managers'
+    # dashboard and as a red clock beside the row. Targets, not rules:
+    # nothing is refused or reassigned when one passes.
+    sla:
+      verification-hours: ${STAFF_SLA_VERIFICATION_HOURS:24}
+      sos-ack-minutes: ${STAFF_SLA_SOS_ACK_MINUTES:2}
+      trip-alert-ack-minutes: ${STAFF_SLA_TRIP_ALERT_ACK_MINUTES:10}
+      seller-review-hours: ${STAFF_SLA_SELLER_REVIEW_HOURS:48}
+      ticket-high-hours: ${STAFF_SLA_TICKET_HIGH_HOURS:4}
+      ticket-medium-hours: ${STAFF_SLA_TICKET_MEDIUM_HOURS:24}
+      ticket-low-hours: ${STAFF_SLA_TICKET_LOW_HOURS:72}
+    # Passkeys (WebAuthn). Owners must have one and sign in with it once
+    # they do; managers are asked to. The site a passkey is bound to (the
+    # RP id) and the addresses allowed to use it default to the console
+    # URL's host and origin - set them only if the console moves domain,
+    # and know that changing the RP id makes every existing passkey stop
+    # working (everyone falls back to a recovery code and adds a new one).
+    passkey:
+      required-roles: ${STAFF_PASSKEY_REQUIRED_ROLES:OWNER}
+      recommended-roles: ${STAFF_PASSKEY_RECOMMENDED_ROLES:MANAGER}
+      rp-id: ${STAFF_PASSKEY_RP_ID:}
+      origins: ${STAFF_PASSKEY_ORIGINS:}
+    # How often each open live connection re-checks its session (ms).
+    events-check-ms: ${STAFF_EVENTS_CHECK_MS:20000}
+    # A "taken by" on an SOS, trip alert or shop clears after this long.
+    soft-lock-hours: ${STAFF_SOFT_LOCK_HOURS:12}
     login:
       # Wrong answers in a row before an account is locked, and for how long.
       max-failures: ${STAFF_LOGIN_MAX_FAILURES:5}

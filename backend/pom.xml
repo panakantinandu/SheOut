@@ -82,6 +82,16 @@
             <version>1.78</version>
         </dependency>
 
+        <!-- Passkeys (WebAuthn) for staff sign-in and step-up
+             (staff.internal.StaffPasskeys): Yubico's server-side library checks
+             each signature, the origin, the counter and the challenge, so none
+             of that is hand-written here. -->
+        <dependency>
+            <groupId>com.yubico</groupId>
+            <artifactId>webauthn-server-core</artifactId>
+            <version>2.6.0</version>
+        </dependency>
+
         <!-- The QR code a new staff member scans into an authenticator app,
              drawn on the server so the console loads no third-party script. -->
         <dependency>

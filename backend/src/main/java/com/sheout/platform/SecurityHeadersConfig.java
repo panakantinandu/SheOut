@@ -135,12 +135,12 @@ public class SecurityHeadersConfig {
     }
 
     /**
-     * Firebase's messaging SDK, at one pinned version. The path, not just the
-     * host, is what is allowed: nothing else Google serves from gstatic can
-     * run on the page that holds an operator's token. Bump together with the
-     * version in the console's FIREBASE_BASE.
+     * Firebase's messaging SDK is served from the console's own origin
+     * (static/admin/vendor/firebase, version 12.19.0, its import of
+     * firebase-app rewritten to the local copy): no third-party script origin
+     * is allowed at all. 'self' covers it and the push service worker.
      */
-    static final String FIREBASE_SCRIPTS = "https://www.gstatic.com/firebasejs/12.19.0/";
+    static final String SELF_SCRIPTS = "'self'";
 
     /** The two endpoints Firebase calls to issue and register a push token. */
     static final String FIREBASE_CONNECT = "https://firebaseinstallations.googleapis.com https://fcmregistrations.googleapis.com";
@@ -156,7 +156,7 @@ public class SecurityHeadersConfig {
         String scripts = hashes(html, "script");
         String styles = hashes(html, "style");
         return "default-src 'none'"
-                + "; script-src " + scripts + " " + FIREBASE_SCRIPTS
+                + "; script-src " + scripts + " " + SELF_SCRIPTS
                 + "; style-src " + styles
                 + "; img-src 'self' https: data: blob:"
                 + "; connect-src 'self' " + FIREBASE_CONNECT

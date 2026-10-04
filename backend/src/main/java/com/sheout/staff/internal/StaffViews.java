@@ -26,25 +26,30 @@ final class StaffViews {
     record Me(UUID staffId, UUID accountId, String displayName, String email, StaffRole role, String roleLabel,
               List<String> permissions, String csrfToken, long idleTimeoutSeconds, Instant idleExpiresAt,
               Instant absoluteExpiresAt, Instant accessExpiresAt, int recoveryCodesLeft, Long activeOwners,
-              boolean legacy) {
+              boolean legacy, PasskeyStatus passkey) {
 
-        static Me of(StaffMemberEntity member, StaffSessionEntity session, int recoveryCodesLeft, Long activeOwners) {
+        static Me of(StaffMemberEntity member, StaffSessionEntity session, int recoveryCodesLeft, Long activeOwners,
+                     PasskeyStatus passkey) {
             return new Me(member.getId(), member.getAccountId(), member.getDisplayName(), member.getEmail(), member.getRole(),
                     StaffRoleLabels.label(member.getRole()), keys(member.getRole()), session.getCsrfToken(),
                     session.idleExpiresAt().getEpochSecond() - session.getLastActivityAt().getEpochSecond(),
                     session.idleExpiresAt(), session.getAbsoluteExpiresAt(), member.getAccessExpiresAt(),
-                    recoveryCodesLeft, activeOwners, false);
+                    recoveryCodesLeft, activeOwners, false, passkey);
         }
 
         /** An old phone-and-code ADMIN token, only ever while ADMIN_PHONE_LOGIN_ENABLED is on. */
         static Me legacy(StaffPrincipal principal) {
             return new Me(null, principal.accountId(), principal.displayName(), null, principal.role(), "Owner (phone sign-in)",
-                    keys(principal.role()), null, 0, null, null, null, 0, null, true);
+                    keys(principal.role()), null, 0, null, null, null, 0, null, true, new PasskeyStatus(0, false, false));
         }
 
         private static List<String> keys(StaffRole role) {
             return role.permissions().stream().map(Permission::key).sorted().toList();
         }
+    }
+
+    /** How many passkeys she has, and whether her role must (owners) or should (managers) have one. */
+    record PasskeyStatus(int count, boolean required, boolean recommended) {
     }
 
     record SignInResponse(Me me, boolean usedRecoveryCode) {
