@@ -5124,6 +5124,10 @@ function createTileMap(host, { center = HYDERABAD, zoom = 12, minZoom = 8, maxZo
         img.alt = '';
         img.draggable = false;
         img.decoding = 'async';
+        // The page is no-referrer, but OpenStreetMap refuses a tile request
+        // that names no site (403 "Access blocked"). The origin alone - no
+        // path, so no record id - is what its tile policy asks for.
+        img.referrerPolicy = 'strict-origin';
         img.src = TILE_URL(st.z, ((tx % n) + n) % n, ty);
         img.style.left = (tx * TILE - left) + 'px';
         img.style.top = (ty * TILE - top) + 'px';
