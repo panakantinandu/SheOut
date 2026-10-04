@@ -977,6 +977,7 @@ function ShopStatusScreen({ shop, onShop, reload, onFix }: { shop: Shop; onShop:
                       navigate('/book/parcel', {
                         state: {
                           marketplace: 'seller',
+                          productId: p.id,
                           pickup: shop.parcelPickup ?? undefined,
                           parcelNote: t('seller.parcel.note', { code: p.code, title: p.title }).slice(0, 300),
                         },

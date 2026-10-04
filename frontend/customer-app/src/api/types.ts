@@ -404,6 +404,8 @@ export interface SellerProduct {
   active: boolean;
   images: { id: string; url: string | null }[];
   terms?: ProductTerms;
+  /** Buyers who tapped Call or WhatsApp on it today. */
+  enquiriesToday?: number;
 }
 
 /**

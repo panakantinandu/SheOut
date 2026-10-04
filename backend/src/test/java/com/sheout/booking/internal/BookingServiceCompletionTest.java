@@ -137,6 +137,40 @@ class BookingServiceCompletionTest {
     }
 
     @Test
+    void aDeliveredParcelThatCarriesAnOrderSaysWhichAndHowMany() {
+        UUID product = UUID.randomUUID();
+        BookingEntity parcel = new BookingEntity(BookingType.DELIVERY, BookingCategory.PARCEL, UUID.randomUUID(),
+                new GeoAddressEmbeddable("pickup", 17.3800, 78.4800),
+                new GeoAddressEmbeddable("drop", 17.3850, 78.4867), BigDecimal.TEN);
+        parcel.setDriverId(driverId);
+        parcel.setStatus(BookingStatus.IN_PROGRESS);
+        parcel.setOrder(product, 3);
+        UUID parcelId = UUID.randomUUID();
+        when(repository.findLockedById(parcelId)).thenReturn(Optional.of(parcel));
+        when(locations.findLocation(driverId)).thenReturn(Optional.of(new DriverLocation(17.3850, 78.4867, Instant.now())));
+
+        assertTrue(service.completeTrip(parcelId, driverId).isSuccess());
+
+        var captor = org.mockito.ArgumentCaptor.forClass(com.sheout.sharedkernel.event.DomainEvent.class);
+        verify(events, org.mockito.Mockito.times(2)).publish(captor.capture());
+        var delivered = captor.getAllValues().stream()
+                .filter(e -> e instanceof com.sheout.booking.ParcelOrderDelivered)
+                .map(e -> (com.sheout.booking.ParcelOrderDelivered) e).findFirst().orElseThrow();
+        assertEquals(product, delivered.orderProductId());
+        assertEquals(3, delivered.orderQuantity());
+    }
+
+    @Test
+    void aRideNeverCarriesAnOrder() {
+        when(locations.findLocation(driverId)).thenReturn(Optional.of(new DriverLocation(17.3850, 78.4867, Instant.now())));
+        booking.setOrder(UUID.randomUUID(), 1);
+
+        assertTrue(service.completeTrip(bookingId, driverId).isSuccess());
+        verify(events, org.mockito.Mockito.times(1)).publish(org.mockito.ArgumentMatchers.isA(com.sheout.booking.BookingCompleted.class));
+        verify(events, org.mockito.Mockito.never()).publish(org.mockito.ArgumentMatchers.isA(com.sheout.booking.ParcelOrderDelivered.class));
+    }
+
+    @Test
     void unauthorizedDriverCannotComplete() {
         when(locations.findLocation(driverId)).thenReturn(Optional.of(
                 new DriverLocation(17.3850, 78.4867, Instant.now())));

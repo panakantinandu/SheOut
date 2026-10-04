@@ -455,6 +455,29 @@ class NotificationEventListeners {
                 "/seller/manage", "seller-plan-" + event.sellerId(), OutboundMessage.Urgency.NORMAL));
     }
 
+    /**
+     * Her stock: a SheOut parcel delivered it and her count went down (or it
+     * sold out), or buyers asked about it today and she may have sold some
+     * off the app. Opens My products on that product.
+     */
+    @Async(NotificationDeliveryConfig.EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void onSellerStockNotice(com.sheout.marketplace.SellerStockNotice event) {
+        String key = switch (event.kind()) {
+            case DELIVERED -> event.left() == null ? "sellerDeliveredUncounted"
+                    : event.left() == 0 ? "sellerDeliveredSoldOut" : "sellerDelivered";
+            case ENQUIRIES -> event.quantity() > 1 ? "sellerEnquiries" : "sellerEnquiry";
+        };
+        UUID to = event.accountId();
+        dispatcher.deliver(to, NotificationType.SELLER_STOCK, localized(to, key, language -> Map.of(
+                        "title", event.productTitle(),
+                        "quantity", String.valueOf(event.quantity()),
+                        "count", String.valueOf(event.quantity()),
+                        "left", event.left() == null ? "" : String.valueOf(event.left())),
+                "/seller/my-products?code=" + event.productCode(), "seller-stock-" + event.productCode(),
+                OutboundMessage.Urgency.NORMAL));
+    }
+
     private static java.time.LocalDate indiaDate(java.time.Instant instant) {
         return instant.atZone(java.time.ZoneId.of("Asia/Kolkata")).toLocalDate();
     }

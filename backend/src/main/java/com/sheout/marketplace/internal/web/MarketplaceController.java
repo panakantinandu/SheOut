@@ -147,6 +147,22 @@ public class MarketplaceController {
                         "This seller has not set a pickup point. Ask her for the address."));
     }
 
+    /**
+     * A buyer tapped Call or WhatsApp on this product - an enquiry, counted
+     * for the seller (never who asked). Fire-and-forget: 204 whatever
+     * happens, so the call or WhatsApp is never held up by it.
+     */
+    @PostMapping("/products/{productId}/enquired")
+    public ResponseEntity<Void> enquired(@PathVariable UUID productId) {
+        CurrentAccount caller = requireCustomer();
+        try {
+            products.recordEnquiry(productId, caller.accountId());
+        } catch (RuntimeException ignored) {
+            // A count is never worth an error in her way.
+        }
+        return ResponseEntity.noContent().build();
+    }
+
     // ------------------------------------------------------------ her shop
 
     @PutMapping("/seller/me/parcel-pickup")

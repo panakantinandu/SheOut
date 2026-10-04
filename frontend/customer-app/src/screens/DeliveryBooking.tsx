@@ -54,6 +54,8 @@ export interface ParcelRouteState {
   marketplace?: 'buyer' | 'seller';
   /** The seller's parcel pickup point, when she has set one - a starting point, still changeable. */
   pickup?: GeoAddress;
+  /** The Marketplace product the parcel carries: delivered, its stock goes down by the quantity. */
+  productId?: string;
 }
 
 const MEAL_TYPES = ['VEG', 'NON_VEG'] as const;
@@ -115,6 +117,8 @@ export function DeliveryBooking() {
   const [pickerMode, setPickerMode] = useState<PickerMode>('search');
   const chipsRef = useRef<HTMLDivElement>(null);
   const [details, setDetails] = useState(kind === 'parcel' ? routeState.parcelNote ?? '' : '');
+  const orderProductId = kind === 'parcel' ? routeState.productId : undefined;
+  const [quantity, setQuantity] = useState(1);
   const [mealType, setMealType] = useState<MealType>('VEG');
   const [plan, setPlan] = useState<Plan>('DAILY');
   const [submitting, setSubmitting] = useState(false);
@@ -164,8 +168,18 @@ export function DeliveryBooking() {
     setSubmitting(true);
     setError(null);
     try {
-      const note = isLunchbox ? undefined : details.trim() || undefined;
-      const booking = await bookingApi.create({ type: 'DELIVERY', category: config.category, pickup, drop, parcelNote: note });
+      // The partner reads how many from the note; the order carries it for the stock.
+      const base = isLunchbox ? '' : details.trim();
+      const note = base ? (orderProductId && quantity > 1 ? `${base} x${quantity}`.slice(0, 300) : base) : undefined;
+      const booking = await bookingApi.create({
+        type: 'DELIVERY',
+        category: config.category,
+        pickup,
+        drop,
+        parcelNote: note,
+        orderProductId,
+        orderQuantity: orderProductId ? quantity : undefined,
+      });
       navigate(`/tracking/${booking.id}`);
     } catch (err) {
       setError(apiErrorText(err, 'booking.createError'));
@@ -251,6 +265,24 @@ export function DeliveryBooking() {
               data-testid="parcel-details"
             />
             {!isLunchbox && <p className="-mt-2 text-caption text-text-secondary">{t('delivery.parcel.detailsHint')}</p>}
+            {/* How many: when it is delivered, the seller's stock goes down by this many. */}
+            {orderProductId && (
+              <div className="flex items-center justify-between gap-3" data-testid="order-quantity">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-text-primary">{t('delivery.marketplace.quantity')}</p>
+                  <p className="text-caption text-text-secondary">{t('delivery.marketplace.quantityHint')}</p>
+                </div>
+                <div className="flex shrink-0 items-center rounded-full border border-border">
+                  <button type="button" className="flex h-9 w-9 items-center justify-center text-lg disabled:opacity-40" disabled={quantity <= 1} onClick={() => setQuantity((q) => Math.max(1, q - 1))} aria-label={t('delivery.marketplace.fewer')}>
+                    -
+                  </button>
+                  <span className="min-w-[2rem] text-center text-sm font-semibold">{quantity}</span>
+                  <button type="button" className="flex h-9 w-9 items-center justify-center text-lg disabled:opacity-40" disabled={quantity >= 20} onClick={() => setQuantity((q) => Math.min(20, q + 1))} aria-label={t('delivery.marketplace.more')}>
+                    +
+                  </button>
+                </div>
+              </div>
+            )}
             {pickupError && !pickup && <p className="text-xs text-text-secondary">{pickupError}</p>}
             {error && <p className="text-sm text-danger">{error}</p>}
             {liveTripId && (

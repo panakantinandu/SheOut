@@ -59,7 +59,9 @@ public class ProductService implements ProductApi {
     private final ListingSearchApi listingSearch;
 
     ProductService(SellerProfileRepository sellers, ProductRepository products, ProductImageRepository images,
-                   ShopViews views, DocumentStorage documentStorage, MarketplaceLimits limits, ListingSearchApi listingSearch) {
+                   ShopViews views, DocumentStorage documentStorage, MarketplaceLimits limits, ListingSearchApi listingSearch,
+                   StockKeeper stock) {
+        this.stock = stock;
         this.sellers = sellers;
         this.products = products;
         this.images = images;
@@ -67,6 +69,13 @@ public class ProductService implements ProductApi {
         this.documentStorage = documentStorage;
         this.limits = limits;
         this.listingSearch = listingSearch;
+    }
+
+    private final StockKeeper stock;
+
+    @Override
+    public void recordEnquiry(UUID productId, UUID buyerAccountId) {
+        stock.recordEnquiry(productId, buyerAccountId);
     }
 
     // ------------------------------------------------------------ the directory

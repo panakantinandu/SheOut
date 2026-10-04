@@ -58,7 +58,9 @@ public final class MarketplaceViews {
 
     public record ProductView(UUID id, String code, String title, String description, BigDecimal displayPrice,
                               BigDecimal originalPrice, boolean active, List<ProductImageView> images,
-                              ProductTerms terms) {
+                              ProductTerms terms,
+                              /** Buyers who tapped Call or WhatsApp on it today - for her own view only. */
+                              int enquiriesToday) {
     }
 
     /**

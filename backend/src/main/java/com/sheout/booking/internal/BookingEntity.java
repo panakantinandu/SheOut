@@ -238,6 +238,25 @@ public class BookingEntity extends BaseEntity {
         this.parcelNote = parcelNote;
     }
 
+    /** The order a delivery carries - an opaque reference, see ParcelOrderDelivered. */
+    @Column(name = "order_product_id")
+    private UUID orderProductId;
+    @Column(name = "order_quantity")
+    private Integer orderQuantity;
+
+    public void setOrder(UUID productId, Integer quantity) {
+        this.orderProductId = productId;
+        this.orderQuantity = productId == null ? null : quantity;
+    }
+
+    public UUID getOrderProductId() {
+        return orderProductId;
+    }
+
+    public Integer getOrderQuantity() {
+        return orderQuantity;
+    }
+
     public String getParcelNote() {
         return parcelNote;
     }

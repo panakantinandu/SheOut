@@ -844,7 +844,9 @@
       "show": "Show",
       "nowHidden": "Hidden from customers",
       "nowShown": "Shown to customers again",
-      "manageAll": "Manage all"
+      "manageAll": "Manage all",
+      "askedToday_one": "{{count}} asked today",
+      "askedToday_other": "{{count}} asked today"
     }
   },
   "refer": {
@@ -1024,7 +1026,11 @@
       "terms": "SheOut carries the parcel only. The price, payment, returns and refunds are between you and the other person. You pay for this delivery in the app.",
       "sellerPickup": "Seller's pickup address - ask the seller",
       "pickupFromSeller": "Pickup is the seller's pickup point. Change it if she tells you the product is somewhere else.",
-      "pickupYours": "Pickup is your saved pickup point. Change it if the product is somewhere else today."
+      "pickupYours": "Pickup is your saved pickup point. Change it if the product is somewhere else today.",
+      "quantity": "How many in this parcel?",
+      "quantityHint": "When it's delivered, the seller's stock goes down by this many.",
+      "fewer": "One fewer",
+      "more": "One more"
     }
   },
   "geo": {

@@ -670,7 +670,16 @@ export const bookingApi = {
   },
 
   /** parcelNote: a delivery only - what is in the parcel, shown to the partner who carries it. */
-  create(input: { type: BookingType; category: BookingCategory; pickup: GeoAddress; drop: GeoAddress; parcelNote?: string }): Promise<BookingSummary> {
+  create(input: {
+    type: BookingType;
+    category: BookingCategory;
+    pickup: GeoAddress;
+    drop: GeoAddress;
+    parcelNote?: string;
+    /** A Marketplace parcel: the product it carries, so its stock goes down when delivered. */
+    orderProductId?: string;
+    orderQuantity?: number;
+  }): Promise<BookingSummary> {
     return request('/api/v1/bookings', { method: 'POST', body: input });
   },
 
@@ -985,6 +994,11 @@ export const marketplaceApi = {
 
   product(productId: string): Promise<ProductDetail> {
     return request(`/api/v1/marketplace/products/${productId}`);
+  },
+
+  /** A buyer tapped Call or WhatsApp: counted for the seller. Never waited on, never an error. */
+  recordEnquiry(productId: string): void {
+    request(`/api/v1/marketplace/products/${productId}/enquired`, { method: 'POST' }).catch(() => undefined);
   },
 
   /** The seller's parcel pickup point, asked for only when a buyer books a parcel. Null when she has not set one. */

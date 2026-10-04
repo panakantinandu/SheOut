@@ -1,6 +1,6 @@
 import { Copy, EyeOff, ImageOff, Minus, Package, PackagePlus, Pencil, Plus, Search } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button, Card, ListEmptyState, SkeletonCard, TextField, TopHeader, showToast, useTranslation } from '@sheout/design-system';
 import { marketplaceApi } from '../api/client';
 import type { ProductInput, ProductTerms, SellerProduct, SellerShop } from '../api/types';
@@ -60,7 +60,9 @@ export function MyProducts() {
   const goBack = useGoBack('/profile');
   const [shop, setShop] = useState<SellerShop | null | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
-  const [find, setFind] = useState('');
+  // Opened from a reminder ("3 buyers asked about ..."): straight to that product.
+  const [params] = useSearchParams();
+  const [find, setFind] = useState(params.get('code') ?? '');
   const [filter, setFilter] = useState<Filter>('all');
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -237,6 +239,11 @@ export function MyProducts() {
                             </span>
                           )}
                           {p.images.length === 0 && <span className="text-xs font-semibold text-accent-orange-strong">{t('seller.wizard.products.missingPhoto')}</span>}
+                          {(p.enquiriesToday ?? 0) > 0 && (
+                            <span className="rounded-full bg-primary-light px-2.5 py-1 text-xs font-semibold text-primary" data-testid="enquiries-today">
+                              {t('seller.myProducts.askedToday', { count: p.enquiriesToday })}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -299,6 +306,7 @@ export function MyProducts() {
                                 navigate('/book/parcel', {
                                   state: {
                                     marketplace: 'seller',
+                                    productId: p.id,
                                     pickup: shop.parcelPickup ?? undefined,
                                     parcelNote: t('seller.parcel.note', { code: p.code, title: p.title }).slice(0, 300),
                                   },

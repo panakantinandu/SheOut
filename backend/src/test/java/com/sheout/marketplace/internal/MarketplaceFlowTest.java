@@ -93,6 +93,7 @@ class MarketplaceFlowTest {
     @Autowired ApplicationEvents events;
     @Autowired SellerPlanReminders reminders;
     @Autowired SampleShops samples;
+    @Autowired StockKeeper stock;
     @Autowired SellerProfileRepository sellerRepository;
 
     /** 10:00 in India today: daytime, when reminders may go. */
@@ -502,6 +503,61 @@ class MarketplaceFlowTest {
                 .isEqualTo(MarketplaceError.INVALID_PICKUP);
         ok(sellers.setParcelPickup(bina, null));
         assertThat(sellers.parcelPickupFor(jar)).isEmpty();
+    }
+
+    @Test
+    void aDeliveredParcelCountsStockDownAndBuyersAskingBringsAnEveningReminder() throws IOException {
+        SellerView shop = ok(sellers.applyAsSeller(bina, details("Bina " + tag + " Bangles", "9876500008", null)));
+        com.sheout.marketplace.ProductTerms three = new com.sheout.marketplace.ProductTerms(
+                com.sheout.marketplace.ProductTerms.Availability.IN_STOCK, 3, null, com.sheout.marketplace.ProductTerms.PriceUnit.SET,
+                null, null, Set.of(), null, null);
+        UUID set = ok(products.addProduct(bina, new ProductDetails("Glass bangles " + tag, "Set of 12", new BigDecimal("300"), null, true, three)))
+                .products().get(0).id();
+        ok(products.addProductImage(bina, set, photo()));
+        ok(sellers.submitForReview(bina));
+        ok(sellers.approve(shop.id(), admin));
+
+        // ---- a SheOut parcel carrying 2 is delivered: 3 -> 1, and she is told
+        events.clear();
+        stock.onParcelOrderDelivered(new com.sheout.booking.ParcelOrderDelivered(UUID.randomUUID(), asha, set, 2));
+        assertThat(productOf(set).terms().quantityAvailable()).isEqualTo(1);
+        assertThat(events.stream(com.sheout.marketplace.SellerStockNotice.class)).singleElement().satisfies(n -> {
+            assertThat(n.kind()).isEqualTo(com.sheout.marketplace.SellerStockNotice.Kind.DELIVERED);
+            assertThat(n.left()).isEqualTo(1);
+            assertThat(n.accountId()).isEqualTo(bina);
+        });
+        // ---- the next takes the last: sold out, nothing negative
+        stock.onParcelOrderDelivered(new com.sheout.booking.ParcelOrderDelivered(UUID.randomUUID(), asha, set, 2));
+        assertThat(productOf(set).terms().availability()).isEqualTo(com.sheout.marketplace.ProductTerms.Availability.OUT_OF_STOCK);
+        assertThat(productOf(set).terms().quantityAvailable()).isNull();
+
+        // ---- buyers asking: once a day each, never her own taps
+        ok(products.updateProduct(bina, set, new ProductDetails("Glass bangles " + tag, "Set of 12", new BigDecimal("300"), null, true, three)));
+        stock.recordEnquiry(set, asha);
+        stock.recordEnquiry(set, asha);
+        stock.recordEnquiry(set, bina);
+        UUID third = UUID.randomUUID();
+        accounts.add(third);
+        stock.recordEnquiry(set, third);
+        assertThat(productOf(set).enquiriesToday()).isEqualTo(2);
+
+        events.clear();
+        java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Kolkata"));
+        assertThat(stock.remindSellers(today)).isGreaterThanOrEqualTo(1);
+        assertThat(events.stream(com.sheout.marketplace.SellerStockNotice.class).filter(n -> n.accountId().equals(bina)))
+                .singleElement().satisfies(n -> {
+                    assertThat(n.kind()).isEqualTo(com.sheout.marketplace.SellerStockNotice.Kind.ENQUIRIES);
+                    assertThat(n.quantity()).isEqualTo(2);
+                });
+        events.clear();
+        stock.remindSellers(today);
+        assertThat(events.stream(com.sheout.marketplace.SellerStockNotice.class).filter(n -> n.accountId().equals(bina)))
+                .as("once a day").isEmpty();
+        jdbc.update("delete from product_enquiries where product_id = ?", set);
+    }
+
+    private com.sheout.marketplace.MarketplaceViews.ProductView productOf(UUID productId) {
+        return sellers.mySeller(bina).orElseThrow().products().stream().filter(p -> p.id().equals(productId)).findFirst().orElseThrow();
     }
 
     /** The plan sweep at {@code at}, and the reminders it sent. */

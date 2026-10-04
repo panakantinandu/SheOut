@@ -110,7 +110,9 @@ public class BookingController {
                 request.category(),
                 request.pickup().toGeoAddress(),
                 request.drop().toGeoAddress(),
-                request.parcelNote()
+                request.parcelNote(),
+                request.orderProductId(),
+                request.orderQuantity()
         );
         Result<BookingSummary, BookingError> result = bookingService.requestBooking(command);
         if (result.isFailure()) {
@@ -768,7 +770,10 @@ public class BookingController {
             @Valid @NotNull GeoAddressRequest pickup,
             @Valid @NotNull GeoAddressRequest drop,
             /** A delivery only: what is in the parcel, for the partner carrying it. Optional. */
-            @jakarta.validation.constraints.Size(max = 300) String parcelNote
+            @jakarta.validation.constraints.Size(max = 300) String parcelNote,
+            /** A delivery only: the Marketplace product it carries, so its stock goes down when delivered. Optional. */
+            UUID orderProductId,
+            @jakarta.validation.constraints.Min(1) @jakarta.validation.constraints.Max(20) Integer orderQuantity
     ) {
     }
 

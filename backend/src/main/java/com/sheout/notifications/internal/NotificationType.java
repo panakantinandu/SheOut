@@ -51,6 +51,8 @@ public enum NotificationType {
     SELLER_STATUS,
     /** To a seller: her month ends soon, has ended, or her shop is hidden until she pays - see marketplace's SellerPlanNotice. */
     SELLER_PLAN,
+    /** To a seller: a SheOut parcel delivered her product and her stock went down, or buyers asked about it today - see marketplace's SellerStockNotice. */
+    SELLER_STOCK,
     /** An operator's announcement delivered to each account one by one (the SheOut Seller waitlist), not by topic. */
     ANNOUNCEMENT,
 

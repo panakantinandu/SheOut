@@ -311,6 +311,10 @@ public class BookingService implements BookingApi {
                 fareEstimate
         );
         booking.setParcelNote(parcelNote);
+        if (command.type() == com.sheout.booking.BookingType.DELIVERY && command.orderProductId() != null) {
+            int quantity = command.orderQuantity() == null ? 1 : Math.max(1, Math.min(20, command.orderQuantity()));
+            booking.setOrder(command.orderProductId(), quantity);
+        }
         booking.recordQuotedDistance(
                 BigDecimal.valueOf(quote.distanceKm()).setScale(2, java.math.RoundingMode.HALF_UP), quote.routed());
         // Kept for her receipt's "Fare details" - the same quote, so the parts add up to what she agreed to.
@@ -589,8 +593,7 @@ public class BookingService implements BookingApi {
                 reason, trimmedNote, now);
         bookingRepository.save(booking);
 
-        eventPublisher.publish(new BookingCompleted(
-                booking.getId(), booking.getCustomerId(), booking.getDriverId(), booking.getFinalFare(), booking.amountDue()));
+        publishCompleted(booking);
         return Result.success(toSummary(booking));
     }
 
@@ -632,8 +635,7 @@ public class BookingService implements BookingApi {
                 null, null, now);
         bookingRepository.save(booking);
 
-        eventPublisher.publish(new BookingCompleted(
-                booking.getId(), booking.getCustomerId(), booking.getDriverId(), booking.getFinalFare(), booking.amountDue()));
+        publishCompleted(booking);
         return Result.success(toSummary(booking));
     }
 
@@ -1045,6 +1047,20 @@ public class BookingService implements BookingApi {
         return authApi.findAccount(customerId)
                 .map(account -> verifiedBypassPhone.equals(account.phoneNumber()))
                 .orElse(false);
+    }
+
+    /**
+     * The trip is over: payments charges for it, and a parcel that carried an
+     * order says so, so its stock can go down - only now that it has arrived,
+     * never at booking, so a cancelled parcel changes nothing.
+     */
+    private void publishCompleted(BookingEntity booking) {
+        eventPublisher.publish(new BookingCompleted(
+                booking.getId(), booking.getCustomerId(), booking.getDriverId(), booking.getFinalFare(), booking.amountDue()));
+        if (booking.getType() == com.sheout.booking.BookingType.DELIVERY && booking.getOrderProductId() != null) {
+            eventPublisher.publish(new com.sheout.booking.ParcelOrderDelivered(booking.getId(), booking.getCustomerId(),
+                    booking.getOrderProductId(), booking.getOrderQuantity() == null ? 1 : booking.getOrderQuantity()));
+        }
     }
 
     /** Eight or more digits, allowing spaces, dashes and a leading +: a phone number, however it was typed. */

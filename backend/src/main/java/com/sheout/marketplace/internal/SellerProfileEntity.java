@@ -96,6 +96,9 @@ public class SellerProfileEntity extends BaseEntity {
     @Column(name = "parcel_pickup_lng")
     private Double parcelPickupLng;
 
+    /** The day she was last sent the evening "sold any?" reminder - at most one a day. */
+    private java.time.LocalDate lastEnquiryNudge;
+
     protected SellerProfileEntity() {
         // JPA
     }
@@ -208,6 +211,10 @@ public class SellerProfileEntity extends BaseEntity {
         this.parcelPickupLng = lng;
     }
 
+    void enquiryNudgeSent(java.time.LocalDate day) {
+        this.lastEnquiryNudge = day;
+    }
+
     void planNoticeSent(String notice) {
         lastPlanNotice = notice;
     }
@@ -274,4 +281,5 @@ public class SellerProfileEntity extends BaseEntity {
     public String getParcelPickupLabel() { return parcelPickupLabel; }
     public Double getParcelPickupLat() { return parcelPickupLat; }
     public Double getParcelPickupLng() { return parcelPickupLng; }
+    public java.time.LocalDate getLastEnquiryNudge() { return lastEnquiryNudge; }
 }

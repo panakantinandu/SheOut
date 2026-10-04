@@ -31,9 +31,12 @@ class ShopViews {
     private final PaymentApi paymentApi;
     private final CustomerProfileApi customerProfiles;
     private final MarketplaceLimits limits;
+    private final ProductEnquiries enquiries;
 
     ShopViews(ProductRepository products, ProductImageRepository images, DocumentStorage documentStorage,
-              PaymentApi paymentApi, CustomerProfileApi customerProfiles, MarketplaceLimits limits) {
+              PaymentApi paymentApi, CustomerProfileApi customerProfiles, MarketplaceLimits limits,
+              ProductEnquiries enquiries) {
+        this.enquiries = enquiries;
         this.products = products;
         this.images = images;
         this.documentStorage = documentStorage;
@@ -47,7 +50,9 @@ class ShopViews {
     }
 
     SellerView sellerView(SellerProfileEntity seller) {
-        List<ProductView> productViews = productViews(products.findBySellerIdOrderByCreatedAtAsc(seller.getId()));
+        List<ProductEntity> own = products.findBySellerIdOrderByCreatedAtAsc(seller.getId());
+        List<ProductView> productViews = productViews(own, enquiries.countsOn(own.stream().map(ProductEntity::getId).toList(),
+                java.time.LocalDate.now(java.time.ZoneId.of("Asia/Kolkata"))));
         int imagesUsed = productViews.stream().mapToInt(p -> p.images().size()).sum();
         boolean verified = accountVerified(seller.getAccountId());
         boolean hasPhotographedProduct = productViews.stream().anyMatch(p -> p.active() && !p.images().isEmpty());
@@ -131,13 +136,17 @@ class ShopViews {
     }
 
     List<ProductView> productViews(List<ProductEntity> list) {
+        return productViews(list, Map.of());
+    }
+
+    List<ProductView> productViews(List<ProductEntity> list, Map<UUID, Integer> enquiriesToday) {
         Map<UUID, List<ProductImageEntity>> byProduct = imagesOf(list.stream().map(ProductEntity::getId).toList());
         return list.stream().map(p -> new ProductView(
                 p.getId(), p.getCode(), p.getTitle(), p.getDescription(), p.getDisplayPrice(), p.getOriginalPrice(), p.isActive(),
                 byProduct.getOrDefault(p.getId(), List.of()).stream()
                         .map(i -> new ProductImageView(i.getId(), url(i.getStorageKey())))
                         .toList(),
-                p.getTerms())).toList();
+                p.getTerms(), enquiriesToday.getOrDefault(p.getId(), 0))).toList();
     }
 
     List<ListingCard> cards(List<ProductEntity> list, Map<UUID, SellerProfileEntity> sellers) {

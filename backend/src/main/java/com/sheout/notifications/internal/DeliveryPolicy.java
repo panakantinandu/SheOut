@@ -66,6 +66,8 @@ record DeliveryPolicy(boolean push, boolean emailFallback, boolean smsFallback, 
             // text - that needs a DLT-registered template, and a reminder
             // days ahead is not urgent enough to pay for one.
             case SELLER_PLAN -> PUSH_THEN_EMAIL;
+            // Her stock: worth a glance, not an email or a text.
+            case SELLER_STOCK -> PUSH_ONLY;
             // "Are you all right?" mid-trip. If push cannot reach her phone
             // - no data - a text is exactly when it matters.
             case TRIP_CHECK_IN -> PUSH_THEN_SMS;

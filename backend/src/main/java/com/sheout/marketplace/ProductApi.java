@@ -44,4 +44,11 @@ public interface ProductApi {
     Result<SellerView, MarketplaceError> addProductImage(UUID accountId, UUID productId, DocumentUpload upload);
 
     Result<SellerView, MarketplaceError> deleteProductImage(UUID accountId, UUID productId, UUID imageId);
+
+    /**
+     * A buyer tapped Call or WhatsApp on this product: an enquiry, counted
+     * for the seller once a day per buyer. Ignored for her own product, a
+     * sample, or a listing that is not live.
+     */
+    void recordEnquiry(UUID productId, UUID buyerAccountId);
 }

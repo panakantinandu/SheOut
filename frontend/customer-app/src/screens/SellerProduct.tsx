@@ -200,6 +200,8 @@ export function SellerProduct() {
 
               <a
                 href={contact.href}
+                // An enquiry for the seller's "sold any?" reminder - counted, never waited on.
+                onClick={() => marketplaceApi.recordEnquiry(product.productId)}
                 target={contact.kind === 'whatsapp' ? '_blank' : undefined}
                 rel={contact.kind === 'whatsapp' ? 'noopener noreferrer' : undefined}
                 className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-4 font-heading text-card-title text-text-inverse shadow-lift"
@@ -239,6 +241,7 @@ export function SellerProduct() {
                     navigate('/book/parcel', {
                       state: {
                         marketplace: 'buyer',
+                        productId: product.productId,
                         pickup: pickup ?? undefined,
                         parcelNote: t('seller.parcel.note', { code: product.code, title: product.title }).slice(0, 300),
                       },
