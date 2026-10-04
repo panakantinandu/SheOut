@@ -62,7 +62,7 @@ const BOOKING_STATUS: Record<string, string> = {
   // Deliberately not phrased as a cancellation. Nobody called this off;
   // the search ended without finding anyone, and telling a rider she
   // cancelled a trip she was waiting for is both wrong and insulting.
-  NO_DRIVERS_AVAILABLE: 'No drivers found',
+  NO_DRIVERS_AVAILABLE: 'No partner found',
 };
 
 export function bookingStatusLabel(status: string | null | undefined): string {
@@ -119,4 +119,16 @@ const PAYMENT_STATUS: Record<string, string> = {
 export function paymentStatusLabel(status: string | null | undefined): string {
   if (!status) return dsT('common.unknown', 'Unknown');
   return dsT(`paymentStatus.${status}`, PAYMENT_STATUS[status] ?? humanizeEnum(status));
+}
+
+/**
+ * "+919000000101" -> "+91 90000 00101": an Indian mobile number grouped the
+ * way people read it aloud. Anything that is not a ten-digit Indian mobile
+ * (with or without +91) comes back as it was.
+ */
+export function phoneDisplay(phone: string | null | undefined): string {
+  if (!phone) return '';
+  const digits = phone.replace(/\D/g, '');
+  const ten = digits.length === 12 && digits.startsWith('91') ? digits.slice(2) : digits.length === 10 ? digits : null;
+  return ten ? `+91 ${ten.slice(0, 5)} ${ten.slice(5)}` : phone;
 }

@@ -106,6 +106,7 @@ export function Home() {
   const [profileError, setProfileError] = useState<string | null>(null);
   const [verificationError, setVerificationError] = useState<string | null>(null);
   const [togglingOnline, setTogglingOnline] = useState(false);
+  const [checklistBlocking, setChecklistBlocking] = useState(false);
   // Set when the server says she is not anywhere SheOut operates. Not an
   // error - a standing fact about where she is, which no retry changes.
   const [outOfArea, setOutOfArea] = useState<string | null>(null);
@@ -390,7 +391,11 @@ export function Home() {
   // Good morning / afternoon / evening, the sky beside it, and a line for
   // that time of day changing softly under it.
   const dayPart = useDayPart();
-  const dayLines = [t(`home.day.${dayPart}.line1`), t(`home.day.${dayPart}.line2`)];
+  // "Stay online to catch the next trip" reads as a mistake to a partner who
+  // cannot go online yet: until she is verified, one line about getting ready.
+  const dayLines = heroState === 'verification'
+    ? [t('home.gettingReady')]
+    : [t(`home.day.${dayPart}.line1`), t(`home.day.${dayPart}.line2`)];
 
   return (
     <div className="space-y-4">
@@ -447,7 +452,7 @@ export function Home() {
       <ServiceClosedStrip />
 
       {/* A missing, rejected or expired document, or a police check due: what to do, before she is refused. */}
-      <ReadinessBanner reloadKey={profile?.updatedAt} />
+      <ReadinessBanner reloadKey={profile?.updatedAt} onBlocked={setChecklistBlocking} />
 
       {/* Where she stands, and the one thing to do about it. */}
       {profileError ? (
@@ -463,6 +468,7 @@ export function Home() {
           onTurnOnLocation={() => (location.permission === 'denied' ? setLocationHelpOpen(true) : askForLocation())}
           onReviewVerification={() => navigate('/verification')}
           message={outOfArea ?? error}
+          checklistAbove={checklistBlocking}
         />
       )}
 

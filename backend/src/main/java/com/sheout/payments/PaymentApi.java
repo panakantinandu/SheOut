@@ -36,13 +36,15 @@ public interface PaymentApi {
     // ------------------------------------------------------------ listing fees
 
     /**
-     * Opens (or reopens) the Razorpay order for a seller's listing fee. One
-     * payment row per seller: asking again before paying reuses it, so a
-     * closed Checkout or a failed card never leaves two fees to reconcile.
-     * The amount is the marketplace's to decide and is fixed on the row the
-     * first time; an already-captured fee is refused as ALREADY_CAPTURED.
+     * Opens (or reopens) the Razorpay order for a seller's fee for one month
+     * ({@code period}: 1 for her first paid month). One payment row per
+     * seller and month: asking again before paying reuses it, so a closed
+     * Checkout or a failed card never leaves two fees to reconcile. The
+     * amount is the marketplace's to decide and is fixed on the row the
+     * first time; an already-captured month is refused as ALREADY_CAPTURED.
      */
-    Result<ListingFeeCheckout, PaymentError> startListingFeeCheckout(UUID payerAccountId, UUID sellerId, BigDecimal amount);
+    Result<ListingFeeCheckout, PaymentError> startListingFeeCheckout(UUID payerAccountId, UUID sellerId, int period,
+                                                                    BigDecimal amount);
 
     /**
      * Checkout reported success. Verified with Razorpay exactly as a trip is -
@@ -50,16 +52,20 @@ public interface PaymentApi {
      * before ListingFeePaid is published. A no-op if the webhook got there
      * first.
      */
-    Result<PaymentSummary, PaymentError> confirmListingFeeCheckout(UUID payerAccountId, UUID sellerId, String orderId,
-                                                                    String razorpayPaymentId, String signature);
+    Result<PaymentSummary, PaymentError> confirmListingFeeCheckout(UUID payerAccountId, UUID sellerId, int period,
+                                                                    String orderId, String razorpayPaymentId, String signature);
 
-    /** The seller's listing fee as it stands, if one was ever started. */
-    Optional<PaymentSummary> listingFeeFor(UUID sellerId);
+    /** The seller's fee for one month as it stands, if one was ever started. */
+    Optional<PaymentSummary> listingFeeFor(UUID sellerId, int period);
+
+    /** Every month a seller has paid for, oldest first - her payment history. */
+    java.util.List<SellerFeePayment> paidListingFees(UUID sellerId);
 
     /**
      * The fee paid from her SheOut wallet: the debit and the capture in one
      * transaction, and ListingFeePaid published with it. INSUFFICIENT_BALANCE
      * when her balance is short; ALREADY_CAPTURED when it is paid already.
      */
-    Result<PaymentSummary, PaymentError> payListingFeeFromWallet(UUID payerAccountId, UUID sellerId, BigDecimal amount);
+    Result<PaymentSummary, PaymentError> payListingFeeFromWallet(UUID payerAccountId, UUID sellerId, int period,
+                                                                 BigDecimal amount);
 }

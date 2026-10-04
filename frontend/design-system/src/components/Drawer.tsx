@@ -85,8 +85,10 @@ export function Drawer({ open, onClose, header, sections, footer }: DrawerProps)
         aria-label={t('drawer.label')}
         tabIndex={-1}
         className={cn(
-          'absolute inset-y-0 left-0 flex w-[82%] max-w-[20rem] flex-col bg-surface shadow-overlay outline-none transition-transform duration-300 ease-out',
-          open ? 'translate-x-0' : '-translate-x-full'
+          'absolute inset-y-0 left-0 flex w-[82%] max-w-[20rem] flex-col bg-surface shadow-overlay outline-none transition-[transform,visibility] duration-300 ease-out',
+          // Hidden once it has slid away: off-screen, its shadow still showed
+          // as a faint line down the left edge of every screen.
+          open ? 'visible translate-x-0' : 'invisible -translate-x-full'
         )}
         data-testid="drawer"
         {...(open ? {} : { inert: '' })}

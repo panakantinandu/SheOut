@@ -6,12 +6,15 @@ comes back.
 
 ## SheOut Seller (marketplace)
 
-SheOut lists sellers for a flat one-time listing fee and is not a party to
-any sale. The apps say so in two places:
+SheOut lists sellers for a flat monthly fee (499 rupees by default; the
+first month after approval is free) and is not a party to any sale. Each
+month is paid by hand from the app - there is no auto-debit - and an unpaid
+shop is hidden, not deleted, three days after its month ends. The apps say
+so in two places:
 
 | Where | String key (rider app) | English |
 |---|---|---|
-| Seller application, and the foot of the seller's own shop screen | `seller.legal.applicationNotice` | SheOut is a discovery platform - you handle your own sales, payments, and delivery directly with customers. SheOut charges a flat listing fee only and is not party to your transactions. |
+| Seller application, and the foot of the seller's own shop screen | `seller.legal.applicationNotice` | SheOut is a discovery platform - you handle your own sales, payments, and delivery directly with customers. SheOut charges a flat monthly listing fee only and is not party to your transactions. |
 | Every product page shown to customers | `seller.legal.productNotice` | This sale happens directly with the seller. SheOut is not involved in payment or delivery for this listing. |
 
 Related wording in the same flows, worth reading alongside:
@@ -21,7 +24,8 @@ Related wording in the same flows, worth reading alongside:
   SheOut is not part of them."
 - `seller.directory.notInvolved` - under the directory list.
 - `seller.product.priceNote` - "Price set by the seller. Confirm it with her before you buy."
-- `seller.fee.oneTime` - "One-time fee. SheOut takes nothing from your sales."
+- `seller.fee.oneTime` - "Each payment adds one month. No auto-debit - you choose when to pay. SheOut takes nothing from your sales."
+- `seller.submit.free` - "Review is free. Once approved, your shop goes live and the first month is free. After that it is {{amount}} a month."
 
 The Hindi and Telugu versions (`hi.json`, `te.json`) are machine-quality
 translations of the above and need the same review; see
@@ -30,9 +34,13 @@ other translated safety copy is being handled.
 
 Open questions for the review:
 
-- Whether the Terms of Service need a SheOut Seller section (listing fee,
-  refund policy for the fee if a shop is suspended, content rules, and
-  the platform's non-involvement in sales). None exists yet.
+- Whether the Terms of Service need a SheOut Seller section (the monthly
+  fee and free first month, what happens to a month already paid if a shop
+  is suspended - today it is kept for when she is reinstated, not refunded -
+  content rules, and the platform's non-involvement in sales). None exists
+  yet.
+- GST on the monthly fee (TaxCategory SELLER_LISTING_FEE) is off with the
+  rest of GST until the CA signs off.
 - Whether showing a seller's phone/WhatsApp number to every signed-in rider
   needs explicit consent wording in the application beyond the form
   labels.

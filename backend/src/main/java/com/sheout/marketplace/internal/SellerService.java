@@ -14,6 +14,7 @@ import com.sheout.payments.ListingFeeCheckout;
 import com.sheout.payments.ListingFeePaid;
 import com.sheout.payments.PaymentApi;
 import com.sheout.payments.PaymentError;
+import com.sheout.payments.PaymentStatus;
 import com.sheout.payments.PaymentSummary;
 import com.sheout.privacy.AccountDeletionRequested;
 import com.sheout.sharedkernel.Result;
@@ -34,6 +35,7 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
@@ -43,11 +45,12 @@ import java.util.function.Consumer;
  * A seller's shop from application to the directory, and every decision an
  * operator makes about it.
  * <p>
- * The order is deliberate: she builds her shop, a person reviews it for
- * free, and only then does she pay. The fee is charged through payments'
- * ordinary Razorpay flow as a SELLER_LISTING_FEE; its capture (Checkout or
- * webhook, whichever is first) publishes ListingFeePaid, and that - nothing
- * else - puts her in the directory.
+ * She builds her shop and a person reviews it, free. Approval puts it live
+ * at once on its free first month; after that she pays a flat fee a month
+ * (SellerPlan has the rules). Each month is charged through payments'
+ * ordinary Razorpay flow, or her wallet, as a SELLER_LISTING_FEE for that
+ * period; its capture (Checkout or webhook, whichever is first) publishes
+ * ListingFeePaid, and that - nothing else - adds the month.
  */
 @Service
 public class SellerService implements SellerApi, MarketplaceAdminApi {
@@ -150,7 +153,7 @@ public class SellerService implements SellerApi, MarketplaceAdminApi {
     }
 
     /**
-     * The Razorpay order for her fee. No transaction is held open: the
+     * The Razorpay order for her next month. No transaction is held open: the
      * gateway call can take seconds, and payments opens its own short ones.
      */
     @Override
@@ -160,17 +163,18 @@ public class SellerService implements SellerApi, MarketplaceAdminApi {
             return Result.failure(MarketplaceError.NOT_A_SELLER);
         }
         SellerProfileEntity seller = found.get();
-        if (seller.getStatus() != SellerStatus.APPROVED_AWAITING_PAYMENT) {
-            return Result.failure(seller.getStatus() == SellerStatus.ACTIVE
-                    ? MarketplaceError.ALREADY_PAID : MarketplaceError.NOT_AWAITING_PAYMENT);
+        Optional<MarketplaceError> refused = payRefusal(seller);
+        if (refused.isPresent()) {
+            return Result.failure(refused.get());
         }
+        int period = SellerPlan.nextPeriod(seller);
         Result<ListingFeeCheckout, PaymentError> checkout =
-                paymentApi.startListingFeeCheckout(accountId, seller.getId(), seller.getListingFeeAmount());
+                paymentApi.startListingFeeCheckout(accountId, seller.getId(), period, limits.monthlyFee());
         if (checkout.isFailure()) {
             if (checkout.error() == PaymentError.ALREADY_CAPTURED) {
-                // Paid, but she is still waiting: the capture's event was
+                // Paid, but her month was not added: the capture's event was
                 // missed. Put that right now rather than ask her twice.
-                activateIfPaid(seller.getId());
+                renewIfPaid(seller.getId(), period);
                 return Result.failure(MarketplaceError.ALREADY_PAID);
             }
             log.warn("Listing fee checkout for seller {} failed: {}", seller.getId(), checkout.error());
@@ -186,12 +190,13 @@ public class SellerService implements SellerApi, MarketplaceAdminApi {
             return Result.failure(MarketplaceError.NOT_A_SELLER);
         }
         SellerProfileEntity seller = found.get();
-        if (seller.getStatus() != SellerStatus.APPROVED_AWAITING_PAYMENT) {
-            return Result.failure(seller.getStatus() == SellerStatus.ACTIVE
-                    ? MarketplaceError.ALREADY_PAID : MarketplaceError.NOT_AWAITING_PAYMENT);
+        Optional<MarketplaceError> refused = payRefusal(seller);
+        if (refused.isPresent()) {
+            return Result.failure(refused.get());
         }
+        int period = SellerPlan.nextPeriod(seller);
         Result<PaymentSummary, PaymentError> paid =
-                paymentApi.payListingFeeFromWallet(accountId, seller.getId(), seller.getListingFeeAmount());
+                paymentApi.payListingFeeFromWallet(accountId, seller.getId(), period, limits.monthlyFee());
         if (paid.isFailure()) {
             return Result.failure(switch (paid.error()) {
                 case INSUFFICIENT_BALANCE -> MarketplaceError.INSUFFICIENT_BALANCE;
@@ -200,7 +205,7 @@ public class SellerService implements SellerApi, MarketplaceAdminApi {
             });
         }
         // ListingFeePaid has run as the payment committed; this covers it if it could not.
-        activateIfPaid(seller.getId());
+        renewIfPaid(seller.getId(), period);
         return Result.success(mySeller(accountId).orElseThrow());
     }
 
@@ -211,8 +216,9 @@ public class SellerService implements SellerApi, MarketplaceAdminApi {
         if (found.isEmpty()) {
             return Result.failure(MarketplaceError.NOT_A_SELLER);
         }
+        int period = SellerPlan.nextPeriod(found.get());
         Result<PaymentSummary, PaymentError> confirmed = paymentApi.confirmListingFeeCheckout(
-                accountId, found.get().getId(), orderId, razorpayPaymentId, signature);
+                accountId, found.get().getId(), period, orderId, razorpayPaymentId, signature);
         if (confirmed.isFailure()) {
             log.warn("Listing fee confirmation for seller {} failed: {}", found.get().getId(), confirmed.error());
             return Result.failure(confirmed.error() == PaymentError.SIGNATURE_INVALID
@@ -220,43 +226,55 @@ public class SellerService implements SellerApi, MarketplaceAdminApi {
         }
         // ListingFeePaid has been handled by now (it runs as the capture
         // commits); this also covers the case where it could not be.
-        activateIfPaid(found.get().getId());
+        renewIfPaid(found.get().getId(), period);
         return Result.success(mySeller(accountId).orElseThrow());
     }
 
+    /** Why she may not pay for her next month now, if she may not - before any order is made. */
+    private Optional<MarketplaceError> payRefusal(SellerProfileEntity seller) {
+        if (SellerPlan.canPay(seller, limits, Instant.now())) {
+            return Optional.empty();
+        }
+        // Live with time to spare: this month is covered; the next can be paid in its last days.
+        return Optional.of(seller.getStatus() == SellerStatus.ACTIVE
+                ? MarketplaceError.ALREADY_PAID : MarketplaceError.NOT_AWAITING_PAYMENT);
+    }
+
     /**
-     * Her fee was captured. After the payment commits, in a transaction of
+     * A month was captured. After the payment commits, in a transaction of
      * its own, so a problem here can never undo a payment Razorpay has taken.
      */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onListingFeePaid(ListingFeePaid event) {
-        sellers.findLockedById(event.sellerId()).ifPresentOrElse(seller -> {
-            if (seller.getStatus() == SellerStatus.APPROVED_AWAITING_PAYMENT) {
-                goLive(seller);
-            } else {
-                // Paid while suspended, say: the money is recorded and she
-                // goes live if she is reinstated. Nothing to undo here.
-                log.warn("Listing fee {} paid for seller {} in status {} - left as it is",
-                        event.paymentId(), seller.getId(), seller.getStatus());
-            }
-        }, () -> log.error("Listing fee {} paid for unknown seller {}", event.paymentId(), event.sellerId()));
+        sellers.findLockedById(event.sellerId()).ifPresentOrElse(seller -> renew(seller, event.period(), event.amount()),
+                () -> log.error("Listing fee {} paid for unknown seller {}", event.paymentId(), event.sellerId()));
     }
 
     /** Its own short transaction, from calls that deliberately hold none open. */
-    private void activateIfPaid(UUID sellerId) {
-        transactions.executeWithoutResult(status -> sellers.findLockedById(sellerId)
-                .filter(s -> s.getStatus() == SellerStatus.APPROVED_AWAITING_PAYMENT)
-                .filter(s -> views.listingFeePaid(s.getId()))
-                .ifPresent(this::goLive));
+    private void renewIfPaid(UUID sellerId, int period) {
+        paymentApi.listingFeeFor(sellerId, period)
+                .filter(p -> p.status() == PaymentStatus.CAPTURED)
+                .ifPresent(p -> transactions.executeWithoutResult(status -> sellers.findLockedById(sellerId)
+                        .ifPresent(s -> renew(s, period, p.amount()))));
     }
 
-    private void goLive(SellerProfileEntity seller) {
-        seller.activate(Instant.now());
+    /**
+     * Adds the month - once: a repeat of the same capture finds it already
+     * counted. Paid while suspended, the month is still hers, used if she is
+     * reinstated.
+     */
+    private void renew(SellerProfileEntity seller, int period, BigDecimal amount) {
+        SellerStatus before = seller.getStatus();
+        if (!seller.paidFor(period, amount, Instant.now())) {
+            return;
+        }
         sellers.save(seller);
-        log.info("Seller {} is live", seller.getId());
-        events.publish(new SellerStatusChanged(seller.getId(), seller.getAccountId(), SellerStatus.ACTIVE,
-                seller.getListingFeeAmount()));
+        log.info("Seller {} paid for month {}; listed until {}", seller.getId(), period, seller.getPaidUntil());
+        if (before == SellerStatus.LAPSED) {
+            events.publish(new SellerStatusChanged(seller.getId(), seller.getAccountId(), SellerStatus.ACTIVE,
+                    amount, seller.getPaidUntil(), false));
+        }
     }
 
     // ------------------------------------------------------------ the console
@@ -290,7 +308,7 @@ public class SellerService implements SellerApi, MarketplaceAdminApi {
     @Transactional
     public Result<SellerAdminRow, MarketplaceError> approve(UUID sellerId, UUID adminId) {
         return decide(sellerId, SellerStatus.SUBMITTED_FOR_REVIEW,
-                s -> s.approve(adminId, limits.listingFee(), Instant.now()));
+                s -> s.approve(adminId, limits.monthlyFee(), limits.freeMonths(), Instant.now()));
     }
 
     @Override
@@ -314,12 +332,8 @@ public class SellerService implements SellerApi, MarketplaceAdminApi {
     @Override
     @Transactional
     public Result<SellerAdminRow, MarketplaceError> reinstate(UUID sellerId, UUID adminId) {
-        Optional<SellerProfileEntity> found = sellers.findById(sellerId);
-        // Only a seller who has paid goes back into the directory.
-        if (found.isPresent() && !views.listingFeePaid(sellerId)) {
-            return Result.failure(MarketplaceError.INVALID_TRANSITION);
-        }
-        return decide(sellerId, SellerStatus.SUSPENDED, s -> s.reinstate(adminId, Instant.now()));
+        // Back live if her month still runs; otherwise hidden until she pays.
+        return decide(sellerId, SellerStatus.SUSPENDED, s -> s.reinstate(adminId, Instant.now(), limits.grace()));
     }
 
     private Result<SellerAdminRow, MarketplaceError> decide(UUID sellerId, SellerStatus from,
@@ -335,8 +349,9 @@ public class SellerService implements SellerApi, MarketplaceAdminApi {
         change.accept(seller);
         sellers.save(seller);
         log.info("Seller {} is now {}", seller.getId(), seller.getStatus());
+        boolean approvedNow = from == SellerStatus.SUBMITTED_FOR_REVIEW && seller.getStatus() == SellerStatus.ACTIVE;
         events.publish(new SellerStatusChanged(seller.getId(), seller.getAccountId(), seller.getStatus(),
-                seller.getListingFeeAmount()));
+                limits.monthlyFee(), seller.getPaidUntil(), approvedNow));
         return Result.success(views.adminRow(seller));
     }
 

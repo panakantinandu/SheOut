@@ -56,11 +56,11 @@ export default defineConfig({
         background_color: '#FEF8F8',
         display: 'standalone',
         icons: [
-          { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+          { src: '/icons/app-icon-192-v3.png', sizes: '192x192', type: 'image/png' },
+          { src: '/icons/app-icon-512-v3.png', sizes: '512x512', type: 'image/png' },
           // Android masks installed icons to its own shape; this one keeps the
           // artwork inside the safe zone so the pin and wheels are not cut off.
-          { src: '/icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: '/icons/app-icon-maskable-512-v3.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
     }),

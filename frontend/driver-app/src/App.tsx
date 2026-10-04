@@ -17,6 +17,7 @@ import { Notifications } from './screens/Notifications'
 import { Offer } from './screens/Offer'
 import { Payouts } from './screens/Payouts'
 import { Profile } from './screens/Profile'
+import { Settings } from './screens/Settings'
 import { Splash } from './screens/Splash'
 import { About } from './screens/About'
 import { AppDrawerProvider } from './components/AppDrawer'
@@ -85,6 +86,7 @@ function App() {
       <Route path="/chat/:bookingId" element={protectedOnly(<Chat />)} />
 
       <Route path="/about" element={protectedOnly(<About />)} />
+      <Route path="/settings" element={protectedOnly(<Settings />)} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

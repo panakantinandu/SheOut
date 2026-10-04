@@ -71,6 +71,19 @@ public class SellerProfileEntity extends BaseEntity {
     private Instant suspendedAt;
     private Instant editedLiveAt;
 
+    /** Listed until this moment (plus grace) - see SellerPlan. Null until approved. */
+    private Instant paidUntil;
+    /** The end of her free first month(s). */
+    private Instant freeUntil;
+    /** Months paid for; the next payment is for paidPeriods + 1. */
+    private int paidPeriods;
+    /** The last plan reminder sent for the current month (see SellerPlanReminders); cleared when she pays. */
+    @Column(length = 20)
+    private String lastPlanNotice;
+
+    /** An example shop with nobody behind it - see SampleShops. */
+    private boolean sample;
+
     protected SellerProfileEntity() {
         // JPA
     }
@@ -84,12 +97,13 @@ public class SellerProfileEntity extends BaseEntity {
 
     /**
      * Her shop can be changed while it is hers to change: a draft, a
-     * rejected application being put right, or a live shop. Not while a
-     * person is reviewing it or it is awaiting payment - what was approved
-     * is what she pays for - and not while suspended.
+     * rejected application being put right, a live shop, or one hidden
+     * until she pays (so it is ready when she does). Not while a person is
+     * reviewing it, and not while suspended.
      */
     boolean editable() {
-        return status == SellerStatus.DRAFT || status == SellerStatus.REJECTED || status == SellerStatus.ACTIVE;
+        return status == SellerStatus.DRAFT || status == SellerStatus.REJECTED || status == SellerStatus.ACTIVE
+                || status == SellerStatus.LAPSED;
     }
 
     boolean submittable() {
@@ -119,12 +133,69 @@ public class SellerProfileEntity extends BaseEntity {
         submittedAt = now;
     }
 
-    void approve(UUID adminId, BigDecimal fee, Instant now) {
-        status = SellerStatus.APPROVED_AWAITING_PAYMENT;
+    /**
+     * Approved: live at once, free for freeMonths from now. A shop that has
+     * had its free months already keeps the dates it has.
+     */
+    void approve(UUID adminId, BigDecimal monthlyFee, int freeMonths, Instant now) {
+        status = SellerStatus.ACTIVE;
         reviewedAt = now;
         reviewedBy = adminId;
-        listingFeeAmount = fee;
+        listingFeeAmount = monthlyFee;
         rejectionReason = null;
+        activatedAt = now;
+        if (paidUntil == null) {
+            paidUntil = plusMonths(now, freeMonths);
+            freeUntil = paidUntil;
+        }
+        lastPlanNotice = null;
+    }
+
+    /**
+     * Month {@code period} was paid for. A month is added to whichever is
+     * later, now or the end of her current month, and a hidden shop is back.
+     * False when this is not the month she owes next (a repeat event).
+     */
+    boolean paidFor(int period, BigDecimal amount, Instant now) {
+        if (period != paidPeriods + 1) {
+            return false;
+        }
+        Instant from = paidUntil == null || paidUntil.isBefore(now) ? now : paidUntil;
+        paidUntil = plusMonths(from, 1);
+        paidPeriods = period;
+        listingFeeAmount = amount;
+        lastPlanNotice = null;
+        if (status == SellerStatus.LAPSED) {
+            status = SellerStatus.ACTIVE;
+        }
+        return true;
+    }
+
+    /**
+     * An example shop: live at once and never due - it has no plan and is
+     * never reminded or hidden; it goes when sample shops are turned off.
+     */
+    void makeSample(Instant now) {
+        sample = true;
+        status = SellerStatus.ACTIVE;
+        submittedAt = now;
+        reviewedAt = now;
+        activatedAt = now;
+        paidUntil = null;
+        freeUntil = null;
+    }
+
+    /** Her month and its grace days are over: hidden until she pays. */
+    void lapse() {
+        status = SellerStatus.LAPSED;
+    }
+
+    void planNoticeSent(String notice) {
+        lastPlanNotice = notice;
+    }
+
+    private static Instant plusMonths(Instant from, int months) {
+        return from.atZone(java.time.ZoneId.of("Asia/Kolkata")).plusMonths(months).toInstant();
     }
 
     void reject(UUID adminId, String reason, Instant now) {
@@ -134,11 +205,6 @@ public class SellerProfileEntity extends BaseEntity {
         rejectionReason = reason;
     }
 
-    void activate(Instant now) {
-        status = SellerStatus.ACTIVE;
-        activatedAt = now;
-    }
-
     void suspend(UUID adminId, String reason, Instant now) {
         status = SellerStatus.SUSPENDED;
         suspendedAt = now;
@@ -146,8 +212,9 @@ public class SellerProfileEntity extends BaseEntity {
         suspensionReason = reason;
     }
 
-    void reinstate(UUID adminId, Instant now) {
-        status = SellerStatus.ACTIVE;
+    /** Back from a suspension: live if her month is still running, otherwise hidden until she pays. */
+    void reinstate(UUID adminId, Instant now, java.time.Duration grace) {
+        status = paidUntil != null && now.isBefore(paidUntil.plus(grace)) ? SellerStatus.ACTIVE : SellerStatus.LAPSED;
         reviewedBy = adminId;
         reviewedAt = now;
         suspensionReason = null;
@@ -181,4 +248,9 @@ public class SellerProfileEntity extends BaseEntity {
     public BigDecimal getListingFeeAmount() { return listingFeeAmount; }
     public Instant getActivatedAt() { return activatedAt; }
     public Instant getEditedLiveAt() { return editedLiveAt; }
+    public Instant getPaidUntil() { return paidUntil; }
+    public Instant getFreeUntil() { return freeUntil; }
+    public int getPaidPeriods() { return paidPeriods; }
+    public String getLastPlanNotice() { return lastPlanNotice; }
+    public boolean isSample() { return sample; }
 }

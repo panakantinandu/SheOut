@@ -408,7 +408,9 @@ class NotificationEventListeners {
         String key = switch (event.status()) {
             case APPROVED_AWAITING_PAYMENT -> "sellerApproved";
             case REJECTED -> "sellerRejected";
-            case ACTIVE -> "sellerLive";
+            // Approved just now: live on her free month. Otherwise live
+            // again - reinstated, or her month paid after it lapsed.
+            case ACTIVE -> event.freeMonth() && event.paidUntil() != null ? "sellerLiveFree" : "sellerLive";
             case SUSPENDED -> "sellerSuspended";
             default -> null;
         };
@@ -416,9 +418,45 @@ class NotificationEventListeners {
             return;
         }
         UUID to = event.accountId();
-        dispatcher.deliver(to, NotificationType.SELLER_STATUS, localized(to, key,
-                language -> event.listingFeeAmount() == null ? Map.of() : Map.of("amount", rupees(event.listingFeeAmount())),
+        dispatcher.deliver(to, NotificationType.SELLER_STATUS, localized(to, key, language -> {
+                    Map<String, String> params = new java.util.HashMap<>();
+                    if (event.listingFeeAmount() != null) {
+                        params.put("amount", rupees(event.listingFeeAmount()));
+                    }
+                    if (event.paidUntil() != null) {
+                        params.put("date", copy.date(indiaDate(event.paidUntil()), language));
+                    }
+                    return params;
+                },
                 "/seller/manage", "seller-" + event.sellerId(), OutboundMessage.Urgency.NORMAL));
+    }
+
+    /**
+     * Her monthly plan: ending in a few days, ended (still listed until a
+     * date), or hidden until she pays. The date is the one that matters for
+     * each: when her month ends, or when her shop will be hidden.
+     */
+    @Async(NotificationDeliveryConfig.EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void onSellerPlanNotice(com.sheout.marketplace.SellerPlanNotice event) {
+        String key = switch (event.kind()) {
+            case ENDS_SOON -> (event.freeMonth() ? "sellerPlanFreeDue" : "sellerPlanDue")
+                    + (event.daysLeft() <= 1 ? "Tomorrow" : "");
+            case ENDED -> "sellerPlanEnded";
+            case HIDDEN -> "sellerPlanHidden";
+        };
+        java.time.Instant when = event.kind() == com.sheout.marketplace.SellerPlanNotice.Kind.ENDED
+                ? event.hiddenFrom() : event.paidUntil();
+        UUID to = event.accountId();
+        dispatcher.deliver(to, NotificationType.SELLER_PLAN, localized(to, key, language -> Map.of(
+                        "amount", rupees(event.monthlyFee()),
+                        "days", String.valueOf(Math.max(1, event.daysLeft())),
+                        "date", copy.date(indiaDate(when), language)),
+                "/seller/manage", "seller-plan-" + event.sellerId(), OutboundMessage.Urgency.NORMAL));
+    }
+
+    private static java.time.LocalDate indiaDate(java.time.Instant instant) {
+        return instant.atZone(java.time.ZoneId.of("Asia/Kolkata")).toLocalDate();
     }
 
     /** The receipt: emailed if she has an address, and kept in her inbox either way. */

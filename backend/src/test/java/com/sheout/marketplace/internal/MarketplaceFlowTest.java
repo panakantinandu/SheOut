@@ -2,6 +2,8 @@ package com.sheout.marketplace.internal;
 
 import com.sheout.marketplace.MarketplaceError;
 import com.sheout.marketplace.MarketplaceViews.ListingCard;
+import com.sheout.marketplace.MarketplaceViews.PlanState;
+import com.sheout.marketplace.SellerPlanNotice;
 import com.sheout.marketplace.MarketplaceViews.ProductDetail;
 import com.sheout.marketplace.MarketplaceViews.ProductDetails;
 import com.sheout.marketplace.MarketplaceViews.DirectoryFilter;
@@ -45,6 +47,8 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -69,7 +73,9 @@ import static org.mockito.Mockito.when;
  */
 @SpringBootTest(properties = {
         "sheout.warm-up.enabled=false",
-        "sheout.marketplace.listing-fee=299",
+        "sheout.marketplace.monthly-fee=499",
+        // The tests run the plan sweep themselves, at the moments they choose.
+        "sheout.marketplace.plan-sweep-initial-delay-ms=86400000",
         "sheout.marketplace.max-images-per-product=2",
         "sheout.marketplace.max-images-per-seller=3",
         // Its own context (the mocks make it one), on a local Postgres with
@@ -85,6 +91,13 @@ class MarketplaceFlowTest {
     @Autowired PaymentService payments;
     @Autowired JdbcTemplate jdbc;
     @Autowired ApplicationEvents events;
+    @Autowired SellerPlanReminders reminders;
+    @Autowired SampleShops samples;
+    @Autowired SellerProfileRepository sellerRepository;
+
+    /** 10:00 in India today: daytime, when reminders may go. */
+    private final Instant morning = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Kolkata"))
+            .atTime(10, 0).atZone(java.time.ZoneId.of("Asia/Kolkata")).toInstant();
 
     @MockBean PaymentGateway gateway;
     /** A spy, not a mock: the same bean also serves emergency contacts, which SOS needs to start. */
@@ -122,7 +135,7 @@ class MarketplaceFlowTest {
     }
 
     @Test
-    void aShopGoesFromDraftToTheDirectoryOnlyOnceReviewedAndPaid() throws IOException {
+    void aShopGoesLiveOnItsFreeMonthOnceReviewedThenPaysMonthByMonth() throws IOException {
         // ---- her application
         assertThat(sellers.applyAsSeller(asha, details("Asha " + tag, "98765 00001", "abc")).error())
                 .isEqualTo(MarketplaceError.INVALID_PHONE);
@@ -138,7 +151,9 @@ class MarketplaceFlowTest {
             assertThat(sellers.updateProfile(asha, new SellerDetails("Asha " + tag + " Sarees", SellerCategory.FASHION_SAREE,
                     "9876500001", null, null, bad, null)).error()).as(bad).isEqualTo(MarketplaceError.INVALID_WEBSITE);
         }
-        assertThat(draft.listingFee().amount()).isEqualByComparingTo("299");
+        assertThat(draft.plan().monthlyFee()).isEqualByComparingTo("499");
+        assertThat(draft.plan().state()).isEqualTo(PlanState.NOT_STARTED);
+        assertThat(draft.plan().canPayNow()).isFalse();
         assertThat(sellers.applyAsSeller(asha, details("Again", "9876500001", null)).error())
                 .isEqualTo(MarketplaceError.ALREADY_A_SELLER);
         assertThat(sellers.submitForReview(asha).error()).isEqualTo(MarketplaceError.NOTHING_TO_REVIEW);
@@ -176,25 +191,46 @@ class MarketplaceFlowTest {
         assertThat(ok(sellers.reject(sellerId, admin, "Photo 2 is blurred")).rejectionReason()).isEqualTo("Photo 2 is blurred");
         assertThat(sellers.mySeller(asha).orElseThrow().canEdit()).isTrue();
         ok(sellers.submitForReview(asha));
-        assertThat(ok(sellers.approve(sellerId, admin)).status()).isEqualTo(SellerStatus.APPROVED_AWAITING_PAYMENT);
-        assertThat(directory(null, tag)).isEmpty();
+        events.clear();
+        // ---- approved: live at once, on its free month - nothing to pay yet
+        assertThat(ok(sellers.approve(sellerId, admin)).status()).isEqualTo(SellerStatus.ACTIVE);
+        assertThat(events.stream(SellerStatusChanged.class)).singleElement()
+                .satisfies(e -> assertThat(e.freeMonth()).isTrue());
+        SellerView free = sellers.mySeller(asha).orElseThrow();
+        assertThat(free.plan().state()).isEqualTo(PlanState.FREE_MONTH);
+        assertThat(free.plan().freeUntil()).isEqualTo(free.plan().paidUntil()).isAfter(Instant.now().plus(Duration.ofDays(27)));
+        assertThat(free.plan().canPayNow()).as("not months ahead").isFalse();
+        assertThat(sellers.startListingFeePayment(asha).error()).isEqualTo(MarketplaceError.ALREADY_PAID);
+        assertThat(directory(null, tag)).hasSize(2);
 
-        // ---- the fee, captured by webhook
+        // ---- the last days of her free month: the next month, captured by webhook
+        Instant endsSoon = Instant.now().plus(Duration.ofDays(2));
+        endMonthAt(sellerId, endsSoon);
+        assertThat(sellers.mySeller(asha).orElseThrow().plan().state()).isEqualTo(PlanState.DUE_SOON);
         ListingFeeCheckout checkout = ok(sellers.startListingFeePayment(asha));
-        assertThat(checkout.amountPaise()).isEqualTo(29900);
-        // Asking again reuses the same order - one fee, never two.
+        assertThat(checkout.amountPaise()).isEqualTo(49900);
+        // Asking again reuses the same order - one fee a month, never two.
         assertThat(ok(sellers.startListingFeePayment(asha)).orderId()).isEqualTo(checkout.orderId());
         events.clear();
         assertThat(payments.applyWebhookUpdate(checkout.orderId(), "pay_hook", true, null, PaymentMethod.UPI)).isTrue();
 
-        SellerView live = sellers.mySeller(asha).orElseThrow();
-        assertThat(live.status()).isEqualTo(SellerStatus.ACTIVE);
-        assertThat(live.listingFee().status()).isEqualTo(PaymentStatus.CAPTURED);
-        assertThat(live.listingFee().method()).isEqualTo(PaymentMethod.UPI);
+        SellerView paid = sellers.mySeller(asha).orElseThrow();
+        assertThat(paid.status()).isEqualTo(SellerStatus.ACTIVE);
+        assertThat(paid.plan().state()).isEqualTo(PlanState.PAID);
+        // A month added to the end of the free one: paying early loses her nothing.
+        assertThat(paid.plan().paidUntil()).isCloseTo(endsSoon.atZone(java.time.ZoneId.of("Asia/Kolkata")).plusMonths(1).toInstant(),
+                org.assertj.core.api.Assertions.within(1, java.time.temporal.ChronoUnit.MILLIS));
+        assertThat(paid.plan().history()).singleElement().satisfies(m -> {
+            assertThat(m.period()).isEqualTo(1);
+            assertThat(m.amount()).isEqualByComparingTo("499");
+            assertThat(m.method()).isEqualTo(PaymentMethod.UPI);
+        });
         assertThat(events.stream(ListingFeePaid.class)).hasSize(1);
         assertThat(events.stream(PaymentCaptured.class)).as("a listing fee is not a trip's capture").isEmpty();
-        assertThat(events.stream(SellerStatusChanged.class)).anyMatch(e -> e.status() == SellerStatus.ACTIVE);
         assertThat(sellers.startListingFeePayment(asha).error()).isEqualTo(MarketplaceError.ALREADY_PAID);
+        // The same capture told twice adds nothing.
+        payments.applyWebhookUpdate(checkout.orderId(), "pay_hook", true, null, PaymentMethod.UPI);
+        assertThat(sellers.mySeller(asha).orElseThrow().plan().paidUntil()).isEqualTo(paid.plan().paidUntil());
 
         // ---- in her payment history, marked as what it is
         PaymentSummary fee = payments.pageForBookings(List.of(), asha, null, null, null, null, null, PageRequest.of(0, 20))
@@ -260,7 +296,7 @@ class MarketplaceFlowTest {
     }
 
     @Test
-    void checkoutConfirmationAloneAlsoPutsHerLive() throws IOException {
+    void aShopNotPaidForIsHiddenAfterItsGraceDaysAndBackOnceCheckoutPays() throws IOException {
         SellerView shop = ok(sellers.applyAsSeller(bina, details("Bina " + tag + " Mehandi", "9876500004", null)));
         UUID design = ok(products.addProduct(bina, product("Bridal mehandi", "Full hands", "2500"))).products().get(0).id();
         ok(products.addProductImage(bina, design, photo()));
@@ -268,11 +304,29 @@ class MarketplaceFlowTest {
         ok(sellers.submitForReview(bina));
         ok(sellers.approve(shop.id(), admin));
 
+        // Her month ended two days ago: still listed, in its grace days.
+        endMonthAt(shop.id(), morning.minus(Duration.ofDays(2)));
+        reminders.runOnce(morning);
+        assertThat(sellers.mySeller(bina).orElseThrow().plan().state()).isEqualTo(PlanState.OVERDUE);
+        assertThat(directory(SellerCategory.MEHANDI, tag)).hasSize(1);
+        // Four days ago: the grace is over and the shop is hidden.
+        endMonthAt(shop.id(), morning.minus(Duration.ofDays(4)));
+        reminders.runOnce(morning);
+        SellerView hidden = sellers.mySeller(bina).orElseThrow();
+        assertThat(hidden.status()).isEqualTo(SellerStatus.LAPSED);
+        assertThat(hidden.plan().canPayNow()).isTrue();
+        assertThat(hidden.canEdit()).as("she can still tidy her shop while it is hidden").isTrue();
+        assertThat(directory(SellerCategory.MEHANDI, tag)).isEmpty();
+
         ListingFeeCheckout checkout = ok(sellers.startListingFeePayment(bina));
+        events.clear();
         SellerView live = ok(sellers.confirmListingFeePayment(bina, checkout.orderId(), "pay_checkout", "sig"));
 
         assertThat(live.status()).isEqualTo(SellerStatus.ACTIVE);
-        assertThat(live.listingFee().method()).isEqualTo(PaymentMethod.CARD);
+        assertThat(live.plan().history()).singleElement().satisfies(m -> assertThat(m.method()).isEqualTo(PaymentMethod.CARD));
+        // Paid late: a month from today, not from when it ended - she is not charged for days she was hidden.
+        assertThat(live.plan().paidUntil()).isAfter(Instant.now().plus(Duration.ofDays(27)));
+        assertThat(events.stream(SellerStatusChanged.class)).anyMatch(e -> e.status() == SellerStatus.ACTIVE && !e.freeMonth());
         // The webhook arriving afterwards changes nothing.
         events.clear();
         payments.applyWebhookUpdate(checkout.orderId(), "pay_checkout", true, null, PaymentMethod.UPI);
@@ -287,20 +341,21 @@ class MarketplaceFlowTest {
         ok(products.addProductImage(bina, p, photo()));
         ok(sellers.submitForReview(bina));
         ok(sellers.approve(shop.id(), admin));
+        endMonthAt(shop.id(), Instant.now().plus(Duration.ofDays(1)));
 
         jdbc.update("insert into rider_wallets (id, customer_account_id, balance, version, created_at, updated_at) "
                 + "values (gen_random_uuid(), ?, 100, 0, now(), now())", bina);
         assertThat(sellers.payListingFeeFromWallet(bina).error()).isEqualTo(MarketplaceError.INSUFFICIENT_BALANCE);
-        assertThat(sellers.mySeller(bina).orElseThrow().status()).isEqualTo(SellerStatus.APPROVED_AWAITING_PAYMENT);
+        assertThat(sellers.mySeller(bina).orElseThrow().plan().history()).isEmpty();
 
         jdbc.update("update rider_wallets set balance = 500 where customer_account_id = ?", bina);
         SellerView live = ok(sellers.payListingFeeFromWallet(bina));
 
         assertThat(live.status()).isEqualTo(SellerStatus.ACTIVE);
-        assertThat(live.listingFee().method()).isEqualTo(PaymentMethod.SHEOUT_WALLET);
+        assertThat(live.plan().history()).singleElement().satisfies(m -> assertThat(m.method()).isEqualTo(PaymentMethod.SHEOUT_WALLET));
         assertThat(jdbc.queryForObject("select balance from rider_wallets where customer_account_id = ?", BigDecimal.class, bina))
-                .isEqualByComparingTo("201");
-        assertThat(jdbc.queryForObject("select count(*) from rider_wallet_entries where customer_account_id = ? and entry_type = 'LISTING_FEE' and amount = -299",
+                .isEqualByComparingTo("1");
+        assertThat(jdbc.queryForObject("select count(*) from rider_wallet_entries where customer_account_id = ? and entry_type = 'LISTING_FEE' and amount = -499",
                 Integer.class, bina)).isEqualTo(1);
         assertThat(sellers.payListingFeeFromWallet(bina).error()).isEqualTo(MarketplaceError.ALREADY_PAID);
         assertThat(directory(SellerCategory.FASHION_SAREE, tag)).extracting(ListingCard::title).contains("Hamper");
@@ -321,9 +376,6 @@ class MarketplaceFlowTest {
         ok(products.addProductImage(bina, p, photo()));
         ok(sellers.submitForReview(bina));
         ok(sellers.approve(shop.id(), admin));
-        jdbc.update("insert into rider_wallets (id, customer_account_id, balance, version, created_at, updated_at) "
-                + "values (gen_random_uuid(), ?, 500, 0, now(), now())", bina);
-        ok(sellers.payListingFeeFromWallet(bina));
 
         // Under Other, with her words on the card; and found by those words.
         assertThat(directory(SellerCategory.OTHER, tag)).singleElement().satisfies(c -> {
@@ -351,6 +403,90 @@ class MarketplaceFlowTest {
     }
 
     // ------------------------------------------------------------ helpers
+
+    @Test
+    void sheIsRemindedBeforeHerMonthEndsOnceEachInTheDaytimeAndToldWhenHidden() throws IOException {
+        SellerView shop = ok(sellers.applyAsSeller(bina, details("Bina " + tag + " Cakes", "9876500006", null)));
+        UUID cake = ok(products.addProduct(bina, product("Birthday cake", "1 kg", "900"))).products().get(0).id();
+        ok(products.addProductImage(bina, cake, photo()));
+        ok(sellers.submitForReview(bina));
+        ok(sellers.approve(shop.id(), admin));
+
+        // Twenty days left: nothing to say.
+        endMonthAt(shop.id(), morning.plus(Duration.ofDays(20)));
+        assertThat(noticesAt(morning)).isEmpty();
+
+        // Six days left: the 7-day reminder, about her free month - once.
+        endMonthAt(shop.id(), morning.plus(Duration.ofDays(6)));
+        assertThat(noticesAt(morning)).singleElement().satisfies(n -> {
+            assertThat(n.kind()).isEqualTo(SellerPlanNotice.Kind.ENDS_SOON);
+            assertThat(n.daysLeft()).isEqualTo(6);
+            assertThat(n.freeMonth()).isTrue();
+            assertThat(n.monthlyFee()).isEqualByComparingTo("499");
+        });
+        assertThat(noticesAt(morning)).as("not twice").isEmpty();
+
+        // Down for a while and now one day left: only the latest reminder, not the 3-day one as well.
+        endMonthAt(shop.id(), morning.plus(Duration.ofHours(20)));
+        assertThat(noticesAt(morning)).singleElement().satisfies(n -> assertThat(n.daysLeft()).isEqualTo(1));
+
+        // Ended at night: nothing until the morning.
+        Instant night = morning.minus(Duration.ofHours(8));
+        endMonthAt(shop.id(), night.minus(Duration.ofHours(1)));
+        assertThat(noticesAt(night)).isEmpty();
+        assertThat(noticesAt(morning)).singleElement().satisfies(n -> {
+            assertThat(n.kind()).isEqualTo(SellerPlanNotice.Kind.ENDED);
+            assertThat(n.hiddenFrom()).isCloseTo(night.minus(Duration.ofHours(1)).plus(Duration.ofDays(3)),
+                    org.assertj.core.api.Assertions.within(1, java.time.temporal.ChronoUnit.MILLIS));
+        });
+
+        // Grace over: hidden, and told so.
+        endMonthAt(shop.id(), morning.minus(Duration.ofDays(3)).minus(Duration.ofMinutes(1)));
+        assertThat(noticesAt(morning)).singleElement()
+                .satisfies(n -> assertThat(n.kind()).isEqualTo(SellerPlanNotice.Kind.HIDDEN));
+        assertThat(sellers.mySeller(bina).orElseThrow().status()).isEqualTo(SellerStatus.LAPSED);
+        assertThat(noticesAt(morning)).isEmpty();
+    }
+
+    @Test
+    void sampleShopsAreMarkedHaveNobodyToContactAndGoWhenTurnedOff() {
+        samples.removeAll();
+        assertThat(samples.ensure()).isEqualTo(12);
+        assertThat(samples.ensure()).as("a restart adds nothing twice").isZero();
+
+        List<ListingCard> mehandi = directory(SellerCategory.MEHANDI, "mehandi");
+        assertThat(mehandi).isNotEmpty().allSatisfy(c -> assertThat(c.sample()).isTrue());
+        assertThat(mehandi).allSatisfy(c -> assertThat(c.imageUrl()).isNotNull());
+        ProductDetail detail = products.getProductDetail(mehandi.get(0).productId()).orElseThrow();
+        assertThat(detail.sample()).isTrue();
+        assertThat(detail.contactPhone()).as("nobody to call").isNull();
+        assertThat(detail.whatsappNumber()).isNull();
+        // Never reminded or hidden: a sample shop has no month.
+        assertThat(reminders.noticeDue(sellerOf(mehandi.get(0)), morning)).isNull();
+        assertThat(directory(null, "Nalgonda")).isEmpty();
+        assertThat(browse(Set.of(), null, null, null, "Nalgonda")).isNotEmpty();
+
+        assertThat(samples.removeAll()).isEqualTo(12);
+        assertThat(directory(SellerCategory.MEHANDI, "mehandi")).noneMatch(ListingCard::sample);
+        assertThat(jdbc.queryForObject("select count(*) from seller_products p join seller_profiles s on s.id = p.seller_id"
+                + " where s.sample", Integer.class)).isZero();
+    }
+
+    private SellerProfileEntity sellerOf(ListingCard card) {
+        return sellerRepository.findById(card.sellerId()).orElseThrow();
+    }
+
+    /** The plan sweep at {@code at}, and the reminders it sent. */
+    private List<SellerPlanNotice> noticesAt(Instant at) {
+        events.clear();
+        reminders.runOnce(at);
+        return events.stream(SellerPlanNotice.class).filter(n -> accounts.contains(n.accountId())).toList();
+    }
+
+    /** Moves the end of a seller's current month, as if time had passed. */
+    private void endMonthAt(UUID sellerId, Instant end) {
+        jdbc.update("update seller_profiles set paid_until = ? where id = ?", java.sql.Timestamp.from(end), sellerId);
+    }
 
     private List<ListingCard> directory(SellerCategory category, String keyword) {
         return browse(category == null ? Set.of() : Set.of(category), keyword, null, null, null);

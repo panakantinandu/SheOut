@@ -265,7 +265,7 @@
     "IN_PROGRESS": "ప్రయాణంలో ఉంది",
     "COMPLETED": "పూర్తయింది",
     "CANCELLED": "రద్దు చేయబడింది",
-    "NO_DRIVERS_AVAILABLE": "డ్రైవర్లు దొరకలేదు",
+    "NO_DRIVERS_AVAILABLE": "పార్ట్‌నర్ దొరకలేదు",
     "AWAITING_PAYMENT": "చెల్లింపు కోసం వేచి ఉంది"
   },
   "category": {

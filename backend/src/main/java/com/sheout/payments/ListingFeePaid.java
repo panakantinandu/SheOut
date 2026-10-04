@@ -21,9 +21,11 @@ public class ListingFeePaid extends DomainEvent {
     private final BigDecimal amount;
     private final PaymentMethod method;
     private final Instant capturedAt;
+    private final int period;
 
-    public ListingFeePaid(UUID paymentId, UUID payerAccountId, UUID sellerId, BigDecimal amount, PaymentMethod method,
-                          Instant capturedAt) {
+    public ListingFeePaid(UUID paymentId, UUID payerAccountId, UUID sellerId, int period, BigDecimal amount,
+                          PaymentMethod method, Instant capturedAt) {
+        this.period = period;
         this.paymentId = paymentId;
         this.payerAccountId = payerAccountId;
         this.sellerId = sellerId;
@@ -38,4 +40,6 @@ public class ListingFeePaid extends DomainEvent {
     public BigDecimal amount() { return amount; }
     public PaymentMethod method() { return method; }
     public Instant capturedAt() { return capturedAt; }
+    /** Which of her months this paid for: 1 for the first paid month. 0 for the old one-time fee. */
+    public int period() { return period; }
 }

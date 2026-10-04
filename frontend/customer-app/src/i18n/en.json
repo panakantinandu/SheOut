@@ -89,9 +89,9 @@
   "about": {
     "title": "About SheOut",
     "version": "Version {{version}}",
-    "body": "Rides and deliveries built around women's safety, with women riders and women drivers.",
-    "feature1Title": "Verified drivers",
-    "feature1Body": "Every driver passes an ID and police-verification review before they can accept a trip.",
+    "body": "Rides and deliveries built around women's safety, with women riders and women partners.",
+    "feature1Title": "Verified partners",
+    "feature1Body": "Every partner passes an ID and police-verification review before she can accept a trip.",
     "feature2Title": "Emergency contacts",
     "feature2Body": "Add contacts to your account and one tap on SOS sends them your location by SMS."
   },
@@ -139,7 +139,14 @@
     "emergencyContacts": "Emergency Contacts",
     "emergencyContactsSub": "Who an SOS alerts",
     "deletedNotice": "Your account has been deleted. Your personal details have been removed.",
-    "loading": "Loading your details"
+    "loading": "Loading your details",
+    "editProfile": "Edit your profile and photo",
+    "sectionMore": "More",
+    "verified": "Verified",
+    "notVerified": "Not verified yet",
+    "verifyToRide": "Needed before your first ride",
+    "personalDetailsSub": "Name, photo, date of birth, email",
+    "addressesSub": "Home, work and other places"
   },
   "help": {
     "toPlace": "to {{place}}",
@@ -254,7 +261,7 @@
     "emptyTitle": "No payments yet",
     "emptyMessage": "Payments appear here once a trip is completed.",
     "tripFare": "Trip fare",
-    "listingFee": "SheOut Seller listing fee"
+    "listingFee": "SheOut Seller plan"
   },
   "legal": {
     "privacy": "Privacy Policy",
@@ -321,7 +328,7 @@
       "ACCOUNT_DELETED": "This account has been deleted."
     },
     "trust": {
-      "women": "Women drivers only",
+      "women": "Women partners only",
       "verified": "ID-checked partners",
       "sos": "SOS on every trip"
     },
@@ -354,7 +361,7 @@
       "other": "Other"
     },
     "legal": {
-      "applicationNotice": "SheOut is a discovery platform - you handle your own sales, payments, and delivery directly with customers. SheOut charges a flat listing fee only and is not party to your transactions.",
+      "applicationNotice": "SheOut is a discovery platform - you handle your own sales, payments, and delivery directly with customers. SheOut charges a flat monthly listing fee only and is not party to your transactions.",
       "productNotice": "This sale happens directly with the seller. SheOut is not involved in payment or delivery for this listing.",
       "genuinePrice": "An original price must be a price you genuinely charged before, not a higher figure made up to make a discount look bigger. Indian consumer law requires price and discount claims to be honest."
     },
@@ -472,6 +479,11 @@
         "badge": "Paused",
         "body": "It is hidden from customers for now.",
         "contact": "Contact SheOut support"
+      },
+      "LAPSED": {
+        "title": "Your shop is hidden",
+        "badge": "Hidden",
+        "body": "Your month ended and wasn't paid, so customers can't see your shop right now. Pay below and it's back at once - nothing has been deleted."
       }
     },
     "submit": {
@@ -480,13 +492,13 @@
       "product": "At least one product with a photo",
       "verifyNow": "Verify now",
       "resend": "Send for review again",
-      "free": "Review is free. You pay the {{amount}} listing fee only after your shop is approved."
+      "free": "Review is free. Once approved, your shop goes live and the first month is free. After that it is {{amount}} a month."
     },
     "fee": {
       "pay": "Pay {{amount}} with UPI or card",
       "opening": "Opening payment...",
-      "oneTime": "One-time fee. SheOut takes nothing from your sales.",
-      "checkoutDescription": "SheOut Seller listing fee",
+      "oneTime": "Each payment adds one month. No auto-debit - you choose when to pay. SheOut takes nothing from your sales.",
+      "checkoutDescription": "SheOut Seller - one month",
       "failed": "The payment did not go through: {{reason}}",
       "error": "The payment could not be completed. Please try again.",
       "paying": "Paying...",
@@ -749,6 +761,27 @@
       "shareText": "{{title}} (code {{code}}) on SheOut Marketplace",
       "shareCopied": "Link copied",
       "outOfStockNote": "Out of stock right now. You can still ask the seller when it will be back."
+    },
+    "plan": {
+      "title": "Your plan",
+      "perMonth": "{{amount}} a month",
+      "freeUntil": "Free month - until {{date}}",
+      "paidUntil": "Paid until {{date}}",
+      "dueSoon": "Your month ends on {{date}}. Pay now to stay listed - your new month starts when this one ends, so paying early loses you nothing.",
+      "overdue": "Your month ended on {{end}}. Customers can still see your shop until {{date}}. Pay now to keep it listed.",
+      "lapsed": "Pay {{amount}} and your shop is back in the Marketplace at once.",
+      "payOpensOn": "You can pay for your next month from {{date}}. We'll remind you before it ends.",
+      "history": "Payments",
+      "historyRow": "Month {{n}}",
+      "oldFee": "Listing fee (one-time)",
+      "paidToast": "Paid. Your shop is listed until {{date}}.",
+      "backLive": "Paid. Your shop is back in the Marketplace.",
+      "endedOn": "Ended on {{date}}"
+    },
+    "sample": {
+      "badge": "Sample shop",
+      "title": "This is a sample shop",
+      "body": "It shows how SheOut Marketplace works while women sellers set up their shops. It isn't a real seller, so there is no one to contact yet."
     }
   },
   "refer": {
@@ -831,7 +864,7 @@
     "SELLER_IMAGE_LIMIT_REACHED": "Your shop has used all its photos. Remove one to add another.",
     "UNSUPPORTED_PHOTO_TYPE": "That file is not a photo. Choose a JPEG, PNG or WebP photo.",
     "PHOTO_TOO_LARGE": "That photo is too large. Choose one under 10 MB.",
-    "ALREADY_PAID": "Your listing fee is already paid.",
+    "ALREADY_PAID": "This month is already paid.",
     "INVALID_PRODUCT_TERMS": "Check the stock, ready-in days and minimum order.",
     "TRIP_ENDS_AFTER_HOURS": "This trip would end well after SheOut's service hours. Choose a nearer drop, or book it when bookings open again.",
     "RIDE_INSURANCE_NOT_ACTIVE": "Rides are paused because SheOut cannot insure trips right now. Please try again a little later."
@@ -956,7 +989,7 @@
     "razorpayNote": "Paid securely through Razorpay by UPI, card or netbanking. Money is added once your bank confirms it.",
     "payTrip": "Pay a Trip",
     "tripPayments": "Trip Payments",
-    "closedLoopNote": "Your wallet pays for your own SheOut trips and your seller listing fee. Each fare goes to your partner's SheOut wallet. It can't be sent to other people or withdrawn.",
+    "closedLoopNote": "Your wallet pays for your own SheOut trips and your SheOut Seller plan. Each fare goes to your partner's SheOut wallet. It can't be sent to other people or withdrawn.",
     "activity": "Wallet activity",
     "activityLoading": "Loading your wallet activity",
     "activityEmptyTitle": "No activity yet",
@@ -967,7 +1000,7 @@
     "nothingToPay": "No trip is waiting to be paid.",
     "payTripDue": "Pay ₹{{amount}}",
     "payTripError": "Could not check for unpaid trips. Please try again.",
-    "needForFee": "Add at least ₹{{amount}} to pay your listing fee. You'll go straight back to your shop."
+    "needForFee": "Add at least ₹{{amount}} to pay for your shop's month. You'll go straight back to your shop."
   },
   "tripPay": {
     "lowBalance": "Your wallet balance is too low for this fare. Add money, or pay online.",
@@ -1053,7 +1086,7 @@
   "tracking": {
     "search": {
       "searching": {
-        "title": "Searching for a nearby driver...",
+        "title": "Searching for a nearby partner...",
         "detail": "This usually takes under a minute."
       },
       "stillSearching": {
@@ -1072,24 +1105,24 @@
     "loadError": "Could not load booking",
     "rebookError": "Could not book that again",
     "cancelError": "Could not cancel booking",
-    "driver": "Driver",
+    "driver": "Partner",
     "header": {
-      "noDrivers": "No Drivers Found",
+      "noDrivers": "No partners found",
       "cancelled": "Trip Cancelled",
       "paymentDue": "Payment Due",
       "completed": "Trip Completed",
       "onTheWay": "On the Way",
-      "finding": "Finding a Driver"
+      "finding": "Finding a partner"
     },
     "loading": "Loading your trip",
-    "noDriversTitle": "No drivers available right now",
+    "noDriversTitle": "No partners available right now",
     "noDriversBody": "We could not find anyone free near {{place}}. Nothing has been charged, and you can try again straight away.",
     "tryAgain": "Try Again",
     "arrivedTitle": "You've arrived. Payment is due.",
     "arrivedBody": "Pay below to finish this trip. You can book your next ride once it is paid.",
     "cancelledTitle": "This trip was cancelled",
     "completedTitle": "Trip completed",
-    "cancelledBody": "No driver is on the way. Book again whenever you are ready.",
+    "cancelledBody": "No partner is on the way. Book again whenever you are ready.",
     "completedBody": "Paid, and on its way to your partner. Thanks for riding with SheOut.",
     "bookAnother": "Book another ride",
     "backHome": "Back to home",
@@ -1104,9 +1137,9 @@
     "comingToCollect": "Coming to collect you",
     "onYourWayBody": "Your trip has started. The map now follows you to your drop.",
     "mapFinished": "Where this trip would have started and ended.",
-    "mapUpdated": "Driver position updated {{seconds}}s ago. It refreshes every {{every}}s.",
-    "mapWaiting": "Waiting for the driver to report a position...",
-    "mapPreview": "Showing your pickup and drop. The driver appears once one is assigned.",
+    "mapUpdated": "Partner's position updated {{seconds}}s ago. It refreshes every {{every}}s.",
+    "mapWaiting": "Waiting for the partner to report a position...",
+    "mapPreview": "Showing your pickup and drop. Your partner appears once one is assigned.",
     "openInMaps": "Open her position in Google Maps",
     "fareNotCharged": "Estimated fare, not charged",
     "etaToPickup": "Arriving in",
@@ -1300,5 +1333,12 @@
     "taxSplit": "CGST ₹{{cgst}} + SGST ₹{{sgst}} on a taxable value of ₹{{taxable}}",
     "downloadInvoice": "Download tax invoice {{number}}",
     "downloadError": "Could not download the invoice. Please try again."
+  },
+  "settings": {
+    "title": "Settings",
+    "sub": "Language, appearance, privacy and log out",
+    "preferences": "Preferences",
+    "security": "Security",
+    "aboutLegal": "About & legal"
   }
 }

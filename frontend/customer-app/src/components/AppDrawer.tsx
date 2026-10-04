@@ -1,28 +1,16 @@
-import { FileText, Gift, Info, Languages, LifeBuoy, Lock, LogOut, Moon, ShieldCheck, Star, Store, UserRound } from 'lucide-react';
+import { Gift, LifeBuoy, Settings, ShieldCheck, Store, UserRound } from 'lucide-react';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Avatar,
-  ConfirmDialog,
   Drawer,
-  LANGUAGES,
-  LanguagePicker,
-  ThemePicker,
-  chooseLanguage,
-  showToast,
+  phoneDisplay,
   syncLanguageWithAccount,
-  useAppLanguage,
-  useTheme,
   useTranslation, ASSISTANT_NAME, AssistantAvatar } from '@sheout/design-system';
 import { preferencesApi, usersApi } from '../api/client';
 import type { CustomerProfileSummary } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 
-/**
- * Where "Rate the App" goes. Empty until SheOut has a store listing; until
- * then the row says so instead of opening nothing.
- */
-const STORE_URL = import.meta.env.VITE_APP_STORE_URL as string | undefined;
 const APP_VERSION = '0.1.0';
 
 interface DrawerControls {
@@ -37,7 +25,10 @@ export function useAppDrawer(): DrawerControls {
 }
 
 /**
- * The rider app's menu, and the language picker it opens.
+ * The rider app's menu: shortcuts to the places she goes that are not a
+ * tab, and Settings. Language, appearance, the legal pages and Log Out live
+ * in Settings only - they used to be here as well as on Profile, so Log Out
+ * appeared twice and neither place had every setting.
  * <p>
  * Also where the language is kept in step with her account: once she is
  * signed in, a choice made on this phone is saved to the account, and
@@ -45,15 +36,9 @@ export function useAppDrawer(): DrawerControls {
  */
 export function AppDrawerProvider({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
-  const { t: ds } = useTranslation('ds');
   const navigate = useNavigate();
-  const { isAuthenticated, logout } = useAuth();
-  const lng = useAppLanguage();
+  const { isAuthenticated } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
-  const [pickingLanguage, setPickingLanguage] = useState(false);
-  const [pickingTheme, setPickingTheme] = useState(false);
-  const [themeChoice] = useTheme();
-  const [confirmingLogout, setConfirmingLogout] = useState(false);
   const [profile, setProfile] = useState<CustomerProfileSummary | null>(null);
 
   useEffect(() => {
@@ -74,7 +59,6 @@ export function AppDrawerProvider({ children }: { children: ReactNode }) {
   };
 
   const controls = useMemo(() => ({ open }), [open]);
-  const languageName = LANGUAGES.find((l) => l.code === lng)?.nativeName ?? 'English';
 
   return (
     <DrawerContext.Provider value={controls}>
@@ -90,9 +74,10 @@ export function AppDrawerProvider({ children }: { children: ReactNode }) {
             data-testid="drawer-profile"
           >
             <Avatar url={profile?.profilePhotoUrl} name={profile?.name} size="lg" />
+            {/* Blank until her profile has loaded, rather than "Add your name" flashing before her name. */}
             <div className="min-w-0">
-              <p className="truncate font-heading text-section">{profile?.name || t('profile.addName')}</p>
-              <p className="truncate text-sm opacity-85">{profile?.phoneNumber ?? ''}</p>
+              <p className="truncate font-heading text-section">{profile ? profile.name || t('profile.addName') : ''}</p>
+              <p className="truncate text-sm opacity-85">{phoneDisplay(profile?.phoneNumber)}</p>
             </div>
           </button>
         }
@@ -101,92 +86,22 @@ export function AppDrawerProvider({ children }: { children: ReactNode }) {
             key: 'main',
             items: [
               { key: 'profile', label: t('drawer.profile'), icon: <UserRound />, onClick: () => go('/profile') },
-              {
-                key: 'language',
-                label: t('drawer.language'),
-                sublabel: languageName,
-                icon: <Languages />,
-                onClick: () => {
-                  setIsOpen(false);
-                  setPickingLanguage(true);
-                },
-              },
-              {
-                key: 'theme',
-                label: ds('theme.label'),
-                sublabel: ds(`theme.${themeChoice}`),
-                icon: <Moon />,
-                onClick: () => {
-                  setIsOpen(false);
-                  setPickingTheme(true);
-                },
-              },
               { key: 'safety', label: t('drawer.safety'), icon: <ShieldCheck />, onClick: () => go('/safety') },
               { key: 'refer', label: t('drawer.refer'), icon: <Gift />, onClick: () => go('/refer') },
               { key: 'sell', label: t('drawer.sell'), icon: <Store />, onClick: () => go('/seller/manage') },
-              {
-                key: 'rate',
-                label: t('drawer.rate'),
-                icon: <Star />,
-                onClick: () => {
-                  setIsOpen(false);
-                  if (STORE_URL) window.open(STORE_URL, '_blank', 'noopener');
-                  else showToast(t('drawer.rateSoon'));
-                },
-              },
             ],
           },
           {
-            key: 'info',
+            key: 'help',
             title: t('drawer.helpAndInfo'),
             items: [
               { key: 'assistant', label: t('help.askAssistant', { name: ASSISTANT_NAME }), icon: <AssistantAvatar size={22} staticOnly />, onClick: () => go('/help/assistant') },
               { key: 'support', label: t('drawer.support'), icon: <LifeBuoy />, onClick: () => go('/help') },
-              { key: 'about', label: t('about.title'), icon: <Info />, onClick: () => go('/about') },
-              { key: 'privacy', label: t('legal.privacy'), icon: <Lock />, onClick: () => go('/privacy') },
-              { key: 'terms', label: t('legal.terms'), icon: <FileText />, onClick: () => go('/terms') },
-            ],
-          },
-          {
-            key: 'account',
-            items: [
-              {
-                key: 'logout',
-                label: t('auth.logout'),
-                icon: <LogOut />,
-                tone: 'danger',
-                onClick: () => {
-                  setIsOpen(false);
-                  setConfirmingLogout(true);
-                },
-              },
+              { key: 'settings', label: t('settings.title'), icon: <Settings />, onClick: () => go('/settings') },
             ],
           },
         ]}
         footer={t('drawer.version', { version: APP_VERSION })}
-      />
-      <ThemePicker open={pickingTheme} onClose={() => setPickingTheme(false)} />
-      <LanguagePicker
-        open={pickingLanguage}
-        onClose={() => setPickingLanguage(false)}
-        onSelect={async (code) => {
-          setPickingLanguage(false);
-          const saved = await chooseLanguage(code, isAuthenticated ? preferencesApi : undefined);
-          showToast(saved ? t('drawer.languageSaved') : t('drawer.languageSavedLocally'));
-        }}
-      />
-      <ConfirmDialog
-        open={confirmingLogout}
-        title={t('auth.logoutTitle')}
-        message={t('auth.logoutMessage')}
-        confirmLabel={t('auth.logout')}
-        destructive
-        onConfirm={() => {
-          setConfirmingLogout(false);
-          logout();
-          navigate('/login', { replace: true });
-        }}
-        onCancel={() => setConfirmingLogout(false)}
       />
     </DrawerContext.Provider>
   );

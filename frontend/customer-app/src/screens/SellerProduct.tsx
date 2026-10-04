@@ -43,8 +43,9 @@ export function SellerProduct() {
     window.scrollTo(0, 0);
   }, [productId, t]);
 
-  const contact = product
-    ? contactLink(product, t('seller.product.whatsappMessage', { title: product.title, code: product.code }))
+  // A sample shop has nobody behind it, so no number comes with it.
+  const contact = product && !product.sample && product.contactPhone
+    ? contactLink({ ...product, contactPhone: product.contactPhone }, t('seller.product.whatsappMessage', { title: product.title, code: product.code }))
     : null;
 
   /** Through the phone's share sheet - to a sister, a friend, a family group. */
@@ -87,7 +88,7 @@ export function SellerProduct() {
         />
       )}
 
-      {product && contact && (() => {
+      {product && (() => {
         const terms = product.terms ?? DEFAULT_TERMS;
         return (
         <>
@@ -188,26 +189,39 @@ export function SellerProduct() {
             </p>
           )}
 
-          {/* The notice every product carries: the sale is theirs, not SheOut's. */}
-          <div className="flex gap-3 rounded-input bg-accent-orange-tint px-4 py-3" role="note" data-testid="direct-sale-notice">
-            <Info className="mt-0.5 h-5 w-5 shrink-0 text-accent-orange-strong" aria-hidden="true" />
-            <p className="text-sm text-text-primary">{t('seller.legal.productNotice')}</p>
-          </div>
+          {contact ? (
+            <>
+              {/* The notice every product carries: the sale is theirs, not SheOut's. */}
+              <div className="flex gap-3 rounded-input bg-accent-orange-tint px-4 py-3" role="note" data-testid="direct-sale-notice">
+                <Info className="mt-0.5 h-5 w-5 shrink-0 text-accent-orange-strong" aria-hidden="true" />
+                <p className="text-sm text-text-primary">{t('seller.legal.productNotice')}</p>
+              </div>
 
-          <a
-            href={contact.href}
-            target={contact.kind === 'whatsapp' ? '_blank' : undefined}
-            rel={contact.kind === 'whatsapp' ? 'noopener noreferrer' : undefined}
-            className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-4 font-heading text-card-title text-text-inverse shadow-lift"
-            data-testid="contact-seller"
-            data-contact-kind={contact.kind}
-          >
-            {contact.kind === 'whatsapp' ? <MessageCircle className="h-5 w-5" aria-hidden="true" /> : <Phone className="h-5 w-5" aria-hidden="true" />}
-            {contact.kind === 'whatsapp' ? t('seller.product.contactWhatsapp') : t('seller.product.contactCall')}
-          </a>
-          <p className="-mt-2 text-center text-caption text-text-secondary">
-            {contact.kind === 'whatsapp' ? t('seller.product.codeInMessage') : t('seller.product.codeOnCall', { code: product.code })}
-          </p>
+              <a
+                href={contact.href}
+                target={contact.kind === 'whatsapp' ? '_blank' : undefined}
+                rel={contact.kind === 'whatsapp' ? 'noopener noreferrer' : undefined}
+                className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-4 font-heading text-card-title text-text-inverse shadow-lift"
+                data-testid="contact-seller"
+                data-contact-kind={contact.kind}
+              >
+                {contact.kind === 'whatsapp' ? <MessageCircle className="h-5 w-5" aria-hidden="true" /> : <Phone className="h-5 w-5" aria-hidden="true" />}
+                {contact.kind === 'whatsapp' ? t('seller.product.contactWhatsapp') : t('seller.product.contactCall')}
+              </a>
+              <p className="-mt-2 text-center text-caption text-text-secondary">
+                {contact.kind === 'whatsapp' ? t('seller.product.codeInMessage') : t('seller.product.codeOnCall', { code: product.code })}
+              </p>
+            </>
+          ) : (
+            /* A sample shop: said plainly, in place of a button that would reach nobody. */
+            <div className="flex gap-3 rounded-input bg-primary-light px-4 py-3" role="note" data-testid="sample-notice">
+              <Info className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
+              <div className="text-sm text-text-primary">
+                <p className="font-semibold">{t('seller.sample.title')}</p>
+                <p className="mt-0.5 text-text-secondary">{t('seller.sample.body')}</p>
+              </div>
+            </div>
+          )}
 
           {product.moreFromSeller.length > 0 && (
             <section className="space-y-3">

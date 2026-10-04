@@ -57,8 +57,31 @@ public final class MarketplaceViews {
                               ProductTerms terms) {
     }
 
-    /** Where her listing fee stands. status, method and paidAt are null until she has started paying. */
-    public record ListingFeeView(BigDecimal amount, PaymentStatus status, PaymentMethod method, Instant paidAt) {
+    /**
+     * Where she stands on her monthly plan - see the marketplace's SellerPlan.
+     * <ul>
+     *   <li>NOT_STARTED - not approved yet; nothing to pay.</li>
+     *   <li>FREE_MONTH - her first month, free.</li>
+     *   <li>PAID - a paid month, with more than the pay window left.</li>
+     *   <li>DUE_SOON - her month ends within the pay window: she can pay for the next.</li>
+     *   <li>OVERDUE - her month has ended; still listed until hiddenFrom.</li>
+     *   <li>LAPSED - hidden from customers until she pays.</li>
+     * </ul>
+     */
+    public enum PlanState { NOT_STARTED, FREE_MONTH, PAID, DUE_SOON, OVERDUE, LAPSED }
+
+    /** One month she paid for. period 1 is her first paid month; 0 is the old one-time fee. */
+    public record PaidMonth(int period, BigDecimal amount, PaymentMethod method, Instant paidAt) {
+    }
+
+    /**
+     * Her plan, as the app and the console show it. monthlyFee is what her
+     * next month costs. freeUntil, paidUntil and hiddenFrom are null before
+     * approval. canPayNow is the server's answer, so the app never offers a
+     * payment that would be refused.
+     */
+    public record PlanView(BigDecimal monthlyFee, int freeMonths, PlanState state, Instant freeUntil, Instant paidUntil,
+                           Instant hiddenFrom, Instant payFrom, boolean canPayNow, List<PaidMonth> history) {
     }
 
     /**
@@ -81,7 +104,7 @@ public final class MarketplaceViews {
             String suspensionReason,
             Instant submittedAt,
             Instant activatedAt,
-            ListingFeeView listingFee,
+            PlanView plan,
             List<ProductView> products,
             int imagesUsed,
             int maxImagesPerSeller,
@@ -101,7 +124,9 @@ public final class MarketplaceViews {
                               String imageUrl, UUID sellerId, String businessName, SellerCategory category,
                               String customCategory, String area,
                               /** So the grid can say "Out of stock" before anybody opens it. */
-                              ProductTerms.Availability availability) {
+                              ProductTerms.Availability availability,
+                              /** An example shop: marked as one, and nobody to contact. */
+                              boolean sample) {
     }
 
     /**
@@ -141,7 +166,9 @@ public final class MarketplaceViews {
                                 String whatsappNumber, List<ListingCard> moreFromSeller,
                                 ProductTerms terms,
                                 /** When she last changed it - "updated 3 days ago" says the stock line is fresh. */
-                                java.time.Instant updatedAt) {
+                                java.time.Instant updatedAt,
+                                /** An example shop: contactPhone and whatsappNumber are null, and the app says why. */
+                                boolean sample) {
     }
 
     // ------------------------------------------------------------ the console
@@ -166,7 +193,9 @@ public final class MarketplaceViews {
             Instant editedLiveAt,
             String rejectionReason,
             String suspensionReason,
-            ListingFeeView listingFee
+            PlanView plan,
+            /** An example shop, shown while sample shops are on. */
+            boolean sample
     ) {
     }
 

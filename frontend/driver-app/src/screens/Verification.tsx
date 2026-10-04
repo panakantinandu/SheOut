@@ -425,7 +425,7 @@ export function Verification() {
             <Button fullWidth variant="secondary" disabled={savingPan || !panChanged || !panUsable} onClick={savePan}>
               {savingPan
                 ? t('common.saving')
-                : pan.trim() === ''
+                : pan.trim() === '' && panOnFile
                   ? t('verification.removePan')
                   : panOnFile
                     ? t('verification.updatePan')

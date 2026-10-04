@@ -265,7 +265,7 @@
     "IN_PROGRESS": "In progress",
     "COMPLETED": "Completed",
     "CANCELLED": "Cancelled",
-    "NO_DRIVERS_AVAILABLE": "No drivers found",
+    "NO_DRIVERS_AVAILABLE": "No partner found",
     "AWAITING_PAYMENT": "Awaiting payment"
   },
   "category": {

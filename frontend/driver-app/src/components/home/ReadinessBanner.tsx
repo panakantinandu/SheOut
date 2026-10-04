@@ -16,7 +16,7 @@ import { blockerText } from '../../lib/readinessText';
  * while it loads or if it cannot be read: Home's own refusal still says why.
  * reloadKey refetches it when Home refreshes.
  */
-export function ReadinessBanner({ reloadKey }: { reloadKey?: unknown }) {
+export function ReadinessBanner({ reloadKey, onBlocked }: { reloadKey?: unknown; onBlocked?: (blocked: boolean) => void }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [readiness, setReadiness] = useState<PartnerReadiness | null>(null);
@@ -24,6 +24,12 @@ export function ReadinessBanner({ reloadKey }: { reloadKey?: unknown }) {
   useEffect(() => {
     usersApi.getReadiness().then(setReadiness).catch(() => setReadiness(null));
   }, [reloadKey]);
+
+  // Home's status card says less when this card already names her next step.
+  const blocked = Boolean(readiness && readiness.blockers.length > 0);
+  useEffect(() => {
+    onBlocked?.(blocked);
+  }, [blocked, onBlocked]);
 
   if (!readiness) return null;
   const blocker = readiness.blockers[0];

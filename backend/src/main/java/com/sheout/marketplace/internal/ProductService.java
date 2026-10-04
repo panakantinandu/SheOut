@@ -174,8 +174,10 @@ public class ProductService implements ProductApi {
                 .toList();
         return Optional.of(new ProductDetail(product.getId(), product.getCode(), product.getTitle(), product.getDescription(),
                 product.getDisplayPrice(), product.getOriginalPrice(), photos, s.getId(), s.getBusinessName(), s.getCategory(),
-                s.getCustomCategory(), s.getArea(), s.getWebsiteUrl(), s.getContactPhone(), s.getWhatsappNumber(), views.cards(others, Map.of(s.getId(), s)),
-                product.getTerms(), product.getUpdatedAt()));
+                s.getCustomCategory(), s.getArea(), s.getWebsiteUrl(),
+                // A sample shop has nobody behind it: no number to call.
+                s.isSample() ? null : s.getContactPhone(), s.isSample() ? null : s.getWhatsappNumber(),
+                views.cards(others, Map.of(s.getId(), s)), product.getTerms(), product.getUpdatedAt(), s.isSample()));
     }
 
     /** A code no other product has. Almost always the first one drawn; see ProductCodes. */

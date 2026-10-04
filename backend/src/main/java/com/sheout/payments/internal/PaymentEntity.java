@@ -41,8 +41,14 @@ public class PaymentEntity extends BaseEntity {
      */
     private UUID payerAccountId;
 
-    @Column(unique = true)
     private UUID sellerId;
+
+    /**
+     * Which of her months a seller's fee pays for: 1 for her first paid
+     * month, 2 for the second. 0 is the one-time fee from before monthly
+     * plans. Null for a trip.
+     */
+    private Integer sellerPeriod;
 
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal amount;
@@ -105,12 +111,13 @@ public class PaymentEntity extends BaseEntity {
         this.status = status;
     }
 
-    /** A seller's listing fee: no booking, nobody to settle a share with. */
-    public static PaymentEntity listingFee(UUID payerAccountId, UUID sellerId, BigDecimal amount) {
+    /** A seller's monthly fee for one period: no booking, nobody to settle a share with. */
+    public static PaymentEntity listingFee(UUID payerAccountId, UUID sellerId, int period, BigDecimal amount) {
         PaymentEntity payment = new PaymentEntity(null, amount, PaymentMethod.UPI, PaymentStatus.PENDING);
         payment.purpose = PaymentPurpose.SELLER_LISTING_FEE;
         payment.payerAccountId = payerAccountId;
         payment.sellerId = sellerId;
+        payment.sellerPeriod = period;
         payment.fareAmount = amount;
         return payment;
     }
@@ -143,6 +150,10 @@ public class PaymentEntity extends BaseEntity {
 
     public UUID getSellerId() {
         return sellerId;
+    }
+
+    public Integer getSellerPeriod() {
+        return sellerPeriod;
     }
 
     public UUID getBookingId() {

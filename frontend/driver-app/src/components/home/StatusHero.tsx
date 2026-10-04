@@ -12,6 +12,8 @@ export interface StatusHeroProps {
   onReviewVerification: () => void;
   /** A refused go-online, or a failed toggle, said inside the card it belongs to. */
   message?: string | null;
+  /** The checklist card above names what is missing: say less here, and no second button. */
+  checklistAbove?: boolean;
 }
 
 /**
@@ -35,7 +37,7 @@ export interface StatusHeroProps {
  * something to fix. A change of state cross-fades and the new face pops in.
  * Go Online glows softly while it is the thing to do.
  */
-export function StatusHero({ state, toggling, onGoOnline, onGoOffline, onTurnOnLocation, onReviewVerification, message }: StatusHeroProps) {
+export function StatusHero({ state, toggling, onGoOnline, onGoOffline, onTurnOnLocation, onReviewVerification, message, checklistAbove }: StatusHeroProps) {
   const { t } = useTranslation();
 
   if (state === 'loading') return <SkeletonCard lines={3} label={t('home.loadingProfile')} />;
@@ -60,7 +62,9 @@ export function StatusHero({ state, toggling, onGoOnline, onGoOffline, onTurnOnL
               )}
               <span className="break-words">{title(state, t)}</span>
             </p>
-            <p className="mt-1 break-words text-sm text-text-secondary" data-testid="hero-body">{body(state, t)}</p>
+            <p className="mt-1 break-words text-sm text-text-secondary" data-testid="hero-body">
+              {state === 'verification' && checklistAbove ? t('home.verificationSeeChecklist') : body(state, t)}
+            </p>
           </div>
         </div>
 
@@ -89,7 +93,8 @@ export function StatusHero({ state, toggling, onGoOnline, onGoOffline, onTurnOnL
             {goOffline}
           </div>
         )}
-        {state === 'verification' && (
+        {/* The checklist card above already has the button; two buttons to the same place read as two problems. */}
+        {state === 'verification' && !checklistAbove && (
           <Button size="lg" fullWidth onClick={onReviewVerification} data-testid="review-verification">
             {t('home.review')}
           </Button>

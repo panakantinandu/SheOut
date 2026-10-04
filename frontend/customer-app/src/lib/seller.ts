@@ -95,4 +95,10 @@ export const SELLER_STATUS_TONE: Record<SellerStatus, 'success' | 'warning' | 'd
   ACTIVE: 'success',
   REJECTED: 'danger',
   SUSPENDED: 'danger',
+  LAPSED: 'warning',
 };
+
+/** "4 November" in her language, the day as it is in India - for her plan's dates. */
+export function planDate(iso: string, language: string): string {
+  return new Date(iso).toLocaleDateString(`${language}-IN`, { day: 'numeric', month: 'long', timeZone: 'Asia/Kolkata' });
+}

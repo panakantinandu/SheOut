@@ -89,7 +89,7 @@ const STATUS_OPTIONS: Record<View, { value: BookingStatus; label: string }[]> = 
     { value: 'IN_PROGRESS', label: 'In progress' },
     { value: 'COMPLETED', label: 'Completed' },
     { value: 'CANCELLED', label: 'Cancelled' },
-    { value: 'NO_DRIVERS_AVAILABLE', label: 'No drivers found' },
+    { value: 'NO_DRIVERS_AVAILABLE', label: 'No partner found' },
   ],
   // Each view only offers the statuses it can actually contain. Offering
   // "Completed" inside Live Tracking would be a filter guaranteed to empty
@@ -103,7 +103,7 @@ const STATUS_OPTIONS: Record<View, { value: BookingStatus; label: string }[]> = 
   history: [
     { value: 'COMPLETED', label: 'Completed' },
     { value: 'CANCELLED', label: 'Cancelled' },
-    { value: 'NO_DRIVERS_AVAILABLE', label: 'No drivers found' },
+    { value: 'NO_DRIVERS_AVAILABLE', label: 'No partner found' },
   ],
 };
 

@@ -1372,7 +1372,7 @@ const STATUS_TEXT = {
   OPEN: 'Open', CLOSED: 'Closed',
   // SheOut Seller shops. REJECTED already reads correctly above.
   DRAFT: 'Draft', SUBMITTED_FOR_REVIEW: 'Awaiting review', APPROVED_AWAITING_PAYMENT: 'Approved - fee due',
-  ACTIVE: 'Live', SUSPENDED: 'Suspended',
+  ACTIVE: 'Live', SUSPENDED: 'Suspended', LAPSED: 'Hidden - month not paid',
 };
 const STATUS_TONE = {
   UNDER_REVIEW: 'amber', PENDING: 'amber', REQUESTED: 'amber', MATCHED: 'amber',
@@ -1383,16 +1383,12 @@ const STATUS_TONE = {
   NO_DRIVERS_AVAILABLE: 'amber',
   OPEN: 'amber', CLOSED: 'grey',
   DRAFT: 'grey', SUBMITTED_FOR_REVIEW: 'amber', APPROVED_AWAITING_PAYMENT: 'amber', ACTIVE: 'green', SUSPENDED: 'red',
+  LAPSED: 'amber',
 };
 const SELLER_CATEGORY_TEXT = {
   FASHION_SAREE: 'Fashion & Saree', BEAUTY_SERVICES: 'Beauty Services', TAILORING: 'Tailoring',
   MEHANDI: 'Mehandi', GIFTS: 'Gifts', ORNAMENTS: 'Ornaments',
 };
-/**
- * A listing fee in its own words. A payment's PENDING is "Not yet
- * submitted" in the verification vocabulary above, which is wrong for money:
- * an order exists, she has not finished paying.
- */
 /**
  * How an SOS reached SheOut, as evidence beside "Contacts reached": what
  * raised it, whether it came live over data or sat on her phone without
@@ -1414,11 +1410,22 @@ function sosDelivery(r) {
   return arrived + sms + trigger;
 }
 
-function feeBadge(fee) {
-  if (!fee || !fee.status) return '<span class="badge b-grey">Not started</span>';
-  if (fee.status === 'CAPTURED') return '<span class="badge b-green">Paid</span>';
-  if (fee.status === 'FAILED') return '<span class="badge b-red">Failed</span>';
-  return '<span class="badge b-amber">Started, not paid</span>';
+/**
+ * A seller's monthly plan in a word, and the date that goes with it: free or
+ * paid until, ending soon, ended (still listed in its grace days), or hidden
+ * because it was not paid.
+ */
+const PLAN_TEXT = {
+  NOT_STARTED: ['grey', 'Not started'], FREE_MONTH: ['green', 'Free month'], PAID: ['green', 'Paid'],
+  DUE_SOON: ['amber', 'Ends soon'], OVERDUE: ['red', 'Ended - in grace'], LAPSED: ['red', 'Hidden - not paid'],
+};
+function planBadge(plan) {
+  const [tone, text] = PLAN_TEXT[(plan && plan.state) || 'NOT_STARTED'] || PLAN_TEXT.NOT_STARTED;
+  return `<span class="badge b-${tone}">${text}</span>`;
+}
+function planUntil(plan) {
+  if (!plan || !plan.paidUntil) return '';
+  return plan.state === 'LAPSED' ? `hidden since ${time(plan.hiddenFrom)}` : `until ${time(plan.paidUntil)}`;
 }
 const TICKET_CATEGORY_TEXT = {
   SAFETY_CONCERN: 'Safety concern', PAYMENT_DISPUTE: 'Payment dispute',
@@ -2233,7 +2240,7 @@ const VIEWS = {
     filters: [
       { key: 'q', kind: 'text', label: 'Search', placeholder: 'Shop name, area or contact number…', wide: true },
       { key: 'status', kind: 'select', label: 'Status', any: 'Any status', options: () =>
-          ['SUBMITTED_FOR_REVIEW', 'APPROVED_AWAITING_PAYMENT', 'ACTIVE', 'SUSPENDED', 'REJECTED', 'DRAFT']
+          ['SUBMITTED_FOR_REVIEW', 'ACTIVE', 'LAPSED', 'SUSPENDED', 'REJECTED', 'DRAFT']
             .map(value => ({ value, label: STATUS_TEXT[value] })) },
     ],
     columns: [
@@ -2243,7 +2250,7 @@ const VIEWS = {
       { key: 'owner', label: 'Account', sort: r => r.ownerPhone || '' },
       { key: 'status', label: 'Status', sort: r => r.seller.status || '' },
       { key: 'content', label: 'Products', sort: r => -(r.seller.productCount || 0) },
-      { key: 'fee', label: 'Listing fee', sort: r => (r.seller.listingFee && r.seller.listingFee.status) || '' },
+      { key: 'fee', label: 'Plan', sort: r => new Date((r.seller.plan && r.seller.plan.paidUntil) || 0).getTime() },
       { key: 'waiting', label: 'Submitted', sort: r => -new Date(r.seller.submittedAt || 0).getTime() },
       { key: 'holder', label: 'Reviewing', sort: r => ((WORK['seller-review'] || {})[r.seller.id] || {}).label || '' },
     ],
@@ -2253,13 +2260,13 @@ const VIEWS = {
     },
     cell: (r, key) => {
       const s = r.seller;
-      if (key === 'shop') return `<span class="strong">${esc(s.businessName)}</span>${s.editedLiveAt ? '<div class="subtle">Changed since approval</div>' : ''}`;
+      if (key === 'shop') return `<span class="strong">${esc(s.businessName)}</span>${s.sample ? ' <span class="badge b-grey">Sample</span>' : ''}${s.editedLiveAt ? '<div class="subtle">Changed since approval</div>' : ''}`;
       if (key === 'category') return esc(SELLER_CATEGORY_TEXT[s.category] || humanize(s.category));
       if (key === 'area') return s.area ? esc(s.area) : '<span class="subtle">Not given</span>';
       if (key === 'owner') return `<span class="num">${esc(r.ownerPhone || '—')}</span>${r.ownerBlocked ? ' <span class="badge b-blocked">Blocked</span>' : ''}`;
       if (key === 'status') return badge(s.status);
       if (key === 'content') return `${s.productCount} <span class="subtle">· ${s.imageCount} photos</span>`;
-      if (key === 'fee') return feeBadge(s.listingFee) + `<div class="subtle">${rupees(s.listingFee && s.listingFee.amount)}</div>`;
+      if (key === 'fee') return planBadge(s.plan) + (planUntil(s.plan) ? `<div class="subtle">${esc(planUntil(s.plan))}</div>` : '');
       if (key === 'waiting') {
         if (!s.submittedAt) return '<span class="subtle">Not submitted</span>';
         if (s.status !== 'SUBMITTED_FOR_REVIEW') return `<span class="subtle">${time(s.submittedAt)}</span>`;
@@ -3263,7 +3270,8 @@ async function openSeller(r) {
     return;
   }
   const s = detail.row.seller;
-  const fee = s.listingFee || {};
+  const plan = s.plan || {};
+  const months = (plan.history || []).map(m => `<div class="subtle">${m.period === 0 ? 'One-time listing fee (before monthly plans)' : `Month ${m.period}`}: ${rupees(m.amount)}, ${esc(time(m.paidAt))}${m.method ? ` by ${esc(payMethodText(m.method))}` : ''}</div>`).join('');
   const whatsapp = s.whatsappNumber ? `+91 ${esc(s.whatsappNumber)}` : '<span class="subtle">None - customers are offered a call</span>';
   const products = detail.products.map(p => `
     <div class="check">
@@ -3278,12 +3286,12 @@ async function openSeller(r) {
        <button class="btn btn-approve" data-seller="approve" type="button">Approve</button>`
     : s.status === 'ACTIVE'
       ? '<button class="btn btn-reject" data-seller="suspend" type="button">Suspend shop</button>'
-      : s.status === 'SUSPENDED' && fee.status === 'CAPTURED'
+      : s.status === 'SUSPENDED'
         ? '<button class="btn btn-approve" data-seller="reinstate" type="button">Reinstate</button>'
         : '';
   openModal(`
     <div class="modal-head">
-      <h3>${esc(s.businessName)} ${badge(s.status)}</h3>
+      <h3>${esc(s.businessName)} ${badge(s.status)}${s.sample ? ' <span class="badge b-grey">Sample shop</span>' : ''}</h3>
       <p>${esc(SELLER_CATEGORY_TEXT[s.category] || humanize(s.category))} &middot; ${s.productCount} products &middot; ${s.imageCount} photos</p>
     </div>
     <div class="modal-body">
@@ -3294,7 +3302,7 @@ async function openSeller(r) {
         <dt>Area</dt><dd>${s.area ? esc(s.area) : '<span class="subtle">Not given</span>'}</dd>
         <dt>Website</dt><dd>${s.websiteUrl ? `<a href="${escValue(s.websiteUrl)}" target="_blank" rel="noopener noreferrer">${esc(s.websiteUrl)}</a> <span class="subtle">- check it is her own shop</span>` : '<span class="subtle">None</span>'}</dd>
         <dt>Submitted</dt><dd>${s.submittedAt ? time(s.submittedAt) : '<span class="subtle">Not yet</span>'}</dd>
-        <dt>Listing fee</dt><dd>${feeBadge(fee)} ${rupees(fee.amount)}${fee.paidAt ? ` <span class="subtle">paid ${esc(time(fee.paidAt))}${fee.method ? ` by ${esc(payMethodText(fee.method))}` : ''}</span>` : ''}</dd>
+        <dt>Plan</dt><dd>${planBadge(plan)} ${rupees(plan.monthlyFee)} a month${planUntil(plan) ? ` <span class="subtle">${esc(planUntil(plan))}</span>` : ''}${plan.freeUntil ? `<div class="subtle">Free month to ${esc(time(plan.freeUntil))}</div>` : ''}${months}</dd>
         ${s.activatedAt ? `<dt>Live since</dt><dd>${time(s.activatedAt)}</dd>` : ''}
         ${s.editedLiveAt ? `<dt>Changed since approval</dt><dd>${time(s.editedLiveAt)} <span class="subtle">- read the products below again</span></dd>` : ''}
         ${s.rejectionReason && s.status === 'REJECTED' ? `<dt>Sent back because</dt><dd>“${esc(s.rejectionReason)}”</dd>` : ''}
@@ -3316,7 +3324,7 @@ async function decideSeller(s, action) {
   const ask = {
     approve: {
       title: `Approve ${name}?`,
-      message: `She is asked to pay the one-time listing fee of ${rupees(s.listingFee && s.listingFee.amount)}, and goes into the directory once it is paid. Approve only if every product is what it says and fit to show.`,
+      message: `Her shop goes into the directory at once, free for its first month; after that she pays ${rupees(s.plan && s.plan.monthlyFee)} a month to stay listed. Approve only if every product is what it says and fit to show.`,
       confirmLabel: 'Approve', tone: 'approve',
     },
     reject: {
@@ -3337,7 +3345,7 @@ async function decideSeller(s, action) {
     },
     reinstate: {
       title: `Reinstate ${name}?`,
-      message: 'Her shop goes back into the directory now. She has already paid.',
+      message: 'Her shop goes back into the directory now if her month is still running; otherwise it stays hidden until she pays for one.',
       confirmLabel: 'Reinstate', tone: 'approve',
     },
   }[action];
@@ -3349,8 +3357,8 @@ async function decideSeller(s, action) {
       body: JSON.stringify(ask.withReason ? { reason: ok.reason } : {}),
     });
     toast('ok', { approve: 'Shop approved', reject: 'Shop sent back', suspend: 'Shop suspended', reinstate: 'Shop reinstated' }[action],
-      { approve: 'She has been asked to pay the listing fee.', reject: 'She has been told what to change.',
-        suspend: 'It is out of the directory.', reinstate: 'It is back in the directory.' }[action]);
+      { approve: 'It is live now, on its free month.', reject: 'She has been told what to change.',
+        suspend: 'It is out of the directory.', reinstate: 'It is back, or hidden until she pays for her month.' }[action]);
     closeModal();
     render();
   } catch (err) {
@@ -6551,7 +6559,7 @@ async function loadOverview() {
     q('/admin/trust/review-queue', can('users.block')),
     q('/admin/campaigns', canOpen('campaigns')),
     shops('SUBMITTED_FOR_REVIEW'),
-    shops('APPROVED_AWAITING_PAYMENT'),
+    shops('LAPSED'),
     shops('ACTIVE'),
     q('/admin/live', canOpen('live')),
     q('/admin/profile-changes', can('verification.review')),
@@ -6749,7 +6757,7 @@ function paintOverview(d) {
           <div class="hd"><span class="hico">${OV_EXTRA.store}</span><h3>SheOut Marketplace</h3><span class="tag subtle">Seller shops</span></div>
           <div class="bd">
             ${mrow('amber', OV_EXTRA.clock, 'Waiting for review', 'Check every product and photo', inReview, 'SUBMITTED_FOR_REVIEW')}
-            ${mrow('brand', OV_EXTRA.rupee, 'Approved, fee not paid', 'Live once the listing fee is paid', awaitingFee, 'APPROVED_AWAITING_PAYMENT')}
+            ${mrow('brand', OV_EXTRA.rupee, 'Hidden, month not paid', 'Back once she pays for her month', awaitingFee, 'LAPSED')}
             ${mrow('green', OV_EXTRA.live, 'Live shops', 'In the marketplace now', live, 'ACTIVE')}
           </div>
         </section>

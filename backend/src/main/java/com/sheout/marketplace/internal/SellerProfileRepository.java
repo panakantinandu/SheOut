@@ -25,4 +25,10 @@ interface SellerProfileRepository extends JpaRepository<SellerProfileEntity, UUI
     Optional<SellerProfileEntity> findLockedByAccountId(UUID accountId);
 
     long countByStatus(SellerStatus status);
+
+    /** Every shop on a monthly plan that may need a reminder or to be hidden: live or lapsed, approved. */
+    java.util.List<SellerProfileEntity> findByStatusInAndPaidUntilIsNotNull(java.util.Collection<SellerStatus> statuses);
+
+    /** Every example shop - see SampleShops. */
+    java.util.List<SellerProfileEntity> findBySampleTrue();
 }

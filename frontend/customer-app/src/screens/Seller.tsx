@@ -579,6 +579,7 @@ function AskResults({
 
 /** One product in a grid: its first photo, name, price, and whose shop it is and where. */
 export function ListingTile({ item, onOpen, index = 0 }: { item: ListingCard; onOpen: () => void; index?: number }) {
+  const { t } = useTranslation();
   return (
     <button
       type="button"
@@ -590,6 +591,11 @@ export function ListingTile({ item, onOpen, index = 0 }: { item: ListingCard; on
     >
       <div className="relative flex aspect-square w-full items-center justify-center bg-primary-light">
         <AvailabilityBadge availability={item.availability} />
+        {item.sample && (
+          <span className="absolute right-2 top-2 z-10 rounded-full bg-surface/90 px-2 py-0.5 text-[0.6875rem] font-semibold text-text-primary shadow-card" data-testid="sample-badge">
+            {t('seller.sample.badge')}
+          </span>
+        )}
         {item.imageUrl ? (
           <img src={item.imageUrl} alt="" loading="lazy" className={`h-full w-full object-cover ${item.availability === 'OUT_OF_STOCK' ? 'opacity-60 grayscale-[35%]' : ''}`} />
         ) : (

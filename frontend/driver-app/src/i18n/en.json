@@ -35,14 +35,14 @@
     "sendError": "Could not send that. Check your connection and try again.",
     "raiseIssue": "Raise an issue",
     "title": "Help & Support",
-    "introTitle": "Driver support",
+    "introTitle": "Partner support",
     "introSubtitle": "Tell us what happened and we will reply here.",
     "myTickets": "My tickets",
     "otherWays": "Other ways to reach us",
     "emailUs": "Email us",
     "grievance": "Grievance Officer",
     "grievancePending": "Contact details are being set up",
-    "callSupport": "Call driver support",
+    "callSupport": "Call partner support",
     "verificationStatus": "Verification status",
     "verificationStatusSub": "See what is still outstanding",
     "faqHeading": "Common questions",
@@ -90,7 +90,14 @@
       "withdraw": "Cancel this change",
       "rejectedTitle": "Your change was not approved",
       "rejectedBody": "Your earlier details are still in use. Fix this and save again, or contact support."
-    }
+    },
+    "editProfile": "Edit your profile and photo",
+    "sectionMore": "More",
+    "sectionWork": "Work",
+    "sectionHelp": "Help",
+    "verificationSub": "ID, documents and police check",
+    "payoutsSub": "Where your earnings are paid",
+    "editDetailsSub": "Name, email, date of birth and vehicle"
   },
   "vehicle": {
     "type": "Vehicle Type",
@@ -413,7 +420,9 @@
       "line1": "Questions about trips or payouts?",
       "line2": "Ask me about verification or safety",
       "open": "Ask {{name}}"
-    }
+    },
+    "verificationSeeChecklist": "Finish the checklist above and you can go online.",
+    "gettingReady": "Let's get you ready for your first trip"
   },
   "apiError": {
     "OUTSIDE_SERVICE_AREA": "SheOut only operates in and around Hyderabad right now. Go online once you are inside the service area.",
@@ -448,7 +457,7 @@
     "accepting": "Accepting...",
     "accept": "Accept",
     "unavailableTitle": "This request is no longer available",
-    "unavailableBody": "It expired or another driver accepted it first.",
+    "unavailableBody": "It expired or another partner accepted it first.",
     "backHome": "Back to Home",
     "myTrips": "See my trips"
   },
@@ -870,5 +879,12 @@
     "memberId": "Your member ID: {{id}}",
     "claim": "Claims: {{phone}}",
     "paidBySheOut": "SheOut pays for this cover. Nothing is taken from your earnings."
+  },
+  "settings": {
+    "title": "Settings",
+    "sub": "Language, appearance, privacy and log out",
+    "preferences": "Preferences",
+    "security": "Security",
+    "aboutLegal": "About & legal"
   }
 }

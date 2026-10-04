@@ -17,22 +17,45 @@ import java.math.BigDecimal;
 @Component
 class MarketplaceLimits {
 
-    private final BigDecimal listingFee;
+    private final BigDecimal monthlyFee;
+    private final int freeMonths;
+    private final java.time.Duration payWindow;
+    private final java.time.Duration grace;
+    private final java.util.List<Integer> reminderDays;
     private final int maxImagesPerSeller;
     private final int maxImagesPerProduct;
     private final int maxProducts;
 
-    MarketplaceLimits(@Value("${sheout.marketplace.listing-fee:299}") BigDecimal listingFee,
+    MarketplaceLimits(@Value("${sheout.marketplace.monthly-fee:499}") BigDecimal monthlyFee,
+                      @Value("${sheout.marketplace.free-months:1}") int freeMonths,
+                      @Value("${sheout.marketplace.pay-window-days:7}") int payWindowDays,
+                      @Value("${sheout.marketplace.grace-days:3}") int graceDays,
+                      @Value("${sheout.marketplace.reminder-days:7,3,1}") java.util.List<Integer> reminderDays,
                       @Value("${sheout.marketplace.max-images-per-seller:40}") int maxImagesPerSeller,
                       @Value("${sheout.marketplace.max-images-per-product:8}") int maxImagesPerProduct,
                       @Value("${sheout.marketplace.max-products:100}") int maxProducts) {
-        this.listingFee = listingFee;
+        this.monthlyFee = monthlyFee;
+        this.freeMonths = Math.max(0, freeMonths);
+        this.payWindow = java.time.Duration.ofDays(Math.max(1, payWindowDays));
+        this.grace = java.time.Duration.ofDays(Math.max(0, graceDays));
+        // Largest first: 7 days, then 3, then 1.
+        this.reminderDays = reminderDays.stream().filter(d -> d > 0).distinct()
+                .sorted(java.util.Comparator.reverseOrder()).toList();
         this.maxImagesPerSeller = maxImagesPerSeller;
         this.maxImagesPerProduct = maxImagesPerProduct;
         this.maxProducts = maxProducts;
     }
 
-    BigDecimal listingFee() { return listingFee; }
+    /** Rupees a month, after the free months. */
+    BigDecimal monthlyFee() { return monthlyFee; }
+    /** Free months from the day a person approves her shop. */
+    int freeMonths() { return freeMonths; }
+    /** How long before her month ends she may pay for the next one. */
+    java.time.Duration payWindow() { return payWindow; }
+    /** How long after her month ends her shop stays listed while she pays. */
+    java.time.Duration grace() { return grace; }
+    /** Days before her month ends that she is reminded, largest first. */
+    java.util.List<Integer> reminderDays() { return reminderDays; }
     int maxImagesPerSeller() { return maxImagesPerSeller; }
     int maxImagesPerProduct() { return maxImagesPerProduct; }
     int maxProducts() { return maxProducts; }

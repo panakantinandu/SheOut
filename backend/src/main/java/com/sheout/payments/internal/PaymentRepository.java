@@ -27,11 +27,14 @@ interface PaymentRepository extends JpaRepository<PaymentEntity, UUID>, JpaSpeci
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<PaymentEntity> findLockedByRazorpayOrderId(String razorpayOrderId);
 
-    /** A seller's listing fee - at most one per seller, which the unique seller_id keeps true. */
-    Optional<PaymentEntity> findBySellerId(UUID sellerId);
+    /** A seller's fee for one month - at most one, which uq_payments_seller_period keeps true. */
+    Optional<PaymentEntity> findBySellerIdAndSellerPeriod(UUID sellerId, Integer sellerPeriod);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    Optional<PaymentEntity> findLockedBySellerId(UUID sellerId);
+    Optional<PaymentEntity> findLockedBySellerIdAndSellerPeriod(UUID sellerId, Integer sellerPeriod);
+
+    /** Every fee a seller has started or paid, oldest month first. */
+    java.util.List<PaymentEntity> findBySellerIdOrderBySellerPeriodAsc(UUID sellerId);
 
     /** The payment a partner's UPI QR is for. */
     @Lock(LockModeType.PESSIMISTIC_WRITE)

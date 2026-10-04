@@ -324,14 +324,11 @@ public class VerificationService implements VerificationApi {
      */
     @Transactional
     public void recordFunnelStep(UUID accountId, AccountRole role, VerificationFunnelStep step) {
-        if (funnel.existsByAccountIdAndStep(accountId, step)) {
-            return;
-        }
         try {
-            funnel.save(new VerificationFunnelEntity(accountId, role, step));
+            // The screen asks twice at once when it mounts; the database keeps the first.
+            funnel.recordOnce(accountId, role.name(), step.name());
         } catch (RuntimeException ex) {
-            // Two taps at once, most likely, hitting the unique index. The
-            // measurement is not worth an error in her face.
+            // The measurement is not worth an error in her face.
             log.debug("Could not record verification funnel step {}", step, ex);
         }
     }

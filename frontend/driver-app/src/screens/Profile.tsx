@@ -1,34 +1,29 @@
-import { Camera, Car, Landmark, LogOut, ShieldCheck, User } from 'lucide-react';
+import { Camera, Car, Gift, Landmark, LifeBuoy, Settings as SettingsIcon, ShieldCheck } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Avatar, Button, Card, ConfirmDialog, IconCircle, ListRow, PrivacyDataSection, ThemeToggle, StatusBadge, TopHeader, vehicleLabel, ProfileCompletionForm, shrinkPhoto, ServiceArt } from '@sheout/design-system';
+import { ASSISTANT_NAME, AssistantAvatar, Avatar, Button, Card, IconCircle, ListRow, StatusBadge, TopHeader, phoneDisplay, vehicleLabel, ProfileCompletionForm, shrinkPhoto, ServiceArt } from '@sheout/design-system';
 import { useAppDrawer } from '../components/AppDrawer';
-import { ApiError, privacyApi, supportApi, usersApi } from '../api/client';
+import { ApiError, usersApi } from '../api/client';
 import type { DriverProfileSummary, VehicleType } from '../api/types';
-import { useAuth } from '../auth/AuthContext';
 import { VehicleFields } from '../components/VehicleFields';
 import { PendingChangeCard } from '../components/PendingChangeCard';
 import { YourCoverCard } from '../components/YourCoverCard';
 import { useTranslation } from '@sheout/design-system';
 
 /**
- * REAL: profile fetched from GET /api/v1/users/driver/me, edits saved via
- * PUT (same endpoint). Log Out clears the real session. Help & Support and
- * the notification bell are real screens now - the placeholders they used
- * to show are gone.
+ * Who she is on SheOut and her work: her photo and details, her vehicle,
+ * verification and payouts, and where to get help. How the app behaves -
+ * language, appearance, her data, logging out - is under Settings.
+ * <p>
+ * Her photo is changed by tapping it, the way every app does it. A big
+ * "Your photo" card used to sit first on this screen even when she had a
+ * photo; it now appears only while the photo is missing - the one time it
+ * is the most important thing here, because she cannot go online without it.
  */
 export function Profile() {
   const { t } = useTranslation();
-  const { t: ds } = useTranslation('ds');
   const navigate = useNavigate();
   const drawer = useAppDrawer();
-  const { logout } = useAuth();
-  const [confirmingLogout, setConfirmingLogout] = useState(false);
-  const [grievanceEmail, setGrievanceEmail] = useState<string | null>(null);
-
-  useEffect(() => {
-    supportApi.getContact().then((c) => setGrievanceEmail(c.grievanceOfficerEmail)).catch(() => {});
-  }, []);
   const [profile, setProfile] = useState<DriverProfileSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
@@ -66,22 +61,32 @@ export function Profile() {
       .catch((err) => setError(err instanceof ApiError ? err.message : t('profile.loadError')));
   }, []);
 
-  function handleLogout() {
-    logout();
-    navigate('/login', { replace: true });
-  }
+  const icon = (node: JSX.Element) => <IconCircle tone="soft" size="sm" icon={node} />;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-6">
       <TopHeader variant="plain" title={t('profile.title')} onMenuClick={drawer.open} />
 
-      <Card className="flex items-center gap-3">
-        <Avatar url={profile?.profilePhotoUrl} name={profile?.name} size="lg" />
+      <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoSelected} />
+      <Card className="flex items-center gap-4">
+        <button
+          type="button"
+          className="relative shrink-0 rounded-full"
+          onClick={() => photoInputRef.current?.click()}
+          disabled={!profile || uploadingPhoto}
+          aria-label={profile?.hasProfilePhoto ? t('profile.changePhoto') : t('profile.addPhoto')}
+          data-testid="avatar-photo"
+        >
+          <Avatar url={profile?.profilePhotoUrl} name={profile?.name} size="lg" className={uploadingPhoto ? 'opacity-50' : undefined} />
+          <span className="absolute -bottom-0.5 -right-0.5 flex h-6 w-6 items-center justify-center rounded-full border-2 border-surface bg-primary text-text-inverse">
+            <Camera className="h-3 w-3" aria-hidden="true" />
+          </span>
+        </button>
         <div className="min-w-0 flex-1">
-          <p className="font-heading text-card-title text-text-primary">
+          <p className="truncate font-heading text-card-title text-text-primary">
             {profile ? profile.name || t('profile.addName') : error || t('common.loading')}
           </p>
-          <p className="text-sm text-text-secondary">{profile?.phoneNumber ?? ''}</p>
+          <p className="text-sm text-text-secondary">{phoneDisplay(profile?.phoneNumber)}</p>
           {profile && (
             <StatusBadge tone={profile.verified ? 'success' : 'warning'} className="mt-1">
               {profile.verified ? t('profile.verified') : t('profile.unverified')}
@@ -90,58 +95,27 @@ export function Profile() {
         </div>
       </Card>
 
-      {/* Health, life or accident cover she is enrolled in - only once the insurer has confirmed her. */}
-      <YourCoverCard />
-
-      {/* The photo step, shown first and loudest when it is missing, because
-          it is what stands between her and her first booking. Riders check
-          the face on their screen against the person at the kerb; it is the
-          one thing that tells her she has the right vehicle. */}
-      {profile && !editing && (
-        <Card tone={profile.hasProfilePhoto ? 'default' : 'warning'} className="space-y-3">
+      {/* Only while her photo is missing: then it is what stands between her
+          and her first booking. Riders check the face on their screen against
+          the person at the kerb. hasProfilePhoto, not the URL: on local-disk
+          storage a photo that exists still has no displayable URL. */}
+      {profile && !editing && !profile.hasProfilePhoto && (
+        <Card tone="warning" className="space-y-3" data-testid="photo-missing">
           <div className="flex items-start gap-3">
-            <IconCircle
-              tone="soft"
-              color={profile.hasProfilePhoto ? undefined : 'orange'}
-              icon={profile.hasProfilePhoto ? <User /> : <Camera />}
-            />
+            <IconCircle tone="soft" color="orange" icon={<Camera />} />
             <div className="flex-1">
-              <p className="font-heading text-card-title text-text-primary">
-                {profile.hasProfilePhoto ? t('profile.yourPhoto') : t('profile.addPhotoToGoOnline')}
-              </p>
-              <p className="mt-1 text-sm text-text-secondary">
-                {profile.hasProfilePhoto
-                  ? t('profile.photoReason')
-                  : t('profile.photoRequired')}
-              </p>
+              <p className="font-heading text-card-title text-text-primary">{t('profile.addPhotoToGoOnline')}</p>
+              <p className="mt-1 text-sm text-text-secondary">{t('profile.photoRequired')}</p>
             </div>
           </div>
-          <input
-            ref={photoInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handlePhotoSelected}
-          />
-          <Button
-            fullWidth
-            variant={profile.hasProfilePhoto ? 'secondary' : 'primary'}
-            icon={<Camera className="h-4 w-4" />}
-            disabled={uploadingPhoto}
-            onClick={() => photoInputRef.current?.click()}
-          >
-            {/* hasProfilePhoto, not the URL: on local-disk storage a photo
-                that exists still has no displayable URL, and keying the
-                label off the URL would offer "Add photo" to somebody who
-                already added one. */}
-            {uploadingPhoto
-              ? t('common.uploading')
-              : profile.hasProfilePhoto
-                ? t('profile.changePhoto')
-                : t('profile.addPhoto')}
+          <Button fullWidth icon={<Camera className="h-4 w-4" />} disabled={uploadingPhoto} onClick={() => photoInputRef.current?.click()}>
+            {uploadingPhoto ? t('common.uploading') : t('profile.addPhoto')}
           </Button>
         </Card>
       )}
+
+      {/* Health, life or accident cover she is enrolled in - only once the insurer has confirmed her. */}
+      <YourCoverCard />
 
       {error && <p className="text-sm text-danger">{error}</p>}
 
@@ -221,65 +195,30 @@ export function Profile() {
         </Card>
       )}
 
-      <Card className="divide-y divide-border p-0">
-        <ListRow
-          icon={<IconCircle tone="soft" size="sm" icon={<ShieldCheck />} />}
-          label={t('verification.title')}
-          onClick={() => navigate('/verification')}
-        />
-        <ListRow
-          icon={<IconCircle tone="soft" size="sm" icon={<Landmark />} />}
-          label={t('profile.payouts')}
-          onClick={() => navigate('/payouts')}
-        />
-      </Card>
+      {!editing && (
+        <>
+          <section>
+            <h2 className="mb-3 font-heading text-section text-text-primary">{t('profile.sectionWork')}</h2>
+            <Card className="divide-y divide-border p-0">
+              <ListRow icon={icon(<ShieldCheck />)} label={t('verification.title')} sublabel={t('profile.verificationSub')} onClick={() => navigate('/verification')} />
+              <ListRow icon={icon(<Landmark />)} label={t('profile.payouts')} sublabel={t('profile.payoutsSub')} onClick={() => navigate('/payouts')} />
+            </Card>
+          </section>
 
-      {/* Per device, not per account: the right answer in bed on a phone is
-          not the right answer at a desk - see ThemeToggle. */}
-      <section data-testid="appearance">
-        <h2 className="mb-3 font-heading text-section text-text-primary">{ds('theme.label')}</h2>
-        <Card className="space-y-3">
-          <p className="text-sm text-text-secondary">{ds('theme.description')}</p>
-          <ThemeToggle />
-        </Card>
-      </section>
+          <section>
+            <h2 className="mb-3 font-heading text-section text-text-primary">{t('profile.sectionHelp')}</h2>
+            <Card className="divide-y divide-border p-0">
+              <ListRow icon={<AssistantAvatar size={32} staticOnly />} label={t('help.askAssistant', { name: ASSISTANT_NAME })} onClick={() => navigate('/help/assistant')} />
+              <ListRow icon={icon(<LifeBuoy />)} label={t('drawer.support')} onClick={() => navigate('/help')} />
+              <ListRow icon={icon(<Gift />)} label={t('refer.title')} onClick={() => navigate('/refer')} />
+            </Card>
+          </section>
 
-      <PrivacyDataSection
-        audience="driver"
-        grievanceOfficerEmail={grievanceEmail}
-        onDownload={() => privacyApi.downloadMyData()}
-        onDelete={async () => {
-          await privacyApi.deleteAccount();
-        }}
-        onDeleted={() => {
-          logout();
-          navigate('/login', {
-            replace: true,
-            state: { notice: t('profile.deletedNotice') },
-          });
-        }}
-      />
-
-      <Card className="p-0">
-        <ListRow
-          icon={<IconCircle color="red" tone="soft" size="sm" icon={<LogOut />} />}
-          label={t('auth.logout')}
-          chevron={false}
-          onClick={() => setConfirmingLogout(true)}
-        />
-      </Card>
-
-      {/* Logging out used to fire on a single tap of the row above, with
-          no way back. */}
-      <ConfirmDialog
-        open={confirmingLogout}
-        title={t('auth.logoutTitle')}
-        message={t('auth.logoutMessage')}
-        confirmLabel={t('auth.logout')}
-        destructive
-        onConfirm={handleLogout}
-        onCancel={() => setConfirmingLogout(false)}
-      />
+          <Card className="p-0">
+            <ListRow icon={icon(<SettingsIcon />)} label={t('settings.title')} sublabel={t('settings.sub')} onClick={() => navigate('/settings')} />
+          </Card>
+        </>
+      )}
     </div>
   );
 }

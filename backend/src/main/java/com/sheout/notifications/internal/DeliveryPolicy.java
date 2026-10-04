@@ -62,6 +62,10 @@ record DeliveryPolicy(boolean push, boolean emailFallback, boolean smsFallback, 
             // Operators on duty, like an SOS: push, every device.
             case TRIP_WATCH_ALERT -> PUSH_ONLY;
             case STAFF_SECURITY_ALERT -> PUSH_ONLY;
+            // Her shop's month: worth an email if push missed her. Not a
+            // text - that needs a DLT-registered template, and a reminder
+            // days ahead is not urgent enough to pay for one.
+            case SELLER_PLAN -> PUSH_THEN_EMAIL;
             // "Are you all right?" mid-trip. If push cannot reach her phone
             // - no data - a text is exactly when it matters.
             case TRIP_CHECK_IN -> PUSH_THEN_SMS;

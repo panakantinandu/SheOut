@@ -1,0 +1,57 @@
+{
+  "note": "Sample shops for SheOut Seller - see the marketplace's SampleShops. Shown only while MARKETPLACE_SAMPLE_SHOPS is true, each marked as a sample with no way to contact it. Photos are crops of the app's own category art (crop = x, y, width, height as fractions of the source).",
+  "shops": [
+    { "key": "lakshmi-silk", "name": "Lakshmi Silk Sarees", "category": "FASHION_SAREE", "area": "Kukatpally", "products": [
+      { "key": "banarasi", "title": "Pink Banarasi silk saree with zari border", "description": "Pure Banarasi silk in rani pink with a heavy gold zari border and pallu. Comes with an unstitched blouse piece.", "price": 3499, "originalPrice": 4200, "source": "fashion-saree", "crop": [0.52, 0.08, 0.44, 0.92] },
+      { "key": "anarkali", "title": "Festive anarkali kurtas", "description": "Floor-length anarkali kurtas with gold print, in teal, purple, pink and orange. Sizes S to XXL.", "price": 1299, "source": "fashion-saree", "crop": [0.0, 0.05, 0.55, 0.95] },
+      { "key": "handbag", "title": "Rose clutch handbag", "description": "Structured handbag with a gold clasp. Fits a phone, keys and a small wallet.", "price": 899, "source": "fashion-saree", "crop": [0.74, 0.58, 0.26, 0.42] }
+    ]},
+    { "key": "meera-boutique", "name": "Meera Boutique", "category": "FASHION_SAREE", "area": "Ameerpet", "products": [
+      { "key": "teal-frock", "title": "Teal printed long frock", "description": "Rayon long frock with a gold printed yoke. Light and easy for daily wear.", "price": 1499, "source": "fashion-saree", "crop": [0.0, 0.1, 0.26, 0.9] },
+      { "key": "purple-gown", "title": "Purple party gown", "description": "Flared gown in deep purple with all-over gold print, lined and ready to wear.", "price": 1799, "originalPrice": 2199, "source": "fashion-saree", "crop": [0.17, 0.1, 0.26, 0.9] }
+    ]},
+    { "key": "glow-divya", "name": "Glow by Divya", "category": "BEAUTY_SERVICES", "area": "Madhapur", "products": [
+      { "key": "bridal-makeup", "title": "Bridal makeup at home", "description": "HD bridal makeup with hairstyle and draping, done at your home. Trial session available.", "price": 6999, "source": "beauty", "crop": [0.0, 0.0, 1.0, 1.0] },
+      { "key": "facial", "title": "Cleanup and facial (60 minutes)", "description": "Deep cleanup, scrub and a fruit facial with a calming mask. All products are sealed and single-use.", "price": 999, "source": "beauty", "crop": [0.14, 0.04, 0.6, 0.8] },
+      { "key": "party-makeup", "title": "Party makeup", "description": "Soft glam or bold evening makeup for functions, with lashes included.", "price": 2499, "source": "beauty", "crop": [0.62, 0.42, 0.38, 0.58] }
+    ]},
+    { "key": "sneha-beauty", "name": "Sneha Beauty Studio", "category": "BEAUTY_SERVICES", "area": "Dilsukhnagar", "products": [
+      { "key": "threading", "title": "Threading and waxing at home", "description": "Eyebrows, upper lip and full arms, at your home in about 45 minutes.", "price": 499, "source": "beauty", "crop": [0.2, 0.0, 0.6, 0.85] }
+    ]},
+    { "key": "henna-farah", "name": "Henna by Farah", "category": "MEHANDI", "area": "Tolichowki", "products": [
+      { "key": "bridal-henna", "title": "Bridal mehandi, full hands and feet", "description": "Intricate bridal designs with your names hidden in the pattern. Organic henna, dark stain.", "price": 3500, "source": "mehandi", "crop": [0.0, 0.0, 1.0, 1.0] },
+      { "key": "arabic", "title": "Arabic mehandi, both hands", "description": "Flowing Arabic patterns on both hands, front and back. About 40 minutes.", "price": 600, "source": "mehandi", "crop": [0.47, 0.0, 0.45, 1.0] },
+      { "key": "kids", "title": "Kids festival mehandi", "description": "Small, simple designs for children, made with natural henna only.", "price": 250, "source": "mehandi", "crop": [0.24, 0.05, 0.4, 0.95] }
+    ]},
+    { "key": "rani-mehandi", "name": "Rani Mehandi Arts", "category": "MEHANDI", "area": "Secunderabad", "products": [
+      { "key": "engagement", "title": "Engagement mehandi", "description": "Elbow-length designs for engagement or sangeet, with matching designs for family members on request.", "price": 1500, "originalPrice": 1800, "source": "mehandi", "crop": [0.0, 0.0, 0.62, 1.0] }
+    ]},
+    { "key": "swathi-stitching", "name": "Swathi Stitching Centre", "category": "TAILORING", "area": "Miyapur", "products": [
+      { "key": "blouse", "title": "Designer blouse stitching", "description": "Lined blouse with your choice of neck and sleeve, piping and latkans. Ready in five days.", "price": 850, "source": "tailoring", "crop": [0.68, 0.0, 0.32, 0.72] },
+      { "key": "fall-pico", "title": "Saree fall and pico", "description": "Fall stitching and pico edging for any saree. Ready in two days.", "price": 150, "source": "tailoring", "crop": [0.4, 0.58, 0.6, 0.42] },
+      { "key": "salwar", "title": "Salwar suit stitching", "description": "Kurta, salwar and dupatta finishing, stitched to your measurements.", "price": 650, "source": "tailoring", "crop": [0.0, 0.34, 0.36, 0.66] }
+    ]},
+    { "key": "kavya-tailors", "name": "Kavya Tailors", "category": "TAILORING", "area": "LB Nagar", "products": [
+      { "key": "alterations", "title": "Alterations, per piece", "description": "Fitting, length and hem changes on kurtas, blouses and pants. Most pieces back the same week.", "price": 100, "source": "tailoring", "crop": [0.3, 0.28, 0.5, 0.62] }
+    ]},
+    { "key": "little-joys", "name": "Little Joys Gift Studio", "category": "GIFTS", "area": "Gachibowli", "products": [
+      { "key": "hamper", "title": "Festive hamper, three boxes", "description": "Three wrapped boxes of dry fruits, chocolates and a candle, with a handwritten card.", "price": 1499, "source": "gifts", "crop": [0.0, 0.0, 1.0, 1.0] },
+      { "key": "bouquet", "title": "Rose bouquet with a gift box", "description": "A dozen pink roses with a small wrapped surprise box. Same-day in Gachibowli and nearby.", "price": 899, "source": "gifts", "crop": [0.55, 0.0, 0.45, 0.62] },
+      { "key": "surprise-box", "title": "Custom wrapped surprise box", "description": "Tell us who it is for and we fill and wrap it - birthdays, anniversaries, thank-yous.", "price": 599, "source": "gifts", "crop": [0.34, 0.4, 0.42, 0.6] }
+    ]},
+    { "key": "sri-durga", "name": "Sri Durga One-Gram Jewellery", "category": "ORNAMENTS", "area": "Banjara Hills", "products": [
+      { "key": "necklace", "title": "One-gram gold bridal necklace set", "description": "Temple-style necklace with ruby stones and pearl drops, with matching earrings.", "price": 2499, "originalPrice": 2999, "source": "ornaments", "crop": [0.34, 0.04, 0.42, 0.62] },
+      { "key": "jhumka", "title": "Kundan jhumka earrings", "description": "Gold-plated jhumkas with ruby kundan and pearl hangings. Light enough for a full day.", "price": 699, "source": "ornaments", "crop": [0.7, 0.48, 0.3, 0.52] },
+      { "key": "bangles", "title": "Gold-plated bangles, set of six", "description": "Textured gold-plated bangles in sizes 2.4 to 2.8.", "price": 899, "source": "ornaments", "crop": [0.1, 0.52, 0.36, 0.48] }
+    ]},
+    { "key": "annapurna-home", "name": "Annapurna Home Store", "category": "OTHER", "customCategory": "Home and kitchen", "area": "Nalgonda", "products": [
+      { "key": "flask", "title": "Stainless steel flask, 1 litre", "description": "Keeps tea hot for 12 hours. Leak-proof lid, easy to clean.", "price": 549, "source": "other", "crop": [0.55, 0.18, 0.2, 0.58] },
+      { "key": "mug", "title": "Floral ceramic mug", "description": "350 ml mug with a hand-painted floral print. Microwave safe.", "price": 249, "source": "other", "crop": [0.66, 0.52, 0.22, 0.34] },
+      { "key": "tote", "title": "Pink tote handbag", "description": "Roomy everyday tote with a zip pocket inside.", "price": 999, "source": "other", "crop": [0.18, 0.0, 0.42, 0.56] }
+    ]},
+    { "key": "pooja-essentials", "name": "Pooja Home Essentials", "category": "OTHER", "customCategory": "Home and kitchen", "area": "Kondapur", "products": [
+      { "key": "pot", "title": "Non-stick cooking pot with lid", "description": "3-litre pot with a glass lid, suitable for gas and induction.", "price": 1199, "originalPrice": 1499, "source": "other", "crop": [0.28, 0.5, 0.4, 0.4] },
+      { "key": "planners", "title": "Notebooks and planners", "description": "A5 ruled notebooks and a monthly planner in pastel covers.", "price": 399, "source": "other", "crop": [0.78, 0.28, 0.22, 0.44] }
+    ]}
+  ]
+}

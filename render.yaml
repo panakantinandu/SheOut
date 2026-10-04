@@ -529,6 +529,12 @@ envVarGroups:
       - key: INSURANCE_BADGE_REQUIRES_REPORTED
         value: "false"
 
+      # Example shops in SheOut Seller, labelled "Sample shop" with no way to
+      # contact them, while real sellers sign up (founder, 2026-10-04). Set to
+      # "false" before launch: every sample shop is removed at the next start.
+      - key: MARKETPLACE_SAMPLE_SHOPS
+        value: "true"
+
       # Total time dispatch may spend hunting for a driver for one booking,
       # across every retry round and radius expansion. NOT the per-offer
       # accept window - that bounds one driver answering one offer. They

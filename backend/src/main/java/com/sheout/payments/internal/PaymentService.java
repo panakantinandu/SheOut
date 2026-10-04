@@ -6,6 +6,7 @@ import com.sheout.booking.BookingStatus;
 import com.sheout.booking.BookingSummary;
 import com.sheout.payments.ListingFeeCheckout;
 import com.sheout.payments.ListingFeePaid;
+import com.sheout.payments.SellerFeePayment;
 import com.sheout.payments.PaymentApi;
 import com.sheout.payments.PaymentPurpose;
 import com.sheout.payments.UpiQr;
@@ -137,7 +138,8 @@ public class PaymentService implements PaymentApi {
             applyGst(payment, TaxCategory.SELLER_LISTING_FEE, payment.getPayerAccountId(), "SheOut Seller listing fee");
             paymentRepository.save(payment);
             eventPublisher.publish(new ListingFeePaid(payment.getId(), payment.getPayerAccountId(), payment.getSellerId(),
-                    payment.getAmount(), method, payment.getCapturedAt()));
+                    payment.getSellerPeriod() == null ? 0 : payment.getSellerPeriod(), payment.getAmount(), method,
+                    payment.getCapturedAt()));
             return toSummary(payment);
         }
         // The rider paid the full fare; this records what of it is the
@@ -459,18 +461,19 @@ public class PaymentService implements PaymentApi {
     // ------------------------------------------------------------ listing fees
 
     /**
-     * The seller's listing fee order. The row is made once per seller; the
+     * The seller's fee order for one month. The row is made once per seller and month; the
      * Razorpay order is made with no transaction open (it can take seconds),
      * then written back under the row lock, the same shape as
      * prepareCheckout for a trip.
      */
     @Override
-    public Result<ListingFeeCheckout, PaymentError> startListingFeeCheckout(UUID payerAccountId, UUID sellerId, BigDecimal amount) {
+    public Result<ListingFeeCheckout, PaymentError> startListingFeeCheckout(UUID payerAccountId, UUID sellerId, int period,
+                                                                           BigDecimal amount) {
         if (amount == null || amount.signum() <= 0) {
             return Result.failure(PaymentError.INVALID_AMOUNT);
         }
-        PaymentEntity payment = transactions.execute(status -> paymentRepository.findLockedBySellerId(sellerId)
-                .orElseGet(() -> paymentRepository.save(PaymentEntity.listingFee(payerAccountId, sellerId, amount))));
+        PaymentEntity payment = transactions.execute(status -> paymentRepository.findLockedBySellerIdAndSellerPeriod(sellerId, period)
+                .orElseGet(() -> paymentRepository.save(PaymentEntity.listingFee(payerAccountId, sellerId, period, amount))));
         if (!payerAccountId.equals(payment.getPayerAccountId())) {
             return Result.failure(PaymentError.PAYMENT_NOT_FOUND);
         }
@@ -486,14 +489,14 @@ public class PaymentService implements PaymentApi {
             }
             orderId = created.value().orderId();
             String newOrderId = orderId;
-            transactions.executeWithoutResult(status -> paymentRepository.findLockedBySellerId(sellerId).ifPresent(p -> {
+            transactions.executeWithoutResult(status -> paymentRepository.findLockedBySellerIdAndSellerPeriod(sellerId, period).ifPresent(p -> {
                 p.setRazorpayOrderId(newOrderId);
                 paymentRepository.save(p);
             }));
         }
         if (payment.getStatus() == PaymentStatus.FAILED) {
             // A declined card is not the end of it: she tries again on the same order.
-            transactions.executeWithoutResult(status -> paymentRepository.findLockedBySellerId(sellerId).ifPresent(p -> {
+            transactions.executeWithoutResult(status -> paymentRepository.findLockedBySellerIdAndSellerPeriod(sellerId, period).ifPresent(p -> {
                 p.setStatus(PaymentStatus.PENDING);
                 p.setFailureReason(null);
                 paymentRepository.save(p);
@@ -504,9 +507,10 @@ public class PaymentService implements PaymentApi {
     }
 
     @Override
-    public Result<PaymentSummary, PaymentError> confirmListingFeeCheckout(UUID payerAccountId, UUID sellerId, String orderId,
-                                                                           String razorpayPaymentId, String signature) {
-        Optional<PaymentEntity> found = paymentRepository.findBySellerId(sellerId)
+    public Result<PaymentSummary, PaymentError> confirmListingFeeCheckout(UUID payerAccountId, UUID sellerId, int period,
+                                                                           String orderId, String razorpayPaymentId,
+                                                                           String signature) {
+        Optional<PaymentEntity> found = paymentRepository.findBySellerIdAndSellerPeriod(sellerId, period)
                 .filter(p -> payerAccountId.equals(p.getPayerAccountId()))
                 .filter(p -> orderId != null && orderId.equals(p.getRazorpayOrderId()));
         if (found.isEmpty()) {
@@ -522,7 +526,7 @@ public class PaymentService implements PaymentApi {
             return Result.failure(confirmed.error());
         }
         return Result.success(transactions.execute(status -> {
-            PaymentEntity payment = paymentRepository.findLockedBySellerId(sellerId).orElseThrow();
+            PaymentEntity payment = paymentRepository.findLockedBySellerIdAndSellerPeriod(sellerId, period).orElseThrow();
             return settled(payment)
                     ? toSummary(payment)
                     : markCaptured(payment, confirmed.value().method(), confirmed.value().paymentId());
@@ -531,18 +535,29 @@ public class PaymentService implements PaymentApi {
 
     @Override
     @Transactional(readOnly = true)
-    public Optional<PaymentSummary> listingFeeFor(UUID sellerId) {
-        return paymentRepository.findBySellerId(sellerId).map(this::toSummary);
+    public Optional<PaymentSummary> listingFeeFor(UUID sellerId, int period) {
+        return paymentRepository.findBySellerIdAndSellerPeriod(sellerId, period).map(this::toSummary);
     }
 
     @Override
-    public Result<PaymentSummary, PaymentError> payListingFeeFromWallet(UUID payerAccountId, UUID sellerId, BigDecimal amount) {
+    @Transactional(readOnly = true)
+    public List<SellerFeePayment> paidListingFees(UUID sellerId) {
+        return paymentRepository.findBySellerIdOrderBySellerPeriodAsc(sellerId).stream()
+                .filter(p -> p.getStatus() == PaymentStatus.CAPTURED)
+                .map(p -> new SellerFeePayment(p.getId(), p.getSellerPeriod() == null ? 0 : p.getSellerPeriod(),
+                        p.getAmount(), p.getMethod(), p.getCapturedAt()))
+                .toList();
+    }
+
+    @Override
+    public Result<PaymentSummary, PaymentError> payListingFeeFromWallet(UUID payerAccountId, UUID sellerId, int period,
+                                                                        BigDecimal amount) {
         if (amount == null || amount.signum() <= 0) {
             return Result.failure(PaymentError.INVALID_AMOUNT);
         }
         return transactions.execute(status -> {
-            PaymentEntity payment = paymentRepository.findLockedBySellerId(sellerId)
-                    .orElseGet(() -> paymentRepository.save(PaymentEntity.listingFee(payerAccountId, sellerId, amount)));
+            PaymentEntity payment = paymentRepository.findLockedBySellerIdAndSellerPeriod(sellerId, period)
+                    .orElseGet(() -> paymentRepository.save(PaymentEntity.listingFee(payerAccountId, sellerId, period, amount)));
             if (!payerAccountId.equals(payment.getPayerAccountId())) {
                 return Result.<PaymentSummary, PaymentError>failure(PaymentError.PAYMENT_NOT_FOUND);
             }

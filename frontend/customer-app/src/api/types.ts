@@ -295,7 +295,7 @@ export interface PaymentSummary {
 
 export type SellerCategory = 'FASHION_SAREE' | 'BEAUTY_SERVICES' | 'TAILORING' | 'MEHANDI' | 'GIFTS' | 'ORNAMENTS' | 'OTHER';
 
-export type SellerStatus = 'DRAFT' | 'SUBMITTED_FOR_REVIEW' | 'APPROVED_AWAITING_PAYMENT' | 'ACTIVE' | 'REJECTED' | 'SUSPENDED';
+export type SellerStatus = 'DRAFT' | 'SUBMITTED_FOR_REVIEW' | 'APPROVED_AWAITING_PAYMENT' | 'ACTIVE' | 'REJECTED' | 'SUSPENDED' | 'LAPSED';
 
 export type ProductAvailability = 'IN_STOCK' | 'MADE_TO_ORDER' | 'OUT_OF_STOCK';
 export type PriceUnit = 'PIECE' | 'SET' | 'PAIR' | 'METRE' | 'KG' | 'HOUR' | 'SESSION';
@@ -342,6 +342,8 @@ export interface ListingCard {
   area: string | null;
   /** So the grid can say "Out of stock" before anybody opens it. */
   availability?: ProductAvailability;
+  /** An example shop - labelled, and nobody to contact. */
+  sample?: boolean;
 }
 
 /**
@@ -381,12 +383,15 @@ export interface ProductDetail {
   customCategory: string | null;
   area: string | null;
   websiteUrl: string | null;
-  contactPhone: string;
+  /** Null for a sample shop: there is nobody to call. */
+  contactPhone: string | null;
   whatsappNumber: string | null;
   moreFromSeller: ListingCard[];
   terms?: ProductTerms;
   /** When the seller last changed it. */
   updatedAt?: string;
+  /** An example shop, shown while real sellers sign up - no way to contact it. */
+  sample?: boolean;
 }
 
 export interface SellerProduct {
@@ -401,11 +406,34 @@ export interface SellerProduct {
   terms?: ProductTerms;
 }
 
-export interface ListingFee {
+/**
+ * Where she stands on her monthly plan. FREE_MONTH and PAID: nothing to do.
+ * DUE_SOON: her month ends within a week and she can pay for the next.
+ * OVERDUE: it has ended, still listed until hiddenFrom. LAPSED: hidden until
+ * she pays. NOT_STARTED: not approved yet.
+ */
+export type SellerPlanState = 'NOT_STARTED' | 'FREE_MONTH' | 'PAID' | 'DUE_SOON' | 'OVERDUE' | 'LAPSED';
+
+/** One month she paid for. period 0 is the one-time fee from before monthly plans. */
+export interface SellerPaidMonth {
+  period: number;
   amount: number;
-  status: PaymentStatus | null;
   method: PaymentMethod | null;
-  paidAt: string | null;
+  paidAt: string;
+}
+
+export interface SellerPlan {
+  monthlyFee: number;
+  freeMonths: number;
+  state: SellerPlanState;
+  freeUntil: string | null;
+  paidUntil: string | null;
+  hiddenFrom: string | null;
+  /** From when she can pay for her next month. */
+  payFrom: string | null;
+  /** The server's answer: show the pay buttons only when true. */
+  canPayNow: boolean;
+  history: SellerPaidMonth[];
 }
 
 /** Her own shop. canEdit/canSubmit and the limits are the server's, so the app never offers what it would refuse. */
@@ -424,7 +452,7 @@ export interface SellerShop {
   suspensionReason: string | null;
   submittedAt: string | null;
   activatedAt: string | null;
-  listingFee: ListingFee;
+  plan: SellerPlan;
   products: SellerProduct[];
   imagesUsed: number;
   maxImagesPerSeller: number;

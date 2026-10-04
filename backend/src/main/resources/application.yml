@@ -503,13 +503,24 @@ sheout:
       cache-read-per-mtok: ${ASSISTANT_PRICE_CACHE_READ:0.1}
       cache-write-per-mtok: ${ASSISTANT_PRICE_CACHE_WRITE:1.25}
 
-  # SheOut Seller - see the marketplace module. SheOut charges one flat
-  # listing fee and takes no part in any sale.
+  # SheOut Seller - see the marketplace module. SheOut charges a flat
+  # monthly fee and takes no part in any sale.
   marketplace:
-    # Rupees, charged once, after a person has approved her shop. Changing it
-    # affects sellers approved from then on; one already approved pays what
-    # she was quoted.
-    listing-fee: ${SELLER_LISTING_FEE:299}
+    # Rupees a month, after the free months. Each month is charged at the fee
+    # in force when she pays for it.
+    monthly-fee: ${SELLER_MONTHLY_FEE:499}
+    # Free months from the day a person approves her shop.
+    free-months: ${SELLER_FREE_MONTHS:1}
+    # She can pay for her next month in the last this-many days of the
+    # current one; her shop stays listed this many days after it ends.
+    pay-window-days: ${SELLER_PAY_WINDOW_DAYS:7}
+    grace-days: ${SELLER_GRACE_DAYS:3}
+    # Reminders this many days before her month ends (push, then email).
+    reminder-days: ${SELLER_REMINDER_DAYS:7,3,1}
+    # Example shops (sample-shops/catalog.json), each labelled "Sample shop"
+    # with no way to contact it, while real sellers sign up. false removes
+    # them all at the next start - see SampleShops.
+    sample-shops: ${MARKETPLACE_SAMPLE_SHOPS:false}
     # Photo caps. 40 across a whole shop is 5 products with 8 photos each,
     # or 20 with 2 - see the note in MarketplaceLimits.
     max-images-per-seller: ${SELLER_MAX_IMAGES_PER_SELLER:40}

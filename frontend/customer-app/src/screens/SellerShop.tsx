@@ -1,10 +1,12 @@
 import {
   AlertTriangle,
   BadgeCheck,
+  CalendarClock,
   CheckCircle2,
   ChevronRight,
   Circle,
   Clock,
+  EyeOff,
   ImageOff,
   IndianRupee,
   Globe,
@@ -37,7 +39,7 @@ import type { SellerCategory, SellerDetailsInput, SellerShop as Shop } from '../
 import { useAuth } from '../auth/AuthContext';
 import { apiErrorText } from '../lib/apiErrors';
 import { openRazorpayCheckout } from '../lib/razorpayCheckout';
-import { SELLER_CATEGORIES, SELLER_STATUS_TONE, categoryKey, categoryName, priceText, websiteLabel } from '../lib/seller';
+import { SELLER_CATEGORIES, SELLER_STATUS_TONE, categoryKey, categoryName, planDate, priceText, websiteLabel } from '../lib/seller';
 import { clearWizardDraft, readWizardDraft, writeWizardDraft, type WizardDraft } from '../lib/sellerWizardDraft';
 
 /**
@@ -700,7 +702,7 @@ function ReviewStep({ shop, busy, onEdit, onSubmit }: { shop: Shop; busy: boolea
         <Button size="lg" className="w-full" disabled={busy || !shop.canSubmit} onClick={onSubmit} data-testid="submit-for-review">
           {shop.status === 'REJECTED' ? t('seller.submit.resend') : t('seller.wizard.review.submit')}
         </Button>
-        <p className="text-caption text-text-secondary">{t('seller.submit.free', { amount: priceText(shop.listingFee.amount) })}</p>
+        <p className="text-caption text-text-secondary">{t('seller.submit.free', { amount: priceText(shop.plan.monthlyFee) })}</p>
       </Card>
     </section>
   );
@@ -724,23 +726,27 @@ function ReviewSection({ title, onEdit, children }: { title: string; onEdit: () 
 // ================================================================ after sending
 
 /**
- * Her shop once it has been sent: in review, approved and waiting for the
- * fee, live, sent back, or paused. The status card says where it stands
- * and offers the one action that fits; below it, her details and products -
- * editable while the shop is live, read-only while a person is looking at
- * it or the fee is due.
+ * Her shop once it has been sent: in review, live, sent back, paused, or
+ * hidden because its month was not paid. The status card says where it
+ * stands and offers the one action that fits; the plan card says what her
+ * month costs and when it ends, and takes the payment when one is due.
+ * Below them, her details and products - editable while the shop is hers
+ * (live, or hidden until she pays), read-only while a person is looking at
+ * it or it is paused.
  */
 function ShopStatusScreen({ shop, onShop, reload, onFix }: { shop: Shop; onShop: (s: Shop) => void; reload: () => Promise<void>; onFix: () => void }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const goBack = useGoBack();
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [justWentLive, setJustWentLive] = useState(false);
-  /** Her SheOut wallet balance, while the fee is due - null until known, or if it could not be read. */
+  /** Her SheOut wallet balance, while a month can be paid - null until known, or if it could not be read. */
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
-  const feeDue = shop.status === 'APPROVED_AWAITING_PAYMENT';
+  const feeDue = shop.plan.canPayNow;
+  /** Live, or hidden until she pays: either way the shop is hers to change. */
+  const hers = shop.status === 'ACTIVE' || shop.status === 'LAPSED';
   useEffect(() => {
     if (!feeDue) return;
     walletApi.get().then((w) => setWalletBalance(w.balance)).catch(() => setWalletBalance(null));
@@ -761,13 +767,23 @@ function ShopStatusScreen({ shop, onShop, reload, onFix }: { shop: Shop; onShop:
     }
   }
 
+  /** After a month is paid: back from hidden is a moment; otherwise a quiet "listed until". */
+  function paid(updated: Shop) {
+    const wasHidden = shop.status === 'LAPSED';
+    onShop(updated);
+    if (wasHidden && updated.status === 'ACTIVE') {
+      setJustWentLive(true);
+      showToast(t('seller.plan.backLive'));
+    } else if (updated.plan.paidUntil) {
+      showToast(t('seller.plan.paidToast', { date: planDate(updated.plan.paidUntil, i18n.language) }));
+    }
+  }
+
   async function payFeeFromWallet() {
     setBusy(true);
     setError(null);
     try {
-      const updated = await marketplaceApi.payListingFeeFromWallet();
-      onShop(updated);
-      if (updated.status === 'ACTIVE') setJustWentLive(true);
+      paid(await marketplaceApi.payListingFeeFromWallet());
     } catch (err) {
       if (err instanceof ApiError && err.body?.error === 'ALREADY_PAID') {
         await reload();
@@ -793,9 +809,7 @@ function ShopStatusScreen({ shop, onShop, reload, onFix }: { shop: Shop; onShop:
         setError(t('seller.fee.failed', { reason: outcome.message }));
         return;
       }
-      const updated = await marketplaceApi.confirmListingFee(outcome.result);
-      onShop(updated);
-      if (updated.status === 'ACTIVE') setJustWentLive(true);
+      paid(await marketplaceApi.confirmListingFee(outcome.result));
     } catch (err) {
       if (err instanceof ApiError && err.body?.error === 'ALREADY_PAID') {
         await reload();
@@ -811,21 +825,23 @@ function ShopStatusScreen({ shop, onShop, reload, onFix }: { shop: Shop; onShop:
     <div className="space-y-6 pb-6" data-testid="seller-status-screen">
       <TopHeader variant="back" title={t('seller.shop.title')} onBack={goBack} />
 
-      <StatusCard
-        shop={shop}
-        busy={busy}
-        onPay={payFee}
-        onPayFromWallet={payFeeFromWallet}
-        onFix={onFix}
-        walletBalance={walletBalance}
-        justWentLive={justWentLive}
-      />
+      <StatusCard shop={shop} onFix={onFix} justWentLive={justWentLive} />
+      {shop.plan.state !== 'NOT_STARTED' && shop.status !== 'REJECTED' && (
+        <PlanCard
+          shop={shop}
+          busy={busy}
+          walletBalance={walletBalance}
+          onPay={payFee}
+          onPayFromWallet={payFeeFromWallet}
+          onTopUp={(need) => navigate('/wallet', { state: { returnTo: '/seller/manage', need, purpose: 'listingFee' } })}
+        />
+      )}
       {error && <p className="text-sm text-danger" role="alert">{error}</p>}
 
       <section className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="font-heading text-section text-text-primary">{t('seller.shop.detailsTitle')}</h2>
-          {shop.status === 'ACTIVE' && shop.canEdit && !editing && (
+          {hers && shop.canEdit && !editing && (
             <button type="button" className="flex items-center gap-1 text-sm font-semibold text-primary" onClick={() => setEditing(true)} data-testid="edit-shop">
               <Pencil className="h-4 w-4" aria-hidden="true" /> {t('seller.shop.edit')}
             </button>
@@ -864,7 +880,7 @@ function ShopStatusScreen({ shop, onShop, reload, onFix }: { shop: Shop; onShop:
           </span>
         </div>
         {/* A sent-back shop is changed through the wizard ("Make changes"), not here. */}
-        {shop.status === 'ACTIVE' ? (
+        {hers ? (
           <>
             <ProductRows shop={shop} onOpen={(id) => navigate(`/seller/manage/products/${id}`, { state: { fromShop: true } })} />
             {shop.canEdit && (
@@ -954,23 +970,7 @@ function ShopFields({
   );
 }
 
-function StatusCard({
-  shop,
-  busy,
-  onPay,
-  onPayFromWallet,
-  onFix,
-  walletBalance,
-  justWentLive,
-}: {
-  shop: Shop;
-  busy: boolean;
-  onPay: () => void;
-  onPayFromWallet: () => void;
-  onFix: () => void;
-  walletBalance: number | null;
-  justWentLive: boolean;
-}) {
+function StatusCard({ shop, onFix, justWentLive }: { shop: Shop; onFix: () => void; justWentLive: boolean }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const icon = {
@@ -980,6 +980,7 @@ function StatusCard({
     ACTIVE: <BadgeCheck />,
     REJECTED: <AlertTriangle />,
     SUSPENDED: <PauseCircle />,
+    LAPSED: <EyeOff />,
   }[shop.status];
   return (
     <Card className="space-y-3" data-testid="shop-status" data-status={shop.status}>
@@ -995,7 +996,7 @@ function StatusCard({
         </div>
       </div>
       <p className="text-sm text-text-secondary">
-        {t(`seller.status.${shop.status}.body`, { amount: priceText(shop.listingFee.amount) })}
+        {t(`seller.status.${shop.status}.body`, { amount: priceText(shop.plan.monthlyFee) })}
       </p>
       {shop.status === 'REJECTED' && shop.rejectionReason && (
         <p className="rounded-input bg-accent-red-tint px-4 py-3 text-sm text-text-primary" data-testid="rejection-reason">
@@ -1012,16 +1013,6 @@ function StatusCard({
           <span className="font-semibold">{t('seller.status.reasonLabel')}</span> {shop.suspensionReason}
         </p>
       )}
-      {shop.status === 'APPROVED_AWAITING_PAYMENT' && (
-        <FeeOptions
-          fee={shop.listingFee.amount}
-          walletBalance={walletBalance}
-          busy={busy}
-          onPayFromWallet={onPayFromWallet}
-          onPay={onPay}
-          onTopUp={(need) => navigate('/wallet', { state: { returnTo: '/seller/manage', need, purpose: 'listingFee' } })}
-        />
-      )}
       {shop.status === 'ACTIVE' && (
         <Button variant="secondary" className="w-full" icon={<Store className="h-4 w-4" />} onClick={() => navigate('/seller')}>
           {t('seller.status.ACTIVE.view')}
@@ -1037,7 +1028,103 @@ function StatusCard({
 }
 
 /**
- * How she pays the listing fee: her SheOut wallet first, then UPI or card.
+ * Her monthly plan: what it costs, when this month ends, what happens next,
+ * and - only when the server says she can - the ways to pay for the next
+ * month. Below, every month she has paid for.
+ */
+function PlanCard({
+  shop,
+  busy,
+  walletBalance,
+  onPay,
+  onPayFromWallet,
+  onTopUp,
+}: {
+  shop: Shop;
+  busy: boolean;
+  walletBalance: number | null;
+  onPay: () => void;
+  onPayFromWallet: () => void;
+  onTopUp: (need: number) => void;
+}) {
+  const { t, i18n } = useTranslation();
+  const plan = shop.plan;
+  const date = (iso: string | null) => (iso ? planDate(iso, i18n.language) : '');
+  const fee = priceText(plan.monthlyFee);
+  // Her free month is still her free month in its last days; once it has
+  // ended, what matters is when.
+  const onFreeMonth = plan.freeUntil != null && plan.freeUntil === plan.paidUntil;
+  const headline =
+    plan.state === 'OVERDUE' || plan.state === 'LAPSED'
+      ? t('seller.plan.endedOn', { date: date(plan.paidUntil) })
+      : onFreeMonth
+        ? t('seller.plan.freeUntil', { date: date(plan.freeUntil) })
+        : t('seller.plan.paidUntil', { date: date(plan.paidUntil) });
+  const note =
+    plan.state === 'DUE_SOON'
+      ? t('seller.plan.dueSoon', { date: date(plan.paidUntil) })
+      : plan.state === 'OVERDUE'
+        ? t('seller.plan.overdue', { end: date(plan.paidUntil), date: date(plan.hiddenFrom) })
+        : plan.state === 'LAPSED'
+          ? t('seller.plan.lapsed', { amount: fee })
+          : plan.payFrom && shop.status === 'ACTIVE'
+            ? t('seller.plan.payOpensOn', { date: date(plan.payFrom) })
+            : null;
+  const urgent = plan.state === 'OVERDUE' || plan.state === 'LAPSED';
+
+  return (
+    <Card className="space-y-3" data-testid="seller-plan" data-state={plan.state}>
+      <div className="flex items-center gap-3">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary-light text-primary">
+          <CalendarClock className="h-5 w-5" aria-hidden="true" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-caption font-semibold uppercase tracking-wide text-text-secondary">{t('seller.plan.title')}</p>
+          <p className="font-heading text-card-title text-text-primary" data-testid="plan-headline">{headline}</p>
+        </div>
+        <span className="shrink-0 text-sm font-semibold text-text-primary">{t('seller.plan.perMonth', { amount: fee })}</span>
+      </div>
+      {note && (
+        <p
+          className={`rounded-input px-4 py-3 text-sm ${urgent ? 'bg-accent-red-tint text-text-primary' : 'bg-primary-light text-text-primary'}`}
+          data-testid="plan-note"
+        >
+          {note}
+        </p>
+      )}
+      {plan.canPayNow && (
+        <FeeOptions
+          fee={plan.monthlyFee}
+          walletBalance={walletBalance}
+          busy={busy}
+          onPayFromWallet={onPayFromWallet}
+          onPay={onPay}
+          onTopUp={onTopUp}
+        />
+      )}
+      {plan.history.length > 0 && (
+        <div className="border-t border-border pt-3" data-testid="plan-history">
+          <p className="mb-2 text-caption font-semibold uppercase tracking-wide text-text-secondary">{t('seller.plan.history')}</p>
+          <ul className="space-y-1.5 text-sm">
+            {[...plan.history].reverse().map((m) => (
+              <li key={`${m.period}-${m.paidAt}`} className="flex items-center justify-between gap-3">
+                <span className="text-text-primary">
+                  {m.period === 0 ? t('seller.plan.oldFee') : t('seller.plan.historyRow', { n: m.period })}
+                </span>
+                <span className="text-text-secondary">
+                  {priceText(m.amount)} · {date(m.paidAt)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+/**
+ * How she pays for a month: her SheOut wallet first, then UPI or card.
  * <p>
  * The wallet is always offered, not only when it already covers the fee -
  * hidden, it read as "the wallet can't pay this". Covered: one tap. Short:

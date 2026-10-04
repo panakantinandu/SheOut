@@ -21,6 +21,7 @@ import { SavedAddresses } from './screens/SavedAddresses'
 import { Verification } from './screens/Verification'
 import { MyBookings } from './screens/MyBookings'
 import { Profile } from './screens/Profile'
+import { Settings } from './screens/Settings'
 import { RideBooking } from './screens/RideBooking'
 import { Sos } from './screens/Sos'
 import { Splash } from './screens/Splash'
@@ -99,6 +100,7 @@ function App() {
       <Route path="/profile/addresses" element={protectedOnly(<SavedAddresses />)} />
       <Route path="/profile/payments" element={protectedOnly(<PaymentMethods />)} />
       <Route path="/profile/devices" element={protectedOnly(<Devices />)} />
+      <Route path="/settings" element={protectedOnly(<Settings />)} />
       <Route path="/profile/emergency-contacts" element={protectedOnly(<EmergencyContacts />)} />
       <Route path="/verification" element={protectedOnly(<Verification />)} />
       <Route path="/help" element={protectedOnly(<HelpSupport />)} />

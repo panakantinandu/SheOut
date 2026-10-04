@@ -2,6 +2,7 @@ package com.sheout.driververification.internal;
 
 import com.sheout.auth.AccountRole;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -9,6 +10,19 @@ import java.time.Instant;
 import java.util.UUID;
 
 interface VerificationFunnelRepository extends JpaRepository<VerificationFunnelEntity, UUID> {
+
+    /**
+     * The step, the first time - and nothing at all if it is already there.
+     * The database decides, so two requests at the same moment (a screen
+     * mounting twice) cannot both get past a check and collide.
+     */
+    @Modifying
+    @Query(value = """
+            insert into verification_funnel_events (id, account_id, role, step, occurred_at, created_at, updated_at)
+            values (gen_random_uuid(), :accountId, :role, :step, now(), now(), now())
+            on conflict (account_id, step) do nothing
+            """, nativeQuery = true)
+    int recordOnce(@Param("accountId") UUID accountId, @Param("role") String role, @Param("step") String step);
 
     boolean existsByAccountIdAndStep(UUID accountId, VerificationFunnelStep step);
 

@@ -49,6 +49,8 @@ public enum NotificationType {
     REFERRAL_REWARDED,
     /** To a seller: her shop was approved, rejected, went live or was suspended - see marketplace's SellerStatusChanged. */
     SELLER_STATUS,
+    /** To a seller: her month ends soon, has ended, or her shop is hidden until she pays - see marketplace's SellerPlanNotice. */
+    SELLER_PLAN,
     /** An operator's announcement delivered to each account one by one (the SheOut Seller waitlist), not by topic. */
     ANNOUNCEMENT,
 

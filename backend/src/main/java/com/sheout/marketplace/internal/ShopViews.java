@@ -1,25 +1,23 @@
 package com.sheout.marketplace.internal;
 
 import com.sheout.marketplace.MarketplaceViews.ListingCard;
-import com.sheout.marketplace.MarketplaceViews.ListingFeeView;
+import com.sheout.marketplace.MarketplaceViews.PaidMonth;
+import com.sheout.marketplace.MarketplaceViews.PlanView;
 import com.sheout.marketplace.MarketplaceViews.ProductImageView;
 import com.sheout.marketplace.MarketplaceViews.ProductView;
 import com.sheout.marketplace.MarketplaceViews.SellerAdminRow;
 import com.sheout.marketplace.MarketplaceViews.SellerView;
 import com.sheout.marketplace.SellerStatus;
 import com.sheout.payments.PaymentApi;
-import com.sheout.payments.PaymentStatus;
-import com.sheout.payments.PaymentSummary;
 import com.sheout.sharedkernel.storage.DocumentStorage;
 import com.sheout.users.CustomerProfileApi;
 import com.sheout.users.CustomerProfileSummary;
 import org.springframework.stereotype.Component;
 
-import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -67,7 +65,7 @@ class ShopViews {
                 seller.getSuspensionReason(),
                 seller.getSubmittedAt(),
                 seller.getActivatedAt(),
-                listingFee(seller),
+                plan(seller),
                 productViews,
                 imagesUsed,
                 limits.maxImagesPerSeller(),
@@ -99,27 +97,27 @@ class ShopViews {
                 seller.getEditedLiveAt(),
                 seller.getRejectionReason(),
                 seller.getSuspensionReason(),
-                listingFee(seller));
+                plan(seller),
+                seller.isSample());
     }
 
-    /**
-     * What she pays: the amount she was approved at, or - before approval -
-     * the fee in force now, so the app can say what is coming.
-     */
-    ListingFeeView listingFee(SellerProfileEntity seller) {
-        Optional<PaymentSummary> payment = paymentApi.listingFeeFor(seller.getId());
-        BigDecimal amount = payment.map(PaymentSummary::amount)
-                .orElse(seller.getListingFeeAmount() != null ? seller.getListingFeeAmount() : limits.listingFee());
-        boolean paid = payment.map(p -> p.status() == PaymentStatus.CAPTURED).orElse(false);
-        return new ListingFeeView(
-                amount,
-                payment.map(PaymentSummary::status).orElse(null),
-                paid ? payment.get().method() : null,
-                paid ? payment.get().capturedAt() : null);
-    }
-
-    boolean listingFeePaid(UUID sellerId) {
-        return paymentApi.listingFeeFor(sellerId).map(p -> p.status() == PaymentStatus.CAPTURED).orElse(false);
+    /** Her monthly plan as it stands now, with every month she has paid for. */
+    PlanView plan(SellerProfileEntity seller) {
+        Instant now = Instant.now();
+        Instant paidUntil = seller.getPaidUntil();
+        List<PaidMonth> history = paymentApi.paidListingFees(seller.getId()).stream()
+                .map(p -> new PaidMonth(p.period(), p.amount(), p.method(), p.paidAt()))
+                .toList();
+        return new PlanView(
+                limits.monthlyFee(),
+                limits.freeMonths(),
+                SellerPlan.state(seller, limits, now),
+                seller.getFreeUntil(),
+                paidUntil,
+                paidUntil == null ? null : paidUntil.plus(limits.grace()),
+                paidUntil == null ? null : paidUntil.minus(limits.payWindow()),
+                SellerPlan.canPay(seller, limits, now),
+                history);
     }
 
     List<ProductView> productViews(List<ProductEntity> list) {
@@ -142,7 +140,7 @@ class ShopViews {
                     return new ListingCard(p.getId(), p.getCode(), p.getTitle(), p.getDisplayPrice(), p.getOriginalPrice(),
                             photos.isEmpty() ? null : url(photos.get(0).getStorageKey()),
                             s.getId(), s.getBusinessName(), s.getCategory(), s.getCustomCategory(), s.getArea(),
-                            p.getTerms().availability());
+                            p.getTerms().availability(), s.isSample());
                 }).toList();
     }
 

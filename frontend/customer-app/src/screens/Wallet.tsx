@@ -1,4 +1,4 @@
-import { ArrowDownLeft, PlusCircle, Receipt, ShieldCheck, Store } from 'lucide-react';
+import { ArrowDownLeft, Receipt, ShieldCheck, Store } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { AmountText, Button, Card, IconCircle, ListEmptyState, LoadMore, PullToRefresh, SkeletonCard, SkeletonList, TextField, TopHeader, usePagedList, ServiceArt } from '@sheout/design-system';
@@ -8,6 +8,7 @@ import { openRazorpayCheckout } from '../lib/razorpayCheckout';
 import { apiErrorText } from '../lib/apiErrors';
 import { useTranslation } from '@sheout/design-system';
 import { PromotionsCard } from '../components/PromotionsCard';
+import { useAppDrawer } from '../components/AppDrawer';
 
 const QUICK_AMOUNTS = [100, 200, 500, 1000];
 
@@ -35,6 +36,7 @@ interface WalletRouteState {
 export function Wallet() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const drawer = useAppDrawer();
   const location = useLocation();
   const routeState = (location.state as WalletRouteState | null) ?? {};
 
@@ -165,11 +167,13 @@ export function Wallet() {
 
   return (
     <PullToRefresh onRefresh={refresh} disabled={busy} className="space-y-6">
-      <TopHeader
-        variant="back"
-        title={t('wallet.title')}
-        onBack={() => (routeState.returnTo ? navigate(routeState.returnTo) : navigate('/home'))}
-      />
+      {/* A tab like Home and Bookings: the menu, not a back arrow - unless
+          she was sent here to top up for something, which she goes back to. */}
+      {routeState.returnTo ? (
+        <TopHeader variant="back" title={t('wallet.title')} onBack={() => navigate(routeState.returnTo!)} />
+      ) : (
+        <TopHeader variant="plain" title={t('wallet.title')} onMenuClick={drawer.open} />
+      )}
 
       {loadError && !wallet && (
         <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-danger">
@@ -270,18 +274,8 @@ export function Wallet() {
         </p>
       )}
 
+      {/* Add Money is the button on the balance card; it was here a second time. */}
       <div className="flex justify-around">
-        <button
-          type="button"
-          className="flex flex-col items-center gap-2"
-          // The add panel needs the balance. If it did not load, fetch it
-          // again first, rather than a tap that does nothing.
-          onClick={() => (wallet ? setAdding(true) : void loadWallet().then(() => setAdding(true)))}
-          data-testid="wallet-add-money-tile"
-        >
-          <IconCircle tone="soft" icon={<PlusCircle />} />
-          <span className="text-xs font-medium text-text-primary">{t('wallet.addMoney')}</span>
-        </button>
         <button
           type="button"
           className="flex flex-col items-center gap-2"

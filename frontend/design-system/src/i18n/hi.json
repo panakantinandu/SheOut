@@ -265,7 +265,7 @@
     "IN_PROGRESS": "सफ़र जारी है",
     "COMPLETED": "पूरी हुई",
     "CANCELLED": "रद्द",
-    "NO_DRIVERS_AVAILABLE": "कोई ड्राइवर नहीं मिला",
+    "NO_DRIVERS_AVAILABLE": "कोई पार्टनर नहीं मिली",
     "AWAITING_PAYMENT": "भुगतान बाकी है"
   },
   "category": {
