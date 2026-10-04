@@ -17,7 +17,7 @@ export const DEFAULT_TERMS: ProductTerms = {
 };
 
 /** "Only 3 left" from here down - enough to be useful, not enough to nag. */
-const FEW_LEFT = 5;
+export const FEW_LEFT = 5;
 
 const FULFILMENT_ICON: Record<Fulfilment, ReactNode> = {
   HOME_DELIVERY: <Truck className="h-4 w-4" aria-hidden="true" />,

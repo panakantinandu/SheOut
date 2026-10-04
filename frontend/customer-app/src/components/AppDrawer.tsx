@@ -1,4 +1,4 @@
-import { Gift, LifeBuoy, Settings, ShieldCheck, Store, UserRound } from 'lucide-react';
+import { Gift, LifeBuoy, Package, Settings, ShieldCheck, Store, UserRound } from 'lucide-react';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -10,6 +10,7 @@ import {
 import { preferencesApi, usersApi } from '../api/client';
 import type { CustomerProfileSummary } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
+import { useMyShop } from '../lib/useMyShop';
 
 const APP_VERSION = '0.1.0';
 
@@ -40,6 +41,7 @@ export function AppDrawerProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [profile, setProfile] = useState<CustomerProfileSummary | null>(null);
+  const shop = useMyShop(isOpen && isAuthenticated);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -88,7 +90,12 @@ export function AppDrawerProvider({ children }: { children: ReactNode }) {
               { key: 'profile', label: t('drawer.profile'), icon: <UserRound />, onClick: () => go('/profile') },
               { key: 'safety', label: t('drawer.safety'), icon: <ShieldCheck />, onClick: () => go('/safety') },
               { key: 'refer', label: t('drawer.refer'), icon: <Gift />, onClick: () => go('/refer') },
-              { key: 'sell', label: t('drawer.sell'), icon: <Store />, onClick: () => go('/seller/manage') },
+              ...(shop
+                ? [
+                    { key: 'products', label: t('seller.myProducts.title'), icon: <Package />, onClick: () => go('/seller/my-products') },
+                    { key: 'shop', label: t('seller.myShop'), icon: <Store />, onClick: () => go('/seller/manage') },
+                  ]
+                : [{ key: 'sell', label: t('drawer.sell'), icon: <Store />, onClick: () => go('/seller/manage') }]),
             ],
           },
           {

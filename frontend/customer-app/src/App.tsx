@@ -22,6 +22,7 @@ import { Verification } from './screens/Verification'
 import { MyBookings } from './screens/MyBookings'
 import { Profile } from './screens/Profile'
 import { Settings } from './screens/Settings'
+import { MyProducts } from './screens/MyProducts'
 import { RideBooking } from './screens/RideBooking'
 import { Sos } from './screens/Sos'
 import { Splash } from './screens/Splash'
@@ -119,6 +120,7 @@ function App() {
       <Route path="/seller" element={protectedOnly(<Seller />)} />
       <Route path="/seller/products/:productId" element={protectedOnly(<SellerProduct />)} />
       <Route path="/seller/manage" element={protectedOnly(<SellerShop />)} />
+      <Route path="/seller/my-products" element={protectedOnly(<MyProducts />)} />
       <Route path="/seller/manage/products/:productId" element={protectedOnly(<SellerProductEditor />)} />
       <Route path="/refer" element={protectedOnly(<Refer />)} />
 

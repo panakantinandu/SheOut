@@ -1,4 +1,4 @@
-import { BadgeCheck, Camera, ChevronRight, Gift, LifeBuoy, MapPin, Receipt, Settings as SettingsIcon, ShieldAlert, ShieldCheck, Store, User } from 'lucide-react';
+import { BadgeCheck, Camera, ChevronRight, Gift, LifeBuoy, MapPin, Package, Receipt, Settings as SettingsIcon, ShieldAlert, ShieldCheck, Store, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -16,6 +16,7 @@ import {
 import { useAppDrawer } from '../components/AppDrawer';
 import { ApiError, usersApi } from '../api/client';
 import type { CustomerProfileSummary } from '../api/types';
+import { useMyShop } from '../lib/useMyShop';
 
 /**
  * Who she is on SheOut, and the things that are hers: her details and
@@ -32,6 +33,8 @@ export function Profile() {
   const drawer = useAppDrawer();
   const [profile, setProfile] = useState<CustomerProfileSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // A seller sees her shop and products here; anyone else, the way to start one.
+  const shop = useMyShop();
 
   useEffect(() => {
     usersApi
@@ -104,7 +107,14 @@ export function Profile() {
         <h2 className="mb-3 font-heading text-section text-text-primary">{t('profile.sectionMore')}</h2>
         <Card className="divide-y divide-border p-0">
           <ListRow icon={icon(<Gift />)} label={t('drawer.refer')} onClick={() => navigate('/refer')} />
-          <ListRow icon={icon(<Store />)} label={t('drawer.sell')} onClick={() => navigate('/seller/manage')} />
+          {shop ? (
+            <>
+              <ListRow icon={icon(<Package />)} label={t('seller.myProducts.title')} sublabel={t('seller.myProducts.rowSub', { count: shop.products.length })} onClick={() => navigate('/seller/my-products')} />
+              <ListRow icon={icon(<Store />)} label={t('seller.myShop')} sublabel={t('seller.myShopSub')} onClick={() => navigate('/seller/manage')} />
+            </>
+          ) : (
+            <ListRow icon={icon(<Store />)} label={t('drawer.sell')} onClick={() => navigate('/seller/manage')} />
+          )}
         </Card>
       </section>
 

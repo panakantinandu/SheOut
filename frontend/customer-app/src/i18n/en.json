@@ -811,6 +811,40 @@
       "pickerTitle": "Where should parcels be collected?",
       "saved": "Pickup point saved",
       "removed": "Pickup point removed"
+    },
+    "myShop": "My shop",
+    "myShopSub": "Plan, shop details and pickup point",
+    "myProducts": {
+      "title": "My products",
+      "rowSub_one": "{{count}} product - find by code, update stock",
+      "rowSub_other": "{{count}} products - find by code, update stock",
+      "findLabel": "Find by product code or name",
+      "found": "Found {{code}}",
+      "filter": {
+        "all": "All {{count}}",
+        "inStock": "In stock {{count}}",
+        "low": "Running low {{count}}",
+        "out": "Out of stock {{count}}",
+        "hidden": "Hidden {{count}}"
+      },
+      "readOnly": "Your shop is being reviewed or is paused, so products cannot be changed right now.",
+      "emptyTitle": "No products yet",
+      "emptyBody": "Add your first product with a clear photo and price.",
+      "noneInFilter": "Nothing here right now.",
+      "hiddenBadge": "Hidden",
+      "oneLess": "One less in stock",
+      "oneMore": "One more in stock",
+      "stockNow_one": "{{count}} left in stock",
+      "stockNow_other": "{{count}} left in stock",
+      "markOut": "Mark out of stock",
+      "backInStock": "Back in stock",
+      "markedOut": "Marked out of stock",
+      "markedIn": "Back in stock",
+      "hide": "Hide",
+      "show": "Show",
+      "nowHidden": "Hidden from customers",
+      "nowShown": "Shown to customers again",
+      "manageAll": "Manage all"
     }
   },
   "refer": {

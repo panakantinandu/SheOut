@@ -956,10 +956,15 @@ function ShopStatusScreen({ shop, onShop, reload, onFix }: { shop: Shop; onShop:
       <section className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="font-heading text-section text-text-primary">{t('seller.shop.productsTitle')}</h2>
-          <span className="text-caption text-text-secondary" data-testid="photo-usage">
-            {t('seller.shop.photoUsage', { used: shop.imagesUsed, max: shop.maxImagesPerSeller })}
-          </span>
+          {hers && shop.products.length > 0 && (
+            <button type="button" className="text-sm font-semibold text-primary" onClick={() => navigate('/seller/my-products')} data-testid="open-my-products">
+              {t('seller.myProducts.manageAll')}
+            </button>
+          )}
         </div>
+        <p className="-mt-2 text-caption text-text-secondary" data-testid="photo-usage">
+          {t('seller.shop.photoUsage', { used: shop.imagesUsed, max: shop.maxImagesPerSeller })}
+        </p>
         {/* A sent-back shop is changed through the wizard ("Make changes"), not here. */}
         {hers ? (
           <>
