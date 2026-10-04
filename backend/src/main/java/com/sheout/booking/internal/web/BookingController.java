@@ -109,7 +109,8 @@ public class BookingController {
                 request.type(),
                 request.category(),
                 request.pickup().toGeoAddress(),
-                request.drop().toGeoAddress()
+                request.drop().toGeoAddress(),
+                request.parcelNote()
         );
         Result<BookingSummary, BookingError> result = bookingService.requestBooking(command);
         if (result.isFailure()) {
@@ -616,6 +617,9 @@ public class BookingController {
                     "Rides are paused because SheOut cannot insure trips right now. Please try again a little later.");
             case SERVICE_CLOSED -> new ApiException(
                     HttpStatus.CONFLICT, "SERVICE_CLOSED", ServiceStatusController.closedMessage(serviceHours.currentStatus()));
+            case PARCEL_NOTE_HAS_PHONE -> new ApiException(
+                    HttpStatus.BAD_REQUEST, "PARCEL_NOTE_HAS_PHONE",
+                    "Leave phone numbers out of the parcel note. Your partner can call you through the app.");
             case TRIP_ENDS_AFTER_HOURS -> new ApiException(
                     HttpStatus.CONFLICT, "TRIP_ENDS_AFTER_HOURS", ServiceStatusController.endsAfterHoursMessage(serviceHours.currentStatus()));
             case CATEGORY_TYPE_MISMATCH -> new ApiException(
@@ -762,7 +766,9 @@ public class BookingController {
             @NotNull BookingType type,
             @NotNull BookingCategory category,
             @Valid @NotNull GeoAddressRequest pickup,
-            @Valid @NotNull GeoAddressRequest drop
+            @Valid @NotNull GeoAddressRequest drop,
+            /** A delivery only: what is in the parcel, for the partner carrying it. Optional. */
+            @jakarta.validation.constraints.Size(max = 300) String parcelNote
     ) {
     }
 

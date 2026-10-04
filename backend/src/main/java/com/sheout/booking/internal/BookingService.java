@@ -298,6 +298,10 @@ public class BookingService implements BookingApi {
             return Result.failure(BookingError.TRIP_ENDS_AFTER_HOURS);
         }
         BigDecimal fareEstimate = quote.amount();
+        String parcelNote = command.type() == com.sheout.booking.BookingType.DELIVERY ? cleanParcelNote(command.parcelNote()) : null;
+        if (parcelNote != null && PHONE_LIKE.matcher(parcelNote).find()) {
+            return Result.failure(BookingError.PARCEL_NOTE_HAS_PHONE);
+        }
         BookingEntity booking = new BookingEntity(
                 command.type(),
                 command.category(),
@@ -306,6 +310,7 @@ public class BookingService implements BookingApi {
                 GeoAddressEmbeddable.from(command.drop()),
                 fareEstimate
         );
+        booking.setParcelNote(parcelNote);
         booking.recordQuotedDistance(
                 BigDecimal.valueOf(quote.distanceKm()).setScale(2, java.math.RoundingMode.HALF_UP), quote.routed());
         // Kept for her receipt's "Fare details" - the same quote, so the parts add up to what she agreed to.
@@ -1042,6 +1047,21 @@ public class BookingService implements BookingApi {
                 .orElse(false);
     }
 
+    /** Eight or more digits, allowing spaces, dashes and a leading +: a phone number, however it was typed. */
+    static final java.util.regex.Pattern PHONE_LIKE = java.util.regex.Pattern.compile("\\+?\\d(?:[\\s-]?\\d){7,}");
+
+    /** Trimmed, one line, no control characters, at most 300 characters; null when nothing is left. */
+    static String cleanParcelNote(String note) {
+        if (note == null) {
+            return null;
+        }
+        String clean = note.replaceAll("\\p{Cntrl}", " ").replaceAll("\\s+", " ").trim();
+        if (clean.isEmpty()) {
+            return null;
+        }
+        return clean.length() > 300 ? clean.substring(0, 300) : clean;
+    }
+
     private BookingSummary toSummary(BookingEntity booking) {
         return new BookingSummary(
                 booking.getId(),
@@ -1063,7 +1083,8 @@ public class BookingService implements BookingApi {
                 booking.getPaymentSettledAt(),
                 booking.getPromoDiscount(),
                 booking.amountDue(),
-                booking.getPromotionName()
+                booking.getPromotionName(),
+                booking.getParcelNote()
         );
     }
 

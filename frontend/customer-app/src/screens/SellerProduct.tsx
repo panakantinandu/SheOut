@@ -1,7 +1,7 @@
-import { Clock, Copy, ExternalLink, Globe, Info, MessageCircle, Phone, Share2, Store } from 'lucide-react';
+import { Clock, Copy, ExternalLink, Globe, Info, MessageCircle, Package, Phone, Share2, Store } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Card, ListEmptyState, SkeletonCard, TopHeader, showToast, useTranslation } from '@sheout/design-system';
+import { Button, Card, ListEmptyState, SkeletonCard, TopHeader, showToast, useTranslation } from '@sheout/design-system';
 import { ApiError, marketplaceApi } from '../api/client';
 import type { ProductDetail } from '../api/types';
 import { PriceTag } from '../components/PriceTag';
@@ -211,6 +211,34 @@ export function SellerProduct() {
               <p className="-mt-2 text-center text-caption text-text-secondary">
                 {contact.kind === 'whatsapp' ? t('seller.product.codeInMessage') : t('seller.product.codeOnCall', { code: product.code })}
               </p>
+
+              {/* After they have agreed, between themselves: SheOut can carry it.
+                  The parcel names the product so the partner knows what she holds;
+                  the price, payment and any return stay between buyer and seller. */}
+              <Card className="space-y-3" data-testid="marketplace-delivery">
+                <div className="flex items-start gap-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-orange-tint text-accent-orange-strong">
+                    <Package className="h-5 w-5" aria-hidden="true" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="font-heading text-card-title text-text-primary">{t('seller.parcel.title')}</p>
+                    <p className="mt-0.5 text-sm text-text-secondary">{t('seller.parcel.body')}</p>
+                  </div>
+                </div>
+                <Button
+                  variant="secondary"
+                  fullWidth
+                  icon={<Package className="h-4 w-4" />}
+                  onClick={() =>
+                    navigate('/book/parcel', {
+                      state: { marketplace: 'buyer', parcelNote: t('seller.parcel.note', { code: product.code, title: product.title }).slice(0, 300) },
+                    })
+                  }
+                  data-testid="book-marketplace-parcel"
+                >
+                  {t('seller.parcel.cta')}
+                </Button>
+              </Card>
             </>
           ) : (
             /* A sample shop: said plainly, in place of a button that would reach nobody. */

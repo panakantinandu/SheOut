@@ -1,4 +1,4 @@
-import { ArrowLeft, CheckCircle2, ChevronDown, MapPin, MessageCircle, Navigation, UserX } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, ChevronDown, MapPin, MessageCircle, Navigation, Package, UserX } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
@@ -713,6 +713,16 @@ export function Trip() {
               {routeError && <p className="mt-1 text-xs text-text-secondary">{t('trip.routeError')}</p>}
             </div>
           </div>
+
+          {/* What she is carrying, in the sender's words - a Marketplace order says which product. */}
+          {!isRide && booking.parcelNote && (
+            <div className="flex items-start gap-2 rounded-input bg-accent-orange-tint px-3 py-2 text-sm" data-testid="parcel-note">
+              <Package className="mt-0.5 h-4 w-4 shrink-0 text-accent-orange-strong" aria-hidden="true" />
+              <p className="min-w-0 text-text-primary">
+                <span className="font-semibold">{t('trip.parcelNote')}</span> {booking.parcelNote}
+              </p>
+            </div>
+          )}
 
           {/* Who she is collecting, with the one way to reach her - folded into the check while it is up. */}
           {!needsRiderCheck && (

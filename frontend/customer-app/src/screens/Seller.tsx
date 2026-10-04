@@ -46,11 +46,12 @@ function useDirectoryFilters() {
   const ask = params.get('ask') ?? '';
 
   /**
-   * Typing, a price or an area replaces the current entry, so Back is not
-   * a walk through every letter. A step she would call "going somewhere" -
-   * into a category, to all of them, another search mode, an AI search -
-   * is `step`: a history entry of its own, so Back returns from it to the
-   * marketplace as it was, not straight to Home.
+   * Every change replaces the current entry - typing, a price, an area, and
+   * a category too. The filters live in the address, so opening a product
+   * and coming Back finds them as they were; but switching from Fashion to
+   * Beauty to Gifts is browsing one screen, and Back walking through every
+   * category she touched, instead of leaving the Marketplace, was the
+   * complaint. `step` now only means "somewhere new": open at the top.
    */
   const set = useCallback(
     (patch: Partial<Record<'q' | 'cat' | 'min' | 'max' | 'area' | 'mode' | 'ask', string>>, step = false) => {
@@ -63,7 +64,7 @@ function useDirectoryFilters() {
           }
           return next;
         },
-        { replace: !step }
+        { replace: true }
       );
       // A step is somewhere new - a category, another search - so it opens at the top, where its results start.
       if (step) window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
@@ -126,6 +127,31 @@ export function Seller() {
   const list = usePagedList(fetchPage, [aiMode, q.trim(), categories.join(','), rangeInverted ? '' : `${min}-${max}`, area.trim()], {
     debounceMs: 350,
   });
+
+  // Back from a product returns to this list where she was in it, not at
+  // the top: the scroll is kept for exactly these filters when she opens one.
+  const scrollKey = `marketplace-scroll:${window.location.search}`;
+  const openProduct = (productId: string) => {
+    try {
+      sessionStorage.setItem(scrollKey, String(window.scrollY));
+    } catch {
+      // Private mode: she lands at the top, which still works.
+    }
+    navigate(`/seller/products/${productId}`);
+  };
+  useEffect(() => {
+    if (list.loading) return;
+    let saved: string | null = null;
+    try {
+      saved = sessionStorage.getItem(scrollKey);
+      sessionStorage.removeItem(scrollKey);
+    } catch {
+      return;
+    }
+    if (saved) requestAnimationFrame(() => window.scrollTo({ top: Number(saved), behavior: 'instant' as ScrollBehavior }));
+    // Once, when the list for these filters has loaded.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [list.loading, scrollKey]);
 
   // A product code typed into the search (a customer reading it off a
   // message) opens that product straight away. Only for what she typed just
@@ -408,7 +434,7 @@ export function Seller() {
           examples={examples}
           onExample={submitAsk}
           onExact={() => switchMode('exact')}
-          onOpen={(id) => navigate(`/seller/products/${id}`)}
+          onOpen={openProduct}
         />
       )}
 
@@ -470,7 +496,7 @@ export function Seller() {
       {!aiMode && !list.loading && list.items.length > 0 && (
         <div className="grid grid-cols-2 gap-3" data-testid="seller-listings">
           {list.items.map((item, i) => (
-            <ListingTile key={item.productId} item={item} index={i} onOpen={() => navigate(`/seller/products/${item.productId}`)} />
+            <ListingTile key={item.productId} item={item} index={i} onOpen={() => openProduct(item.productId)} />
           ))}
         </div>
       )}

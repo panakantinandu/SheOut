@@ -39,7 +39,9 @@ public record BookingSummary(
         /** What the rider is charged: the fare less the promotion. */
         BigDecimal amountDue,
         /** Which promotion, by its name - null when none. */
-        String promotionName
+        String promotionName,
+        /** A delivery's note on what is in the parcel, for the partner carrying it - null when none. */
+        String parcelNote
 ) {
 
     /** Ended by the partner, not yet paid for. */

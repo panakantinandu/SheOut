@@ -669,7 +669,8 @@ export const bookingApi = {
     return (await request<PaymentHold | undefined>('/api/v1/bookings/me/payment-hold')) ?? null;
   },
 
-  create(input: { type: BookingType; category: BookingCategory; pickup: GeoAddress; drop: GeoAddress }): Promise<BookingSummary> {
+  /** parcelNote: a delivery only - what is in the parcel, shown to the partner who carries it. */
+  create(input: { type: BookingType; category: BookingCategory; pickup: GeoAddress; drop: GeoAddress; parcelNote?: string }): Promise<BookingSummary> {
     return request('/api/v1/bookings', { method: 'POST', body: input });
   },
 

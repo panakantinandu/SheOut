@@ -202,6 +202,8 @@ export interface BookingSummary {
   cancelledAt: string | null;
   /** When the rider paid. A COMPLETED trip with this null has ended and is still unpaid. */
   paymentSettledAt: string | null;
+  /** A delivery's note on what is in the parcel, from the sender - null when none. */
+  parcelNote?: string | null;
 }
 
 /**

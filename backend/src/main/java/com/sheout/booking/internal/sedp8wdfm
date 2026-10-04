@@ -1,0 +1,1166 @@
+package com.sheout.booking.internal;
+
+import com.sheout.auth.AuthApi;
+import com.sheout.booking.BookingApi;
+import com.sheout.booking.BookingAccepted;
+import com.sheout.booking.BookingCancelled;
+import com.sheout.booking.BookingCategory;
+import com.sheout.booking.GeoAddress;
+import com.sheout.booking.BookingCompleted;
+import com.sheout.booking.BookingError;
+import com.sheout.booking.BookingMatched;
+import com.sheout.booking.BookingParticipants;
+import com.sheout.booking.BookingRequested;
+import com.sheout.booking.BookingStarted;
+import com.sheout.booking.BookingStatus;
+import com.sheout.booking.CancellationReason;
+import com.sheout.booking.BookingSummary;
+import com.sheout.booking.PaymentHold;
+import com.sheout.booking.RequestBookingCommand;
+import com.sheout.booking.internal.fare.FareCalculator;
+import com.sheout.booking.internal.fare.FareQuote;
+import com.sheout.driververification.VerificationApi;
+import com.sheout.driververification.VerificationStatus;
+import com.sheout.driververification.VerificationSummary;
+import com.sheout.booking.DropOffDeviationReason;
+import com.sheout.booking.BookingNoDriversAvailable;
+import com.sheout.campaigns.CampaignsApi;
+import com.sheout.campaigns.PromoApplication;
+import com.sheout.booking.RouteReviewItem;
+import com.sheout.booking.TripEndedBy;
+import com.sheout.dispatch.DriverLocation;
+import com.sheout.dispatch.DriverLocationApi;
+import com.sheout.sharedkernel.Result;
+import com.sheout.sharedkernel.devmode.DevMode;
+import com.sheout.sharedkernel.geo.ServiceArea;
+import com.sheout.sharedkernel.event.DomainEventPublisher;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
+import com.sheout.booking.BookingQuery;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+@Service
+public class BookingService implements BookingApi {
+
+    /** A partner on any of these is busy - see hasActiveTripAsDriver. */
+    private static final java.util.Set<BookingStatus> ACTIVE_TRIP_STATUSES = java.util.EnumSet.of(
+            BookingStatus.MATCHED, BookingStatus.ACCEPTED, BookingStatus.IN_PROGRESS);
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(BookingService.class);
+
+    /** A rider's trip is live from the moment it starts searching. */
+    private static final java.util.Set<BookingStatus> LIVE_STATUSES = java.util.EnumSet.of(
+            BookingStatus.REQUESTED, BookingStatus.MATCHED, BookingStatus.ACCEPTED, BookingStatus.IN_PROGRESS);
+
+    private final BookingRepository bookingRepository;
+    private final VerificationApi verificationApi;
+    private final FareCalculator fareCalculator;
+    private final DomainEventPublisher eventPublisher;
+    private final AuthApi authApi;
+    private final ServiceArea serviceArea;
+    private final String verifiedBypassPhone;
+    private final Duration partnerPaymentHold;
+    private final DriverLocationApi locationStore;
+    private final DropoffGeofence dropoffGeofence;
+    private final DropoffGeofence pickupGeofence;
+    private final TripRouteChecker routeChecker;
+    private final CampaignsApi campaigns;
+    /** The trip audit log; nothing for a BookingService built by hand in a unit test. */
+    private BookingEventLog eventLog = BookingEventLog.NONE;
+
+    @Autowired
+    void setEventLog(BookingEventLog eventLog) {
+        this.eventLog = eventLog;
+    }
+
+    @Override
+    public List<com.sheout.booking.BookingEvent> eventsFor(UUID bookingId) {
+        return eventLog.forBooking(bookingId);
+    }
+
+    /** Whether new bookings are being taken now, and how late a trip may end - see ServiceHoursApi. */
+    private final BookingWindow bookingWindow;
+
+    /**
+     * Set by Spring after construction, rather than through the constructors
+     * the tests build this with: a booking service with no gate (a test)
+     * refuses nothing for insurance. See RideInsuranceGate.
+     */
+    private RideInsuranceGate insuranceGate;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setInsuranceGate(RideInsuranceGate insuranceGate) {
+        this.insuranceGate = insuranceGate;
+    }
+    /** Time allowed for a partner to reach the pickup, when judging whether a trip ends in hours. */
+    private static final Duration PICKUP_ALLOWANCE = Duration.ofMinutes(15);
+
+    @Autowired
+    public BookingService(BookingRepository bookingRepository,
+                           VerificationApi verificationApi,
+                           FareCalculator fareCalculator,
+                           DomainEventPublisher eventPublisher,
+                           AuthApi authApi,
+                           ServiceArea serviceArea,
+                           // The rider verification bypass, only ever set with
+                           // DEV_MODE_ENABLED - see DevMode.
+                           DevMode devMode,
+                           @Value("${sheout.booking.partner-payment-hold-minutes:10}") long partnerPaymentHoldMinutes,
+                           DriverLocationApi locationStore,
+                           @Value("${sheout.booking.completion.drop-off-radius-metres:150}") double dropoffRadiusMetres,
+                           @Value("${sheout.booking.completion.driver-location-max-age-seconds:30}") long driverLocationMaxAgeSeconds,
+                           @Value("${sheout.booking.completion.pickup-radius-metres:150}") double pickupRadiusMetres,
+                           TripRouteChecker routeChecker,
+                           CampaignsApi campaigns,
+                           com.sheout.booking.ServiceHoursApi serviceHours) {
+        this(bookingRepository, verificationApi, fareCalculator, eventPublisher, authApi, serviceArea,
+                devMode.verifiedRiderBypassPhone().orElse(""), partnerPaymentHoldMinutes, locationStore,
+                dropoffRadiusMetres, driverLocationMaxAgeSeconds, pickupRadiusMetres, routeChecker, campaigns,
+                BookingWindow.from(serviceHours));
+    }
+
+    BookingService(BookingRepository bookingRepository,
+                           VerificationApi verificationApi,
+                           FareCalculator fareCalculator,
+                           DomainEventPublisher eventPublisher,
+                           AuthApi authApi,
+                           ServiceArea serviceArea,
+                           String verifiedBypassPhone,
+                           long partnerPaymentHoldMinutes,
+                           DriverLocationApi locationStore,
+                           double dropoffRadiusMetres,
+                           long driverLocationMaxAgeSeconds,
+                           double pickupRadiusMetres,
+                           TripRouteChecker routeChecker,
+                           CampaignsApi campaigns,
+                           BookingWindow bookingWindow) {
+        this.bookingWindow = bookingWindow;
+        this.routeChecker = routeChecker;
+        this.campaigns = campaigns;
+        this.partnerPaymentHold = Duration.ofMinutes(partnerPaymentHoldMinutes);
+        this.bookingRepository = bookingRepository;
+        this.verificationApi = verificationApi;
+        this.fareCalculator = fareCalculator;
+        this.eventPublisher = eventPublisher;
+        this.authApi = authApi;
+        this.serviceArea = serviceArea;
+        this.verifiedBypassPhone = verifiedBypassPhone;
+        this.locationStore = locationStore;
+        this.dropoffGeofence = new DropoffGeofence(
+                dropoffRadiusMetres, Duration.ofSeconds(driverLocationMaxAgeSeconds));
+        this.pickupGeofence = new DropoffGeofence(
+                pickupRadiusMetres, Duration.ofSeconds(driverLocationMaxAgeSeconds));
+    }
+
+    /**
+     * Keeps direct unit-test construction source/binary compatible while the
+     * Spring constructor also receives the pickup radius configuration.
+     */
+    public BookingService(BookingRepository bookingRepository,
+                           VerificationApi verificationApi,
+                           FareCalculator fareCalculator,
+                           DomainEventPublisher eventPublisher,
+                           AuthApi authApi,
+                           ServiceArea serviceArea,
+                           String verifiedBypassPhone,
+                           long partnerPaymentHoldMinutes,
+                           DriverLocationApi locationStore,
+                           double dropoffRadiusMetres,
+                           long driverLocationMaxAgeSeconds) {
+        this(bookingRepository, verificationApi, fareCalculator, eventPublisher, authApi, serviceArea,
+                verifiedBypassPhone, partnerPaymentHoldMinutes, locationStore, dropoffRadiusMetres,
+                driverLocationMaxAgeSeconds, 300, TripRouteChecker.withoutTrails(), NO_CAMPAIGNS, BookingWindow.alwaysOpen());
+    }
+
+    /**
+     * A fare quote and nothing else: no entity, no event, no side effect of
+     * any kind. It runs the same FareCalculator requestBooking runs, with
+     * the same inputs, so the number a customer is shown before booking is
+     * the number the booking is then created with.
+     * <p>
+     * Deliberately not transactional and deliberately not persisted - it
+     * reads nothing and writes nothing. It also does not check customer
+     * verification: pricing is public information, and refusing to price a
+     * trip would leak whether an account is verified to anyone who asks.
+     * The verification gate stays where it belongs, on actually creating
+     * the booking.
+     */
+    public Result<FareQuote, BookingError> quoteFare(BookingCategory category, GeoAddress pickup, GeoAddress drop) {
+        if (!withinServiceArea(pickup, drop)) {
+            return Result.failure(BookingError.OUTSIDE_SERVICE_AREA);
+        }
+        return Result.success(fareCalculator.quote(category, pickup, drop));
+    }
+
+    /**
+     * Both ends must be somewhere we operate. Checked here rather than in
+     * the controller so the booking path and the quote path cannot drift
+     * apart, and so no caller can reach a booking without passing it.
+     */
+    private boolean withinServiceArea(GeoAddress pickup, GeoAddress drop) {
+        return serviceArea.covers(pickup.lat(), pickup.lng()) && serviceArea.covers(drop.lat(), drop.lng());
+    }
+
+    /**
+     * Everything requestBooking does except publishing BookingRequested - its
+     * checks, the quote and its route, the promotion lookup and the insert -
+     * for a made-up customer. Only for BookingWarmUp, which runs it in a
+     * transaction it rolls back: without the event nothing reaches dispatch,
+     * and without the commit nothing is kept.
+     */
+    BookingSummary warmUpRequestPath(UUID customerId, BookingCategory category, GeoAddress pickup, GeoAddress drop) {
+        withinServiceArea(pickup, drop);
+        hasPhoneNumber(customerId);
+        isCustomerVerified(customerId);
+        findPaymentHoldForCustomer(customerId);
+        bookingRepository.existsByCustomerIdAndTypeAndStatusIn(customerId, category.expectedType(), LIVE_STATUSES);
+        FareQuote quote = fareCalculator.quote(category, pickup, drop);
+        campaigns.previewDiscount(customerId, quote.amount());
+        BookingEntity booking = new BookingEntity(category.expectedType(), category, customerId,
+                GeoAddressEmbeddable.from(pickup), GeoAddressEmbeddable.from(drop), quote.amount());
+        booking.recordQuotedDistance(
+                BigDecimal.valueOf(quote.distanceKm()).setScale(2, java.math.RoundingMode.HALF_UP), quote.routed());
+        bookingRepository.saveAndFlush(booking);
+        return toSummary(booking);
+    }
+
+    @Override
+    @Transactional
+    public Result<BookingSummary, BookingError> requestBooking(RequestBookingCommand command) {
+        if (command.category().expectedType() != command.type()) {
+            return Result.failure(BookingError.CATEGORY_TYPE_MISMATCH);
+        }
+        // First of all: outside the hours, or while an operator has paused
+        // bookings, nothing else about the request matters tonight. Only new
+        // bookings stop - trips under way and searches already running carry
+        // on, because cutting those off would strand her mid-journey.
+        if (!bookingWindow.open()) {
+            return Result.failure(BookingError.SERVICE_CLOSED);
+        }
+        // A platform-wide stop like the hours above: with no passenger cover
+        // in force and cover required, no ride is taken - see RideInsuranceGate.
+        if (insuranceGate != null && insuranceGate.refuses(command.type())) {
+            return Result.failure(BookingError.RIDE_INSURANCE_NOT_ACTIVE);
+        }
+        // Before the verification gate on purpose: whether we serve an area
+        // is public information, so answering it first tells an unverified
+        // customer the useful thing rather than the gate they would have
+        // hit anyway.
+        if (!withinServiceArea(command.pickup(), command.drop())) {
+            return Result.failure(BookingError.OUTSIDE_SERVICE_AREA);
+        }
+        // Before the ID check: the app asks for the number first, so this is
+        // the step she is actually on. The app enforces it too, but only the
+        // server can promise a phone-less account never books.
+        if (!hasPhoneNumber(command.customerId())) {
+            return Result.failure(BookingError.CUSTOMER_PHONE_REQUIRED);
+        }
+        if (!isCustomerVerified(command.customerId())) {
+            return Result.failure(BookingError.CUSTOMER_NOT_VERIFIED);
+        }
+        // A trip that ended unpaid has to be paid before the next one. This
+        // is what makes walking away from a fare pointless: the account that
+        // owes it cannot ride again until it is settled.
+        if (findPaymentHoldForCustomer(command.customerId()).isPresent()) {
+            return Result.failure(BookingError.UNPAID_TRIP);
+        }
+        // One live trip of each kind: a ride and a parcel together is
+        // ordinary, two rides at once is not a thing a person does. Her
+        // requests are taken one at a time first, or two arriving together
+        // both pass this check - see lockNewBookingsFor.
+        bookingRepository.lockNewBookingsFor(command.customerId());
+        if (bookingRepository.existsByCustomerIdAndTypeAndStatusIn(command.customerId(), command.type(), LIVE_STATUSES)) {
+            return Result.failure(BookingError.ACTIVE_BOOKING_EXISTS);
+        }
+
+        // The quote, not just its price: the distance it was priced on is
+        // kept, so the trip can later be compared with the road actually driven.
+        FareQuote quote = fareCalculator.quote(command.category(), command.pickup(), command.drop());
+        // Near closing time, a trip that would run long after it is refused:
+        // the operations desk closes with the hours, and a woman should not
+        // be on the road at 10:30 pm with nobody watching her trip. Judged
+        // on the routed duration plus time for a partner to arrive.
+        Optional<Instant> finishBy = bookingWindow.finishBy();
+        if (finishBy.isPresent() && Instant.now().plus(PICKUP_ALLOWANCE)
+                .plusSeconds(Math.round(quote.durationMinutes() * 60)).isAfter(finishBy.get())) {
+            return Result.failure(BookingError.TRIP_ENDS_AFTER_HOURS);
+        }
+        BigDecimal fareEstimate = quote.amount();
+        String parcelNote = command.type() == com.sheout.booking.BookingType.DELIVERY ? cleanParcelNote(command.parcelNote()) : null;
+        if (parcelNote != null && PHONE_LIKE.matcher(parcelNote).find()) {
+            return Result.failure(BookingError.PARCEL_NOTE_HAS_PHONE);
+        }
+        BookingEntity booking = new BookingEntity(
+                command.type(),
+                command.category(),
+                command.customerId(),
+                GeoAddressEmbeddable.from(command.pickup()),
+                GeoAddressEmbeddable.from(command.drop()),
+                fareEstimate
+        );
+        booking.setParcelNote(parcelNote);
+        booking.recordQuotedDistance(
+                BigDecimal.valueOf(quote.distanceKm()).setScale(2, java.math.RoundingMode.HALF_UP), quote.routed());
+        // Kept for her receipt's "Fare details" - the same quote, so the parts add up to what she agreed to.
+        booking.recordFareBreakdown(quote.baseFare(), quote.distanceCharge(), quote.timeCharge(),
+                quote.surgeMultiplier(), quote.nightMultiplier(), quote.minimumFareApplied());
+        bookingRepository.save(booking);
+        eventLog.record(booking.getId(), "REQUESTED", null, BookingStatus.REQUESTED, null);
+
+        eventPublisher.publish(new BookingRequested(
+                booking.getId(), booking.getCustomerId(), booking.getType(), booking.getCategory(),
+                command.pickup(), command.drop()));
+
+        // A promotion pays some or all of the fare on her behalf - the fare
+        // itself is unchanged. Held against the promotion's budget in this
+        // transaction: if the booking does not commit, neither does the hold.
+        //
+        // Last, after the search has started, on purpose. Holding means
+        // locking the promotion's row until this transaction commits, and
+        // every rider with that promotion books against the same row. Taken
+        // before the search, the lock lasted the whole first dispatch round,
+        // so bookings queued single file behind it: in a load test of 1,000
+        // riders, connections waited up to 30 s on this one row and most
+        // bookings timed out. Taken here, it is held only until the commit.
+        PromoApplication promo = campaigns.reserveDiscount(command.customerId(), booking.getId(), fareEstimate);
+        if (promo.applies()) {
+            booking.applyPromotion(promo.discount(), promo.promotionName());
+            bookingRepository.save(booking);
+        }
+
+        return Result.success(toSummary(booking));
+    }
+
+    @Override
+    @Transactional
+    public Result<BookingSummary, BookingError> assignDriver(UUID bookingId, UUID driverId) {
+        Optional<BookingEntity> found = bookingRepository.findLockedById(bookingId);
+        if (found.isEmpty()) {
+            return Result.failure(BookingError.BOOKING_NOT_FOUND);
+        }
+        BookingEntity booking = found.get();
+
+        Result<BookingStatus, BookingError> transition =
+                BookingStateMachine.transition(booking.getStatus(), BookingStatus.MATCHED);
+        if (transition.isFailure()) {
+            return Result.failure(transition.error());
+        }
+
+        booking.setDriverId(driverId);
+        BookingStatus previousStatus = booking.getStatus();
+        booking.setStatus(BookingStatus.MATCHED);
+        eventLog.record(booking.getId(), "MATCHED", previousStatus, BookingStatus.MATCHED, null);
+        booking.setMatchedAt(Instant.now());
+        bookingRepository.save(booking);
+
+        eventPublisher.publish(new BookingMatched(booking.getId(), booking.getCustomerId(), driverId));
+        return Result.success(toSummary(booking));
+    }
+
+    /** Self-service - the driver assigned to a MATCHED booking confirms it. Caller-vs-driverId match is checked by the controller. */
+    @Transactional
+    public Result<BookingSummary, BookingError> acceptBooking(UUID bookingId) {
+        Optional<BookingEntity> found = bookingRepository.findLockedById(bookingId);
+        if (found.isEmpty()) {
+            return Result.failure(BookingError.BOOKING_NOT_FOUND);
+        }
+        BookingEntity booking = found.get();
+
+        Result<BookingStatus, BookingError> transition =
+                BookingStateMachine.transition(booking.getStatus(), BookingStatus.ACCEPTED);
+        if (transition.isFailure()) {
+            return Result.failure(transition.error());
+        }
+
+        BookingStatus previousStatus = booking.getStatus();
+        booking.setStatus(BookingStatus.ACCEPTED);
+        eventLog.record(booking.getId(), "ACCEPTED", previousStatus, BookingStatus.ACCEPTED, null);
+        booking.setAcceptedAt(Instant.now());
+        // Generated here, at the one moment a partner becomes committed to
+        // this trip, so the rider's screen has a code to show her from the
+        // instant she is told somebody is coming. Generating it later - at
+        // arrival, say - would need an "arrived" state the booking module
+        // does not have, and would leave a window where she is watching a
+        // partner approach with nothing to read out.
+        booking.setPickupOtp(PickupCode.generate());
+        bookingRepository.save(booking);
+
+        eventPublisher.publish(new BookingAccepted(booking.getId(), booking.getCustomerId(), booking.getDriverId()));
+        return Result.success(toSummary(booking));
+    }
+
+    /**
+     * The partner proves she is at the pickup, and the trip begins.
+     * <p>
+     * This replaces an unverified "Start Trip" tap. That tap let a partner
+     * move a booking to IN_PROGRESS and then COMPLETED with nobody in the
+     * vehicle, and the rider was charged the fare for it. The code is the
+     * only thing standing between the two, so it is checked here - in the
+     * same transaction that moves the status - rather than in the
+     * controller, where a second caller could one day skip it.
+     * <p>
+     * Order matters, and it is deliberate:
+     * <ol>
+     *   <li>the state machine first, so a booking that cannot start is
+     *       refused before a guess is ever counted against it - otherwise
+     *       replaying a stale request would burn a legitimate partner's
+     *       attempts;</li>
+     *   <li>the attempt limit next, so an exhausted booking stops accepting
+     *       guesses rather than merely recording them;</li>
+     *   <li>the code last.</li>
+     * </ol>
+     * <p>
+     * The authenticated driver and a recent pickup-geofence location are
+     * checked inside this locked transaction, before the OTP is consumed or
+     * the status is changed.
+     */
+    @Transactional
+    public Result<BookingSummary, BookingError> startTrip(UUID bookingId, UUID driverId, String submittedCode) {
+        // Locked: the attempt count below is read, compared and written back,
+        // and concurrent guesses must see each other's count. See
+        // BookingRepository.findLockedById.
+        Optional<BookingEntity> found = bookingRepository.findLockedById(bookingId);
+        if (found.isEmpty()) {
+            return Result.failure(BookingError.BOOKING_NOT_FOUND);
+        }
+        BookingEntity booking = found.get();
+
+        if (!driverId.equals(booking.getDriverId())) {
+            return Result.failure(BookingError.INVALID_STATE_TRANSITION);
+        }
+
+        Result<BookingStatus, BookingError> transition =
+                BookingStateMachine.transition(booking.getStatus(), BookingStatus.IN_PROGRESS);
+        if (transition.isFailure()) {
+            return Result.failure(transition.error());
+        }
+
+        DropoffGeofence.Decision pickupDecision = pickupGeofence.check(
+                locationStore.findLocation(driverId).orElse(null),
+                booking.getPickup().getLat(), booking.getPickup().getLng(), Instant.now());
+        if (pickupDecision == DropoffGeofence.Decision.LOCATION_UNAVAILABLE) {
+            return Result.failure(BookingError.DRIVER_LOCATION_UNAVAILABLE);
+        }
+        if (pickupDecision != DropoffGeofence.Decision.AT_DROP_OFF) {
+            return Result.failure(BookingError.DRIVER_NOT_AT_PICKUP);
+        }
+
+        if (booking.getPickupOtp() == null) {
+            return Result.failure(BookingError.PICKUP_CODE_REQUIRED);
+        }
+        if (booking.pickupAttemptsExhausted()) {
+            return Result.failure(BookingError.PICKUP_VERIFICATION_LOCKED);
+        }
+        if (!PickupCode.isWellFormed(submittedCode)) {
+            return Result.failure(BookingError.PICKUP_CODE_REQUIRED);
+        }
+        if (!PickupCode.matches(booking.getPickupOtp(), submittedCode)) {
+            // Saved on its own, because the surrounding transaction is
+            // about to return a failure Result - which does not roll
+            // back, but leaving the count to an implicit flush would
+            // make the count difficult to reason about.
+            booking.recordFailedPickupAttempt();
+            bookingRepository.save(booking);
+            return Result.failure(booking.pickupAttemptsExhausted()
+                    ? BookingError.PICKUP_VERIFICATION_LOCKED
+                    : BookingError.INVALID_PICKUP_CODE);
+        }
+
+        Instant now = Instant.now();
+        BookingStatus previousStatus = booking.getStatus();
+        booking.setStatus(BookingStatus.IN_PROGRESS);
+        eventLog.record(booking.getId(), "IN_PROGRESS", previousStatus, BookingStatus.IN_PROGRESS, null);
+        booking.setStartedAt(now);
+        booking.setPickupVerifiedAt(now);
+        bookingRepository.save(booking);
+
+        eventPublisher.publish(new BookingStarted(
+                booking.getId(), booking.getCustomerId(), booking.getDriverId(), true,
+                booking.getCategory(), booking.getPickup().toGeoAddress(), booking.getDrop().toGeoAddress()));
+        return Result.success(toSummary(booking));
+    }
+
+    /**
+     * The pickup code, for the rider who booked and nobody else.
+     * <p>
+     * Returned as an Optional rather than put on {@link BookingSummary},
+     * and that is the whole design. {@code GET /bookings/{id}} is served to
+     * both participants; a field on the summary would hand the partner the
+     * code she is supposed to be proving she was told, which would make the
+     * check worthless. So the code has its own read path, and the only
+     * caller is an endpoint that has already established the caller is the
+     * customer.
+     */
+    public Optional<String> findPickupCodeForCustomer(UUID bookingId, UUID customerId) {
+        return bookingRepository.findById(bookingId)
+                .filter(booking -> booking.getCustomerId().equals(customerId))
+                .filter(booking -> booking.getStatus() == BookingStatus.ACCEPTED)
+                .filter(booking -> booking.getDriverId() != null)
+                .filter(booking -> pickupGeofence.check(
+                        locationStore.findLocation(booking.getDriverId()).orElse(null),
+                        booking.getPickup().getLat(), booking.getPickup().getLng(), Instant.now())
+                        == DropoffGeofence.Decision.AT_DROP_OFF)
+                .map(BookingEntity::getPickupOtp);
+    }
+
+    public boolean isDriverAtPickup(UUID bookingId, UUID driverId) {
+        return bookingRepository.findById(bookingId)
+                .filter(booking -> booking.getDriverId() != null && booking.getDriverId().equals(driverId))
+                .filter(booking -> booking.getStatus() == BookingStatus.ACCEPTED)
+                .map(booking -> pickupGeofence.check(
+                        locationStore.findLocation(driverId).orElse(null),
+                        booking.getPickup().getLat(), booking.getPickup().getLng(), Instant.now())
+                        == DropoffGeofence.Decision.AT_DROP_OFF)
+                .orElse(false);
+    }
+
+    /**
+     * Self-service - the assigned driver marks drop-off complete. The row
+     * lock keeps duplicate requests serialized; the authoritative drop-off
+     * and the latest trusted driver location are checked before any state or
+     * payment-related event can be written.
+     * <p>
+     * AWAY FROM THE DROP, A REASON - NOT A REFUSAL. This used to refuse
+     * outright unless she was within the drop-off radius, which left a real
+     * trip unendable whenever the rider asked to be let out somewhere else or
+     * the road to the pin was shut. Now, if she is not within the radius (or
+     * her position is too stale to say), she has to say why - the same shape
+     * as a cancellation reason, OTHER needing a note - and the trip ends. The
+     * reason, where she was and how far that was from the drop are kept on
+     * the booking whatever she chose.
+     */
+    @Transactional
+    public Result<BookingSummary, BookingError> completeTrip(UUID bookingId, UUID driverId) {
+        return completeTrip(bookingId, driverId, null, null);
+    }
+
+    @Transactional
+    public Result<BookingSummary, BookingError> completeTrip(UUID bookingId, UUID driverId,
+                                                             DropOffDeviationReason reason, String note) {
+        // Lock before every read involved in completion. This makes the state
+        // check, location check, and final transition one atomic decision.
+        Optional<BookingEntity> found = bookingRepository.findLockedById(bookingId);
+        if (found.isEmpty()) {
+            return Result.failure(BookingError.BOOKING_NOT_FOUND);
+        }
+        BookingEntity booking = found.get();
+
+        Result<BookingStatus, BookingError> transition =
+                BookingStateMachine.transition(booking.getStatus(), BookingStatus.COMPLETED);
+        if (transition.isFailure()) {
+            return Result.failure(transition.error());
+        }
+        if (booking.getDriverId() == null || !booking.getDriverId().equals(driverId)) {
+            return Result.failure(BookingError.BOOKING_NOT_FOUND);
+        }
+
+        Instant now = Instant.now();
+        DriverLocation location = locationStore.findLocation(driverId).orElse(null);
+        DropoffGeofence.Decision geofence = dropoffGeofence.check(
+                location, booking.getDrop().getLat(), booking.getDrop().getLng(), now);
+        String trimmedNote = note == null || note.isBlank() ? null : note.trim();
+        if (geofence != DropoffGeofence.Decision.AT_DROP_OFF) {
+            if (reason == null) {
+                return Result.failure(BookingError.DROP_OFF_REASON_REQUIRED);
+            }
+            if (reason.requiresNote() && trimmedNote == null) {
+                return Result.failure(BookingError.DROP_OFF_NOTE_REQUIRED);
+            }
+        }
+
+        BookingStatus previousStatus = booking.getStatus();
+        booking.setStatus(BookingStatus.COMPLETED);
+        eventLog.record(booking.getId(), "COMPLETED", previousStatus, BookingStatus.COMPLETED, null);
+        booking.setCompletedAt(now);
+        booking.setFinalFare(booking.getFareEstimate());
+        recordEnding(booking, TripEndedBy.PARTNER, location, geofence == DropoffGeofence.Decision.LOCATION_UNAVAILABLE,
+                reason, trimmedNote, now);
+        bookingRepository.save(booking);
+
+        eventPublisher.publish(new BookingCompleted(
+                booking.getId(), booking.getCustomerId(), booking.getDriverId(), booking.getFinalFare(), booking.amountDue()));
+        return Result.success(toSummary(booking));
+    }
+
+    /**
+     * The rider ends her own trip where she is, short of the drop pin.
+     * <p>
+     * The partner's End Trip is held to the drop-off geofence, which is right
+     * for her and left no way out for the ordinary "drop me here, by the
+     * gate": the partner could not end it, the rider had no button, and the
+     * trip sat IN_PROGRESS until support stepped in. The rider is the one
+     * person who can say she has arrived without GPS having to agree, so the
+     * rider may end it. The fare is the one she was quoted - stopping early
+     * is her choice and never costs her partner.
+     */
+    @Transactional
+    public Result<BookingSummary, BookingError> endTripAtRidersRequest(UUID bookingId, UUID customerId) {
+        Optional<BookingEntity> found = bookingRepository.findLockedById(bookingId);
+        if (found.isEmpty() || !found.get().getCustomerId().equals(customerId)) {
+            return Result.failure(BookingError.BOOKING_NOT_FOUND);
+        }
+        BookingEntity booking = found.get();
+        Result<BookingStatus, BookingError> transition =
+                BookingStateMachine.transition(booking.getStatus(), BookingStatus.COMPLETED);
+        if (transition.isFailure()) {
+            return Result.failure(transition.error());
+        }
+
+        Instant now = Instant.now();
+        BookingStatus previousStatus = booking.getStatus();
+        booking.setStatus(BookingStatus.COMPLETED);
+        eventLog.record(booking.getId(), "COMPLETED", previousStatus, BookingStatus.COMPLETED, null);
+        booking.setCompletedAt(now);
+        booking.setFinalFare(booking.getFareEstimate());
+        DriverLocation partnerAt = booking.getDriverId() == null ? null
+                : locationStore.findLocation(booking.getDriverId()).orElse(null);
+        DropoffGeofence.Decision where = dropoffGeofence.check(
+                partnerAt, booking.getDrop().getLat(), booking.getDrop().getLng(), now);
+        recordEnding(booking, TripEndedBy.RIDER, partnerAt, where == DropoffGeofence.Decision.LOCATION_UNAVAILABLE,
+                null, null, now);
+        bookingRepository.save(booking);
+
+        eventPublisher.publish(new BookingCompleted(
+                booking.getId(), booking.getCustomerId(), booking.getDriverId(), booking.getFinalFare(), booking.amountDue()));
+        return Result.success(toSummary(booking));
+    }
+
+    /**
+     * How the trip ended - by whom, where, how far from the drop, and any
+     * reason - and the route check. A stale position is not recorded as
+     * where she was.
+     */
+    private void recordEnding(BookingEntity booking, TripEndedBy by, DriverLocation location, boolean locationStale,
+                              DropOffDeviationReason reason, String note, Instant now) {
+        Double lat = null;
+        Double lng = null;
+        Integer metres = null;
+        if (location != null && !locationStale) {
+            lat = location.lat();
+            lng = location.lng();
+            metres = (int) Math.round(com.sheout.sharedkernel.geo.GeoDistance.haversineKm(
+                    lat, lng, booking.getDrop().getLat(), booking.getDrop().getLng()) * 1000);
+        }
+        booking.recordCompletion(by, lat, lng, metres, reason, note);
+        routeChecker.check(booking, now);
+    }
+
+    /** Trips flagged by the route check and not yet looked at, oldest first. */
+    @Override
+    public List<RouteReviewItem> findAwaitingRouteReview() {
+        return bookingRepository.findByRouteFlaggedAtIsNotNullAndRouteReviewedAtIsNullOrderByRouteFlaggedAtAsc().stream()
+                .map(BookingService::toRouteReviewItem)
+                .toList();
+    }
+
+    /**
+     * An operator has looked at a flagged trip. The note is required - it is
+     * the record of what was decided - and nothing else about the trip
+     * changes: the fare stands, and nothing is held against anybody here.
+     */
+    @Override
+    @Transactional
+    public Result<RouteReviewItem, BookingError> recordRouteReview(UUID bookingId, UUID adminAccountId, String note) {
+        Optional<BookingEntity> found = bookingRepository.findLockedById(bookingId);
+        if (found.isEmpty() || found.get().getRouteFlaggedAt() == null) {
+            return Result.failure(BookingError.BOOKING_NOT_FOUND);
+        }
+        BookingEntity booking = found.get();
+        if (booking.getRouteReviewedAt() == null) {
+            booking.recordRouteReview(adminAccountId, note.trim(), Instant.now());
+            bookingRepository.save(booking);
+        }
+        return Result.success(toRouteReviewItem(booking));
+    }
+
+    private static RouteReviewItem toRouteReviewItem(BookingEntity b) {
+        return new RouteReviewItem(
+                b.getId(), b.getCustomerId(), b.getDriverId(), b.getCategory(),
+                b.getPickup().toGeoAddress(), b.getDrop().toGeoAddress(), b.getFinalFare(),
+                b.getQuotedDistanceKm(), Boolean.TRUE.equals(b.getQuotedDistanceRouted()),
+                b.getActualDistanceKm(), b.getRoutePoints() == null ? 0 : b.getRoutePoints(),
+                b.getCompletedBy(), b.getCompletionDistanceFromDropM(),
+                b.getDropDeviationReason(), b.getDropDeviationNote(),
+                b.getStartedAt(), b.getCompletedAt(), b.getRouteFlaggedAt(),
+                b.getRouteReviewedAt(), b.getRouteReviewNote(),
+                b.getDestinationChangedAt(), b.getOriginalQuotedDistanceKm());
+    }
+
+
+    /**
+     * Self-service - either participant (customer or the assigned driver)
+     * can cancel pre-IN_PROGRESS. Which of them it was is checked by the
+     * controller and recorded here.
+     * <p>
+     * Cancels a booking, recording who did it and why.
+     * <p>
+     * The reason is required rather than optional, which BookingCancelled's
+     * own Javadoc already flagged as the gap. Without it a cancellation is a
+     * fact with no explanation: a rider who changed their mind and one whose
+     * partner never arrived were counted identically, and any accountability
+     * built on that count would have been unfair in both directions.
+     * <p>
+     * OTHER additionally requires a note. An "Other" with nothing after it
+     * is the same as no reason, dressed up as an answer.
+     */
+    /**
+     * Records that dispatch searched, found nobody, and has stopped.
+     * <p>
+     * Called only from DispatchExhaustedListener. It takes no reason and no
+     * actor because there is neither: this is not somebody's decision, it is
+     * the platform failing to find a driver, and the distinction is the
+     * whole reason NO_DRIVERS_AVAILABLE is not CANCELLED. In particular it
+     * publishes no BookingCancelled, so no cancellation is counted against
+     * the rider's trust score for a search she had no part in.
+     * <p>
+     * Only valid from REQUESTED. A booking that has since been cancelled by
+     * the rider, or matched by a driver who accepted in the gap, is left
+     * exactly as it is - the state machine refuses the transition and this
+     * returns that refusal rather than forcing it.
+     */
+    @Transactional
+    public Result<BookingSummary, BookingError> markNoDriversAvailable(UUID bookingId) {
+        Optional<BookingEntity> found = bookingRepository.findLockedById(bookingId);
+        if (found.isEmpty()) {
+            return Result.failure(BookingError.BOOKING_NOT_FOUND);
+        }
+        BookingEntity booking = found.get();
+
+        Result<BookingStatus, BookingError> transition =
+                BookingStateMachine.transition(booking.getStatus(), BookingStatus.NO_DRIVERS_AVAILABLE);
+        if (transition.isFailure()) {
+            return Result.failure(transition.error());
+        }
+
+        BookingStatus previousStatus = booking.getStatus();
+        booking.setStatus(BookingStatus.NO_DRIVERS_AVAILABLE);
+        eventLog.record(booking.getId(), "NO_DRIVERS_AVAILABLE", previousStatus, BookingStatus.NO_DRIVERS_AVAILABLE, null);
+        bookingRepository.save(booking);
+        eventPublisher.publish(new BookingNoDriversAvailable(booking.getId(), booking.getCustomerId()));
+        return Result.success(toSummary(booking));
+    }
+
+    @Transactional
+    public Result<BookingSummary, BookingError> cancelBooking(
+            UUID bookingId, UUID cancelledBy, CancellationReason reason, String note) {
+        if (reason == null) {
+            return Result.failure(BookingError.CANCELLATION_REASON_REQUIRED);
+        }
+        String trimmedNote = note == null ? null : note.trim();
+        if (reason.requiresNote() && (trimmedNote == null || trimmedNote.isBlank())) {
+            return Result.failure(BookingError.CANCELLATION_NOTE_REQUIRED);
+        }
+
+        Optional<BookingEntity> found = bookingRepository.findLockedById(bookingId);
+        if (found.isEmpty()) {
+            return Result.failure(BookingError.BOOKING_NOT_FOUND);
+        }
+        BookingEntity booking = found.get();
+
+        Result<BookingStatus, BookingError> transition =
+                BookingStateMachine.transition(booking.getStatus(), BookingStatus.CANCELLED);
+        if (transition.isFailure()) {
+            return Result.failure(transition.error());
+        }
+        Result<CancellationOutcome, BookingError> outcome = judgeCancellation(booking, cancelledBy, reason);
+        if (outcome.isFailure()) {
+            return Result.failure(outcome.error());
+        }
+        if (searchesAgain(booking, cancelledBy, reason)) {
+            return returnToSearch(booking, reason, trimmedNote);
+        }
+
+        BookingStatus previousStatus = booking.getStatus();
+        booking.setStatus(BookingStatus.CANCELLED);
+        eventLog.record(booking.getId(), "CANCELLED", previousStatus, BookingStatus.CANCELLED, null);
+        booking.setCancelledAt(Instant.now());
+        booking.recordCancellation(cancelledBy, reason, trimmedNote);
+        eventLog.record(booking.getId(), "CANCELLATION_REASON", null, null,
+                reason + (trimmedNote == null || trimmedNote.isBlank() ? "" : ": " + trimmedNote));
+        bookingRepository.save(booking);
+
+        // cancelledBy and the reason travel on the event, because the module
+        // that counts cancellations against an account cannot work out
+        // whose fault it was from a booking id alone.
+        eventPublisher.publish(new BookingCancelled(
+                booking.getId(), booking.getCustomerId(), booking.getDriverId(), cancelledBy, reason,
+                outcome.value().countsAgainst(), outcome.value().reported()));
+        return Result.success(toSummary(booking));
+    }
+
+    /**
+     * A partner dropping a trip she had taken, for a reason that is about her
+     * ("I cannot complete this trip", or something else): the rider still
+     * needs her ride, so the search starts again without this partner. Not
+     * when the reason is about the rider or the pickup - a no-show, a wrong
+     * pin, a safety concern - where sending another woman to the same place
+     * would be the wrong answer.
+     */
+    private static boolean searchesAgain(BookingEntity booking, UUID by, CancellationReason reason) {
+        return booking.getDriverId() != null && by.equals(booking.getDriverId())
+                && (booking.getStatus() == BookingStatus.MATCHED || booking.getStatus() == BookingStatus.ACCEPTED)
+                && (reason == CancellationReason.DRIVER_UNAVAILABLE || reason == CancellationReason.OTHER);
+    }
+
+    private Result<BookingSummary, BookingError> returnToSearch(BookingEntity booking, CancellationReason reason, String note) {
+        Result<BookingStatus, BookingError> transition =
+                BookingStateMachine.transition(booking.getStatus(), BookingStatus.REQUESTED);
+        if (transition.isFailure()) {
+            return Result.failure(transition.error());
+        }
+        UUID partner = booking.getDriverId();
+        BookingStatus previousStatus = booking.getStatus();
+        booking.returnToSearch();
+        eventLog.record(booking.getId(), "PARTNER_LEFT", previousStatus, BookingStatus.REQUESTED,
+                "Partner " + partner + " dropped it (" + reason + "); searching again without her");
+        bookingRepository.save(booking);
+        log.info("Partner {} dropped booking {} ({}{}); searching again", partner, booking.getId(), reason,
+                note == null ? "" : ": " + note);
+        eventPublisher.publish(new com.sheout.booking.PartnerLeftBooking(booking.getId(), booking.getCustomerId(), partner, reason));
+        eventPublisher.publish(new BookingRequested(booking.getId(), booking.getCustomerId(), booking.getType(),
+                booking.getCategory(), booking.getPickup().toGeoAddress(), booking.getDrop().toGeoAddress(), partner));
+        return Result.success(toSummary(booking));
+    }
+
+    /** Partner accepted this long ago and is still not at the pickup: "taking too long" is her lateness, not the rider's. */
+    private static final Duration PARTNER_LATE_AFTER = Duration.ofMinutes(15);
+
+    private record CancellationOutcome(UUID countsAgainst, UUID reported) {
+    }
+
+    /**
+     * Whose cancellation this is, from the evidence rather than from who
+     * pressed the button - and whether the reason given is one this person
+     * may give at all.
+     * <p>
+     * A rider cancelling a search that never sent anybody costs nobody
+     * anything and counts against nobody. A rider who says it is not the
+     * right person or vehicle, or that she does not feel safe, is never
+     * counted - the other account goes to the review queue instead. A rider
+     * who gives up on a partner still not at the pickup well after accepting
+     * is not counted either: the lateness was not hers. A partner who says
+     * the rider never came has to be at the pickup for the server to believe
+     * it, and then it counts against the rider. Everything else counts
+     * against whoever cancelled, as before.
+     */
+    private Result<CancellationOutcome, BookingError> judgeCancellation(BookingEntity booking, UUID by,
+                                                                       CancellationReason reason) {
+        boolean byRider = by.equals(booking.getCustomerId());
+        boolean byPartner = booking.getDriverId() != null && by.equals(booking.getDriverId());
+        if ((byRider && !reason.riderMayGive()) || (byPartner && !reason.partnerMayGive())) {
+            return Result.failure(BookingError.CANCELLATION_REASON_NOT_ALLOWED);
+        }
+        if (reason.isSafetyReport()) {
+            // There has to be somebody to report.
+            if (booking.getDriverId() == null || booking.getStatus() != BookingStatus.ACCEPTED) {
+                return Result.failure(BookingError.CANCELLATION_REASON_NOT_ALLOWED);
+            }
+            return Result.success(new CancellationOutcome(null, byRider ? booking.getDriverId() : booking.getCustomerId()));
+        }
+        boolean partnerAtPickup = booking.getDriverId() != null && pickupGeofence.check(
+                locationStore.findLocation(booking.getDriverId()).orElse(null),
+                booking.getPickup().getLat(), booking.getPickup().getLng(), Instant.now()) == DropoffGeofence.Decision.AT_DROP_OFF;
+        if (reason == CancellationReason.CUSTOMER_NOT_AT_PICKUP) {
+            if (!partnerAtPickup) {
+                return Result.failure(BookingError.DRIVER_NOT_AT_PICKUP);
+            }
+            return Result.success(new CancellationOutcome(booking.getCustomerId(), null));
+        }
+        if (byRider) {
+            if (booking.getDriverId() == null) {
+                return Result.success(new CancellationOutcome(null, null));
+            }
+            boolean partnerLate = booking.getAcceptedAt() != null
+                    && booking.getAcceptedAt().isBefore(Instant.now().minus(PARTNER_LATE_AFTER)) && !partnerAtPickup;
+            if (reason == CancellationReason.DRIVER_TAKING_TOO_LONG && partnerLate) {
+                return Result.success(new CancellationOutcome(null, null));
+            }
+        }
+        return Result.success(new CancellationOutcome(by, null));
+    }
+
+    @Override
+    public Optional<BookingSummary> findById(UUID bookingId) {
+        return bookingRepository.findById(bookingId).map(this::toSummary);
+    }
+
+    /**
+     * How a trip's fare was reached, for her receipt. Every part comes from
+     * the quote the booking was priced on (see recordFareBreakdown);
+     * breakdownRecorded is false for a trip booked before it was kept, or
+     * re-priced by a destination change - the total is then all there is.
+     */
+    public record FareDetails(UUID bookingId, BigDecimal fare, boolean breakdownRecorded, BigDecimal baseFare,
+                              BigDecimal distanceCharge, BigDecimal timeCharge, BigDecimal surgeMultiplier,
+                              BigDecimal nightMultiplier, boolean minimumFareApplied, boolean repricedByDestinationChange,
+                              BigDecimal promoDiscount, String promotionName, BigDecimal amountDue) {
+    }
+
+    public Optional<FareDetails> fareDetails(UUID bookingId) {
+        return bookingRepository.findById(bookingId).map(b -> new FareDetails(b.getId(),
+                b.getFinalFare() != null ? b.getFinalFare() : b.getFareEstimate(),
+                b.getFareBaseFare() != null, b.getFareBaseFare(), b.getFareDistanceCharge(), b.getFareTimeCharge(),
+                b.getFareSurgeMultiplier(), b.getFareNightMultiplier(), Boolean.TRUE.equals(b.getFareMinimumApplied()),
+                b.getDestinationChangedAt() != null, b.getPromoDiscount(), b.getPromotionName(), b.amountDue()));
+    }
+
+    @Override
+    public List<BookingSummary> findRecent(int limit) {
+        return bookingRepository.findAllByOrderByCreatedAtDesc(PageRequest.of(0, limit)).stream()
+                .map(this::toSummary)
+                .toList();
+    }
+
+    @Override
+    public Result<BookingParticipants, BookingError> getParticipants(UUID bookingId) {
+        return bookingRepository.findById(bookingId)
+                .<Result<BookingParticipants, BookingError>>map(
+                        b -> Result.success(new BookingParticipants(b.getCustomerId(), b.getDriverId(), b.getStatus())))
+                .orElseGet(() -> Result.failure(BookingError.BOOKING_NOT_FOUND));
+    }
+
+    public List<BookingSummary> listForCustomer(UUID customerId) {
+        return bookingRepository.findByCustomerId(customerId).stream().map(this::toSummary).toList();
+    }
+
+    @Override
+    public java.util.Set<UUID> bookingIdsForCustomer(UUID customerId) {
+        return bookingRepository.findByCustomerId(customerId).stream()
+                .map(BookingEntity::getId)
+                .collect(java.util.stream.Collectors.toSet());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<BookingSummary> findRecentForAccount(UUID accountId, int limit) {
+        return bookingRepository.findByCustomerIdOrDriverIdOrderByCreatedAtDesc(
+                        accountId, accountId, PageRequest.of(0, Math.max(1, Math.min(limit, 100))))
+                .stream().map(this::toSummary).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<com.sheout.booking.BookingOpsFacts> findOpsFacts(UUID bookingId) {
+        return bookingRepository.findById(bookingId).map(b -> new com.sheout.booking.BookingOpsFacts(
+                b.getId(), b.getCancellationReason(), b.getCancellationNote(), b.getCancelledBy(),
+                b.getCompletedBy(), b.getCompletionDistanceFromDropM(), b.getDropDeviationReason(),
+                b.getDropDeviationNote(), b.getQuotedDistanceKm(), b.getQuotedDistanceRouted(),
+                b.getActualDistanceKm(), b.getRouteFlaggedAt(), b.getRouteReviewedAt(), b.getRouteReviewNote(),
+                b.getPickupVerifiedAt(), b.getPickupAttempts(), b.getDestinationChangedAt()));
+    }
+
+    @Override
+    public List<BookingSummary> findAllForAccount(UUID accountId) {
+        return java.util.stream.Stream.concat(
+                        bookingRepository.findByCustomerId(accountId).stream(),
+                        bookingRepository.findByDriverId(accountId).stream())
+                .distinct()
+                .sorted(java.util.Comparator.comparing(BookingEntity::getCreatedAt).reversed())
+                .map(this::toSummary)
+                .toList();
+    }
+
+    public List<BookingSummary> listForDriver(UUID driverId) {
+        return bookingRepository.findByDriverId(driverId).stream().map(this::toSummary).toList();
+    }
+
+    /**
+     * A page of one person's own trips, narrowed by whatever they asked for.
+     * <p>
+     * The unpaged listForCustomer/listForDriver above are kept because
+     * callers that genuinely need the whole set still exist - the driver
+     * dashboard totals today's earnings across every completed trip, and
+     * paging that would mean summing pages client-side and getting a
+     * different answer depending on how far someone scrolled. Deleting them
+     * in favour of paging everything would trade one honest number for
+     * several inconsistent ones.
+     */
+    public Page<BookingSummary> pageForCustomer(UUID customerId, BookingQuery query, Pageable pageable) {
+        return search(customerId, null, query, pageable);
+    }
+
+    public Page<BookingSummary> pageForDriver(UUID driverId, BookingQuery query, Pageable pageable) {
+        return search(null, driverId, query, pageable);
+    }
+
+    /** No owner scope: the ops console sees every booking. */
+    @Override
+    public Page<BookingSummary> pageBookings(BookingQuery query, Pageable pageable) {
+        return search(null, null, query, pageable);
+    }
+
+    private Page<BookingSummary> search(UUID customerId, UUID driverId, BookingQuery query, Pageable pageable) {
+        // Newest first, applied here rather than in the Specification: the
+        // sort belongs to the request, and every caller wants page 0 to be
+        // the most recent. It also keeps offset paging stable enough - new
+        // rows land on page 0 instead of shifting everything below them.
+        Pageable sorted = PageRequest.of(
+                pageable.getPageNumber(), pageable.getPageSize(), Sort.by(Sort.Direction.DESC, "createdAt"));
+        return bookingRepository
+                .findAll(BookingSpecs.matching(customerId, driverId, query), sorted)
+                .map(this::toSummary);
+    }
+
+    /**
+     * TESTING AID ONLY, NOT A PRODUCT FEATURE: if sheout.testing.verified-
+     * bypass-phone is set (blank/unset by default in every real
+     * environment, same as sheout.auth.dev-otp-phone) and this customer's
+     * account phone number matches it exactly, the real verification check
+     * below is skipped for this one account so an automated QA pass can
+     * exercise the full booking flow without a real admin-verified test
+     * account. Every other account - including every other test number -
+     * still goes through the unmodified VerificationApi check with no
+     * change in behavior.
+     */
+    private boolean hasPhoneNumber(UUID customerId) {
+        return authApi.findAccount(customerId)
+                .map(account -> account.phoneNumber() != null && !account.phoneNumber().isBlank())
+                .orElse(false);
+    }
+
+    private boolean isCustomerVerified(UUID customerId) {
+        if (isVerifiedBypassAccount(customerId)) {
+            return true;
+        }
+        Optional<VerificationSummary> verification = verificationApi.findByAccountId(customerId);
+        return verification.map(v -> v.genderVerificationStatus() == VerificationStatus.VERIFIED).orElse(false);
+    }
+
+    private boolean isVerifiedBypassAccount(UUID customerId) {
+        if (verifiedBypassPhone.isBlank()) {
+            return false;
+        }
+        return authApi.findAccount(customerId)
+                .map(account -> verifiedBypassPhone.equals(account.phoneNumber()))
+                .orElse(false);
+    }
+
+    /** Eight or more digits, allowing spaces, dashes and a leading +: a phone number, however it was typed. */
+    private static final java.util.regex.Pattern PHONE_LIKE = java.util.regex.Pattern.compile("\\+?\\d(?:[\\s-]?\\d){7,}");
+
+    /** Trimmed, one line, no control characters, at most 300 characters; null when nothing is left. */
+    static String cleanParcelNote(String note) {
+        if (note == null) {
+            return null;
+        }
+        String clean = note.replaceAll("\\p{Cntrl}", " ").replaceAll("\\s+", " ").trim();
+        if (clean.isEmpty()) {
+            return null;
+        }
+        return clean.length() > 300 ? clean.substring(0, 300) : clean;
+    }
+
+    private BookingSummary toSummary(BookingEntity booking) {
+        return new BookingSummary(
+                booking.getId(),
+                booking.getType(),
+                booking.getCategory(),
+                booking.getStatus(),
+                booking.getCustomerId(),
+                booking.getDriverId(),
+                booking.getPickup().toGeoAddress(),
+                booking.getDrop().toGeoAddress(),
+                booking.getFareEstimate(),
+                booking.getFinalFare(),
+                booking.getCreatedAt(),
+                booking.getMatchedAt(),
+                booking.getAcceptedAt(),
+                booking.getStartedAt(),
+                booking.getCompletedAt(),
+                booking.getCancelledAt(),
+                booking.getPaymentSettledAt(),
+                booking.getPromoDiscount(),
+                booking.amountDue(),
+                booking.getPromotionName(),
+                booking.getParcelNote()
+        );
+    }
+
+    @Override
+    public long completedTripOrdinalForDriver(UUID driverId, UUID bookingId) {
+        return bookingRepository.findById(bookingId)
+                .filter(b -> driverId.equals(b.getDriverId()) && b.getStatus() == BookingStatus.COMPLETED && b.getCompletedAt() != null)
+                .map(b -> bookingRepository.countByDriverIdAndStatusAndCompletedAtLessThanEqual(
+                        driverId, BookingStatus.COMPLETED, b.getCompletedAt()))
+                .orElse(0L);
+    }
+
+    @Override
+    public long countFullPriceTripsForCustomer(UUID customerId, Instant from, Instant to) {
+        return bookingRepository.countByCustomerIdAndStatusAndPromoDiscountAndCompletedAtGreaterThanEqualAndCompletedAtLessThan(
+                customerId, BookingStatus.COMPLETED, BigDecimal.ZERO.setScale(2), from, to);
+    }
+
+    /** What a quote would come to for this rider after her best promotion - previewed, nothing held. */
+    public PromoApplication previewPromotion(UUID customerId, BigDecimal fare) {
+        return campaigns.previewDiscount(customerId, fare);
+    }
+
+    /** For direct construction in tests: no promotions apply. */
+    private static final CampaignsApi NO_CAMPAIGNS = new CampaignsApi() {
+        @Override
+        public PromoApplication previewDiscount(UUID customerId, BigDecimal fare) {
+            return PromoApplication.none();
+        }
+
+        @Override
+        public PromoApplication reserveDiscount(UUID customerId, UUID bookingId, BigDecimal fare) {
+            return PromoApplication.none();
+        }
+    };
+
+    @Override
+    @Transactional
+    public Result<BookingSummary, BookingError> markPaymentSettled(UUID bookingId) {
+        Optional<BookingEntity> found = bookingRepository.findLockedById(bookingId);
+        if (found.isEmpty()) {
+            return Result.failure(BookingError.BOOKING_NOT_FOUND);
+        }
+        BookingEntity booking = found.get();
+        // Only an ended trip is paid for. Anything else reaching here is a
+        // bug upstream, and settling a trip still in progress would free the
+        // rider to book a second one while riding the first.
+        if (booking.getStatus() != BookingStatus.COMPLETED) {
+            return Result.failure(BookingError.INVALID_STATE_TRANSITION);
+        }
+        if (booking.getPaymentSettledAt() == null) {
+            booking.setPaymentSettledAt(Instant.now());
+            bookingRepository.save(booking);
+        }
+        return Result.success(toSummary(booking));
+    }
+
+    @Override
+    public Optional<PaymentHold> findPaymentHoldForCustomer(UUID customerId) {
+        return bookingRepository
+                .findFirstByCustomerIdAndStatusAndPaymentSettledAtIsNullOrderByCompletedAtAsc(
+                        customerId, BookingStatus.COMPLETED)
+                .map(booking -> new PaymentHold(booking.getId(), booking.amountDue(), booking.getCompletedAt(), null));
+    }
+
+    @Override
+    public boolean hasActiveTripAsDriver(UUID driverId) {
+        return bookingRepository.existsByDriverIdAndStatusIn(driverId, ACTIVE_TRIP_STATUSES);
+    }
+
+    public Optional<PaymentHold> findPaymentHoldForDriver(UUID driverId) {
+        Instant cutoff = Instant.now().minus(partnerPaymentHold);
+        return bookingRepository
+                .findFirstByDriverIdAndStatusAndPaymentSettledAtIsNullAndCompletedAtAfterOrderByCompletedAtDesc(
+                        driverId, BookingStatus.COMPLETED, cutoff)
+                .map(booking -> new PaymentHold(booking.getId(), booking.getFinalFare(), booking.getCompletedAt(),
+                        booking.getCompletedAt().plus(partnerPaymentHold)));
+    }
+}

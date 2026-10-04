@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useGoBack, handOffSheet } from '../lib/useGoBack';
 import { Button, TextField, ServiceArt, useRouteLine } from '@sheout/design-system';
 import type { MapMarker } from '@sheout/design-system';
@@ -43,6 +43,17 @@ const CONFIG: Record<'parcel' | 'lunchbox', { key: 'parcel' | 'lunchbox'; catego
   lunchbox: { key: 'lunchbox', category: 'LUNCHBOX' },
 };
 
+/**
+ * Arriving from a Marketplace product, once buyer and seller have agreed on
+ * the phone: the note names the product, and who is booking decides which
+ * end her own location fills - the seller sends from where she is, the
+ * buyer has it brought to where she is.
+ */
+export interface ParcelRouteState {
+  parcelNote?: string;
+  marketplace?: 'buyer' | 'seller';
+}
+
 const MEAL_TYPES = ['VEG', 'NON_VEG'] as const;
 type MealType = (typeof MEAL_TYPES)[number];
 
@@ -71,6 +82,8 @@ export function DeliveryBooking() {
   const config = CONFIG[kind === 'lunchbox' ? 'lunchbox' : 'parcel'];
   const navigate = useNavigate();
   const goBack = useGoBack('/home');
+  const routeState = (useLocation().state as ParcelRouteState | null) ?? {};
+  const marketplace = kind === 'parcel' ? routeState.marketplace : undefined;
 
   // Lunch Box is deferred for launch. Its Home tile is gone, but /book/:kind
   // is a URL anyone can still type, so the route is closed here too -
@@ -99,7 +112,7 @@ export function DeliveryBooking() {
   const [picking, setPicking] = useState<'pickup' | 'drop' | null>(null);
   const [pickerMode, setPickerMode] = useState<PickerMode>('search');
   const chipsRef = useRef<HTMLDivElement>(null);
-  const [details, setDetails] = useState('');
+  const [details, setDetails] = useState(kind === 'parcel' ? routeState.parcelNote ?? '' : '');
   const [mealType, setMealType] = useState<MealType>('VEG');
   const [plan, setPlan] = useState<Plan>('DAILY');
   const [submitting, setSubmitting] = useState(false);
@@ -124,12 +137,16 @@ export function DeliveryBooking() {
   // so the row reads as a place rather than "Your Current Location". A
   // failure here is no longer terminal: pickup is a picker like the drop,
   // so a blocked or unavailable location just means choosing it by hand.
+  // A buyer is having it brought to her, so where she is fills the drop and
+  // the pickup waits for the seller's address.
   useEffect(() => {
     let cancelled = false;
     currentPosition()
       .then(async ({ lat, lng }) => {
         const address = await describePoint(lat, lng, t('booking.currentLocation'));
-        if (!cancelled) setPickup(address);
+        if (cancelled) return;
+        if (marketplace === 'buyer') setDrop(address);
+        else setPickup(address);
       })
       .catch((err: Error) => {
         if (!cancelled) setPickupError(err.message);
@@ -144,7 +161,8 @@ export function DeliveryBooking() {
     setSubmitting(true);
     setError(null);
     try {
-      const booking = await bookingApi.create({ type: 'DELIVERY', category: config.category, pickup, drop });
+      const note = isLunchbox ? undefined : details.trim() || undefined;
+      const booking = await bookingApi.create({ type: 'DELIVERY', category: config.category, pickup, drop, parcelNote: note });
       navigate(`/tracking/${booking.id}`);
     } catch (err) {
       setError(apiErrorText(err, 'booking.createError'));
@@ -188,7 +206,9 @@ export function DeliveryBooking() {
         onBack={goBack}
         pickup={pickup}
         drop={drop}
-        pickupPlaceholder={pickupError ? t('booking.tapToChoosePickup') : t('booking.findingLocation')}
+        pickupPlaceholder={
+          marketplace === 'buyer' ? t('delivery.marketplace.sellerPickup') : pickupError ? t('booking.tapToChoosePickup') : t('booking.findingLocation')
+        }
         onEdit={openPicker}
         active={picking}
         chipsRef={chipsRef}
@@ -207,12 +227,22 @@ export function DeliveryBooking() {
               drop={drop}
             />
             <ServiceAreaNotice pickup={pickup} drop={drop} />
+            {/* A Marketplace order: SheOut carries the parcel and nothing else - said before she books. */}
+            {marketplace && (
+              <div className="rounded-input bg-primary-light px-4 py-3 text-sm text-text-primary" role="note" data-testid="marketplace-parcel-note">
+                <p className="font-semibold">{t(`delivery.marketplace.${marketplace}Title`)}</p>
+                <p className="mt-0.5 text-text-secondary">{t('delivery.marketplace.terms')}</p>
+              </div>
+            )}
             <TextField
               label={t(`delivery.${config.key}.details`)}
               placeholder={isLunchbox ? t('delivery.lunchbox.detailsPlaceholder') : t('delivery.parcel.detailsPlaceholder')}
+              maxLength={300}
               value={details}
               onChange={(e) => setDetails(e.target.value)}
+              data-testid="parcel-details"
             />
+            {!isLunchbox && <p className="-mt-2 text-caption text-text-secondary">{t('delivery.parcel.detailsHint')}</p>}
             {pickupError && !pickup && <p className="text-xs text-text-secondary">{pickupError}</p>}
             {error && <p className="text-sm text-danger">{error}</p>}
             {liveTripId && (

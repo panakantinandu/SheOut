@@ -353,7 +353,7 @@
   "seller": {
     "categories": {
       "fashion": "Fashion & Saree",
-      "beauty": "Beauty Services",
+      "beauty": "Beauty",
       "tailoring": "Tailoring",
       "mehandi": "Mehandi",
       "gifts": "Gifts",
@@ -444,7 +444,16 @@
       "areaOn": "Area: {{area}}",
       "noArea": "No area given",
       "websiteOn": "Website: {{site}}",
-      "noWebsite": "No website given"
+      "noWebsite": "No website given",
+      "findLabel": "Find a product",
+      "findPlaceholder": "Product code or name, e.g. MCSQ87K",
+      "findNone": "No product matches. Check the code with the buyer.",
+      "findCount_one": "{{count}} product",
+      "findCount_other": "{{count}} products",
+      "codeCopied": "Code {{code}} copied",
+      "copyCode": "Copy product code {{code}}",
+      "send": "Send",
+      "sendHint": "Agreed with a buyer? Tap Send on the product to book a SheOut parcel to her. The price, payment and any return stay between you and the buyer."
     },
     "status": {
       "reasonLabel": "Reason:",
@@ -562,7 +571,8 @@
       "deliveryNote": "Delivery details (optional)",
       "deliveryNotePlaceholder": "e.g. Free delivery in Kukatpally, ₹50 elsewhere in Hyderabad",
       "returnsNotSaid": "Not said",
-      "numberInvalid": "Enter a whole number from {{min}} to {{max}}."
+      "numberInvalid": "Enter a whole number from {{min}} to {{max}}.",
+      "codeLabel": "Product code buyers quote"
     },
     "browse": {
       "categories": "Category",
@@ -782,6 +792,12 @@
       "badge": "Sample shop",
       "title": "This is a sample shop",
       "body": "It shows how SheOut Marketplace works while women sellers set up their shops. It isn't a real seller, so there is no one to contact yet."
+    },
+    "parcel": {
+      "title": "Agreed with the seller? Get it delivered",
+      "body": "Once you and the seller have agreed on the price and how to pay, book a SheOut parcel to bring it to you. Ask her for the pickup address.",
+      "cta": "Book a parcel delivery",
+      "note": "Marketplace order {{code}}: {{title}}"
     }
   },
   "refer": {
@@ -867,7 +883,8 @@
     "ALREADY_PAID": "This month is already paid.",
     "INVALID_PRODUCT_TERMS": "Check the stock, ready-in days and minimum order.",
     "TRIP_ENDS_AFTER_HOURS": "This trip would end well after SheOut's service hours. Choose a nearer drop, or book it when bookings open again.",
-    "RIDE_INSURANCE_NOT_ACTIVE": "Rides are paused because SheOut cannot insure trips right now. Please try again a little later."
+    "RIDE_INSURANCE_NOT_ACTIVE": "Rides are paused because SheOut cannot insure trips right now. Please try again a little later.",
+    "PARCEL_NOTE_HAS_PHONE": "Leave phone numbers out of the parcel note. Your partner can call you through the app."
   },
   "picker": {
     "noAddress": "No address found at that point. Move the pin somewhere closer to a road or landmark.",
@@ -934,9 +951,10 @@
   "delivery": {
     "parcel": {
       "title": "Parcel Delivery",
-      "details": "Package Details (optional)",
+      "details": "What's in the parcel (optional)",
       "detailsPlaceholder": "e.g. small box, handle with care",
-      "cta": "Continue"
+      "cta": "Continue",
+      "detailsHint": "Your partner sees this. Leave phone numbers out - she can call you through the app."
     },
     "lunchbox": {
       "title": "Lunch Box Delivery",
@@ -952,6 +970,12 @@
       "DAILY": "Daily",
       "WEEKLY": "Weekly",
       "MONTHLY": "Monthly"
+    },
+    "marketplace": {
+      "buyerTitle": "Marketplace order, brought to you",
+      "sellerTitle": "Marketplace order, sent to your buyer",
+      "terms": "SheOut carries the parcel only. The price, payment, returns and refunds are between you and the other person. You pay for this delivery in the app.",
+      "sellerPickup": "Seller's pickup address - ask the seller"
     }
   },
   "geo": {

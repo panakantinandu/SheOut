@@ -556,7 +556,8 @@
       "title": "भुगतान मिल गया",
       "body": "{{name}} ने भुगतान कर दिया। यह आपके SheOut वॉलेट में है।"
     },
-    "reportAccident": "दुर्घटना की सूचना दें"
+    "reportAccident": "दुर्घटना की सूचना दें",
+    "parcelNote": "पार्सल में क्या है:"
   },
   "earnings": {
     "group": {

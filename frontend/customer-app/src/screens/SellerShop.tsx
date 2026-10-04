@@ -6,12 +6,14 @@ import {
   ChevronRight,
   Circle,
   Clock,
+  Copy,
   EyeOff,
   ImageOff,
   IndianRupee,
   Globe,
   Info,
   MapPin,
+  Package,
   PackagePlus,
   PauseCircle,
   Pencil,
@@ -581,18 +583,73 @@ function ProductsStep({ shop, onContinue }: { shop: Shop; onContinue: () => void
   );
 }
 
-function ProductRows({ shop, onOpen }: { shop: Shop; onOpen: (id: string) => void }) {
+/** "#mcsq 87k" -> "MCSQ87K": how a buyer reads a code out, cleaned to how it is printed. */
+function asCode(text: string): string {
+  return text.toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+/**
+ * Her products. A buyer quotes a product by its code - on WhatsApp, or read
+ * out on a call - so the code is printed large on every row with a copy
+ * button, and the box above finds a product by its code or its name. A
+ * full code opens straight to that one product.
+ * <p>
+ * With `onSend` (a live shop), each row can also be sent with a SheOut
+ * parcel once she and the buyer have agreed: the parcel note names the
+ * product, so the partner knows what she is carrying.
+ */
+function ProductRows({ shop, onOpen, onSend }: { shop: Shop; onOpen: (id: string) => void; onSend?: (product: Shop['products'][number]) => void }) {
   const { t } = useTranslation();
+  const [find, setFind] = useState('');
+  const code = asCode(find);
+  const words = find.trim().toLowerCase();
+  const shown = words
+    ? shop.products.filter((p) => p.code.includes(code) && code.length >= 3 || p.title.toLowerCase().includes(words))
+    : shop.products;
+  const exact = code.length === 7 ? shop.products.find((p) => p.code === code) : undefined;
+
+  async function copy(text: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast(t('seller.shop.codeCopied', { code: text }));
+    } catch {
+      // Nothing to do: the code is on screen to read out.
+    }
+  }
+
   return (
     <div className="space-y-3">
-      {shop.products.map((p) => (
-        <button
+      {shop.products.length > 1 && (
+        <div>
+          <TextField
+            label={t('seller.shop.findLabel')}
+            placeholder={t('seller.shop.findPlaceholder')}
+            value={find}
+            onChange={(e) => setFind(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && exact && shop.canEdit) onOpen(exact.id);
+            }}
+            autoCapitalize="characters"
+            data-testid="find-product"
+          />
+          {words && (
+            <p className="mt-1 text-caption text-text-secondary" data-testid="find-result">
+              {shown.length === 0 ? t('seller.shop.findNone') : t('seller.shop.findCount', { count: shown.length })}
+            </p>
+          )}
+        </div>
+      )}
+      {shown.map((p) => (
+        <div
           key={p.id}
+          className={`flex items-center gap-3 rounded-card border bg-surface p-3 ${exact?.id === p.id ? 'border-primary ring-2 ring-primary/20' : 'border-border'}`}
+          data-testid="shop-product"
+        >
+        <button
           type="button"
           disabled={!shop.canEdit}
           onClick={() => onOpen(p.id)}
-          className="flex w-full items-center gap-3 rounded-card border border-border bg-surface p-3 text-left disabled:opacity-80"
-          data-testid="shop-product"
+          className="flex min-w-0 flex-1 items-center gap-3 text-left disabled:opacity-80"
         >
           <span className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-input bg-primary-light">
             {p.images[0]?.url ? (
@@ -608,15 +665,36 @@ function ProductRows({ shop, onOpen }: { shop: Shop; onOpen: (id: string) => voi
                 <s className="mr-1.5 text-text-secondary">{priceText(p.originalPrice)}</s>
               )}
               {priceText(p.displayPrice)}
-              <span className="ml-2 font-mono text-caption tracking-wider text-text-secondary">{p.code}</span>
             </span>
             <span className={`block text-caption ${p.images.length === 0 ? 'font-semibold text-accent-orange-strong' : 'text-text-secondary'}`}>
               {p.images.length === 0 ? t('seller.wizard.products.missingPhoto') : t('seller.shop.productPhotos', { count: p.images.length })}
               {!p.active && ` · ${t('seller.shop.hidden')}`}
             </span>
           </span>
-          {shop.canEdit && <ChevronRight className="h-5 w-5 shrink-0 text-text-secondary" aria-hidden="true" />}
         </button>
+          <div className="flex shrink-0 flex-col items-end gap-1.5">
+            <button
+              type="button"
+              onClick={() => void copy(p.code)}
+              className="flex items-center gap-1 rounded-full bg-background px-2 py-0.5 font-mono text-xs font-semibold tracking-wider text-text-primary"
+              aria-label={t('seller.shop.copyCode', { code: p.code })}
+              data-testid="product-code"
+            >
+              {p.code}
+              <Copy className="h-3 w-3 text-text-secondary" aria-hidden="true" />
+            </button>
+            {onSend && p.active && (
+              <button
+                type="button"
+                onClick={() => onSend(p)}
+                className="flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-xs font-semibold text-primary"
+                data-testid="send-parcel"
+              >
+                <Package className="h-3.5 w-3.5" aria-hidden="true" /> {t('seller.shop.send')}
+              </button>
+            )}
+          </div>
+        </div>
       ))}
     </div>
   );
@@ -882,7 +960,19 @@ function ShopStatusScreen({ shop, onShop, reload, onFix }: { shop: Shop; onShop:
         {/* A sent-back shop is changed through the wizard ("Make changes"), not here. */}
         {hers ? (
           <>
-            <ProductRows shop={shop} onOpen={(id) => navigate(`/seller/manage/products/${id}`, { state: { fromShop: true } })} />
+            <ProductRows
+              shop={shop}
+              onOpen={(id) => navigate(`/seller/manage/products/${id}`, { state: { fromShop: true } })}
+              onSend={
+                shop.status === 'ACTIVE'
+                  ? (p) =>
+                      navigate('/book/parcel', {
+                        state: { marketplace: 'seller', parcelNote: t('seller.parcel.note', { code: p.code, title: p.title }).slice(0, 300) },
+                      })
+                  : undefined
+              }
+            />
+            {shop.status === 'ACTIVE' && <p className="text-caption text-text-secondary">{t('seller.shop.sendHint')}</p>}
             {shop.canEdit && (
               <Button
                 variant="secondary"

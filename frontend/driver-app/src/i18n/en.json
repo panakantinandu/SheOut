@@ -556,7 +556,8 @@
       "title": "Payment received",
       "body": "{{name}} has paid. It's in your SheOut wallet."
     },
-    "reportAccident": "Report an accident"
+    "reportAccident": "Report an accident",
+    "parcelNote": "What's in the parcel:"
   },
   "earnings": {
     "group": {

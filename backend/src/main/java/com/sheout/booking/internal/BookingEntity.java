@@ -230,6 +230,18 @@ public class BookingEntity extends BaseEntity {
     @Column(name = "fare_minimum_applied")
     private Boolean fareMinimumApplied;
 
+    /** A delivery's note on what is in the parcel; null for a ride. */
+    @Column(name = "parcel_note", length = 300)
+    private String parcelNote;
+
+    public void setParcelNote(String parcelNote) {
+        this.parcelNote = parcelNote;
+    }
+
+    public String getParcelNote() {
+        return parcelNote;
+    }
+
     public void recordFareBreakdown(BigDecimal base, BigDecimal distance, BigDecimal time, BigDecimal surge,
                                     BigDecimal night, boolean minimumApplied) {
         this.fareBaseFare = base;

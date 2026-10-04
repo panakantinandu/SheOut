@@ -10,6 +10,12 @@ package com.sheout.booking;
 public enum BookingError {
     CUSTOMER_NOT_VERIFIED,
     /**
+     * A parcel note with a phone number in it. Riders' and partners' numbers
+     * are never passed between them - calls go through SheOut - so a note
+     * cannot be the way round that.
+     */
+    PARCEL_NOTE_HAS_PHONE,
+    /**
      * A rider account with no verified phone number - one created through
      * Google that has not added one yet. Dispatch, SOS and support all reach
      * a rider on her number, so a trip is never booked without one.

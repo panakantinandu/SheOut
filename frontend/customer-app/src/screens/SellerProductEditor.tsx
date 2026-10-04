@@ -193,6 +193,13 @@ export function SellerProductEditor() {
       />
       {!shop && !error && <SkeletonCard lines={4} label={t('seller.shop.loading')} />}
       {shop && !shop.canEdit && <p className="text-sm text-text-secondary">{t('seller.editor.locked')}</p>}
+      {/* The code buyers quote for this product - on WhatsApp, or read out on a call. */}
+      {product && (
+        <p className="flex items-center justify-between rounded-input bg-primary-light px-4 py-3 text-sm text-text-primary" data-testid="editor-code">
+          <span>{t('seller.editor.codeLabel')}</span>
+          <span className="font-mono text-base font-semibold tracking-wider">{product.code}</span>
+        </p>
+      )}
 
       {shop && shop.canEdit && (isNew || product) && (
         <>
