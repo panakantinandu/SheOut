@@ -246,6 +246,15 @@ sheout:
     # trip stays quiet this long, then comes back if it still holds.
     snooze-after-check-minutes: ${TRIP_WATCH_SNOOZE_MINUTES:30}
 
+  # An SOS nobody has taken from the queue - see SosEscalationSweeper. Once it
+  # passes sheout.staff.sla.sos-ack-minutes, everyone who can respond gets an
+  # urgent push and every open console rings, every repeat-minutes, until
+  # someone takes it or it is resolved (at most max-rounds reminders).
+  sos-escalation:
+    enabled: ${SOS_ESCALATION_ENABLED:true}
+    repeat-minutes: ${SOS_ESCALATION_REPEAT_MINUTES:2}
+    max-rounds: ${SOS_ESCALATION_MAX_ROUNDS:30}
+
   users:
     # Where the cancellation review line sits.
     #

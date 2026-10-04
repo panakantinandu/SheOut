@@ -31,7 +31,7 @@ record DeliveryPolicy(boolean push, boolean emailFallback, boolean smsFallback, 
             // She is looking at the searching screen the moment she books;
             // a push saying so would arrive on top of it.
             case BOOKING_REQUESTED -> INBOX_ONLY;
-            case DRIVER_OFFER, SOS_OPERATOR_ALERT -> PUSH_ONLY;
+            case DRIVER_OFFER, SOS_OPERATOR_ALERT, SOS_ESCALATION -> PUSH_ONLY;
             // Good news, already in her balance and her inbox: not worth a paid text.
             case INCENTIVE_EARNED -> PUSH_ONLY;
             // Good news too, and nothing she must act on: not worth a text either.

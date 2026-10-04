@@ -27,6 +27,8 @@ public enum NotificationType {
     SOS_ALERT,
     /** An SOS raised by a rider, sent to operators. */
     SOS_OPERATOR_ALERT,
+    /** An SOS nobody has taken yet, sent again to everyone who can respond until someone does. */
+    SOS_ESCALATION,
     /** An operator replied to a support ticket - see support's SupportReplyPosted. */
     SUPPORT_REPLY,
     /** A trip was offered to this partner - see dispatch's DriverOffered. */

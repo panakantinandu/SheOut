@@ -65,4 +65,23 @@ public class ClusterLock {
             }
         }
     }
+
+    /**
+     * "Has any server done this yet?" for something that must happen once
+     * across servers - one reminder of one round - and is never released:
+     * the first caller gets true, everyone after gets false until
+     * {@code remember} passes.
+     * <p>
+     * If Redis cannot be reached the answer is {@code ifUnavailable}: a
+     * caller whose duplicate is cheaper than its absence (a second push about
+     * an SOS) says true.
+     */
+    public boolean firstToClaim(String name, Duration remember, boolean ifUnavailable) {
+        try {
+            return Boolean.TRUE.equals(redis.opsForValue().setIfAbsent("once:" + name, "1", remember));
+        } catch (RuntimeException ex) {
+            log.warn("Claim store unavailable for {}: {}", name, ex.getClass().getSimpleName());
+            return ifUnavailable;
+        }
+    }
 }

@@ -7871,6 +7871,16 @@ function connectLive() {
     refreshBadges();
     if (tab === 'sos') render({ quiet: true });
   });
+  // Nobody has taken it from the queue: ring again even where it was
+  // acknowledged - Acknowledge quiets one screen, it does not take the SOS.
+  liveSource.addEventListener('sos-escalated', (e) => {
+    const data = safeJson(e.data);
+    if (!data || !data.alertId) return;
+    ackedSos.delete(data.alertId);
+    raiseSos([data.alertId], true);
+    toast('bad', 'SOS: nobody has taken it', `Waiting ${data.minutes} minute${data.minutes === 1 ? '' : 's'}. Open SOS Alerts and take it.`);
+    if (tab === 'sos') render({ quiet: true });
+  });
   liveSource.addEventListener('trip-alert', (e) => {
     raiseTripAlert(safeJson(e.data) || {});
     refreshBadges();
