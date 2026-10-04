@@ -85,11 +85,44 @@
         <!-- Passkeys (WebAuthn) for staff sign-in and step-up
              (staff.internal.StaffPasskeys): Yubico's server-side library checks
              each signature, the origin, the counter and the challenge, so none
-             of that is hand-written here. -->
+             of that is hand-written here.
+             It asks for Jackson and CBOR as open version ranges, which
+             dependency:go-offline in the Docker build walks to the newest
+             snapshot it can see and then fails to download. So those come
+             in as exclusions and are declared below at fixed versions:
+             Jackson from Spring Boot, CBOR the last 4.x (the range also
+             admitted 5.0.0 alphas). -->
         <dependency>
             <groupId>com.yubico</groupId>
             <artifactId>webauthn-server-core</artifactId>
             <version>2.6.0</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.core</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.dataformat</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.datatype</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.upokecenter</groupId>
+                    <artifactId>cbor</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-cbor</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.upokecenter</groupId>
+            <artifactId>cbor</artifactId>
+            <version>4.5.6</version>
         </dependency>
 
         <!-- The QR code a new staff member scans into an authenticator app,

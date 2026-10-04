@@ -12,7 +12,12 @@ WORKDIR /app
 COPY docker-maven-settings.xml .
 ENV MAVEN_ARGS="-B -s docker-maven-settings.xml -Dmaven.artifact.threads=8 -Daether.connector.http.retryHandler.count=5"
 COPY pom.xml .
-RUN mvn dependency:go-offline
+# resolve, not go-offline: go-offline collects the graph itself, ignoring the
+# pom's exclusions and Spring Boot's pinned versions, so a library that asks
+# for an open version range (webauthn-server-core asks for Jackson
+# [2.13.2.1,3)) sends it after snapshots that cannot be downloaded, and the
+# build fails after eleven minutes. resolve gets exactly what package uses.
+RUN mvn dependency:resolve dependency:resolve-plugins
 COPY src src
 RUN mvn package -DskipTests
 
