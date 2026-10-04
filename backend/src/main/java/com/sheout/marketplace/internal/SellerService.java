@@ -129,6 +129,38 @@ public class SellerService implements SellerApi, MarketplaceAdminApi {
 
     @Override
     @Transactional
+    public Result<SellerView, MarketplaceError> setParcelPickup(UUID accountId, com.sheout.marketplace.MarketplaceViews.PickupPoint pickup) {
+        Optional<SellerProfileEntity> found = sellers.findLockedByAccountId(accountId);
+        if (found.isEmpty()) {
+            return Result.failure(MarketplaceError.NOT_A_SELLER);
+        }
+        SellerProfileEntity seller = found.get();
+        if (pickup == null) {
+            seller.setParcelPickup(null, null, null);
+        } else {
+            if (Math.abs(pickup.lat()) > 90 || Math.abs(pickup.lng()) > 180) {
+                return Result.failure(MarketplaceError.INVALID_PICKUP);
+            }
+            String label = pickup.label() == null ? "" : pickup.label().trim().replaceAll("\\s+", " ");
+            seller.setParcelPickup(label.isEmpty() ? null : label.substring(0, Math.min(label.length(), 200)),
+                    pickup.lat(), pickup.lng());
+        }
+        return Result.success(views.sellerView(sellers.save(seller)));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<com.sheout.marketplace.MarketplaceViews.PickupPoint> parcelPickupFor(UUID productId) {
+        return products.findById(productId)
+                .filter(ProductEntity::isActive)
+                .flatMap(p -> sellers.findById(p.getSellerId()))
+                .filter(ShopViews::live)
+                .filter(s -> !s.isSample())
+                .map(ShopViews::pickup);
+    }
+
+    @Override
+    @Transactional
     public Result<SellerView, MarketplaceError> submitForReview(UUID accountId) {
         Optional<SellerProfileEntity> found = sellers.findLockedByAccountId(accountId);
         if (found.isEmpty()) {

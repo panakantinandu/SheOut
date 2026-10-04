@@ -49,6 +49,10 @@ public final class MarketplaceViews {
 
     // ------------------------------------------------------------ her own shop
 
+    /** A place on the map with what she calls it - her parcel pickup point. */
+    public record PickupPoint(String label, double lat, double lng) {
+    }
+
     public record ProductImageView(UUID id, String url) {
     }
 
@@ -113,7 +117,9 @@ public final class MarketplaceViews {
             boolean canEdit,
             boolean canSubmit,
             /** Her account's ID check - a shop is not reviewed before it. */
-            boolean accountVerified
+            boolean accountVerified,
+            /** Where her parcels are collected, if she has set it - null until then. */
+            PickupPoint parcelPickup
     ) {
     }
 

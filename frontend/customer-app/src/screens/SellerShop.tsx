@@ -37,6 +37,7 @@ import {
   useTranslation,
 } from '@sheout/design-system';
 import { ApiError, marketplaceApi, usersApi, walletApi } from '../api/client';
+import { LocationPicker } from '../components/LocationPicker';
 import type { SellerCategory, SellerDetailsInput, SellerShop as Shop } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { apiErrorText } from '../lib/apiErrors';
@@ -916,6 +917,8 @@ function ShopStatusScreen({ shop, onShop, reload, onFix }: { shop: Shop; onShop:
       )}
       {error && <p className="text-sm text-danger" role="alert">{error}</p>}
 
+      {shop.status !== 'REJECTED' && <PickupCard shop={shop} onShop={onShop} />}
+
       <section className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="font-heading text-section text-text-primary">{t('seller.shop.detailsTitle')}</h2>
@@ -967,7 +970,11 @@ function ShopStatusScreen({ shop, onShop, reload, onFix }: { shop: Shop; onShop:
                 shop.status === 'ACTIVE'
                   ? (p) =>
                       navigate('/book/parcel', {
-                        state: { marketplace: 'seller', parcelNote: t('seller.parcel.note', { code: p.code, title: p.title }).slice(0, 300) },
+                        state: {
+                          marketplace: 'seller',
+                          pickup: shop.parcelPickup ?? undefined,
+                          parcelNote: t('seller.parcel.note', { code: p.code, title: p.title }).slice(0, 300),
+                        },
                       })
                   : undefined
               }
@@ -1113,6 +1120,71 @@ function StatusCard({ shop, onFix, justWentLive }: { shop: Shop; onFix: () => vo
           {t('seller.status.SUSPENDED.contact')}
         </Button>
       )}
+    </Card>
+  );
+}
+
+/**
+ * Where her parcels are collected, if she wants buyers to be able to book
+ * one straight from her product. Her choice, on the map: home, her shop, or
+ * a gate she meets the partner at. Shown to a buyer only when the buyer
+ * books a parcel - never on her public listing, which only ever says her
+ * area. Removable at any time.
+ */
+function PickupCard({ shop, onShop }: { shop: Shop; onShop: (s: Shop) => void }) {
+  const { t } = useTranslation();
+  const [picking, setPicking] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const point = shop.parcelPickup;
+
+  async function save(run: () => Promise<Shop>, done: string) {
+    setBusy(true);
+    try {
+      onShop(await run());
+      showToast(done);
+    } catch (err) {
+      showToast(apiErrorText(err, 'seller.shop.actionError'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card className="space-y-3" data-testid="pickup-card">
+      <div className="flex items-start gap-3">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent-orange-tint text-accent-orange-strong">
+          <MapPin className="h-5 w-5" aria-hidden="true" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-caption font-semibold uppercase tracking-wide text-text-secondary">{t('seller.pickup.title')}</p>
+          <p className="font-heading text-card-title text-text-primary" data-testid="pickup-label">
+            {point ? point.label || t('seller.pickup.pinned') : t('seller.pickup.notSet')}
+          </p>
+        </div>
+      </div>
+      <p className="text-sm text-text-secondary">{t(point ? 'seller.pickup.bodySet' : 'seller.pickup.body')}</p>
+      <div className="flex gap-2">
+        <Button variant={point ? 'secondary' : 'primary'} className="flex-1" disabled={busy} onClick={() => setPicking(true)} data-testid="set-pickup">
+          {point ? t('seller.pickup.change') : t('seller.pickup.set')}
+        </Button>
+        {point && (
+          <Button variant="secondary" disabled={busy} onClick={() => void save(() => marketplaceApi.clearParcelPickup(), t('seller.pickup.removed'))} data-testid="remove-pickup">
+            {t('seller.pickup.remove')}
+          </Button>
+        )}
+      </div>
+      <LocationPicker
+        open={picking}
+        title={t('seller.pickup.pickerTitle')}
+        allowCurrentLocation
+        markerKind="pickup"
+        startAt={point ?? null}
+        onSelect={(address) => {
+          setPicking(false);
+          void save(() => marketplaceApi.setParcelPickup(address), t('seller.pickup.saved'));
+        }}
+        onClose={() => setPicking(false)}
+      />
     </Card>
   );
 }

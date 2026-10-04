@@ -987,6 +987,16 @@ export const marketplaceApi = {
     return request(`/api/v1/marketplace/products/${productId}`);
   },
 
+  /** The seller's parcel pickup point, asked for only when a buyer books a parcel. Null when she has not set one. */
+  async parcelPickup(productId: string): Promise<GeoAddress | null> {
+    try {
+      return await request<GeoAddress>(`/api/v1/marketplace/products/${productId}/parcel-pickup`);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 404) return null;
+      throw err;
+    }
+  },
+
   /** Her shop, or null when she has not applied. */
   async myShop(): Promise<SellerShop | null> {
     try {
@@ -1003,6 +1013,14 @@ export const marketplaceApi = {
 
   updateShop(details: SellerDetailsInput): Promise<SellerShop> {
     return request('/api/v1/marketplace/seller/me', { method: 'PUT', body: details });
+  },
+
+  setParcelPickup(point: GeoAddress): Promise<SellerShop> {
+    return request('/api/v1/marketplace/seller/me/parcel-pickup', { method: 'PUT', body: point });
+  },
+
+  clearParcelPickup(): Promise<SellerShop> {
+    return request('/api/v1/marketplace/seller/me/parcel-pickup', { method: 'DELETE' });
   },
 
   submit(): Promise<SellerShop> {

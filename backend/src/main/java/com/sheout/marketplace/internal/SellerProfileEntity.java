@@ -84,6 +84,18 @@ public class SellerProfileEntity extends BaseEntity {
     /** An example shop with nobody behind it - see SampleShops. */
     private boolean sample;
 
+    /**
+     * Where a parcel for one of her orders is collected - her choice, set on
+     * a map (home, shop, or a gate she meets the partner at). Null until she
+     * sets one; given to a buyer only when the buyer books a parcel.
+     */
+    @Column(name = "parcel_pickup_label", length = 200)
+    private String parcelPickupLabel;
+    @Column(name = "parcel_pickup_lat")
+    private Double parcelPickupLat;
+    @Column(name = "parcel_pickup_lng")
+    private Double parcelPickupLng;
+
     protected SellerProfileEntity() {
         // JPA
     }
@@ -190,6 +202,12 @@ public class SellerProfileEntity extends BaseEntity {
         status = SellerStatus.LAPSED;
     }
 
+    void setParcelPickup(String label, Double lat, Double lng) {
+        this.parcelPickupLabel = label;
+        this.parcelPickupLat = lat;
+        this.parcelPickupLng = lng;
+    }
+
     void planNoticeSent(String notice) {
         lastPlanNotice = notice;
     }
@@ -253,4 +271,7 @@ public class SellerProfileEntity extends BaseEntity {
     public int getPaidPeriods() { return paidPeriods; }
     public String getLastPlanNotice() { return lastPlanNotice; }
     public boolean isSample() { return sample; }
+    public String getParcelPickupLabel() { return parcelPickupLabel; }
+    public Double getParcelPickupLat() { return parcelPickupLat; }
+    public Double getParcelPickupLng() { return parcelPickupLng; }
 }

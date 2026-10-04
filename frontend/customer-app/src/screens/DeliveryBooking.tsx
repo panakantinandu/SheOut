@@ -52,6 +52,8 @@ const CONFIG: Record<'parcel' | 'lunchbox', { key: 'parcel' | 'lunchbox'; catego
 export interface ParcelRouteState {
   parcelNote?: string;
   marketplace?: 'buyer' | 'seller';
+  /** The seller's parcel pickup point, when she has set one - a starting point, still changeable. */
+  pickup?: GeoAddress;
 }
 
 const MEAL_TYPES = ['VEG', 'NON_VEG'] as const;
@@ -95,7 +97,7 @@ export function DeliveryBooking() {
     if (kind === 'lunchbox') navigate('/home', { replace: true });
   }, [kind, navigate]);
 
-  const [pickup, setPickup] = useState<GeoAddress | null>(null);
+  const [pickup, setPickup] = useState<GeoAddress | null>(kind === 'parcel' ? routeState.pickup ?? null : null);
   const [pickupError, setPickupError] = useState<string | null>(null);
   const [drop, setDrop] = useState<GeoAddress | null>(null);
   // Outside the operating hours, or paused by operations: said here, and Book stays off.
@@ -146,7 +148,8 @@ export function DeliveryBooking() {
         const address = await describePoint(lat, lng, t('booking.currentLocation'));
         if (cancelled) return;
         if (marketplace === 'buyer') setDrop(address);
-        else setPickup(address);
+        // The seller's chosen pickup point wins over wherever her phone is.
+        else if (!routeState.pickup) setPickup(address);
       })
       .catch((err: Error) => {
         if (!cancelled) setPickupError(err.message);
@@ -232,6 +235,11 @@ export function DeliveryBooking() {
               <div className="rounded-input bg-primary-light px-4 py-3 text-sm text-text-primary" role="note" data-testid="marketplace-parcel-note">
                 <p className="font-semibold">{t(`delivery.marketplace.${marketplace}Title`)}</p>
                 <p className="mt-0.5 text-text-secondary">{t('delivery.marketplace.terms')}</p>
+                {routeState.pickup && (
+                  <p className="mt-2 text-text-secondary" data-testid="pickup-from-seller">
+                    {t(marketplace === 'buyer' ? 'delivery.marketplace.pickupFromSeller' : 'delivery.marketplace.pickupYours')}
+                  </p>
+                )}
               </div>
             )}
             <TextField

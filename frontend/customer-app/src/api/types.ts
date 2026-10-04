@@ -461,6 +461,8 @@ export interface SellerShop {
   canEdit: boolean;
   canSubmit: boolean;
   accountVerified: boolean;
+  /** Where her parcels are collected - a point she chose on the map. Null until she sets one. */
+  parcelPickup?: GeoAddress | null;
 }
 
 export interface SellerDetailsInput {

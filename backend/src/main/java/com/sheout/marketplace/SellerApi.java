@@ -22,6 +22,15 @@ public interface SellerApi {
 
     Result<SellerView, MarketplaceError> updateProfile(UUID accountId, SellerDetails details);
 
+    /** Sets, or with null clears, where her parcels are collected. */
+    Result<SellerView, MarketplaceError> setParcelPickup(UUID accountId, MarketplaceViews.PickupPoint pickup);
+
+    /**
+     * Where a parcel for this product is collected, for a buyer booking one:
+     * only for a live, real shop whose seller has set a pickup point.
+     */
+    java.util.Optional<MarketplaceViews.PickupPoint> parcelPickupFor(UUID productId);
+
     /** From DRAFT or REJECTED, once she has a product with a photo and her account is verified. */
     Result<SellerView, MarketplaceError> submitForReview(UUID accountId);
 

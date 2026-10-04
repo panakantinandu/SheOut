@@ -798,6 +798,19 @@
       "body": "Once you and the seller have agreed on the price and how to pay, book a SheOut parcel to bring it to you. Ask her for the pickup address.",
       "cta": "Book a parcel delivery",
       "note": "Marketplace order {{code}}: {{title}}"
+    },
+    "pickup": {
+      "title": "Parcel pickup point",
+      "notSet": "Not set",
+      "pinned": "Pin on the map",
+      "body": "Set where your parcels are collected - your home, your shop, or a gate you meet the partner at. Buyers who book a SheOut parcel for your product then have the pickup filled in for them. It is never shown on your listing, which only says your area.",
+      "bodySet": "Buyers who book a SheOut parcel for your product get this as the pickup. They can still change it if you tell them the product is somewhere else.",
+      "set": "Set pickup point",
+      "change": "Change",
+      "remove": "Remove",
+      "pickerTitle": "Where should parcels be collected?",
+      "saved": "Pickup point saved",
+      "removed": "Pickup point removed"
     }
   },
   "refer": {
@@ -975,7 +988,9 @@
       "buyerTitle": "Marketplace order, brought to you",
       "sellerTitle": "Marketplace order, sent to your buyer",
       "terms": "SheOut carries the parcel only. The price, payment, returns and refunds are between you and the other person. You pay for this delivery in the app.",
-      "sellerPickup": "Seller's pickup address - ask the seller"
+      "sellerPickup": "Seller's pickup address - ask the seller",
+      "pickupFromSeller": "Pickup is the seller's pickup point. Change it if she tells you the product is somewhere else.",
+      "pickupYours": "Pickup is your saved pickup point. Change it if the product is somewhere else today."
     }
   },
   "geo": {

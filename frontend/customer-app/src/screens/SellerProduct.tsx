@@ -22,6 +22,7 @@ import { AvailabilityPill, DEFAULT_TERMS, ProductTermsCard, updatedText } from '
 export function SellerProduct() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [fetchingPickup, setFetchingPickup] = useState(false);
   const goBack = useGoBack('/seller');
   const { productId } = useParams<{ productId: string }>();
   const [product, setProduct] = useState<ProductDetail | null>(null);
@@ -229,11 +230,20 @@ export function SellerProduct() {
                   variant="secondary"
                   fullWidth
                   icon={<Package className="h-4 w-4" />}
-                  onClick={() =>
+                  disabled={fetchingPickup}
+                  onClick={async () => {
+                    // The seller's pickup point is asked for here, on the tap - never with the page every visitor loads.
+                    setFetchingPickup(true);
+                    const pickup = await marketplaceApi.parcelPickup(product.productId).catch(() => null);
+                    setFetchingPickup(false);
                     navigate('/book/parcel', {
-                      state: { marketplace: 'buyer', parcelNote: t('seller.parcel.note', { code: product.code, title: product.title }).slice(0, 300) },
-                    })
-                  }
+                      state: {
+                        marketplace: 'buyer',
+                        pickup: pickup ?? undefined,
+                        parcelNote: t('seller.parcel.note', { code: product.code, title: product.title }).slice(0, 300),
+                      },
+                    });
+                  }}
                   data-testid="book-marketplace-parcel"
                 >
                   {t('seller.parcel.cta')}

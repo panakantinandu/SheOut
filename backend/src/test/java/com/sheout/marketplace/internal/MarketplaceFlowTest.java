@@ -476,6 +476,34 @@ class MarketplaceFlowTest {
         return sellerRepository.findById(card.sellerId()).orElseThrow();
     }
 
+    @Test
+    void aBuyerGetsTheSellersPickupPointOnlyOnceSheHasChosenOneAndOnlyForALiveRealShop() throws IOException {
+        SellerView shop = ok(sellers.applyAsSeller(bina, details("Bina " + tag + " Pickles", "9876500007", null)));
+        UUID jar = ok(products.addProduct(bina, product("Mango pickle", "500 g", "250"))).products().get(0).id();
+        ok(products.addProductImage(bina, jar, photo()));
+        assertThat(shop.parcelPickup()).isNull();
+
+        var gate = new com.sheout.marketplace.MarketplaceViews.PickupPoint("  Gate 2,   Lake View Apartments ", 17.4935, 78.3995);
+        SellerView set = ok(sellers.setParcelPickup(bina, gate));
+        assertThat(set.parcelPickup().label()).isEqualTo("Gate 2, Lake View Apartments");
+        // Not live yet: nobody can book a parcel from her.
+        assertThat(sellers.parcelPickupFor(jar)).isEmpty();
+
+        ok(sellers.submitForReview(bina));
+        ok(sellers.approve(shop.id(), admin));
+        assertThat(sellers.parcelPickupFor(jar)).hasValueSatisfying(p -> {
+            assertThat(p.lat()).isEqualTo(17.4935);
+            assertThat(p.lng()).isEqualTo(78.3995);
+        });
+        // Never with the product page every visitor loads.
+        assertThat(products.getProductDetail(jar).orElseThrow().toString()).doesNotContain("Lake View");
+
+        assertThat(sellers.setParcelPickup(bina, new com.sheout.marketplace.MarketplaceViews.PickupPoint("x", 123, 0)).error())
+                .isEqualTo(MarketplaceError.INVALID_PICKUP);
+        ok(sellers.setParcelPickup(bina, null));
+        assertThat(sellers.parcelPickupFor(jar)).isEmpty();
+    }
+
     /** The plan sweep at {@code at}, and the reminders it sent. */
     private List<SellerPlanNotice> noticesAt(Instant at) {
         events.clear();

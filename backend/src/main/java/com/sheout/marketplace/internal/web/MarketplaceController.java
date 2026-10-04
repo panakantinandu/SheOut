@@ -133,7 +133,34 @@ public class MarketplaceController {
                         "This listing is no longer available."));
     }
 
+    /**
+     * Where a parcel for this product is collected, asked for only when a
+     * buyer books one - never part of the product page every visitor loads.
+     * 404 when the seller has not set a pickup point: the buyer asks her.
+     */
+    @GetMapping("/products/{productId}/parcel-pickup")
+    public ResponseEntity<com.sheout.marketplace.MarketplaceViews.PickupPoint> parcelPickup(@PathVariable UUID productId) {
+        requireCustomer();
+        return sellers.parcelPickupFor(productId)
+                .map(ResponseEntity::ok)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "NO_PICKUP_POINT",
+                        "This seller has not set a pickup point. Ask her for the address."));
+    }
+
     // ------------------------------------------------------------ her shop
+
+    @PutMapping("/seller/me/parcel-pickup")
+    public ResponseEntity<SellerView> setParcelPickup(@Valid @RequestBody PickupRequest request) {
+        CurrentAccount caller = requireCustomer();
+        return ResponseEntity.ok(unwrap(sellers.setParcelPickup(caller.accountId(),
+                new com.sheout.marketplace.MarketplaceViews.PickupPoint(request.label(), request.lat(), request.lng()))));
+    }
+
+    @DeleteMapping("/seller/me/parcel-pickup")
+    public ResponseEntity<SellerView> clearParcelPickup() {
+        CurrentAccount caller = requireCustomer();
+        return ResponseEntity.ok(unwrap(sellers.setParcelPickup(caller.accountId(), null)));
+    }
 
     @GetMapping("/seller/me")
     public ResponseEntity<SellerView> mine() {
@@ -214,6 +241,9 @@ public class MarketplaceController {
     }
 
     // ------------------------------------------------------------ requests
+
+    public record PickupRequest(@Size(max = 200) String label, @NotNull Double lat, @NotNull Double lng) {
+    }
 
     public record SellerRequest(
             @NotBlank @Size(max = 80) String businessName,
@@ -296,6 +326,7 @@ public class MarketplaceController {
             case NOT_VERIFIED -> new ApiException(HttpStatus.CONFLICT, error.name(),
                     "Verify your ID first. Every SheOut Seller is a verified SheOut rider.");
             case PRODUCT_NOT_FOUND -> new ApiException(HttpStatus.NOT_FOUND, error.name(), "That product was not found.");
+            case INVALID_PICKUP -> new ApiException(HttpStatus.BAD_REQUEST, error.name(), "Choose the pickup point on the map.");
             case IMAGE_NOT_FOUND -> new ApiException(HttpStatus.NOT_FOUND, error.name(), "That photo was not found.");
             case PRODUCT_LIMIT_REACHED -> new ApiException(HttpStatus.CONFLICT, error.name(), "You have reached the most products a shop can list.");
             case PRODUCT_IMAGE_LIMIT_REACHED -> new ApiException(HttpStatus.CONFLICT, error.name(), "This product already has the most photos it can have.");

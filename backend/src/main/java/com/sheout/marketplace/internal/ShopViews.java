@@ -73,7 +73,8 @@ class ShopViews {
                 limits.maxProducts(),
                 seller.editable(),
                 seller.submittable() && verified && hasPhotographedProduct,
-                verified);
+                verified,
+                pickup(seller));
     }
 
     SellerAdminRow adminRow(SellerProfileEntity seller) {
@@ -99,6 +100,15 @@ class ShopViews {
                 seller.getSuspensionReason(),
                 plan(seller),
                 seller.isSample());
+    }
+
+    /** Her parcel pickup point, or null when she has not set one. */
+    static com.sheout.marketplace.MarketplaceViews.PickupPoint pickup(SellerProfileEntity seller) {
+        if (seller.getParcelPickupLat() == null || seller.getParcelPickupLng() == null) {
+            return null;
+        }
+        return new com.sheout.marketplace.MarketplaceViews.PickupPoint(seller.getParcelPickupLabel(),
+                seller.getParcelPickupLat(), seller.getParcelPickupLng());
     }
 
     /** Her monthly plan as it stands now, with every month she has paid for. */

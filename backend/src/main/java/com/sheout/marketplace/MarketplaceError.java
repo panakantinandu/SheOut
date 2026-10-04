@@ -23,6 +23,8 @@ public enum MarketplaceError {
     /** A seller's account must be ID-verified, like every rider's, before her shop is reviewed. */
     NOT_VERIFIED,
     PRODUCT_NOT_FOUND,
+    /** A parcel pickup point that is not a place on the map. */
+    INVALID_PICKUP,
     IMAGE_NOT_FOUND,
     PRODUCT_LIMIT_REACHED,
     PRODUCT_IMAGE_LIMIT_REACHED,
