@@ -500,5 +500,13 @@
     "insurerSteps": "To claim from {{insurer}}:",
     "noCover": "This trip had no insurance cover on record, so there is no policy to claim on. Our team will still help you.",
     "error": "Could not send that. Please try again, or call SheOut support."
+  },
+  "credits": {
+    "title": "Maps and data",
+    "google": "Maps and address search are provided by Google Maps.",
+    "googleTerms": "Google Maps Terms",
+    "googlePrivacy": "Google Privacy Policy",
+    "osm": "Some address search results and map data © OpenStreetMap contributors, available under the Open Database Licence.",
+    "osmLink": "OpenStreetMap copyright"
   }
 }

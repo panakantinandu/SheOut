@@ -30,6 +30,7 @@ export * from './ListFilterBar';
 export * from './ListEmptyState';
 export * from './LoadMore';
 export * from './LiveMap';
+export * from './MapCredits';
 export * from './OpenInMapsButton';
 export * from './PickupCodeField';
 export * from './PickupCodeCard';

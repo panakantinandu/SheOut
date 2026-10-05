@@ -1,6 +1,6 @@
 import { Heart, Shield, Users } from 'lucide-react';
 import { useGoBack } from '../lib/useGoBack';
-import { Card, IconCircle, TopHeader, contentText, useAppLanguage, useContentSection } from '@sheout/design-system';
+import { Card, IconCircle, TopHeader, contentText, useAppLanguage, useContentSection, MapCredits } from '@sheout/design-system';
 import { contentApi } from '../api/client';
 import { useTranslation } from '@sheout/design-system';
 
@@ -56,6 +56,8 @@ export function About() {
           </div>
         </div>
       </Card>
+
+      <MapCredits />
 
       <p className="text-center text-xs text-text-secondary">&copy; {new Date().getFullYear()} SheOut</p>
     </div>

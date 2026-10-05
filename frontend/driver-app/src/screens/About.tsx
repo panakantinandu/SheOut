@@ -1,6 +1,6 @@
 import { HeartHandshake, IndianRupee, ShieldCheck } from 'lucide-react';
 import { useGoBack } from '../lib/useGoBack';
-import { Card, IconCircle, SheOutWordmark, TopHeader, useTranslation } from '@sheout/design-system';
+import { Card, IconCircle, SheOutWordmark, TopHeader, useTranslation, MapCredits } from '@sheout/design-system';
 
 const APP_VERSION = '0.1.0';
 
@@ -37,6 +37,8 @@ export function About() {
           </div>
         ))}
       </Card>
+
+      <MapCredits />
 
       <p className="text-center text-xs text-text-secondary">&copy; {new Date().getFullYear()} SheOut</p>
     </div>
