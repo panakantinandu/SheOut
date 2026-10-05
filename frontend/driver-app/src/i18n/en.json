@@ -1078,6 +1078,11 @@
       "title": "PAN card",
       "summaryOn": "Added",
       "summaryOff": "Optional · for tax on your payouts"
+    },
+    "puc": {
+      "fromRecord": "Nothing to upload · we read it from your RC's government record",
+      "fromRecordWhy": "We check your PUC on the government's vehicle record when we check your RC, so there is nothing to upload.",
+      "needed": "Your vehicle's record shows no valid PUC. Get one at any PUC centre and upload it."
     }
   }
 }

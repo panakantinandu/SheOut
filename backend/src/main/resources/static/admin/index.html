@@ -1050,6 +1050,12 @@
   .modal-foot .grow { flex: 1; }
   .rv-police-intro { margin-bottom: 12px; }
   .rv-summary li { justify-content: space-between; }
+  .rv-gov { border: 1px solid var(--brand); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+  .rv-gov > a.btn { align-self: flex-start; text-decoration: none; }
+  .gov-row { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+  .gov-row .subtle { min-width: 110px; }
+  .gov-result { border-top: 1px solid var(--line); padding-top: 4px; }
+  .btn.btn-sm { height: 30px; min-height: 30px; padding: 0 10px; font-size: 12px; }
   .sos-alarm { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 14px 16px; border-radius: 10px; border: 2px solid var(--red); background: var(--red-bg); color: var(--red); margin-bottom: 16px; }
   .sos-alarm .pulse { width: 12px; height: 12px; border-radius: 50%; background: var(--red); flex: none; }
   .sos-alarm #alarmOpen { margin-left: auto; }
@@ -4548,6 +4554,61 @@ function paintIdentityStep(body, v, step, after) {
   rejectBox(body.querySelector('#rvReject'), REJECT_REASONS.identity, reason => decide('REJECTED', reason));
 }
 
+/**
+ * The government's own record, checked by a person: Sarathi for a licence,
+ * Vahan for a vehicle. Free, through the official Parivahan pages (each asks
+ * for a captcha, so it is never automated here). What she sees goes on the
+ * audit trail with the approval; for an RC, the PUC validity Vahan shows
+ * files her PUC, so she uploads no PUC certificate at all.
+ * Kept in one place so a changed address is a one-line fix.
+ */
+const GOV_LINKS = {
+  DRIVING_LICENCE: { url: 'https://parivahan.gov.in/rcdlstatus/?pur_cd=101', label: 'Open licence status (Parivahan)', where: 'Sarathi licence record' },
+  VEHICLE_RC: { url: 'https://vahan.parivahan.gov.in/nrservices/faces/user/citizen/citizenlogin.xhtml', label: 'Open vehicle details (Vahan)', where: 'Vahan vehicle record - or the mParivahan app, RC details' },
+};
+const GOV_NOT_FOUND = {
+  DRIVING_LICENCE: 'We could not find this licence in the government (Parivahan) record, or it shows different details. Check the licence number and send it again.',
+  VEHICLE_RC: 'We could not find this vehicle in the government (Vahan) record, or it shows different details. Check the vehicle number and send it again.',
+};
+const ddmmyyyy = iso => (iso ? iso.split('-').reverse().join('-') : '');
+
+function govPanel(type, v, doc) {
+  const link = GOV_LINKS[type];
+  if (!link) return '';
+  const copyRow = (label, value) => `<div class="gov-row"><span class="subtle">${esc(label)}</span><b class="num">${esc(value || '-')}</b>
+      ${value ? `<button type="button" class="btn btn-sm" data-copy="${escValue(value)}">Copy</button>` : ''}</div>`;
+  const rc = type === 'VEHICLE_RC';
+  return `<div class="rv-gov">
+      <div class="rv-checks-h">Step 1 · Check the government record (free)</div>
+      <a class="btn btn-primary btn-sm" href="${escValue(link.url)}" target="_blank" rel="noopener noreferrer">${esc(link.label)} ↗</a>
+      ${rc ? copyRow('Vehicle number', doc.documentNumber) : copyRow('Licence number', doc.documentNumber) + copyRow('Date of birth', ddmmyyyy(v.dateOfBirth))}
+      <div class="gov-result" role="radiogroup" aria-label="What the record shows">
+        <label class="rv-check"><input type="radio" name="govResult" value="FOUND"><span>Found in the ${esc(link.where)}, and it matches${rc ? '' : ' her name'}</span></label>
+        <label class="rv-check"><input type="radio" name="govResult" value="NOT_FOUND"><span>Not found, or the record shows something different</span></label>
+      </div>
+      <div class="doc-fields rv-fields" data-gov-fields hidden>
+        ${rc
+          ? `<label class="field"><span>Owner name shown (as masked on the record)</span><input data-g="owner" maxlength="60" placeholder="e.g. R**** K****"></label>
+             <label class="field"><span>Insurance valid till (record)</span><input type="date" data-g="insurance"></label>
+             <label class="field"><span>PUC valid till (record) - files her PUC</span><input type="date" data-g="puc" min="${todayInIndia()}"></label>
+             <small class="subtle">No valid PUC on the record? Leave it empty: she will be asked to get one and upload it.</small>`
+          : `<label class="field"><span>Class of vehicle shown</span><input data-g="cls" maxlength="40" placeholder="e.g. MCWG, LMV"></label>`}
+      </div>
+    </div>`;
+}
+
+/** What the reviewer recorded from the government record, as one line for the audit trail; null when not found. */
+function govSummary(body, type) {
+  const r = body.querySelector('input[name="govResult"]:checked');
+  if (!r || r.value !== 'FOUND') return null;
+  const g = k => { const el = body.querySelector(`[data-g="${k}"]`); return el && el.value ? el.value.trim() : ''; };
+  if (type === 'VEHICLE_RC') {
+    return ['Vahan: found', g('owner') && 'owner ' + g('owner'), g('insurance') && 'insurance till ' + g('insurance'),
+      g('puc') ? 'PUC till ' + g('puc') : 'no valid PUC shown'].filter(Boolean).join(', ');
+  }
+  return ['Sarathi: found', g('cls') && 'class ' + g('cls')].filter(Boolean).join(', ');
+}
+
 function paintDocStep(body, v, step, after) {
   const doc = step.doc;
   const type = step.key;
@@ -4555,10 +4616,17 @@ function paintDocStep(body, v, step, after) {
   const isInsurance = type === 'VEHICLE_INSURANCE';
   const waiting = step.state === 'waiting';
   const plateMismatch = type === 'VEHICLE_RC' && doc && v.vehicleRegistrationNumber && !sameNumber(doc.documentNumber, v.vehicleRegistrationNumber);
+  // Her PUC comes from the vehicle's Vahan record, read on the RC step - not from an upload.
+  const pucFromRecord = type === 'PUC' && doc && !doc.fileOnFile && doc.source === 'OPERATOR_UPLOAD';
+  const note = type === 'PUC' && step.state === 'missing'
+    ? '<div class="banner banner-info">Nothing for her to upload: her PUC is read from the vehicle\'s Vahan record when you approve her RC. If the record showed no valid PUC, she is asked to get one and upload it, and it appears here.</div>'
+    : stepNote(step.state, 'this document');
   body.innerHTML = `<div class="rv-split">
-      <div class="rv-files">${doc && doc.fileOnFile ? '<div class="doc" data-doc-box><div class="skel doc-skel"></div></div>' : '<div class="fallback">No file on record.</div>'}</div>
+      <div class="rv-files">${doc && doc.fileOnFile ? '<div class="doc" data-doc-box><div class="skel doc-skel"></div></div>'
+        : pucFromRecord ? '<div class="fallback">Read from the vehicle\'s government (Vahan) record - no file. See her audit trail for who checked it.</div>'
+        : '<div class="fallback">No file on record.</div>'}</div>
       <div class="rv-side">
-        ${stepNote(step.state, 'this document')}
+        ${note}
         ${doc ? `<dl class="kv">
           <dt>She typed</dt><dd class="num">${esc(doc.documentNumber || '-')}</dd>
           ${expires ? `<dt>Valid until</dt><dd>${expiryText(doc.validUntil, doc.status)}</dd>` : ''}
@@ -4574,6 +4642,7 @@ function paintDocStep(body, v, step, after) {
           ${isInsurance ? `<label class="field"><span>Policy use</span><select data-f="insuranceUseType">
             ${['COMMERCIAL', 'PRIVATE', 'UNKNOWN'].map(u => `<option value="${u}"${(doc.insuranceUseType || 'UNKNOWN') === u ? ' selected' : ''}>${esc(INSURANCE_USE_TEXT[u])}</option>`).join('')}</select></label>` : ''}
         </div>
+        ${govPanel(type, v, doc)}
         <div id="rvChecks"></div>
         <div class="row"><button class="btn btn-approve" type="button" id="rvApprove" disabled>Approve ${esc(STEP_LABEL[type] || docTypeText(type))}</button><span class="subtle" id="rvWhy"></span></div>
         <div id="rvReject"></div>` : ''}
@@ -4593,12 +4662,31 @@ function paintDocStep(body, v, step, after) {
     if (expires && !(f('validUntil') && f('validUntil').value)) missing.push('the valid-until date');
     else if (expires && f('validUntil').value < todayInIndia()) missing.push('a date that has not passed');
     if (isInsurance && f('insuranceUseType').value !== 'COMMERCIAL') missing.push('a commercial policy');
+    if (GOV_LINKS[type]) {
+      const r = body.querySelector('input[name="govResult"]:checked');
+      body.querySelector('[data-gov-fields]').hidden = !r || r.value !== 'FOUND';
+      if (!r) missing.push('the government record checked');
+      else if (r.value !== 'FOUND') missing.push('a record that matches - send it back instead');
+    }
     if (!allTicked()) missing.push('every check ticked');
     approve.disabled = missing.length > 0;
     why.textContent = missing.length ? 'Needs ' + missing.join(', ') + '.' : '';
   };
   body.querySelectorAll('[data-f]').forEach(el => el.addEventListener('input', check));
   body.querySelector('#rvChecks').addEventListener('change', check);
+  body.querySelectorAll('input[name="govResult"], [data-g]').forEach(el => el.addEventListener('change', () => {
+    check();
+    // Not on the record: the way forward is to send it back, with the reason ready.
+    const r = body.querySelector('input[name="govResult"]:checked');
+    if (r && r.value === 'NOT_FOUND') {
+      const box = body.querySelector('.rv-reject');
+      if (box) { box.open = true; box.querySelector('[data-reason-text]').value = GOV_NOT_FOUND[type]; }
+    }
+  }));
+  body.querySelectorAll('[data-copy]').forEach(b => b.addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(b.dataset.copy); b.textContent = 'Copied'; setTimeout(() => { b.textContent = 'Copy'; }, 1500); }
+    catch (e) { toast('bad', 'Could not copy', 'Select the text and copy it instead.'); }
+  }));
   check();
   const decide = async (payload) => {
     try {
@@ -4610,9 +4698,16 @@ function paintDocStep(body, v, step, after) {
   approve.addEventListener('click', () => {
     const payload = { decision: 'VERIFIED' };
     ['documentNumber', 'validUntil', 'insuranceUseType'].forEach(k => { const el = f(k); if (el && el.value) payload[k] = el.value.trim(); });
+    if (GOV_LINKS[type]) {
+      payload.governmentCheck = govSummary(body, type);
+      const puc = body.querySelector('[data-g="puc"]');
+      if (puc && puc.value) payload.pucValidUntil = puc.value;
+    }
     decide(payload);
   });
-  rejectBox(body.querySelector('#rvReject'), [...(REJECT_REASONS[type] || []), ...REJECT_REASONS.common], reason => decide({ decision: 'REJECTED', reason }));
+  rejectBox(body.querySelector('#rvReject'),
+    [...(GOV_NOT_FOUND[type] ? [GOV_NOT_FOUND[type]] : []), ...(REJECT_REASONS[type] || []), ...REJECT_REASONS.common],
+    reason => decide({ decision: 'REJECTED', reason }));
 }
 
 function paintPoliceStep(body, v, step, after) {

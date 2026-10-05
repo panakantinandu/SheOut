@@ -36,7 +36,13 @@ public record PartnerVerificationView(
         VerificationConsentStatus consent,
         List<AuditRow> audit,
         /** POLICE_REVERIFY_MONTHS, so the form can work out the default re-verify date the server will use. */
-        int policeReverifyMonths
+        int policeReverifyMonths,
+        /**
+         * Her date of birth, which the government licence lookup (Sarathi) asks
+         * for with the licence number. The reviewer reads it off the licence
+         * she opens anyway; it is here so the check needs no retyping.
+         */
+        LocalDate dateOfBirth
 ) {
 
     /** One audit line, with the operator who acted named by their phone. */

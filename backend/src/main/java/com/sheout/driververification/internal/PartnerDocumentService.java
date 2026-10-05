@@ -68,6 +68,7 @@ public class PartnerDocumentService {
     private static final String META_INSURANCE_USE = "insuranceUseType";
     private static final String META_VEHICLE_OWNER = "vehicleOwner";
     private static final String META_OWNER_NAME = "ownerName";
+    private static final String META_GOVERNMENT_RECORD = "governmentRecord";
 
     /**
      * What she, an operator or a provider says is printed on the document.
@@ -238,6 +239,26 @@ public class PartnerDocumentService {
     @Transactional
     public Result<PartnerDocumentSummary, VerificationError> review(
             UUID documentId, UUID operatorId, PartnerDocumentStatus decision, String reason, DocumentFacts corrections) {
+        return review(documentId, operatorId, decision, reason, corrections, null, null);
+    }
+
+    /**
+     * The same decision, with what the operator saw on the government's own
+     * record (Parivahan: Sarathi for a licence, Vahan for an RC).
+     * <p>
+     * governmentCheck is her note of it - "found, valid till 12 May 2041,
+     * class MCWG" - kept on the audit trail beside the approval, so it is on
+     * record that a person checked the official record and not only a photo.
+     * <p>
+     * pucValidUntil, with an RC, is the PUC validity the Vahan record shows.
+     * The partner uploads no PUC certificate: approving the RC files her PUC
+     * as checked against that record, valid until that date, and it expires
+     * and reminds her like any other document.
+     */
+    @Transactional
+    public Result<PartnerDocumentSummary, VerificationError> review(
+            UUID documentId, UUID operatorId, PartnerDocumentStatus decision, String reason, DocumentFacts corrections,
+            String governmentCheck, LocalDate pucValidUntil) {
         if (decision != PartnerDocumentStatus.VERIFIED && decision != PartnerDocumentStatus.REJECTED) {
             return Result.failure(VerificationError.INVALID_DECISION);
         }
@@ -301,11 +322,61 @@ public class PartnerDocumentService {
                 && insuranceUseOf(document) != InsuranceUseType.COMMERCIAL) {
             return Result.failure(VerificationError.INSURANCE_NOT_COMMERCIAL);
         }
+        if (type == PartnerDocumentType.VEHICLE_RC && pucValidUntil != null) {
+            if (pucValidUntil.isBefore(today)) {
+                return Result.failure(VerificationError.DOCUMENT_ALREADY_EXPIRED);
+            }
+            VerificationError tooFar = DocumentNumberRules.validUntilProblem(PartnerDocumentType.PUC, pucValidUntil, today);
+            if (tooFar != null) {
+                return Result.failure(tooFar);
+            }
+        }
         document.markVerified(operatorId, now);
         documents.save(document);
+        String check = blank(governmentCheck) ? null : governmentCheck.trim().replaceAll("\\s+", " ");
+        if (check != null && check.length() > 300) {
+            check = check.substring(0, 300);
+        }
+        String detail = describe(document);
+        if (check != null) {
+            detail = (detail == null ? "" : detail + ". ") + "Government record: " + check;
+        }
         audit.record(document.getAccountId(), operatorId, VerificationAudit.ACTOR_OPERATOR,
-                VerificationAudit.DOCUMENT_VERIFIED, document.getId(), type, describe(document));
+                VerificationAudit.DOCUMENT_VERIFIED, document.getId(), type, detail);
+        if (type == PartnerDocumentType.VEHICLE_RC && pucValidUntil != null) {
+            recordPucFromVehicleRecord(document, operatorId, pucValidUntil, now, today);
+        }
         return Result.success(toSummary(document));
+    }
+
+    /**
+     * Her PUC, as the Vahan record of the vehicle on her approved RC shows
+     * it: on file, approved, valid until that date, with no file of its own
+     * (the record is the evidence; the operator's note says so). Anything she
+     * sent for the PUC before is superseded by it.
+     */
+    private void recordPucFromVehicleRecord(PartnerDocumentEntity rc, UUID operatorId, LocalDate validUntil,
+                                            Instant now, LocalDate today) {
+        documents.findByAccountIdAndTypeAndSupersededAtIsNull(rc.getAccountId(), PartnerDocumentType.PUC).ifPresent(earlier -> {
+            earlier.supersede(now);
+            documents.saveAndFlush(earlier);
+        });
+        PartnerDocumentEntity puc = new PartnerDocumentEntity(rc.getAccountId(), PartnerDocumentType.PUC,
+                PartnerDocumentSource.OPERATOR_UPLOAD, PartnerDocumentStatus.UNDER_REVIEW, now);
+        puc.setDocumentNumber(rc.getDocumentNumber());
+        puc.setValidUntil(validUntil);
+        Map<String, Object> meta = metadata(puc);
+        meta.put(META_GOVERNMENT_RECORD, "VAHAN");
+        puc.setMetadataJson(write(meta));
+        puc.markVerified(operatorId, now);
+        documents.save(puc);
+        audit.record(rc.getAccountId(), operatorId, VerificationAudit.ACTOR_OPERATOR, VerificationAudit.DOCUMENT_VERIFIED,
+                puc.getId(), PartnerDocumentType.PUC, "Read from the vehicle's Vahan record: valid until " + plain(validUntil));
+    }
+
+    /** A document filed from the government's own record rather than a photo she sent. */
+    boolean fromGovernmentRecord(PartnerDocumentEntity document) {
+        return metadata(document).get(META_GOVERNMENT_RECORD) != null;
     }
 
     /**

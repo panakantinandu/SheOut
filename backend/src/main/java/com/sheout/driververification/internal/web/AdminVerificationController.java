@@ -127,7 +127,8 @@ public class AdminVerificationController {
         Result<PartnerDocumentSummary, VerificationError> result = partnerDocuments.review(documentId, admin.accountId(),
                 request.decision(), request.reason(),
                 new PartnerDocumentService.DocumentFacts(request.documentNumber(), request.issuedOn(),
-                        request.validUntil(), request.insuranceUseType()));
+                        request.validUntil(), request.insuranceUseType()),
+                request.governmentCheck(), request.pucValidUntil());
         if (result.isFailure()) {
             throw VerificationController.toApiException(result.error());
         }
@@ -230,7 +231,11 @@ public class AdminVerificationController {
             @Size(max = 64) String documentNumber,
             LocalDate issuedOn,
             LocalDate validUntil,
-            InsuranceUseType insuranceUseType) {
+            InsuranceUseType insuranceUseType,
+            /** What the government record (Parivahan) showed, in the operator's words; kept on the audit trail. */
+            @Size(max = 300) String governmentCheck,
+            /** With an RC: the PUC validity the Vahan record shows; files her PUC without an upload. */
+            LocalDate pucValidUntil) {
     }
 
     /**

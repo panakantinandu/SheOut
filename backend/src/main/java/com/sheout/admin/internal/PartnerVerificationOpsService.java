@@ -79,7 +79,8 @@ public class PartnerVerificationOpsService {
                 verification.policeHistory(accountId),
                 verification.consentStatus(accountId),
                 audit,
-                verification.policeReverifyMonths()));
+                verification.policeReverifyMonths(),
+                profile.map(DriverProfileSummary::dateOfBirth).orElse(null)));
     }
 
     public List<DocumentQueueRow> documentQueue(Queue queue) {

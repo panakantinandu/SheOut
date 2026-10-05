@@ -116,6 +116,24 @@ class PartnerDocumentFlowTest {
     }
 
     @Test
+    void anRcApprovedAgainstItsVahanRecordFilesHerPucWithoutAnUpload() {
+        PartnerDocumentSummary rc = upload(PartnerDocumentType.VEHICLE_RC, "TS09AB1234", today.plusYears(10), null);
+        // A PUC is never valid for two years: a mistyped year is refused, and nothing is approved.
+        assertThat(documents.review(rc.id(), operator, PartnerDocumentStatus.VERIFIED, null, null,
+                "Vahan: found", today.plusYears(2)).error()).isEqualTo(VerificationError.VALID_UNTIL_TOO_FAR);
+
+        assertThat(documents.review(rc.id(), operator, PartnerDocumentStatus.VERIFIED, null, null,
+                "Vahan: found, owner R**** K****, PUC valid", today.plusMonths(8)).isSuccess()).isTrue();
+
+        PartnerReadiness.DocumentState puc = verification.partnerReadiness(partner, "BIKE").documents().stream()
+                .filter(d -> d.type() == PartnerDocumentType.PUC).findFirst().orElseThrow();
+        assertThat(puc.status()).isEqualTo(PartnerDocumentStatus.VERIFIED);
+        assertThat(puc.validUntil()).isEqualTo(today.plusMonths(8));
+        assertThat(jdbc.queryForObject("select count(*) from verification_audit_events where account_id = ? and detail like ?",
+                Integer.class, partner, "%Government record: Vahan: found%")).isEqualTo(1);
+    }
+
+    @Test
     void sheWorksOnlyWithEveryDocumentApprovedAndInDate() {
         // ---- nothing on file: four documents missing, in checklist order
         PartnerReadiness empty = verification.partnerReadiness(partner, "BIKE");

@@ -183,7 +183,7 @@ export function Verification() {
       summary: hasPhoto ? t('verify.photo.added') : t('verify.status.todo'),
       body: <PhotoBody profile={profile} onProfile={(p) => { setProfile(p); if (p.hasProfilePhoto) sent(); }} />,
     },
-    ...vehicleDocs.map((d) => documentStep(t, d, consented, blockers, warnings, sent, profile?.vehicleRegistrationNumber)),
+    ...vehicleDocs.map((d) => documentStep(t, d, consented, blockers, warnings, sent, profile?.vehicleRegistrationNumber, docState('VEHICLE_RC')?.status ?? null)),
     policeStep(t, summary, docState('POLICE_CERTIFICATE'), consented, blockers, warnings, sent),
   ];
 
@@ -350,7 +350,6 @@ const READY_KEY: Partial<Record<PartnerDocumentType, string>> = {
   DRIVING_LICENCE: 'licence',
   VEHICLE_RC: 'rc',
   VEHICLE_INSURANCE: 'insurance',
-  PUC: 'puc',
   FITNESS_CERTIFICATE: 'fitness',
 };
 
@@ -398,6 +397,7 @@ function documentStep(
   warnings: ReadinessBlocker[],
   onSent: () => void,
   profilePlate?: string | null,
+  rcStatus?: DocumentState['status'],
 ): Step {
   const days = d.validUntil ? daysUntil(d.validUntil) : null;
   const notCommercial =
@@ -405,9 +405,16 @@ function documentStep(
   const expiring = warnings.some((w) => w.code === 'DOCUMENT_EXPIRING' && w.documentType === d.type);
   let state: StepState;
   let line: string;
-  if (!d.status) {
+  // Her PUC is read from the vehicle's government record when her RC is
+  // approved - nothing to upload. Only if that record showed no valid PUC
+  // (RC approved, PUC still missing) does she get one and upload it.
+  const pucFromRecord = d.type === 'PUC' && !d.status && rcStatus !== 'VERIFIED';
+  if (pucFromRecord) {
+    state = consented ? 'waiting' : 'locked';
+    line = consented ? t('verify.puc.fromRecord') : t('verify.status.locked');
+  } else if (!d.status) {
     state = consented ? 'todo' : 'locked';
-    line = consented ? t('verify.status.todo') : t('verify.status.locked');
+    line = consented ? (d.type === 'PUC' ? t('verify.puc.needed') : t('verify.status.todo')) : t('verify.status.locked');
   } else if (d.renewalUnderReview) {
     state = 'done';
     line = t('verify.status.renewal');
@@ -437,7 +444,14 @@ function documentStep(
     state,
     summary: line,
     body: (
-      <DocumentBody type={d.type} state={d} stepState={state} why={t(`verify.doc.why.${d.type}`)} profilePlate={profilePlate} onSent={onSent} />
+      <DocumentBody
+        type={d.type}
+        state={d}
+        stepState={state}
+        why={pucFromRecord ? t('verify.puc.fromRecordWhy') : t(`verify.doc.why.${d.type}`)}
+        profilePlate={profilePlate}
+        onSent={onSent}
+      />
     ),
   };
 }
