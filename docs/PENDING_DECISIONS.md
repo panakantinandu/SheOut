@@ -65,3 +65,21 @@ Policies are entered in the console, never in configuration.
 | 24 | IP allowlist for owner and finance | Founder | **Decided:** off for now; built, so `STAFF_IP_ALLOWLIST_<ROLE>` turns it on | Set the networks when wanted |
 | 25 | Session lengths | Founder | **Decided:** 30 min idle / 8 h for most; safety responders 60 min / 12 h; owners 15 min / 8 h (all configurable) | - |
 | 26 | Auditor account for the CA | Founder / CA | **Decided:** supported, read-only finance, access 30 days unless another date is given; none created yet | Invite as Auditor from Staff when needed |
+
+## Going live: SMS, DLT and payments
+
+Checked against the code on 2026-10-05, before real keys are added.
+
+| # | Decision | Who | Safe default today | When answered, change |
+|---|---|---|---|---|
+| 25 | **SMS provider for sign-in codes.** Only `ConsoleOtpSender` exists: with `DEV_MODE_ENABLED=false` a code reaches nobody, so nobody outside the `DEV_OTP_PHONE` slots can sign in. **Launch blocker.** | Founder | Codes are not delivered; test sign-in needs `DEV_MODE_ENABLED=true` | Choose a provider (MSG91, Twilio India, Gupshup...) and implement `OtpSender` for it from its real documentation, with the DLT template id. Then `DEV_MODE_ENABLED=false` and remove every `DEV_OTP_*` and `VERIFIED_*BYPASS_PHONE` |
+| 26 | **DLT registration** (principal entity, sender header, templates). Every SMS SheOut sends must match a registered template word for word, variables as `{#var#}`. That is the OTP, the **SOS text to emergency contacts**, and each notification's SMS fallback (`englishSms` in `OutboundMessage`: "SheOut: <title>. <body>"). **Launch blocker for safety:** until it is live, no SOS text from the server reaches a rider's contacts (operators are still alerted, and the app's SMS fallback opens her own SMS app) | Founder | No SMS goes out (`TWILIO_*` blank) | Register the templates for the OTP, SOS and each `PUSH_THEN_SMS` type in `DeliveryPolicy` (or turn SMS fallback off for types not worth a template). Set the provider's keys; send one SOS test to a staff phone before launch |
+| 27 | **Razorpay live mode** (account activation / KYC) | Founder | Test keys only. Checked: both signature checks (checkout and webhook) refuse when a secret is missing, and no key is written in the code or the apps | Live `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` and `RAZORPAY_WEBHOOK_SECRET` (new webhook in live mode, events `payment.captured`, `payment.failed`, `qr_code.credited`). Check `/v1/methods` shows UPI before testing UPI (see the Razorpay notes) |
+| 28 | Sample shops off | Founder | `MARKETPLACE_SAMPLE_SHOPS=true`: labelled sample shops fill the Marketplace | `false` before launch; every sample is removed at the next start |
+| 29 | Legal placeholders | Lawyer / Founder | 7 `[to be reviewed by lawyer]` and 4 `[to be completed by SheOut]` markers are visible in the app's legal text | Decisions 10, 19 and 21 above |
+
+## Marketplace
+
+| # | Decision | Who | Safe default today | When answered, change |
+|---|---|---|---|---|
+| 30 | **Seller plan tiers** (pay more for costly or high-volume products). Not built on purpose: SheOut never sees a Marketplace sale's price or quantity (deals and payment happen between buyer and seller), so a tier by product value is one the seller declares and nobody can check; a choice of plans at sign-up slows the sellers SheOut most needs now; and one flat price with a free first month is easiest to trust | Founder | One plan: ₹499 a month, first month free, no auto-debit; a seller can stop her plan from her shop screen (listed until her month ends, then hidden, nothing deleted) and say why | Revisit with data, after about 100 paying sellers or 3 months: the stop reasons in the console, listings per seller, enquiries per seller. If tiers are needed, tier on what SheOut can see and controls - number of live products (today one cap, `sheout.marketplace.max-products`, 100) or paid placement - not on product value |

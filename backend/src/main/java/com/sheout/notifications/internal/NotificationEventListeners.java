@@ -5,7 +5,6 @@ import com.sheout.booking.BookingAccepted;
 import com.sheout.booking.BookingApi;
 import com.sheout.booking.BookingCancelled;
 import com.sheout.booking.BookingCompleted;
-import com.sheout.booking.BookingRequested;
 import com.sheout.booking.BookingSummary;
 import com.sheout.booking.DestinationChangeDeclined;
 import com.sheout.booking.DestinationChangeRequested;
@@ -105,17 +104,10 @@ class NotificationEventListeners {
                 none(), "/tracking/" + event.bookingId(), "booking-" + event.bookingId(), OutboundMessage.Urgency.NORMAL));
     }
 
-    @Async(NotificationDeliveryConfig.EXECUTOR)
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
-    public void onBookingRequested(BookingRequested event) {
-        // A search starting again is told to her by onPartnerLeftBooking, in its own words.
-        if (event.isRestart()) {
-            return;
-        }
-        dispatcher.deliver(event.customerId(), NotificationType.BOOKING_REQUESTED, localized(event.customerId(), "bookingRequested",
-                language -> Map.of("category", copy.categoryName(event.category(), language)),
-                "/tracking/" + event.bookingId()));
-    }
+    // Nothing for a booking being made. "We're finding a partner" is a state,
+    // not news: the searching screen shows it live, and a line in the inbox
+    // went on saying it after she cancelled or was matched - the way ride
+    // apps keep the search on the trip screen and the inbox for outcomes.
 
     /**
      * The partner-facing alert that matters most: an offer she has seconds to
@@ -198,15 +190,23 @@ class NotificationEventListeners {
     }
 
     /**
-     * Only the person who did NOT cancel is told. Notifying somebody of the
+     * Only the person who did NOT cancel is pushed. Pushing somebody the
      * cancellation she just tapped is noise; a cancellation by the system
      * (no one account) tells both.
+     * <p>
+     * A rider who cancelled still gets a line in her inbox, without a push:
+     * the inbox is her history, and without it the last thing it said about
+     * this booking could be "We are finding you another partner now" - a
+     * search that is no longer happening.
      */
     @Async(NotificationDeliveryConfig.EXECUTOR)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onBookingCancelled(BookingCancelled event) {
         UUID by = event.cancelledBy();
-        if (!event.customerId().equals(by)) {
+        if (event.customerId().equals(by)) {
+            dispatcher.record(event.customerId(), NotificationType.BOOKING_CANCELLED, localized(event.customerId(),
+                    "cancelledByYou", none(), "/tracking/" + event.bookingId()));
+        } else {
             boolean partnerCancelled = event.driverId() != null && event.driverId().equals(by);
             dispatcher.deliver(event.customerId(), NotificationType.BOOKING_CANCELLED, localized(event.customerId(),
                     partnerCancelled ? "cancelledByPartner" : "cancelledForRider", none(),

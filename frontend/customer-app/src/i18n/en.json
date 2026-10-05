@@ -786,7 +786,27 @@
       "oldFee": "Listing fee (one-time)",
       "paidToast": "Paid. Your shop is listed until {{date}}.",
       "backLive": "Paid. Your shop is back in the Marketplace.",
-      "endedOn": "Ended on {{date}}"
+      "endedOn": "Ended on {{date}}",
+      "stop": "Stop my plan",
+      "stopTitle": "Stop your plan?",
+      "stopPoint1": "Your shop stays in the Marketplace until {{date}}, the end of the month you already have.",
+      "stopPoint2": "After that it is hidden from buyers. Your products, photos and details are kept, and you get no more payment reminders.",
+      "stopPoint3": "Want to come back? Pay {{amount}} for a month and your shop is listed again at once. Nothing is charged automatically, so there is nothing to cancel with your bank.",
+      "whyQuestion": "Why are you stopping? (optional)",
+      "why": {
+        "FEW_ENQUIRIES": "Not enough buyers",
+        "TOO_COSTLY": "Too expensive",
+        "STOPPED_SELLING": "Taking a break",
+        "SELLING_ELSEWHERE": "Selling elsewhere",
+        "OTHER": "Something else"
+      },
+      "keep": "Keep my plan",
+      "stopConfirm": "Stop plan",
+      "stoppedHeadline": "Listed until {{date}}",
+      "stoppedNote": "You stopped your plan. Your shop is hidden after {{date}}, with everything kept. Changed your mind? Keep your plan below.",
+      "stoppedToast": "Plan stopped. Your shop is listed until {{date}}.",
+      "resume": "Keep my plan",
+      "resumedToast": "Your plan continues. We'll remind you before your month ends."
     },
     "sample": {
       "badge": "Sample shop",

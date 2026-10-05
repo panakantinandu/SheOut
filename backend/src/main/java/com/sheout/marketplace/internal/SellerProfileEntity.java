@@ -80,6 +80,11 @@ public class SellerProfileEntity extends BaseEntity {
     /** The last plan reminder sent for the current month (see SellerPlanReminders); cleared when she pays. */
     @Column(length = 20)
     private String lastPlanNotice;
+    /** She stopped her plan: listed until paidUntil, then hidden, no reminders. Null while it runs. */
+    private Instant planStoppedAt;
+    @Enumerated(EnumType.STRING)
+    @Column(length = 30)
+    private com.sheout.marketplace.PlanStopReason planStopReason;
 
     /** An example shop with nobody behind it - see SampleShops. */
     private boolean sample;
@@ -180,6 +185,9 @@ public class SellerProfileEntity extends BaseEntity {
         paidPeriods = period;
         listingFeeAmount = amount;
         lastPlanNotice = null;
+        // Paying is starting again: a stopped plan runs once more.
+        planStoppedAt = null;
+        planStopReason = null;
         if (status == SellerStatus.LAPSED) {
             status = SellerStatus.ACTIVE;
         }
@@ -203,6 +211,23 @@ public class SellerProfileEntity extends BaseEntity {
     /** Her month and its grace days are over: hidden until she pays. */
     void lapse() {
         status = SellerStatus.LAPSED;
+    }
+
+    /** She stopped her plan: listed to the end of this month, then hidden. */
+    void stopPlan(com.sheout.marketplace.PlanStopReason reason, Instant now) {
+        planStoppedAt = now;
+        planStopReason = reason;
+    }
+
+    /** She changed her mind before her month ended: the plan runs, and reminds her, as before. */
+    void resumePlan() {
+        planStoppedAt = null;
+        planStopReason = null;
+        lastPlanNotice = null;
+    }
+
+    boolean planStopped() {
+        return planStoppedAt != null;
     }
 
     void setParcelPickup(String label, Double lat, Double lng) {
@@ -239,7 +264,8 @@ public class SellerProfileEntity extends BaseEntity {
 
     /** Back from a suspension: live if her month is still running, otherwise hidden until she pays. */
     void reinstate(UUID adminId, Instant now, java.time.Duration grace) {
-        status = paidUntil != null && now.isBefore(paidUntil.plus(grace)) ? SellerStatus.ACTIVE : SellerStatus.LAPSED;
+        Instant hiddenFrom = paidUntil == null ? null : planStoppedAt != null ? paidUntil : paidUntil.plus(grace);
+        status = hiddenFrom != null && now.isBefore(hiddenFrom) ? SellerStatus.ACTIVE : SellerStatus.LAPSED;
         reviewedBy = adminId;
         reviewedAt = now;
         suspensionReason = null;
@@ -277,6 +303,8 @@ public class SellerProfileEntity extends BaseEntity {
     public Instant getFreeUntil() { return freeUntil; }
     public int getPaidPeriods() { return paidPeriods; }
     public String getLastPlanNotice() { return lastPlanNotice; }
+    public Instant getPlanStoppedAt() { return planStoppedAt; }
+    public com.sheout.marketplace.PlanStopReason getPlanStopReason() { return planStopReason; }
     public boolean isSample() { return sample; }
     public String getParcelPickupLabel() { return parcelPickupLabel; }
     public Double getParcelPickupLat() { return parcelPickupLat; }

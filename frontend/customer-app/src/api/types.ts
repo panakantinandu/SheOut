@@ -436,7 +436,16 @@ export interface SellerPlan {
   /** The server's answer: show the pay buttons only when true. */
   canPayNow: boolean;
   history: SellerPaidMonth[];
+  /** When she stopped her plan; null while it runs. Stopped: listed until paidUntil, then hidden, no reminders. */
+  stoppedAt: string | null;
+  stopReason: SellerPlanStopReason | null;
+  /** The server's answer: offer "Stop my plan" only when true. */
+  canStop: boolean;
+  /** The server's answer: offer "Keep my plan" only when true. */
+  canResume: boolean;
 }
+
+export type SellerPlanStopReason = 'FEW_ENQUIRIES' | 'TOO_COSTLY' | 'STOPPED_SELLING' | 'SELLING_ELSEWHERE' | 'OTHER';
 
 /** Her own shop. canEdit/canSubmit and the limits are the server's, so the app never offers what it would refuse. */
 export interface SellerShop {

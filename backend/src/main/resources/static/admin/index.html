@@ -1419,13 +1419,21 @@ const PLAN_TEXT = {
   NOT_STARTED: ['grey', 'Not started'], FREE_MONTH: ['green', 'Free month'], PAID: ['green', 'Paid'],
   DUE_SOON: ['amber', 'Ends soon'], OVERDUE: ['red', 'Ended - in grace'], LAPSED: ['red', 'Hidden - not paid'],
 };
+const STOP_REASON_TEXT = {
+  FEW_ENQUIRIES: 'not enough buyers', TOO_COSTLY: 'too expensive', STOPPED_SELLING: 'taking a break',
+  SELLING_ELSEWHERE: 'selling elsewhere', OTHER: 'something else',
+};
 function planBadge(plan) {
   const [tone, text] = PLAN_TEXT[(plan && plan.state) || 'NOT_STARTED'] || PLAN_TEXT.NOT_STARTED;
-  return `<span class="badge b-${tone}">${text}</span>`;
+  const stopped = plan && plan.stoppedAt && plan.state !== 'LAPSED' ? ' <span class="badge b-amber">Stopped by seller</span>' : '';
+  return `<span class="badge b-${tone}">${text}</span>${stopped}`;
 }
 function planUntil(plan) {
   if (!plan || !plan.paidUntil) return '';
-  return plan.state === 'LAPSED' ? `hidden since ${time(plan.hiddenFrom)}` : `until ${time(plan.paidUntil)}`;
+  const why = plan.stoppedAt
+    ? ` · she stopped it ${time(plan.stoppedAt)}${plan.stopReason ? ` (${STOP_REASON_TEXT[plan.stopReason] || 'other'})` : ''}`
+    : '';
+  return (plan.state === 'LAPSED' ? `hidden since ${time(plan.hiddenFrom)}` : `until ${time(plan.paidUntil)}`) + why;
 }
 const TICKET_CATEGORY_TEXT = {
   SAFETY_CONCERN: 'Safety concern', PAYMENT_DISPUTE: 'Payment dispute',

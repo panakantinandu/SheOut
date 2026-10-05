@@ -234,6 +234,21 @@ public class MarketplaceController {
         return ResponseEntity.ok(unwrap(products.deleteProductImage(caller.accountId(), productId, imageId)));
     }
 
+    // ------------------------------------------------------------ her plan
+
+    /** Stops her monthly plan; the body and its reason are optional. */
+    @PostMapping("/seller/me/plan/stop")
+    public ResponseEntity<SellerView> stopPlan(@RequestBody(required = false) StopPlanRequest request) {
+        CurrentAccount caller = requireCustomer();
+        return ResponseEntity.ok(unwrap(sellers.stopPlan(caller.accountId(), request == null ? null : request.reason())));
+    }
+
+    @PostMapping("/seller/me/plan/resume")
+    public ResponseEntity<SellerView> resumePlan() {
+        CurrentAccount caller = requireCustomer();
+        return ResponseEntity.ok(unwrap(sellers.resumePlan(caller.accountId())));
+    }
+
     // ------------------------------------------------------------ the listing fee
 
     @PostMapping("/seller/me/listing-fee/checkout")
@@ -257,6 +272,9 @@ public class MarketplaceController {
     }
 
     // ------------------------------------------------------------ requests
+
+    public record StopPlanRequest(com.sheout.marketplace.PlanStopReason reason) {
+    }
 
     public record PickupRequest(@Size(max = 200) String label, @NotNull Double lat, @NotNull Double lng) {
     }
@@ -358,6 +376,10 @@ public class MarketplaceController {
             case SELLER_NOT_FOUND -> new ApiException(HttpStatus.NOT_FOUND, error.name(), "No such seller.");
             case INVALID_TRANSITION -> new ApiException(HttpStatus.CONFLICT, error.name(), "That can't be done to this seller in their current state.");
             case REASON_REQUIRED -> new ApiException(HttpStatus.BAD_REQUEST, error.name(), "A reason is required.");
+            case PLAN_NOT_RUNNING -> new ApiException(HttpStatus.CONFLICT, error.name(),
+                    "There is no running plan to stop. It may already be stopped or have ended.");
+            case PLAN_NOT_STOPPED -> new ApiException(HttpStatus.CONFLICT, error.name(),
+                    "Your plan is not stopped, or its month has ended. Pay for a month to list your shop again.");
         };
     }
 }

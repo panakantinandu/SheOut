@@ -149,6 +149,38 @@ public class SellerService implements SellerApi, MarketplaceAdminApi {
     }
 
     @Override
+    @Transactional
+    public Result<SellerView, MarketplaceError> stopPlan(UUID accountId, com.sheout.marketplace.PlanStopReason reason) {
+        Optional<SellerProfileEntity> found = sellers.findLockedByAccountId(accountId);
+        if (found.isEmpty()) {
+            return Result.failure(MarketplaceError.NOT_A_SELLER);
+        }
+        SellerProfileEntity seller = found.get();
+        Instant now = Instant.now();
+        if (!SellerPlan.canStop(seller, limits, now)) {
+            return Result.failure(MarketplaceError.PLAN_NOT_RUNNING);
+        }
+        seller.stopPlan(reason, now);
+        log.info("Seller {} stopped her plan ({}), listed until {}", seller.getId(), reason, seller.getPaidUntil());
+        return Result.success(views.sellerView(sellers.save(seller)));
+    }
+
+    @Override
+    @Transactional
+    public Result<SellerView, MarketplaceError> resumePlan(UUID accountId) {
+        Optional<SellerProfileEntity> found = sellers.findLockedByAccountId(accountId);
+        if (found.isEmpty()) {
+            return Result.failure(MarketplaceError.NOT_A_SELLER);
+        }
+        SellerProfileEntity seller = found.get();
+        if (!SellerPlan.canResume(seller, limits, Instant.now())) {
+            return Result.failure(MarketplaceError.PLAN_NOT_STOPPED);
+        }
+        seller.resumePlan();
+        return Result.success(views.sellerView(sellers.save(seller)));
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public Optional<com.sheout.marketplace.MarketplaceViews.PickupPoint> parcelPickupFor(UUID productId) {
         return products.findById(productId)

@@ -1,56 +1,38 @@
-import { Check, Upload } from 'lucide-react';
-import { useRef, useState, type ReactNode } from 'react';
-import { Button, StatusBadge, TextField, useTranslation } from '@sheout/design-system';
-import type { StatusTone } from '@sheout/design-system';
+import { useState } from 'react';
+import { Button, TextField, useTranslation } from '@sheout/design-system';
 import { ApiError, verificationApi } from '../api/client';
 import type { DocumentState, InsuranceUseType, PartnerDocumentType } from '../api/types';
-import { daysUntil, formatDay } from '../lib/documentDates';
+import { daysUntil, todayInIndia } from '../lib/documentDates';
+import { prepareDocumentPhoto } from '../lib/documentPhoto';
+import { PhotoPicker } from './verification/PhotoPicker';
 
 /** Documents that carry a printed valid-until date. The police certificate is redone on a period instead. */
 const EXPIRES: PartnerDocumentType[] = ['DRIVING_LICENCE', 'VEHICLE_RC', 'VEHICLE_INSURANCE', 'PUC', 'FITNESS_CERTIFICATE'];
 
-export function documentTone(state: DocumentState | undefined): StatusTone {
-  if (!state || !state.status) return 'warning';
-  if (state.renewalUnderReview) return 'success';
-  switch (state.status) {
-    case 'VERIFIED':
-      return state.validUntil && (daysUntil(state.validUntil) ?? 99) <= 30 ? 'warning' : 'success';
-    case 'REJECTED':
-    case 'EXPIRED':
-      return 'danger';
-    default:
-      return 'primary';
-  }
-}
-
 /**
- * One document on her checklist: where it stands, why if it was turned
- * down, when it runs out, and the form to send it (again).
+ * Sending one document: a photo of it, then what is printed on it - the
+ * number and the date it runs out, and for a policy whether it is
+ * commercial. Under every box, where on the paper to find it ("Printed as
+ * 'DL No.'"), because "Number on the document" left her guessing which of
+ * five numbers on a licence we meant.
  * <p>
- * She types what is printed on it - the number, the dates, and for a
- * policy whether it is for commercial use. An operator checks her answer
- * against the photo and corrects it, rather than transcribing it, which is
- * what makes a review minutes rather than a day.
+ * An operator checks her answer against the photo and corrects it, rather
+ * than transcribing it, which is what makes a review minutes rather than a
+ * day. A date that has already passed is caught here, before the upload,
+ * not after it as a server refusal.
  */
-export function DocumentStep({
+export function DocumentForm({
   type,
   state,
-  icon,
-  disabled,
-  extra,
   onSent,
+  onCancel,
 }: {
   type: PartnerDocumentType;
   state: DocumentState | undefined;
-  icon: ReactNode;
-  /** Consent not given yet: nothing can be sent. */
-  disabled: boolean;
-  /** Anything specific to this document, shown above the form (the police portal steps). */
-  extra?: ReactNode;
   onSent: () => void;
+  onCancel?: () => void;
 }) {
   const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [number, setNumber] = useState(state?.documentNumber ?? '');
   const [issuedOn, setIssuedOn] = useState('');
@@ -58,150 +40,120 @@ export function DocumentStep({
   const [use, setUse] = useState<InsuranceUseType | ''>('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const input = useRef<HTMLInputElement>(null);
   const expires = EXPIRES.includes(type);
-  const name = t(`docs.type.${type}`);
-  const days = state?.validUntil ? daysUntil(state.validUntil) : null;
+  const police = type === 'POLICE_CERTIFICATE';
+  const pastDate = expires && validUntil !== '' && (daysUntil(validUntil) ?? 0) < 0;
 
-  const status = !state?.status
-    ? t('docs.status.missing')
-    : state.renewalUnderReview
-      ? t('docs.status.renewal')
-      : state.status === 'VERIFIED' && days !== null && days <= 30
-        ? t('docs.status.expiringSoon')
-        : t(`docs.status.${state.status}`);
-
-  const ready = Boolean(file) && number.trim() !== '' && (!expires || validUntil !== '') && (type !== 'VEHICLE_INSURANCE' || use !== '');
   const missing = !file
-    ? t('docs.needFile')
+    ? t('verify.doc.needFile')
     : number.trim() === ''
-      ? t('docs.needNumber')
+      ? t('verify.doc.needNumber')
       : expires && !validUntil
-        ? t('docs.needValidUntil')
+        ? t('verify.doc.needValidUntil')
         : type === 'VEHICLE_INSURANCE' && !use
-          ? t('docs.needUse')
+          ? t('verify.doc.needUse')
           : null;
 
   async function send() {
-    if (!file || !ready) return;
+    if (!file || missing || pastDate) return;
     setSending(true);
     setError(null);
     try {
-      await verificationApi.uploadPartnerDocument(type, file, {
+      await verificationApi.uploadPartnerDocument(type, await prepareDocumentPhoto(file), {
         documentNumber: number.trim(),
-        issuedOn: issuedOn || undefined,
+        issuedOn: police && issuedOn ? issuedOn : undefined,
         validUntil: validUntil || undefined,
         insuranceUseType: use || undefined,
       });
-      setOpen(false);
       setFile(null);
       onSent();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t('docs.sendError'));
+      setError(
+        err instanceof ApiError && err.body?.error === 'DOCUMENT_TOO_SMALL'
+          ? t('verify.doc.photoTooSmall')
+          : err instanceof ApiError
+            ? err.message
+            : t('verify.doc.sendError'),
+      );
     } finally {
       setSending(false);
     }
   }
 
-  const actionLabel = !state?.status
-    ? t('docs.upload')
-    : state.status === 'VERIFIED' && !state.renewalUnderReview
-      ? t('docs.uploadRenewal')
-      : t('docs.reupload');
-  const canSend = !state?.renewalUnderReview && state?.status !== 'UNDER_REVIEW' && state?.status !== 'PENDING';
-
   return (
-    <div className="space-y-2 p-4" data-testid={`doc-step-${type}`}>
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          {icon}
-          <span className="text-sm font-medium text-text-primary">{name}</span>
-        </div>
-        <StatusBadge tone={documentTone(state)}>{status}</StatusBadge>
+    <div className="space-y-4" data-testid={`doc-form-${type}`}>
+      <PhotoPicker file={file} onPick={setFile} disabled={sending} testId={`doc-photo-${type}`} />
+
+      <div className="space-y-1">
+        <TextField
+          label={t(`verify.doc.number.${type}`)}
+          value={number}
+          maxLength={64}
+          autoCapitalize="characters"
+          autoComplete="off"
+          onChange={(e) => setNumber(e.target.value)}
+          data-testid={`doc-number-${type}`}
+        />
+        <p className="px-1 text-caption text-text-secondary">{t(`verify.doc.numberHint.${type}`)}</p>
       </div>
 
-      {state?.status === 'REJECTED' && state.rejectionReason && (
-        <p className="text-xs text-danger">{t('docs.rejectedBecause', { reason: state.rejectionReason })}</p>
-      )}
-      {state?.validUntil && state.status === 'VERIFIED' && (
-        <p className={`text-xs ${days !== null && days <= 30 ? 'text-accent-orange-strong' : 'text-text-secondary'}`}>
-          {days !== null && days <= 30
-            ? t('docs.expiresSoon', { date: formatDay(state.validUntil), count: Math.max(days, 0) })
-            : t('docs.validUntil', { date: formatDay(state.validUntil) })}
-        </p>
-      )}
-      {(state?.status === 'EXPIRED' || (days !== null && days < 0)) && state?.validUntil && (
-        <p className="text-xs text-danger">{t('docs.expiredOn', { date: formatDay(state.validUntil) })}</p>
-      )}
-      {state?.insuranceUseType && state.insuranceUseType !== 'COMMERCIAL' && state.status !== 'VERIFIED' && (
-        <p className="text-xs text-danger">{t('docs.privateWarning')}</p>
-      )}
-
-      {extra}
-
-      {canSend && !open && (
-        <Button
-          size="md"
-          variant="secondary"
-          icon={<Upload className="h-4 w-4" />}
-          disabled={disabled}
-          onClick={() => setOpen(true)}
-          data-testid={`doc-open-${type}`}
-        >
-          {actionLabel}
-        </Button>
-      )}
-      {disabled && !state?.status && <p className="text-xs text-text-secondary">{t('docs.needConsentFirst')}</p>}
-
-      {open && (
-        <div className="space-y-3 rounded-card bg-background p-3">
-          <input
-            ref={input}
-            type="file"
-            accept="image/*,.pdf"
-            className="hidden"
-            onChange={(e) => {
-              setFile(e.target.files?.[0] ?? null);
-              e.target.value = '';
-            }}
+      {expires && (
+        <div className="space-y-1">
+          <TextField
+            label={t('verify.doc.validUntil')}
+            type="date"
+            min={todayInIndia()}
+            value={validUntil}
+            onChange={(e) => setValidUntil(e.target.value)}
+            error={pastDate ? t('verify.doc.pastDate') : undefined}
+            data-testid={`doc-valid-${type}`}
           />
-          <Button
-            fullWidth
-            variant="secondary"
-            icon={file ? <Check className="h-4 w-4" /> : <Upload className="h-4 w-4" />}
-            onClick={() => input.current?.click()}
-          >
-            {file ? file.name : t('docs.chooseFile', { document: t(`docs.typeInSentence.${type}`) })}
-          </Button>
-          <p className="text-xs text-text-secondary">{t('verification.fileHint')}</p>
-          <TextField label={t('docs.number')} value={number} maxLength={64} onChange={(e) => setNumber(e.target.value)} />
-          <TextField label={t('docs.issuedOn')} type="date" value={issuedOn} onChange={(e) => setIssuedOn(e.target.value)} />
-          {expires && (
-            <TextField label={t('docs.validUntilField')} type="date" value={validUntil} onChange={(e) => setValidUntil(e.target.value)} />
-          )}
-          {type === 'VEHICLE_INSURANCE' && (
-            <fieldset className="space-y-1">
-              <legend className="text-xs font-medium text-text-secondary">{t('docs.useQuestion')}</legend>
-              {(['COMMERCIAL', 'PRIVATE', 'UNKNOWN'] as InsuranceUseType[]).map((value) => (
-                <label key={value} className="flex items-center gap-2 text-sm text-text-primary">
-                  <input type="radio" name={`use-${type}`} checked={use === value} onChange={() => setUse(value)} />
-                  {t(`docs.use.${value}`)}
-                </label>
-              ))}
-              {use && use !== 'COMMERCIAL' && <p className="text-xs text-danger">{t('docs.privateWarning')}</p>}
-            </fieldset>
-          )}
-          {error && <p className="text-xs text-danger">{error}</p>}
-          <div className="flex gap-2">
-            <Button fullWidth disabled={!ready || sending} onClick={send} data-testid={`doc-send-${type}`}>
-              {sending ? t('common.uploading') : missing ?? t('docs.send')}
-            </Button>
-            <Button variant="secondary" onClick={() => setOpen(false)}>
-              {t('docs.cancel')}
-            </Button>
-          </div>
+          {!pastDate && <p className="px-1 text-caption text-text-secondary">{t(`verify.doc.validHint.${type}`)}</p>}
         </div>
       )}
+
+      {police && (
+        <TextField
+          label={t('verify.doc.issuedOn')}
+          type="date"
+          max={todayInIndia()}
+          value={issuedOn}
+          onChange={(e) => setIssuedOn(e.target.value)}
+        />
+      )}
+
+      {type === 'VEHICLE_INSURANCE' && (
+        <fieldset className="space-y-2">
+          <legend className="mb-1 text-sm font-medium text-text-primary">{t('verify.doc.useQuestion')}</legend>
+          <div className="grid gap-2">
+            {(['COMMERCIAL', 'PRIVATE', 'UNKNOWN'] as InsuranceUseType[]).map((value) => (
+              <label
+                key={value}
+                className={`flex cursor-pointer items-center gap-3 rounded-input border px-3 py-2.5 text-sm ${
+                  use === value ? 'border-primary bg-primary-light text-text-primary' : 'border-border text-text-primary'
+                }`}
+              >
+                <input type="radio" name={`use-${type}`} checked={use === value} onChange={() => setUse(value)} className="accent-primary" />
+                {t(`verify.doc.use.${value}`)}
+              </label>
+            ))}
+          </div>
+          <p className="px-1 text-caption text-text-secondary">{t('verify.doc.useHelp')}</p>
+          {use && use !== 'COMMERCIAL' && <p className="px-1 text-caption text-danger">{t('verify.doc.privateWarning')}</p>}
+        </fieldset>
+      )}
+
+      {error && <p className="text-sm text-danger" role="alert">{error}</p>}
+      <div className="flex gap-2">
+        <Button fullWidth disabled={Boolean(missing) || pastDate || sending} onClick={send} data-testid={`doc-send-${type}`}>
+          {sending ? t('common.uploading') : missing ?? t('verify.doc.send')}
+        </Button>
+        {onCancel && (
+          <Button variant="secondary" onClick={onCancel} disabled={sending}>
+            {t('verify.doc.cancel')}
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

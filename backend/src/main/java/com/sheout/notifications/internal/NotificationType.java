@@ -8,6 +8,7 @@ package com.sheout.notifications.internal;
  * while rows carry it.
  */
 public enum NotificationType {
+    /** No longer sent (the search is on the booking screen, not news); kept because the name is stored. */
     BOOKING_REQUESTED,
     BOOKING_ACCEPTED,
     /** The partner is close to the pickup - see dispatch's DriverArriving. */

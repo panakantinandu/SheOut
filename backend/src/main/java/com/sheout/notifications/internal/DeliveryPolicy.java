@@ -28,8 +28,7 @@ record DeliveryPolicy(boolean push, boolean emailFallback, boolean smsFallback, 
 
     static DeliveryPolicy forType(NotificationType type) {
         return switch (type) {
-            // She is looking at the searching screen the moment she books;
-            // a push saying so would arrive on top of it.
+            // No longer sent; see NotificationType.
             case BOOKING_REQUESTED -> INBOX_ONLY;
             case DRIVER_OFFER, SOS_OPERATOR_ALERT, SOS_ESCALATION -> PUSH_ONLY;
             // Good news, already in her balance and her inbox: not worth a paid text.

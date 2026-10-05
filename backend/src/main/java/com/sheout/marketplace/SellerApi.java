@@ -34,6 +34,15 @@ public interface SellerApi {
     /** From DRAFT or REJECTED, once she has a product with a photo and her account is verified. */
     Result<SellerView, MarketplaceError> submitForReview(UUID accountId);
 
+    /**
+     * Stops her monthly plan: listed until the month she has ends, then
+     * hidden with nothing deleted, and no reminders. reason is optional.
+     */
+    Result<SellerView, MarketplaceError> stopPlan(UUID accountId, PlanStopReason reason);
+
+    /** Takes back a stop while her month is still running. */
+    Result<SellerView, MarketplaceError> resumePlan(UUID accountId);
+
     /** Once approved: the Razorpay order for her listing fee. */
     Result<ListingFeeCheckout, MarketplaceError> startListingFeePayment(UUID accountId);
 

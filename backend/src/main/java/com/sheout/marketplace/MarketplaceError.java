@@ -40,5 +40,9 @@ public enum MarketplaceError {
     /** Console: no such seller, or not in a state that action applies to. */
     SELLER_NOT_FOUND,
     INVALID_TRANSITION,
-    REASON_REQUIRED
+    REASON_REQUIRED,
+    /** Stop: no running plan to stop (not live, a sample, or already stopped). */
+    PLAN_NOT_RUNNING,
+    /** Keep: the plan was not stopped, or its month has already ended. */
+    PLAN_NOT_STOPPED
 }

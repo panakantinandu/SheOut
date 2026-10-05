@@ -52,6 +52,15 @@ public class NotificationDispatcher {
         this.driverProfileApi = driverProfileApi;
     }
 
+    /**
+     * Records the notification in the account's inbox only, whatever its
+     * type's policy: something she did herself, kept as history, that no
+     * phone should buzz for.
+     */
+    public void record(UUID accountId, NotificationType type, OutboundMessage message) {
+        log.recordNotification(accountId, type, message);
+    }
+
     /** Records the notification in the account's inbox and delivers it by its type's policy. */
     public void deliver(UUID accountId, NotificationType type, OutboundMessage message) {
         DeliveryPolicy policy = DeliveryPolicy.forType(type);

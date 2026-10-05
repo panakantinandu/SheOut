@@ -50,6 +50,7 @@ import type {
   ProductInput,
   SellerDetailsInput,
   SellerShop,
+  SellerPlanStopReason,
   SmartSearchResult,
   PaymentHold,
   RiderWallet,
@@ -1069,6 +1070,16 @@ export const marketplaceApi = {
   },
 
   /** The fee from her SheOut wallet; her shop goes live at once. 409 INSUFFICIENT_BALANCE when short. */
+  /** Stops her plan: listed to the end of this month, then hidden. The reason is optional. */
+  stopPlan(reason: SellerPlanStopReason | null): Promise<SellerShop> {
+    return request('/api/v1/marketplace/seller/me/plan/stop', { method: 'POST', body: { reason } });
+  },
+
+  /** Takes back a stop while her month is still running. */
+  resumePlan(): Promise<SellerShop> {
+    return request('/api/v1/marketplace/seller/me/plan/resume', { method: 'POST' });
+  },
+
   payListingFeeFromWallet(): Promise<SellerShop> {
     return request('/api/v1/marketplace/seller/me/listing-fee/wallet', { method: 'POST' });
   },

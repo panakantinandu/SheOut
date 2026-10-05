@@ -336,6 +336,61 @@ class MarketplaceFlowTest {
     }
 
     @Test
+    void aStoppedPlanIsListedToTheEndOfHerMonthThenHiddenWithNoRemindersAndPayingStartsItAgain() throws IOException {
+        SellerView shop = ok(sellers.applyAsSeller(bina, details("Bina " + tag + " Sarees", "9876500007", null)));
+        UUID saree = ok(products.addProduct(bina, product("Silk saree", "Handloom", "3200"))).products().get(0).id();
+        ok(products.addProductImage(bina, saree, photo()));
+        // Not live yet: nothing to stop.
+        assertThat(sellers.stopPlan(bina, null).error()).isEqualTo(MarketplaceError.PLAN_NOT_RUNNING);
+        ok(sellers.submitForReview(bina));
+        ok(sellers.approve(shop.id(), admin));
+        assertThat(sellers.mySeller(bina).orElseThrow().plan().canStop()).isTrue();
+        assertThat(sellers.resumePlan(bina).error()).as("nothing to take back").isEqualTo(MarketplaceError.PLAN_NOT_STOPPED);
+
+        // Stopped with two days of her free month left.
+        Instant end = morning.plus(Duration.ofDays(2));
+        endMonthAt(shop.id(), end);
+        SellerView stopped = ok(sellers.stopPlan(bina, com.sheout.marketplace.PlanStopReason.FEW_ENQUIRIES));
+        assertThat(stopped.plan().stoppedAt()).isNotNull();
+        assertThat(stopped.plan().stopReason()).isEqualTo(com.sheout.marketplace.PlanStopReason.FEW_ENQUIRIES);
+        assertThat(stopped.plan().state()).as("nothing is due, so not 'due soon'").isEqualTo(PlanState.FREE_MONTH);
+        assertThat(stopped.plan().hiddenFrom()).as("no grace days").isEqualTo(stopped.plan().paidUntil());
+        assertThat(stopped.plan().canPayNow()).isFalse();
+        assertThat(stopped.plan().canStop()).isFalse();
+        assertThat(stopped.plan().canResume()).isTrue();
+        assertThat(sellers.stopPlan(bina, null).error()).isEqualTo(MarketplaceError.PLAN_NOT_RUNNING);
+        // Still listed, and not chased: the reminder that would be due now is not sent.
+        assertThat(noticesAt(morning)).isEmpty();
+        assertThat(directory(SellerCategory.FASHION_SAREE, tag)).hasSize(1);
+
+        // Changed her mind: the plan runs, and reminds her, as before.
+        SellerView kept = ok(sellers.resumePlan(bina));
+        assertThat(kept.plan().stoppedAt()).isNull();
+        assertThat(kept.plan().state()).isEqualTo(PlanState.DUE_SOON);
+        assertThat(noticesAt(morning)).singleElement().satisfies(n -> assertThat(n.kind()).isEqualTo(SellerPlanNotice.Kind.ENDS_SOON));
+
+        // Stopped again; her month ends: hidden at once, without the grace days and without a word.
+        ok(sellers.stopPlan(bina, null));
+        endMonthAt(shop.id(), morning.minus(Duration.ofMinutes(1)));
+        assertThat(noticesAt(morning)).isEmpty();
+        SellerView hidden = sellers.mySeller(bina).orElseThrow();
+        assertThat(hidden.status()).isEqualTo(SellerStatus.LAPSED);
+        assertThat(hidden.plan().canResume()).as("too late to take back; paying starts it again").isFalse();
+        assertThat(hidden.plan().canPayNow()).isTrue();
+        assertThat(hidden.products()).as("nothing deleted").hasSize(1);
+        assertThat(directory(SellerCategory.FASHION_SAREE, tag)).isEmpty();
+        assertThat(noticesAt(morning.plus(Duration.ofDays(1)))).as("not told it was hidden either").isEmpty();
+
+        // Paying is starting again.
+        ListingFeeCheckout checkout = ok(sellers.startListingFeePayment(bina));
+        SellerView back = ok(sellers.confirmListingFeePayment(bina, checkout.orderId(), "pay_restart", "sig"));
+        assertThat(back.status()).isEqualTo(SellerStatus.ACTIVE);
+        assertThat(back.plan().stoppedAt()).isNull();
+        assertThat(back.plan().canStop()).isTrue();
+        assertThat(directory(SellerCategory.FASHION_SAREE, tag)).hasSize(1);
+    }
+
+    @Test
     void theFeeCanBePaidFromHerSheOutWallet() throws IOException {
         SellerView shop = ok(sellers.applyAsSeller(bina, details("Bina " + tag + " Gifts", "9876500005", null)));
         UUID p = ok(products.addProduct(bina, product("Hamper", "Festive hamper", "800"))).products().get(0).id();

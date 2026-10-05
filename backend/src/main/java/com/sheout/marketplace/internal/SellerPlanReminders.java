@@ -29,6 +29,9 @@ import java.util.UUID;
  * the daytime in India; a shop is hidden at any hour, and told in the
  * morning.
  * <p>
+ * A plan she stopped is hidden when its month ends, with no grace days and
+ * no reminders at all.
+ * <p>
  * Push and her inbox, with email when she has one - never SMS, which needs
  * a DLT-registered template. Hourly, one server at a time.
  */
@@ -94,10 +97,11 @@ class SellerPlanReminders {
             return false;
         }
         Instant paidUntil = seller.getPaidUntil();
-        Instant hiddenFrom = paidUntil.plus(limits.grace());
+        Instant hiddenFrom = SellerPlan.hiddenFrom(seller, limits);
         if (seller.getStatus() == SellerStatus.ACTIVE && !now.isBefore(hiddenFrom)) {
             seller.lapse();
-            log.info("Seller {} hidden: month ended {} and was not paid", seller.getId(), paidUntil);
+            log.info("Seller {} hidden: month ended {} and {}", seller.getId(), paidUntil,
+                    seller.planStopped() ? "she had stopped her plan" : "was not paid");
         }
         String due = noticeDue(seller, now);
         if (due == null || !daytime || !later(due, seller.getLastPlanNotice())) {
@@ -120,6 +124,10 @@ class SellerPlanReminders {
      * her shop is.
      */
     String noticeDue(SellerProfileEntity seller, Instant now) {
+        // She stopped it: she knows when it ends, and asked not to be chased.
+        if (seller.planStopped()) {
+            return null;
+        }
         if (seller.getStatus() == SellerStatus.LAPSED) {
             return HIDDEN;
         }

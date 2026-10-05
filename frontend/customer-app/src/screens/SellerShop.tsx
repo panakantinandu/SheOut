@@ -38,7 +38,9 @@ import {
 } from '@sheout/design-system';
 import { ApiError, marketplaceApi, usersApi, walletApi } from '../api/client';
 import { LocationPicker } from '../components/LocationPicker';
-import type { SellerCategory, SellerDetailsInput, SellerShop as Shop } from '../api/types';
+import type { SellerCategory, SellerDetailsInput, SellerPlanStopReason, SellerShop as Shop } from '../api/types';
+
+const STOP_REASONS: SellerPlanStopReason[] = ['FEW_ENQUIRIES', 'TOO_COSTLY', 'STOPPED_SELLING', 'SELLING_ELSEWHERE', 'OTHER'];
 import { useAuth } from '../auth/AuthContext';
 import { apiErrorText } from '../lib/apiErrors';
 import { openRazorpayCheckout } from '../lib/razorpayCheckout';
@@ -913,6 +915,10 @@ function ShopStatusScreen({ shop, onShop, reload, onFix }: { shop: Shop; onShop:
           onPay={payFee}
           onPayFromWallet={payFeeFromWallet}
           onTopUp={(need) => navigate('/wallet', { state: { returnTo: '/seller/manage', need, purpose: 'listingFee' } })}
+          onStop={(reason) =>
+            act(() => marketplaceApi.stopPlan(reason), t('seller.plan.stoppedToast', { date: planDate(shop.plan.paidUntil ?? '', i18n.language) }))
+          }
+          onResume={() => act(() => marketplaceApi.resumePlan(), t('seller.plan.resumedToast'))}
         />
       )}
       {error && <p className="text-sm text-danger" role="alert">{error}</p>}
@@ -1207,6 +1213,8 @@ function PlanCard({
   onPay,
   onPayFromWallet,
   onTopUp,
+  onStop,
+  onResume,
 }: {
   shop: Shop;
   busy: boolean;
@@ -1214,6 +1222,9 @@ function PlanCard({
   onPay: () => void;
   onPayFromWallet: () => void;
   onTopUp: (need: number) => void;
+  /** Resolves true once stopped. */
+  onStop: (reason: SellerPlanStopReason | null) => Promise<boolean>;
+  onResume: () => void;
 }) {
   const { t, i18n } = useTranslation();
   const plan = shop.plan;
@@ -1222,23 +1233,30 @@ function PlanCard({
   // Her free month is still her free month in its last days; once it has
   // ended, what matters is when.
   const onFreeMonth = plan.freeUntil != null && plan.freeUntil === plan.paidUntil;
+  const stopped = plan.stoppedAt != null && plan.state !== 'LAPSED';
   const headline =
     plan.state === 'OVERDUE' || plan.state === 'LAPSED'
       ? t('seller.plan.endedOn', { date: date(plan.paidUntil) })
-      : onFreeMonth
-        ? t('seller.plan.freeUntil', { date: date(plan.freeUntil) })
-        : t('seller.plan.paidUntil', { date: date(plan.paidUntil) });
+      : stopped
+        ? t('seller.plan.stoppedHeadline', { date: date(plan.paidUntil) })
+        : onFreeMonth
+          ? t('seller.plan.freeUntil', { date: date(plan.freeUntil) })
+          : t('seller.plan.paidUntil', { date: date(plan.paidUntil) });
   const note =
-    plan.state === 'DUE_SOON'
-      ? t('seller.plan.dueSoon', { date: date(plan.paidUntil) })
-      : plan.state === 'OVERDUE'
-        ? t('seller.plan.overdue', { end: date(plan.paidUntil), date: date(plan.hiddenFrom) })
-        : plan.state === 'LAPSED'
-          ? t('seller.plan.lapsed', { amount: fee })
-          : plan.payFrom && shop.status === 'ACTIVE'
-            ? t('seller.plan.payOpensOn', { date: date(plan.payFrom) })
-            : null;
+    stopped
+      ? t('seller.plan.stoppedNote', { date: date(plan.paidUntil) })
+      : plan.state === 'DUE_SOON'
+        ? t('seller.plan.dueSoon', { date: date(plan.paidUntil) })
+        : plan.state === 'OVERDUE'
+          ? t('seller.plan.overdue', { end: date(plan.paidUntil), date: date(plan.hiddenFrom) })
+          : plan.state === 'LAPSED'
+            ? t('seller.plan.lapsed', { amount: fee })
+            : plan.payFrom && shop.status === 'ACTIVE'
+              ? t('seller.plan.payOpensOn', { date: date(plan.payFrom) })
+              : null;
   const urgent = plan.state === 'OVERDUE' || plan.state === 'LAPSED';
+  const [stopping, setStopping] = useState(false);
+  const [reason, setReason] = useState<SellerPlanStopReason | null>(null);
 
   return (
     <Card className="space-y-3" data-testid="seller-plan" data-state={plan.state}>
@@ -1269,6 +1287,68 @@ function PlanCard({
           onPay={onPay}
           onTopUp={onTopUp}
         />
+      )}
+      {plan.canResume && (
+        <Button className="w-full" size="lg" onClick={onResume} disabled={busy} data-testid="plan-resume">
+          {t('seller.plan.resume')}
+        </Button>
+      )}
+      {/* Stopping is one quiet link, then one honest screen: what happens,
+          that nothing is lost, and an optional "why" - never a maze. */}
+      {plan.canStop && !stopping && (
+        <button
+          type="button"
+          className="w-full text-center text-sm font-medium text-text-secondary underline underline-offset-4"
+          onClick={() => setStopping(true)}
+          data-testid="plan-stop-open"
+        >
+          {t('seller.plan.stop')}
+        </button>
+      )}
+      {plan.canStop && stopping && (
+        <div className="space-y-3 rounded-input border border-border p-4" data-testid="plan-stop-panel">
+          <p className="font-heading text-card-title text-text-primary">{t('seller.plan.stopTitle')}</p>
+          <ul className="list-disc space-y-1 pl-5 text-sm text-text-secondary">
+            <li>{t('seller.plan.stopPoint1', { date: date(plan.paidUntil) })}</li>
+            <li>{t('seller.plan.stopPoint2')}</li>
+            <li>{t('seller.plan.stopPoint3', { amount: fee })}</li>
+          </ul>
+          <fieldset className="space-y-2">
+            <legend className="mb-2 text-sm font-semibold text-text-primary">{t('seller.plan.whyQuestion')}</legend>
+            <div className="flex flex-wrap gap-2">
+              {STOP_REASONS.map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  aria-pressed={reason === r}
+                  onClick={() => setReason(reason === r ? null : r)}
+                  className={`rounded-full border px-3 py-1.5 text-caption font-medium ${
+                    reason === r ? 'border-primary bg-primary-light text-primary' : 'border-border text-text-secondary'
+                  }`}
+                  data-testid={`plan-stop-reason-${r}`}
+                >
+                  {t(`seller.plan.why.${r}`)}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+          <div className="flex gap-3">
+            <Button variant="secondary" fullWidth onClick={() => setStopping(false)} disabled={busy}>
+              {t('seller.plan.keep')}
+            </Button>
+            <Button
+              variant="danger"
+              fullWidth
+              onClick={async () => {
+                if (await onStop(reason)) setStopping(false);
+              }}
+              disabled={busy}
+              data-testid="plan-stop-confirm"
+            >
+              {t('seller.plan.stopConfirm')}
+            </Button>
+          </div>
+        </div>
       )}
       {plan.history.length > 0 && (
         <div className="border-t border-border pt-3" data-testid="plan-history">

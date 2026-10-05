@@ -129,10 +129,14 @@ class ShopViews {
                 SellerPlan.state(seller, limits, now),
                 seller.getFreeUntil(),
                 paidUntil,
-                paidUntil == null ? null : paidUntil.plus(limits.grace()),
-                paidUntil == null ? null : paidUntil.minus(limits.payWindow()),
+                SellerPlan.hiddenFrom(seller, limits),
+                paidUntil == null || seller.planStopped() ? null : paidUntil.minus(limits.payWindow()),
                 SellerPlan.canPay(seller, limits, now),
-                history);
+                history,
+                seller.getPlanStoppedAt(),
+                seller.getPlanStopReason(),
+                SellerPlan.canStop(seller, limits, now),
+                SellerPlan.canResume(seller, limits, now));
     }
 
     List<ProductView> productViews(List<ProductEntity> list) {

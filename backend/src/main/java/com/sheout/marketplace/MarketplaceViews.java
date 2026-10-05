@@ -83,11 +83,16 @@ public final class MarketplaceViews {
     /**
      * Her plan, as the app and the console show it. monthlyFee is what her
      * next month costs. freeUntil, paidUntil and hiddenFrom are null before
-     * approval. canPayNow is the server's answer, so the app never offers a
-     * payment that would be refused.
+     * approval. canPayNow, canStop and canResume are the server's answer, so
+     * the app never offers what would be refused.
+     * <p>
+     * stoppedAt is when she stopped her plan (null while it runs): her shop is
+     * listed until paidUntil, which is then also hiddenFrom, and is not
+     * reminded. stopReason is what she said, if anything.
      */
     public record PlanView(BigDecimal monthlyFee, int freeMonths, PlanState state, Instant freeUntil, Instant paidUntil,
-                           Instant hiddenFrom, Instant payFrom, boolean canPayNow, List<PaidMonth> history) {
+                           Instant hiddenFrom, Instant payFrom, boolean canPayNow, List<PaidMonth> history,
+                           Instant stoppedAt, PlanStopReason stopReason, boolean canStop, boolean canResume) {
     }
 
     /**
