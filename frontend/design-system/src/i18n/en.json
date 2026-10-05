@@ -108,7 +108,14 @@
       "support": "Support reply",
       "account": "Account",
       "news": "News from SheOut"
-    }
+    },
+    "deleteOne": "Delete notification: {{title}}",
+    "deleted": "Notification deleted",
+    "cleared": "All notifications cleared",
+    "deleteError": "Could not delete that. Please try again.",
+    "clearAll": "Clear all",
+    "clearTitle": "Clear all notifications?",
+    "clearMessage": "They will be removed from this list. This can't be undone."
   },
   "list": {
     "showing": "Showing {{shown}} of {{total}}",

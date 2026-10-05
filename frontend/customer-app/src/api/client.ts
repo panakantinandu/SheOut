@@ -396,6 +396,16 @@ export const notificationsApi = {
     return request('/api/v1/notifications/me/read-all', { method: 'POST' });
   },
 
+  /** Hides one notification from her inbox (the server keeps the record of what was sent). */
+  deleteOne(notificationId: string): Promise<void> {
+    return request(`/api/v1/notifications/${notificationId}`, { method: 'DELETE' });
+  },
+
+  /** Clears her whole inbox. */
+  deleteAll(): Promise<{ deleted: number }> {
+    return request('/api/v1/notifications/me', { method: 'DELETE' });
+  },
+
   /**
    * The delivery fields are optional and only describe how this press went
    * out - see lib/sosDelivery. clientAlertId makes a repeat of the same

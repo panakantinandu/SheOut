@@ -9,6 +9,7 @@ import com.sheout.sharedkernel.web.ApiException;
 import com.sheout.sharedkernel.web.PageResponse;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -73,6 +74,26 @@ public class NotificationLogController {
         CurrentAccount caller = requireCaller();
         inbox.markAllRead(caller.accountId());
         return ResponseEntity.ok(new UnreadCount(0));
+    }
+
+    /** Deletes one notification from her inbox (hidden from her, kept as the record of what was sent). */
+    @DeleteMapping("/{notificationId}")
+    public ResponseEntity<Void> delete(@PathVariable UUID notificationId) {
+        CurrentAccount caller = requireCaller();
+        if (!inbox.delete(caller.accountId(), notificationId)) {
+            throw ApiException.notFound("No such notification");
+        }
+        return ResponseEntity.noContent().build();
+    }
+
+    /** Clears her whole inbox. */
+    @DeleteMapping("/me")
+    public ResponseEntity<Deleted> deleteAll() {
+        CurrentAccount caller = requireCaller();
+        return ResponseEntity.ok(new Deleted(inbox.deleteAll(caller.accountId())));
+    }
+
+    public record Deleted(int deleted) {
     }
 
     private static CurrentAccount requireCaller() {

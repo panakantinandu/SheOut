@@ -222,6 +222,24 @@ class NotificationEventListeners {
         }
     }
 
+    /**
+     * Money back: by push, in her inbox, and by text message every time (see
+     * DeliveryPolicy.PUSH_AND_SMS). No reason in the text - the reason is in
+     * her trip and wallet history, and a lock screen is read by whoever holds
+     * the phone.
+     */
+    @Async(NotificationDeliveryConfig.EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void onRefundIssued(com.sheout.payments.RefundIssued event) {
+        boolean wallet = event.destination() == com.sheout.payments.RefundIssued.Destination.SHEOUT_WALLET;
+        dispatcher.deliver(event.accountId(), NotificationType.REFUND_ISSUED, localized(event.accountId(),
+                wallet ? "refundWallet" : "refundSource",
+                language -> wallet
+                        ? Map.of("amount", rupees(event.amount()), "balance", rupees(event.walletBalance()))
+                        : Map.of("amount", rupees(event.amount())),
+                wallet || event.bookingId() == null ? "/wallet" : "/tracking/" + event.bookingId()));
+    }
+
     @Async(NotificationDeliveryConfig.EXECUTOR)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onDispatchExhausted(DispatchExhausted event) {

@@ -10,6 +10,8 @@ package com.sheout.notifications.internal;
 public enum NotificationType {
     /** No longer sent (the search is on the booking screen, not news); kept because the name is stored. */
     BOOKING_REQUESTED,
+    /** SheOut gave her money back - into her wallet, or to her UPI or bank. Push and SMS, always. */
+    REFUND_ISSUED,
     BOOKING_ACCEPTED,
     /** The partner is close to the pickup - see dispatch's DriverArriving. */
     DRIVER_ARRIVING,

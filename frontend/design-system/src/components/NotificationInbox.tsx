@@ -1,8 +1,10 @@
-import { BadgeCheck, Bell, IndianRupee, MapPinned, Megaphone, MessageCircle, ShieldAlert } from 'lucide-react';
+import { BadgeCheck, Bell, IndianRupee, MapPinned, Megaphone, MessageCircle, ShieldAlert, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { PagedResult } from '../lib/usePagedList';
 import { cn } from '../lib/cn';
+import { ConfirmDialog } from './ConfirmDialog';
 import { ListEmptyState } from './ListEmptyState';
+import { showToast } from '../lib/toast';
 import { LoadMore } from './LoadMore';
 import { PullToRefresh } from './PullToRefresh';
 import { SkeletonList } from './Skeleton';
@@ -32,6 +34,10 @@ export interface NotificationInboxProps {
   onOpen: (link: string) => void;
   /** Bumped by the screen to reload, e.g. when a push arrives while it is open. */
   refreshKey?: number;
+  /** Deletes one notification from her inbox. Without it, no delete buttons are shown. */
+  deleteOne?: (id: string) => Promise<unknown>;
+  /** Clears her whole inbox. Without it, no Clear all. */
+  deleteAll?: () => Promise<unknown>;
 }
 
 type Translate = (key: string, values?: Record<string, unknown>) => string;
@@ -48,7 +54,7 @@ const CATEGORY_OF: Record<string, Category> = {
   BOOKING_REQUESTED: 'booking', BOOKING_ACCEPTED: 'booking', DRIVER_ARRIVING: 'booking', BOOKING_COMPLETED: 'booking',
   BOOKING_CANCELLED: 'booking', NO_DRIVERS_AVAILABLE: 'booking', DRIVER_OFFER: 'booking',
   DESTINATION_CHANGE_REQUESTED: 'booking', DESTINATION_CHANGED: 'booking', DESTINATION_CHANGE_DECLINED: 'booking',
-  PAYMENT_RECEIPT: 'payment', PAYOUT_PAID: 'payment', INCENTIVE_EARNED: 'payment',
+  PAYMENT_RECEIPT: 'payment', REFUND_ISSUED: 'payment', PAYOUT_PAID: 'payment', INCENTIVE_EARNED: 'payment',
   REFERRAL_JOINED: 'payment', REFERRAL_REWARDED: 'payment',
   SOS_ALERT: 'safety', SOS_OPERATOR_ALERT: 'safety',
   SUPPORT_REPLY: 'support',
@@ -91,9 +97,11 @@ function when(iso: string, bucket: Bucket, t: Translate): string {
 /**
  * The in-app notification history: everything SheOut told this account,
  * whether or not a copy reached the phone. Unread entries are marked; tapping
- * one marks it read and opens what it is about.
+ * one marks it read and opens what it is about. Each can be deleted, and the
+ * whole list cleared (after a confirmation) - deleting hides them from her;
+ * the server keeps the record of what was sent.
  */
-export function NotificationInbox({ fetchPage, markRead, markAllRead, onOpen, refreshKey = 0 }: NotificationInboxProps) {
+export function NotificationInbox({ fetchPage, markRead, markAllRead, onOpen, refreshKey = 0, deleteOne, deleteAll }: NotificationInboxProps) {
   const { t } = useTranslation('ds');
   const [items, setItems] = useState<InboxItem[] | null>(null);
   const [total, setTotal] = useState(0);
@@ -102,6 +110,7 @@ export function NotificationInbox({ fetchPage, markRead, markAllRead, onOpen, re
   const [unread, setUnread] = useState(0);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmClear, setConfirmClear] = useState(false);
   const generation = useRef(0);
 
   const load = useCallback(
@@ -136,6 +145,39 @@ export function NotificationInbox({ fetchPage, markRead, markAllRead, onOpen, re
     if (item.link) onOpen(item.link);
   }
 
+  /** Gone from the list at once; put back (by reloading) if the server says no. */
+  async function remove(item: InboxItem) {
+    if (!deleteOne) return;
+    setItems((previous) => previous?.filter((i) => i.id !== item.id) ?? previous);
+    setTotal((n) => Math.max(0, n - 1));
+    if (!item.read) setUnread((n) => Math.max(0, n - 1));
+    try {
+      await deleteOne(item.id);
+      showToast(t('inbox.deleted'));
+    } catch {
+      showToast(t('inbox.deleteError'));
+      void load(0);
+    }
+  }
+
+  async function clearAll() {
+    setConfirmClear(false);
+    if (!deleteAll) return;
+    const before = items;
+    setItems([]);
+    setTotal(0);
+    setUnread(0);
+    setHasMore(false);
+    try {
+      await deleteAll();
+      showToast(t('inbox.cleared'));
+    } catch {
+      setItems(before);
+      showToast(t('inbox.deleteError'));
+      void load(0);
+    }
+  }
+
   async function readAll() {
     setItems((previous) => previous?.map((i) => ({ ...i, read: true })) ?? previous);
     setUnread(0);
@@ -165,14 +207,32 @@ export function NotificationInbox({ fetchPage, markRead, markAllRead, onOpen, re
   return (
     <PullToRefresh onRefresh={() => load(0)}>
       <div className="space-y-6" data-testid="inbox">
-      {unread > 0 && (
-        <div className="flex items-center justify-between">
-          <span className="rounded-full bg-primary-light px-3 py-1 text-caption text-primary" data-testid="inbox-unread">
-            {t('inbox.unread', { count: unread })}
+      {(unread > 0 || deleteAll) && (
+        <div className="flex items-center justify-between gap-2">
+          {unread > 0 ? (
+            <span className="rounded-full bg-primary-light px-3 py-1 text-caption text-primary" data-testid="inbox-unread">
+              {t('inbox.unread', { count: unread })}
+            </span>
+          ) : (
+            <span />
+          )}
+          <span className="flex items-center gap-1">
+            {unread > 0 && (
+              <button type="button" onClick={readAll} className="rounded-full px-3 py-2 text-caption font-semibold text-primary hover:bg-primary-light">
+                {t('inbox.markAllRead')}
+              </button>
+            )}
+            {deleteAll && (
+              <button
+                type="button"
+                onClick={() => setConfirmClear(true)}
+                className="rounded-full px-3 py-2 text-caption font-semibold text-text-secondary hover:bg-background"
+                data-testid="inbox-clear-all"
+              >
+                {t('inbox.clearAll')}
+              </button>
+            )}
           </span>
-          <button type="button" onClick={readAll} className="rounded-full px-3 py-2 text-caption font-semibold text-primary hover:bg-primary-light">
-            {t('inbox.markAllRead')}
-          </button>
         </div>
       )}
       {groups.map((group) => (
@@ -183,17 +243,11 @@ export function NotificationInbox({ fetchPage, markRead, markAllRead, onOpen, re
               const category = CATEGORY_OF[item.type] ?? 'news';
               const look = LOOK[category];
               return (
+                <div key={item.id} className={cn('relative flex items-stretch', !item.read && 'bg-primary-light/40')} data-testid="inbox-item" data-read={item.read} data-category={category}>
                 <button
-                  key={item.id}
                   type="button"
                   onClick={() => open(item)}
-                  className={cn(
-                    'relative flex w-full items-start gap-4 px-4 py-4 text-left transition-colors active:bg-background',
-                    !item.read && 'bg-primary-light/40'
-                  )}
-                  data-testid="inbox-item"
-                  data-read={item.read}
-                  data-category={category}
+                  className="relative flex min-w-0 flex-1 items-start gap-4 py-4 pl-4 pr-2 text-left transition-colors active:bg-background"
                 >
                   {/* The unread edge, in the notification's own colour. */}
                   {!item.read && <span className={cn('absolute inset-y-3 left-0 w-1 rounded-r-full', look.edge)} aria-hidden="true" />}
@@ -216,6 +270,18 @@ export function NotificationInbox({ fetchPage, markRead, markAllRead, onOpen, re
                     {item.body && <span className="mt-1 line-clamp-2 block text-sm text-text-secondary">{item.body}</span>}
                   </span>
                 </button>
+                {deleteOne && (
+                  <button
+                    type="button"
+                    onClick={() => remove(item)}
+                    aria-label={t('inbox.deleteOne', { title: item.title })}
+                    className="flex w-11 shrink-0 items-center justify-center text-text-secondary transition-colors hover:text-danger active:bg-background"
+                    data-testid="inbox-delete"
+                  >
+                    <Trash2 className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                )}
+                </div>
               );
             })}
           </div>
@@ -233,6 +299,15 @@ export function NotificationInbox({ fetchPage, markRead, markAllRead, onOpen, re
         }}
       />
       </div>
+      <ConfirmDialog
+        open={confirmClear}
+        title={t('inbox.clearTitle')}
+        message={t('inbox.clearMessage')}
+        confirmLabel={t('inbox.clearAll')}
+        destructive
+        onConfirm={clearAll}
+        onCancel={() => setConfirmClear(false)}
+      />
     </PullToRefresh>
   );
 }

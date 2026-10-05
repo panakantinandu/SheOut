@@ -32,6 +32,8 @@ export function Notifications() {
         fetchPage={notificationsApi.inbox}
         markRead={notificationsApi.markRead}
         markAllRead={notificationsApi.markAllRead}
+        deleteOne={notificationsApi.deleteOne}
+        deleteAll={notificationsApi.deleteAll}
         onOpen={(link) => {
           const path = safeInternalPath(link);
           if (path) navigate(path);

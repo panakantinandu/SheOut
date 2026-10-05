@@ -57,6 +57,7 @@ public class RiderWalletService {
      */
     public static final BigDecimal MAX_BALANCE = new BigDecimal("10000.00");
 
+    private final com.sheout.sharedkernel.event.DomainEventPublisher events;
     private final RiderWalletRepository wallets;
     private final RiderWalletEntryRepository entries;
     private final WalletTopupRepository topups;
@@ -64,7 +65,9 @@ public class RiderWalletService {
     private final TransactionTemplate transactions;
 
     RiderWalletService(RiderWalletRepository wallets, RiderWalletEntryRepository entries, WalletTopupRepository topups,
-                       PaymentGateway paymentGateway, PlatformTransactionManager transactionManager) {
+                       PaymentGateway paymentGateway, PlatformTransactionManager transactionManager,
+                       com.sheout.sharedkernel.event.DomainEventPublisher events) {
+        this.events = events;
         this.wallets = wallets;
         this.entries = entries;
         this.topups = topups;
@@ -235,6 +238,9 @@ public class RiderWalletService {
         wallets.save(wallet);
         entries.save(RiderWalletEntryEntity.refund(customerAccountId, amount, wallet.getBalance(), refundId, bookingId));
         log.info("Refund {} credited to the wallet of {} - {}", refundId, customerAccountId, amount);
+        // Once: a repeat of the same refund returned above, before this.
+        events.publish(new com.sheout.payments.RefundIssued(customerAccountId, amount,
+                com.sheout.payments.RefundIssued.Destination.SHEOUT_WALLET, bookingId, wallet.getBalance()));
         return Result.success(wallet.getBalance());
     }
 

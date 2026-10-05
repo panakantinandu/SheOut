@@ -649,6 +649,7 @@ public class PaymentService implements PaymentApi {
      * False when the QR is not one of ours.
      */
     public boolean applyQrCredit(String qrId, String razorpayPaymentId, long amountPaise, PaymentMethod method) {
+        UUID[] refundFor = new UUID[1];
         Boolean known = transactions.execute(status -> {
             Optional<PaymentEntity> found = qrId == null ? Optional.empty() : paymentRepository.findLockedByRazorpayQrId(qrId);
             if (found.isEmpty()) {
@@ -665,10 +666,16 @@ public class PaymentService implements PaymentApi {
             }
             log.error("QR payment {} on {} for booking {} could not be applied (settled={}, {} paise, expected {}) - refunding",
                     razorpayPaymentId, qrId, payment.getBookingId(), settled(payment), amountPaise, expected);
+            refundFor[0] = payment.getBookingId();
             return null;
         });
         if (known == null) {
-            paymentGateway.refund(razorpayPaymentId);
+            // Told only once Razorpay has accepted the refund: "on its way back" must be true.
+            if (paymentGateway.refund(razorpayPaymentId).isSuccess() && refundFor[0] != null) {
+                bookingApi.findById(refundFor[0]).ifPresent(trip -> eventPublisher.publish(new com.sheout.payments.RefundIssued(
+                        trip.customerId(), BigDecimal.valueOf(amountPaise).movePointLeft(2),
+                        com.sheout.payments.RefundIssued.Destination.ORIGINAL_METHOD, refundFor[0], null)));
+            }
             return true;
         }
         return known;

@@ -82,7 +82,7 @@ public class NotificationDispatcher {
             }
         }
 
-        if (!reached && policy.smsFallback()) {
+        if ((!reached && policy.smsFallback()) || policy.smsAlways()) {
             if (account.isEmpty()) {
                 account = authApi.findAccount(accountId);
             }

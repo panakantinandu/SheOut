@@ -14,8 +14,13 @@ package com.sheout.notifications.internal;
  * @param emailFallback email when no push copy was delivered and an address is known
  * @param smsFallback   SMS when neither push nor email delivered
  * @param emailAlways   email regardless of push (receipts)
+ * @param smsAlways     SMS regardless of push - only for money given back to her
  */
-record DeliveryPolicy(boolean push, boolean emailFallback, boolean smsFallback, boolean emailAlways) {
+record DeliveryPolicy(boolean push, boolean emailFallback, boolean smsFallback, boolean emailAlways, boolean smsAlways) {
+
+    DeliveryPolicy(boolean push, boolean emailFallback, boolean smsFallback, boolean emailAlways) {
+        this(push, emailFallback, smsFallback, emailAlways, false);
+    }
 
     static final DeliveryPolicy INBOX_ONLY = new DeliveryPolicy(false, false, false, false);
     static final DeliveryPolicy PUSH_ONLY = new DeliveryPolicy(true, false, false, false);
@@ -25,11 +30,18 @@ record DeliveryPolicy(boolean push, boolean emailFallback, boolean smsFallback, 
     static final DeliveryPolicy EMAIL = new DeliveryPolicy(false, false, false, true);
     /** Both, every time - for the few things somebody must not miss. */
     static final DeliveryPolicy PUSH_AND_EMAIL = new DeliveryPolicy(true, false, false, true);
+    /**
+     * Push and a text message, every time: a refund is money, and she should
+     * hear of it whether or not the app is on her phone. The SMS needs a
+     * DLT-registered template before it can reach anyone (see PENDING_DECISIONS).
+     */
+    static final DeliveryPolicy PUSH_AND_SMS = new DeliveryPolicy(true, false, false, false, true);
 
     static DeliveryPolicy forType(NotificationType type) {
         return switch (type) {
             // No longer sent; see NotificationType.
             case BOOKING_REQUESTED -> INBOX_ONLY;
+            case REFUND_ISSUED -> PUSH_AND_SMS;
             case DRIVER_OFFER, SOS_OPERATOR_ALERT, SOS_ESCALATION -> PUSH_ONLY;
             // Good news, already in her balance and her inbox: not worth a paid text.
             case INCENTIVE_EARNED -> PUSH_ONLY;

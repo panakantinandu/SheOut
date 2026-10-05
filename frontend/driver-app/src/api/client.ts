@@ -365,6 +365,16 @@ export const notificationsApi = {
   markAllRead(): Promise<void> {
     return request('/api/v1/notifications/me/read-all', { method: 'POST' });
   },
+
+  /** Hides one notification from her inbox (the server keeps the record of what was sent). */
+  deleteOne(notificationId: string): Promise<void> {
+    return request(`/api/v1/notifications/${notificationId}`, { method: 'DELETE' });
+  },
+
+  /** Clears her whole inbox. */
+  deleteAll(): Promise<{ deleted: number }> {
+    return request('/api/v1/notifications/me', { method: 'DELETE' });
+  },
 };
 
 /** Where this device's FCM token is remembered, so sign-out can unregister it. */

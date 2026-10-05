@@ -45,6 +45,15 @@ public class NotificationLogEntity extends BaseEntity {
     @Column(name = "read_at")
     private Instant readAt;
 
+    /**
+     * She deleted it from her inbox. Hidden from her from then on, but kept:
+     * the row is also the record of what SheOut sent her and how it was
+     * delivered (notification_deliveries), which a dispute or an audit may
+     * need. Erased with her account like everything else.
+     */
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
+
     protected NotificationLogEntity() {
         // JPA
     }
@@ -85,5 +94,17 @@ public class NotificationLogEntity extends BaseEntity {
 
     public Instant getReadAt() {
         return readAt;
+    }
+
+    /** Out of her inbox; read as well, so it never counts as unread. */
+    void markDeleted(Instant at) {
+        if (deletedAt == null) {
+            deletedAt = at;
+        }
+        markRead(at);
+    }
+
+    public Instant getDeletedAt() {
+        return deletedAt;
     }
 }
