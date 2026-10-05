@@ -1,4 +1,4 @@
-package com.sheout.users.internal;
+package com.sheout.sharedkernel.india;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

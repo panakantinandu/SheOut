@@ -14,6 +14,7 @@ import com.sheout.driververification.PartnerReadiness;
 import com.sheout.driververification.PartnerReadiness.Blocker;
 import com.sheout.driververification.PartnerReadiness.BlockerCode;
 import com.sheout.driververification.PartnerReadiness.DocumentState;
+import com.sheout.driververification.VehicleOwner;
 import com.sheout.driververification.VerificationLapsed;
 import com.sheout.sharedkernel.Result;
 import com.sheout.sharedkernel.event.DomainEventPublisher;
@@ -65,10 +66,20 @@ public class PartnerDocumentService {
     static final ZoneId INDIA = ZoneId.of("Asia/Kolkata");
     private static final DateTimeFormatter PLAIN_DATE = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.ENGLISH);
     private static final String META_INSURANCE_USE = "insuranceUseType";
+    private static final String META_VEHICLE_OWNER = "vehicleOwner";
+    private static final String META_OWNER_NAME = "ownerName";
 
-    /** What she, an operator or a provider says is printed on the document. Every field optional on the way in. */
+    /**
+     * What she, an operator or a provider says is printed on the document.
+     * Every field optional on the way in. vehicleOwner and ownerName are for
+     * an RC: whose vehicle it is, and the name printed as its owner.
+     */
     public record DocumentFacts(String documentNumber, LocalDate issuedOn, LocalDate validUntil,
-                                InsuranceUseType insuranceUseType) {
+                                InsuranceUseType insuranceUseType, VehicleOwner vehicleOwner, String ownerName) {
+
+        public DocumentFacts(String documentNumber, LocalDate issuedOn, LocalDate validUntil, InsuranceUseType insuranceUseType) {
+            this(documentNumber, issuedOn, validUntil, insuranceUseType, null, null);
+        }
 
         public static DocumentFacts none() {
             return new DocumentFacts(null, null, null, null);
@@ -155,10 +166,26 @@ public class PartnerDocumentService {
             if (type == PartnerDocumentType.VEHICLE_INSURANCE && given.insuranceUseType() == null) {
                 return Result.failure(VerificationError.INSURANCE_USE_TYPE_REQUIRED);
             }
+            if (type == PartnerDocumentType.POLICE_CERTIFICATE && given.issuedOn() == null) {
+                return Result.failure(VerificationError.ISSUE_DATE_REQUIRED);
+            }
+            if (type == PartnerDocumentType.VEHICLE_RC && (given.vehicleOwner() == null
+                    || (given.vehicleOwner() != VehicleOwner.SELF && blank(given.ownerName())))) {
+                return Result.failure(VerificationError.VEHICLE_OWNER_REQUIRED);
+            }
         }
         VerificationError badDates = dateProblem(given, today);
         if (badDates != null) {
             return Result.failure(badDates);
+        }
+        // What is typed has the shape the document has, from her or from an
+        // operator uploading for her - see DocumentNumberRules. A provider's
+        // report is filed as the provider numbered it.
+        if (source != PartnerDocumentSource.PROVIDER) {
+            VerificationError badFacts = factsProblem(type, given, today);
+            if (badFacts != null) {
+                return Result.failure(badFacts);
+            }
         }
 
         String key;
@@ -243,6 +270,19 @@ public class PartnerDocumentService {
             return Result.success(toSummary(document));
         }
 
+        // Nothing is approved in a shape no RTO, insurer or police force
+        // issues: an operator corrects it to what the photo shows first.
+        // Checked before anything on the document changes, so a refusal
+        // leaves it as it was.
+        if (document.getSource() != PartnerDocumentSource.PROVIDER) {
+            DocumentFacts effective = new DocumentFacts(
+                    blank(given.documentNumber()) ? document.getDocumentNumber() : given.documentNumber(),
+                    null, given.validUntil() != null ? given.validUntil() : document.getValidUntil(), null);
+            VerificationError badFacts = factsProblem(document.getType(), effective, today);
+            if (badFacts != null) {
+                return Result.failure(badFacts);
+            }
+        }
         applyFacts(document, given);
         PartnerDocumentType type = document.getType();
         if (document.getDocumentKey() == null) {
@@ -633,9 +673,20 @@ public class PartnerDocumentService {
         return null;
     }
 
+    /** The number's shape and the dates' believability for this document - null when both are fine. */
+    private static VerificationError factsProblem(PartnerDocumentType type, DocumentFacts facts, LocalDate today) {
+        if (!blank(facts.documentNumber())) {
+            VerificationError number = DocumentNumberRules.numberProblem(type, facts.documentNumber(), today);
+            if (number != null) {
+                return number;
+            }
+        }
+        return DocumentNumberRules.validUntilProblem(type, facts.validUntil(), today);
+    }
+
     private void applyFacts(PartnerDocumentEntity document, DocumentFacts facts) {
         if (!blank(facts.documentNumber())) {
-            String number = facts.documentNumber().trim().toUpperCase(Locale.ROOT);
+            String number = DocumentNumberRules.normalize(document.getType(), facts.documentNumber());
             document.setDocumentNumber(number.length() > 64 ? number.substring(0, 64) : number);
         }
         if (facts.issuedOn() != null) {
@@ -649,6 +700,36 @@ public class PartnerDocumentService {
             meta.put(META_INSURANCE_USE, facts.insuranceUseType().name());
             document.setMetadataJson(write(meta));
         }
+        if (facts.vehicleOwner() != null && document.getType() == PartnerDocumentType.VEHICLE_RC) {
+            Map<String, Object> meta = metadata(document);
+            meta.put(META_VEHICLE_OWNER, facts.vehicleOwner().name());
+            String name = facts.vehicleOwner() == VehicleOwner.SELF || blank(facts.ownerName())
+                    ? null : facts.ownerName().trim().replaceAll("\\s+", " ");
+            if (name == null) {
+                meta.remove(META_OWNER_NAME);
+            } else {
+                meta.put(META_OWNER_NAME, name.length() > 100 ? name.substring(0, 100) : name);
+            }
+            document.setMetadataJson(write(meta));
+        }
+    }
+
+    /** Whose vehicle an RC is, as she said; null when she was not asked (an older upload). */
+    VehicleOwner vehicleOwnerOf(PartnerDocumentEntity document) {
+        Object value = metadata(document).get(META_VEHICLE_OWNER);
+        if (value == null) {
+            return null;
+        }
+        try {
+            return VehicleOwner.valueOf(value.toString());
+        } catch (IllegalArgumentException ex) {
+            return null;
+        }
+    }
+
+    String ownerNameOf(PartnerDocumentEntity document) {
+        Object value = metadata(document).get(META_OWNER_NAME);
+        return value == null ? null : value.toString();
     }
 
     InsuranceUseType insuranceUseOf(PartnerDocumentEntity document) {
@@ -711,7 +792,9 @@ public class PartnerDocumentService {
                 d.getIssuedOn(), d.getValidUntil(), d.getRejectionReason(),
                 d.getType() == PartnerDocumentType.VEHICLE_INSURANCE ? insuranceUseOf(d) : null,
                 d.getSource(), d.getProviderReference(), d.getDocumentKey() != null, d.getSubmittedAt(),
-                d.getReviewedAt(), d.getReviewedBy(), d.getSupersededAt(), d.getReplacesDocumentId());
+                d.getReviewedAt(), d.getReviewedBy(), d.getSupersededAt(), d.getReplacesDocumentId(),
+                d.getType() == PartnerDocumentType.VEHICLE_RC ? vehicleOwnerOf(d) : null,
+                d.getType() == PartnerDocumentType.VEHICLE_RC ? ownerNameOf(d) : null);
     }
 
     private static String actorRoleFor(PartnerDocumentSource source) {

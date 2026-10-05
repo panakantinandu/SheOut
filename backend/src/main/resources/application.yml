@@ -503,6 +503,13 @@ sheout:
       cache-read-per-mtok: ${ASSISTANT_PRICE_CACHE_READ:0.1}
       cache-write-per-mtok: ${ASSISTANT_PRICE_CACHE_WRITE:1.25}
 
+  # Partners - which vehicles SheOut takes partners on with. Two-wheelers
+  # (BIKE: a motorcycle or scooter) only while it starts out; add AUTO or
+  # CAB, comma-separated, when those services open. A partner already on
+  # another type keeps it - only choosing one is refused.
+  partners:
+    vehicle-types: ${PARTNER_VEHICLE_TYPES:BIKE}
+
   # SheOut Seller - see the marketplace module. SheOut charges a flat
   # monthly fee and takes no part in any sale.
   marketplace:

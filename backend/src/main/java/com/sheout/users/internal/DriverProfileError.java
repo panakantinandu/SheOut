@@ -83,5 +83,8 @@ public enum DriverProfileError {
     DECISION_NOTE_REQUIRED,
 
     /** No pending change with that id. */
-    CHANGE_NOT_FOUND
+    CHANGE_NOT_FOUND,
+
+    /** A vehicle type SheOut does not take partners on with yet (two-wheelers only for now). */
+    VEHICLE_TYPE_NOT_OFFERED
 }

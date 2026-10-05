@@ -112,6 +112,27 @@ public enum VerificationError {
     /** The certificate is old enough that it would already be due for re-verification. */
     POLICE_CERTIFICATE_TOO_OLD,
 
+    /** A driving licence number not in the national form: state, RTO, year, serial (TS0920210012345). See DocumentNumberRules. */
+    LICENCE_NUMBER_INVALID,
+
+    /** A vehicle number that is not an Indian plate. */
+    REGISTRATION_NUMBER_INVALID,
+
+    /** An insurance policy number with no digits, odd characters, or an impossible length. */
+    POLICY_NUMBER_INVALID,
+
+    /** A PUC, fitness or police certificate number with no digits, odd characters, or an impossible length. */
+    CERTIFICATE_NUMBER_INVALID,
+
+    /** A valid-until date further ahead than such a document is ever issued for - usually a mistyped year. */
+    VALID_UNTIL_TOO_FAR,
+
+    /** A police certificate sent without the date printed on it. */
+    ISSUE_DATE_REQUIRED,
+
+    /** An RC sent without saying whose vehicle it is. */
+    VEHICLE_OWNER_REQUIRED,
+
     /** A background check was requested from a provider while none is configured. */
     PROVIDER_NOT_CONFIGURED
 }

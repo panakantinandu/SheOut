@@ -469,6 +469,9 @@ export type PartnerDocumentStatus = 'PENDING' | 'UNDER_REVIEW' | 'VERIFIED' | 'R
 
 export type InsuranceUseType = 'COMMERCIAL' | 'PRIVATE' | 'UNKNOWN';
 
+/** Whose name is on the RC: hers, or a family member's (no restriction - the reviewer checks against the owner she names). */
+export type VehicleOwner = 'SELF' | 'FATHER' | 'MOTHER' | 'HUSBAND' | 'SIBLING' | 'OTHER_FAMILY';
+
 export type ReadinessCode =
   | 'ID_CHECK'
   | 'POLICE_CHECK'

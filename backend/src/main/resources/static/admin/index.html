@@ -1016,6 +1016,40 @@
   table.mini { width: 100%; border-collapse: collapse; font-size: 13px; }
   table.mini th, table.mini td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); }
   .link-btn { background: none; border: 0; padding: 0; color: var(--brand); cursor: pointer; font: inherit; text-decoration: underline; }
+  /* Partner review, one step at a time */
+  .rv-head h3 .subtle { font-weight: 500; font-size: 13px; margin-left: 6px; }
+  .rv-steps { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+  .rv-steps li { flex: 1 1 120px; }
+  .rv-step { width: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--text); cursor: pointer; font: inherit; text-align: left; }
+  .rv-step.on { border-color: var(--brand); box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand) 25%, transparent); }
+  .rv-dot { width: 24px; height: 24px; flex: none; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; border: 2px solid var(--line); color: var(--muted); }
+  .rv-step.s-waiting .rv-dot { border-color: var(--amber); color: var(--amber); }
+  .rv-step.s-done .rv-dot { background: var(--green); border-color: var(--green); color: #fff; }
+  .rv-step.s-rejected .rv-dot, .rv-step.s-expired .rv-dot { background: var(--red); border-color: var(--red); color: #fff; }
+  .rv-name { font-weight: 600; font-size: 13px; white-space: nowrap; }
+  .rv-state { font-size: 11px; color: var(--muted); white-space: nowrap; flex-basis: 100%; padding-left: 32px; }
+  .rv-split { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+  @media (max-width: 900px) { .rv-split { grid-template-columns: 1fr; } }
+  .rv-files .doc { margin-top: 0; }
+  .rv-side { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .rv-side .kv { margin: 0; }
+  .rv-checks { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: var(--bg); }
+  .rv-checks-h { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-bottom: 6px; }
+  .modal .rv-check { display: flex; gap: 10px; align-items: flex-start; margin: 0; padding: 7px 0; font-size: 13px; line-height: 1.45; font-weight: 400; color: var(--text); cursor: pointer; }
+  .rv-check span { flex: 1; min-width: 0; }
+  .rv-check input { margin-top: 2px; width: 16px; height: 16px; flex: none; }
+  .rv-check:has(input:checked) span { color: var(--muted); }
+  .rv-plain { font-size: 13px; line-height: 1.5; }
+  .rv-fields { display: grid; gap: 8px; }
+  .rv-fields .field input, .rv-fields .field select { width: 100%; }
+  .rv-reject summary { cursor: pointer; color: var(--red); font-weight: 600; font-size: 13px; }
+  .rv-reasons { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+  .chip-btn { border: 1px solid var(--line); background: var(--panel); color: var(--text); border-radius: 999px; padding: 5px 10px; font: inherit; font-size: 12px; cursor: pointer; text-align: left; }
+  .chip-btn:hover { border-color: var(--red); }
+  .rv-reject textarea { width: 100%; min-height: 70px; }
+  .modal-foot .grow { flex: 1; }
+  .rv-police-intro { margin-bottom: 12px; }
+  .rv-summary li { justify-content: space-between; }
   .sos-alarm { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 14px 16px; border-radius: 10px; border: 2px solid var(--red); background: var(--red-bg); color: var(--red); margin-bottom: 16px; }
   .sos-alarm .pulse { width: 12px; height: 12px; border-radius: 50%; background: var(--red); flex: none; }
   .sos-alarm #alarmOpen { margin-left: auto; }
@@ -1135,10 +1169,14 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
         <span class="nl">Service Hours</span> <span class="count urgent" id="cHours" hidden></span>
       </button>
-      <div class="label">Operations</div>
+      <div class="label">Verification</div>
+      <button data-tab="applications" aria-current="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h2"/><rect x="8" y="1.5" width="8" height="4" rx="1"/><path d="m8.5 12 1.5 1.5 3-3"/><path d="M8.5 17h7"/></svg>
+        <span class="nl">Partner applications</span> <span class="count" id="cApplications"></span>
+      </button>
       <button data-tab="queue" aria-current="false">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M6.2 15a3 3 0 0 1 5.6 0"/><path d="M15 10h3M15 14h3"/></svg>
-        <span class="nl">Verification Queue</span> <span class="count" id="cQueue"></span>
+        <span class="nl">Rider ID checks</span> <span class="count" id="cQueue"></span>
       </button>
       <button data-tab="docreview" aria-current="false">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="m9 15 2 2 4-4"/></svg>
@@ -1160,6 +1198,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="7" r="4"/><path d="M11.5 15H7a4 4 0 0 0-4 4v2"/><path d="M21.4 16.6a1 1 0 0 0-3-3l-4 4a2 2 0 0 0-.5.9l-.8 2.8a.5.5 0 0 0 .6.6l2.8-.8a2 2 0 0 0 .9-.5z"/></svg>
         <span class="nl">Profile Changes</span> <span class="count" id="cChanges"></span>
       </button>
+      <div class="label">Operations</div>
       <button data-tab="bookings" aria-current="false">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4M12 16h4M8 11h.01M8 16h.01"/></svg>
         <span class="nl">Bookings</span> <span class="count" id="cBookings" hidden></span>
@@ -2151,9 +2190,49 @@ function paintPager(paged) {
 }
 
 const VIEWS = {
+  /**
+   * Partners waiting for a person, one row each, however many of her papers
+   * are waiting: her ID and selfie, licence, RC, insurance, PUC, police
+   * certificate. A row opens the step-by-step review - one document at a
+   * time, each with what to check and the common reasons to send it back -
+   * instead of every document on one page.
+   */
+  applications: {
+    title: 'Partner applications',
+    desc: 'Every partner with something waiting for a decision, oldest first. Open one to review it step by step: identity, licence, RC, insurance, PUC, police check. Each step shows the document, what to check on it, and the decision.',
+    cardTitle: 'Waiting for review',
+    hint: 'Select a partner to start reviewing',
+    empty: { icon: ICON_EMPTY_QUEUE, title: 'No applications waiting', text: 'When a partner sends her ID or a document, she appears here.' },
+    columns: [
+      { key: 'name', label: 'Partner', sort: r => (r.name || '').toLowerCase() },
+      { key: 'phone', label: 'Phone', sort: r => r.phoneNumber || '' },
+      { key: 'waitingFor', label: 'Waiting for review', sort: r => -r.items.length },
+      { key: 'since', label: 'Waiting', sort: r => new Date(r.since || 0).getTime() },
+      { key: 'holder', label: 'Taken by', sort: r => ((WORK.verification || {})[r.accountId] || {}).label || '' },
+    ],
+    load: async () => {
+      const [ids, docs] = await Promise.all([
+        api('/admin/verification/review-queue'),
+        api('/admin/verification/document-queue?queue=TO_REVIEW'),
+        loadWork('verification'),
+      ]);
+      return partnerApplications(ids, docs);
+    },
+    cell: (r, key) => {
+      if (key === 'name') return `<span class="strong">${esc(r.name || 'Name not set')}</span><div class="subtle">${esc(r.vehicle || '')}</div>`;
+      if (key === 'phone') return `<span class="num">${esc(r.phoneNumber || '')}</span>`;
+      if (key === 'waitingFor') return r.items.map(i => `<span class="badge b-amber">${esc(i)}</span>`).join(' ');
+      if (key === 'since') return slaClock(r.since, WORK_SLA && WORK_SLA.verification);
+      if (key === 'holder') return holderCell('verification', r.accountId, { manage: 'verification.all' });
+      return '—';
+    },
+    onRowClick: async r => { if (await takeForReview(r.accountId)) openReview(r.accountId); },
+    openLabel: 'Review',
+  },
+
   queue: {
-    title: 'Verification Queue',
-    desc: 'Everyone who has submitted a document and is waiting for a decision - drivers and customers both. Every approval here is a human decision; nothing is checked automatically.',
+    title: 'Rider ID checks',
+    desc: 'Riders who sent their ID and a live selfie and are waiting to be allowed to book. Partners are reviewed under Partner applications. Every approval here is a human decision; nothing is checked automatically.',
     cardTitle: 'Awaiting review',
     hint: 'Select a row to see the document and decide',
     empty: { icon: ICON_EMPTY_QUEUE, title: 'Nobody awaiting review', text: 'When a driver or customer submits a document they will appear here.' },
@@ -2170,7 +2249,7 @@ const VIEWS = {
     ],
     load: async () => {
       const [rows] = await Promise.all([api('/admin/verification/review-queue'), loadWork('verification')]);
-      return rows;
+      return rows.filter(isCustomer);
     },
     cell: (r, key) => {
       if (key === 'role') return roleBadge(r.role);
@@ -4093,7 +4172,7 @@ function bindPoliceForm(form, v) {
       message: `${POLICE_METHOD_TEXT[body.method]}, No. ${body.certificateNumber}, issued ${plainDate(body.issuedOn)}. It falls due again on ${plainDate(body.reverifyDueOn)}. Approve only if the certificate you opened shows exactly this, and it is hers.`,
       confirmLabel: 'Approve police check', tone: 'approve',
     });
-    if (!ok) { openAccount(v.accountId, false, 'documents'); return; }
+    if (!ok) { backToDocs(v.accountId); return; }
     await decidePolice(v.accountId, body, 'approved');
   });
   form.querySelector('[data-police-reject]').addEventListener('click', async () => {
@@ -4103,7 +4182,7 @@ function bindPoliceForm(form, v) {
       confirmLabel: 'Reject', tone: 'reject', withReason: true, reasonRequired: true,
       reasonLabel: 'Reason (required)', reasonPlaceholder: 'e.g. The certificate is for a different name', reasonMaxLength: 1000,
     });
-    if (!ok) { openAccount(v.accountId, false, 'documents'); return; }
+    if (!ok) { backToDocs(v.accountId); return; }
     await decidePolice(v.accountId, { decision: 'REJECTED', reason: ok.reason }, 'rejected');
   });
 }
@@ -4116,8 +4195,17 @@ async function decidePolice(accountId, body, verb) {
     if (err.message === 'unauthorized') return;
     toast('bad', 'Could not save the police check', err.message);
   }
-  openAccount(accountId, false, 'documents');
+  const after = POLICE_AFTER.get(accountId);
+  POLICE_AFTER.delete(accountId);
+  if (after) after();
+  else openAccount(accountId, false, 'documents');
   render({ quiet: true });
+}
+
+/** Back where the police form was opened from: the step-by-step review, or her Documents tab. */
+function backToDocs(accountId) {
+  if (POLICE_AFTER.has(accountId)) openReview(accountId, 'police');
+  else openAccount(accountId, false, 'documents');
 }
 
 /**
@@ -4152,9 +4240,404 @@ function docQueueView({ queue, title, desc, cardTitle, empty, dateLabel, date })
         : r.online ? '<span class="badge b-green">Online</span>' : '<span class="badge b-grey">Offline</span>';
       return '—';
     },
-    onRowClick: r => openPartnerWork(r.accountId),
-    openLabel: 'Open documents',
+    // Something to decide opens the step-by-step review on that document; the
+    // other queues open her documents as they stand.
+    onRowClick: async r => {
+      if (queue !== 'TO_REVIEW') return openPartnerWork(r.accountId);
+      if (await takeForReview(r.accountId)) openReview(r.accountId, r.documentType);
+    },
+    openLabel: queue === 'TO_REVIEW' ? 'Review' : 'Open documents',
   };
+}
+
+// ---- partner applications: one partner, reviewed step by step ---------------
+/**
+ * Partners with anything waiting, one row each: her ID check from the
+ * review queue, and every document waiting in the document queue.
+ */
+function partnerApplications(ids, docs) {
+  const by = new Map();
+  const add = (accountId, base, item, since) => {
+    const row = by.get(accountId) || { accountId, name: base.name, phoneNumber: base.phoneNumber, vehicle: '', items: [], since: null };
+    if (!row.name && base.name) row.name = base.name;
+    if (base.vehicleRegistrationNumber) row.vehicle = `${VEHICLE_TEXT[base.vehicleType] || humanize(base.vehicleType || '')} · ${base.vehicleRegistrationNumber}`;
+    if (!row.items.includes(item)) row.items.push(item);
+    if (since && (!row.since || new Date(since) < new Date(row.since))) row.since = since;
+    by.set(accountId, row);
+  };
+  (ids || []).filter(r => !isCustomer(r) && r.genderVerificationStatus === 'UNDER_REVIEW')
+    .forEach(r => add(r.accountId, r, 'ID & selfie', submittedAt(r)));
+  (docs || []).forEach(d => add(d.accountId, d, docTypeText(d.documentType), d.submittedAt));
+  return [...by.values()].sort((a, b) => new Date(a.since || 0) - new Date(b.since || 0));
+}
+
+/**
+ * The shapes the server accepts for each number (DocumentNumberRules), so a
+ * reviewer correcting what she typed is told before Approve is refused.
+ */
+const STATE_CODES = new Set(['AN', 'AP', 'AR', 'AS', 'BR', 'CG', 'CH', 'DD', 'DL', 'DN', 'GA', 'GJ', 'HP', 'HR', 'JH', 'JK', 'KA', 'KL', 'LA', 'LD',
+  'MH', 'ML', 'MN', 'MP', 'MZ', 'NL', 'OD', 'OR', 'PB', 'PY', 'RJ', 'SK', 'TG', 'TN', 'TR', 'TS', 'UA', 'UK', 'UP', 'WB']);
+function docNumberProblem(type, raw) {
+  const up = String(raw || '').trim().toUpperCase().replace(/\s+/g, '');
+  const n = type === 'DRIVING_LICENCE' || type === 'VEHICLE_RC' ? up.replace(/-/g, '') : up;
+  if (!n) return 'Type the number.';
+  const ref = (min, max) => n.length >= min && n.length <= max && /^[A-Z0-9][A-Z0-9/-]*$/.test(n) && /\d/.test(n);
+  if (type === 'DRIVING_LICENCE') {
+    const m = /^([A-Z]{2})(\d{2,3})(\d{4})(\d{7})$/.exec(n);
+    const ok = m && STATE_CODES.has(m[1]) && +m[3] >= 1950 && +m[3] <= new Date().getFullYear();
+    return ok ? null : 'A licence number is 2 state letters then 13 digits (TS0920210012345).';
+  }
+  if (type === 'VEHICLE_RC') {
+    const m = /^([A-Z]{2})\d{1,2}[A-Z]{1,3}\d{4}$/.exec(n);
+    return (m && STATE_CODES.has(m[1])) || /^\d{2}BH\d{4}[A-Z]{1,2}$/.test(n) ? null : 'Not an Indian number plate (TS09AB1234).';
+  }
+  if (type === 'VEHICLE_INSURANCE') return ref(6, 30) ? null : 'A policy number is 6 to 30 letters and digits.';
+  if (type === 'PUC' || type === 'FITNESS_CERTIFICATE') return ref(6, 25) ? null : 'A certificate number is 6 to 25 letters and digits.';
+  return ref(4, 30) ? null : 'A certificate number has digits.';
+}
+const sameNumber = (a, b) => String(a || '').toUpperCase().replace(/[\s-]/g, '') === String(b || '').toUpperCase().replace(/[\s-]/g, '');
+
+const OWNER_TEXT = { SELF: 'her own', FATHER: "her father's", MOTHER: "her mother's", HUSBAND: "her husband's", SIBLING: "her brother's or sister's", OTHER_FAMILY: "a family member's" };
+
+/**
+ * What to look at on each document before approving it - every box ticked
+ * is the reviewer saying she looked - and the reasons a document is most
+ * often sent back, one click each, written so the partner knows what to fix.
+ */
+function reviewChecks(key, v, doc) {
+  const name = `<b>${esc(v.name || 'her profile name')}</b>`;
+  const plate = `<b class="num">${esc(v.vehicleRegistrationNumber || '-')}</b>`;
+  const num = doc ? `<b class="num">${esc(doc.documentNumber || '-')}</b>` : '';
+  const until = doc && doc.validUntil ? `<b>${esc(plainDate(doc.validUntil))}</b>` : 'the date she typed';
+  switch (key) {
+    case 'identity': return [
+      'It is a government photo ID (Aadhaar, passport, voter ID or driving licence) and every word is readable',
+      `The name on it matches her profile: ${name}`,
+      'It shows she is female (Female, F or महिला / స్త్రీ)',
+      'The live selfie is the same woman as the photo on the ID',
+    ];
+    case 'DRIVING_LICENCE': return [
+      'The name and photo match the ID you approved',
+      `The licence number is exactly ${num}`,
+      'Class of vehicle includes <b>MCWG</b> or <b>MCWOG</b> (a two-wheeler), and it is not a learner\'s licence (LLR)',
+      `Valid till is ${until} (the Transport date, if there are two)`,
+    ];
+    case 'VEHICLE_RC': {
+      const owner = doc && doc.vehicleOwner;
+      const ownerLine = !owner
+        ? 'The owner on the RC is her, or a family member she can name (she was not asked when she sent this)'
+        : owner === 'SELF'
+          ? `The owner on the RC is her: ${name}`
+          : `The owner on the RC is <b>${esc(doc.ownerName || '-')}</b> - ${esc(OWNER_TEXT[owner] || 'a family member\'s')} vehicle, as she said`;
+      return [
+        `The registration number on the RC is her profile's: ${plate}`,
+        'The vehicle class is a two-wheeler (motor cycle, scooter, M-Cycle)',
+        ownerLine,
+        `Registration is valid till ${until}`,
+      ];
+    }
+    case 'VEHICLE_INSURANCE': return [
+      `The policy is for this vehicle: ${plate}`,
+      'It is a commercial policy - it says Commercial, Taxi, Hire or Passenger carrying, not Private',
+      `The policy number is ${num}`,
+      `The policy period ends on ${until}`,
+    ];
+    case 'PUC': return [
+      `The vehicle number on it is ${plate}`,
+      `The certificate number is ${num}`,
+      `Valid upto is ${until}`,
+    ];
+    case 'FITNESS_CERTIFICATE': return [
+      `The vehicle number on it is ${plate}`,
+      `Fitness is valid till ${until}`,
+    ];
+    default: return [];
+  }
+}
+const REJECT_REASONS = {
+  common: [
+    'The photo is blurry or cut off. Photograph the whole document flat, in good light, with all four corners showing.',
+    'The number you typed does not match the document. Send it again and type the number exactly as printed.',
+    'The date you typed does not match the document. Send it again with the date printed on it.',
+    'This document has expired. Send the renewed one.',
+  ],
+  identity: [
+    'The ID is not readable. Photograph it flat, in good light, with all four corners showing.',
+    'The name on your ID does not match the name on your profile.',
+    'The live selfie does not match the photo on your ID. Take the selfie again in good light, facing the camera.',
+    'This is not a government photo ID. Send your Aadhaar, passport, voter ID or driving licence.',
+  ],
+  DRIVING_LICENCE: [
+    'This is a learner\'s licence. A permanent driving licence is needed.',
+    'This licence is not for two-wheelers. It needs MCWG or MCWOG under class of vehicle.',
+    'The name on the licence does not match your ID.',
+  ],
+  VEHICLE_RC: [
+    'The vehicle number on the RC does not match the number on your profile.',
+    'This RC is not for a two-wheeler.',
+    'The owner\'s name on the RC does not match what you told us. Send it again and choose whose vehicle it is.',
+  ],
+  VEHICLE_INSURANCE: [
+    'This is a private policy. A commercial policy is needed to carry paying riders. Ask your insurer for one.',
+    'This policy is for a different vehicle.',
+  ],
+  PUC: ['This PUC certificate is for a different vehicle.'],
+  FITNESS_CERTIFICATE: ['This certificate is for a different vehicle.'],
+};
+
+const STEP_LABEL = { DRIVING_LICENCE: 'Licence', VEHICLE_RC: 'RC', VEHICLE_INSURANCE: 'Insurance', PUC: 'PUC', FITNESS_CERTIFICATE: 'Fitness' };
+const REVIEW_DOC_ORDER = ['DRIVING_LICENCE', 'VEHICLE_RC', 'VEHICLE_INSURANCE', 'PUC', 'FITNESS_CERTIFICATE'];
+const STEP_TONE = { waiting: 'amber', done: 'green', rejected: 'red', missing: 'grey', expired: 'red', blocked: 'grey' };
+const STEP_WORD = { waiting: 'To review', done: 'Approved', rejected: 'Sent back', missing: 'Not sent', expired: 'Expired', blocked: 'After identity' };
+
+/** Her steps, in the order she does them, each with where it stands. */
+function reviewSteps(v) {
+  const g = v.genderVerificationStatus;
+  const steps = [{ key: 'identity', label: 'Identity', state: g === 'UNDER_REVIEW' ? 'waiting' : g === 'VERIFIED' ? 'done' : g === 'REJECTED' ? 'rejected' : 'missing' }];
+  const required = (v.readiness.documents || []).filter(s => s.required).map(s => s.type);
+  REVIEW_DOC_ORDER.filter(t => required.includes(t)).forEach(type => {
+    const doc = v.documents.find(d => d.type === type && !d.supersededAt);
+    const st = !doc ? 'missing' : (doc.status === 'UNDER_REVIEW' || doc.status === 'PENDING') ? 'waiting'
+      : doc.status === 'VERIFIED' ? 'done' : doc.status === 'EXPIRED' ? 'expired' : 'rejected';
+    steps.push({ key: type, label: STEP_LABEL[type], state: st, doc });
+  });
+  const cert = v.documents.find(d => d.type === 'POLICE_CERTIFICATE' && !d.supersededAt && d.status !== 'REJECTED');
+  const p = v.policeVerificationStatus;
+  steps.push({ key: 'police', label: 'Police', state: g !== 'VERIFIED' ? 'blocked' : p === 'VERIFIED' ? 'done' : p === 'REJECTED' ? 'rejected' : cert ? 'waiting' : 'missing' });
+  steps.push({ key: 'summary', label: 'Summary', state: v.readiness.ready ? 'done' : 'waiting' });
+  return steps;
+}
+
+/**
+ * One partner, reviewed one step at a time: identity, then each document
+ * her vehicle needs, then the police check, then a summary of where she
+ * stands. Each step shows the file beside what to check on it; Approve
+ * stays off until every check is ticked, and sending one back takes a
+ * reason she is shown (one click for the common ones). After a decision
+ * the next step waiting for a person opens by itself.
+ */
+async function openReview(accountId, startKey) {
+  openModal(`<div class="modal-head"><h3>Loading…</h3></div><div class="modal-body"><div class="skel"></div><div class="skel"></div></div>`, { xwide: true });
+  let v;
+  try {
+    v = await api(`/admin/partners/${accountId}/verification`);
+  } catch (err) {
+    if (err.message === 'unauthorized') return;
+    $('modalRoot').querySelector('.modal').innerHTML = `<div class="modal-head"><h3>Could not open this partner</h3></div>
+      <div class="modal-body">${errorState(err.message)}</div><div class="modal-foot"><button class="btn" type="button" data-cancel>Close</button></div>`;
+    $('modalRoot').querySelector('[data-cancel]').addEventListener('click', closeModal);
+    return;
+  }
+  const steps = reviewSteps(v);
+  const first = steps.find(s => s.state === 'waiting' && s.key !== 'summary');
+  let current = steps.find(s => s.key === startKey) || first || steps[steps.length - 1];
+  const left = steps.filter(s => s.state === 'waiting' && s.key !== 'summary').length;
+
+  const paint = () => {
+    const i = steps.indexOf(current);
+    const modal = $('modalRoot').querySelector('.modal');
+    modal.innerHTML = `
+      <div class="modal-head rv-head">
+        <h3>${esc(v.name || 'Name not set')} <span class="subtle">${esc(VEHICLE_TEXT[v.vehicleType] || '')}${v.vehicleRegistrationNumber ? ' · <span class="num">' + esc(v.vehicleRegistrationNumber) + '</span>' : ''}</span></h3>
+        <p>${left ? `${left} step${left === 1 ? '' : 's'} waiting for you` : 'Nothing waiting for a decision'} · ${esc(v.phoneNumber || '')}</p>
+        <ol class="rv-steps" role="tablist">${steps.map((s, n) => `<li><button type="button" role="tab" aria-selected="${s === current}" data-step="${s.key}" class="rv-step s-${s.state}${s === current ? ' on' : ''}">
+          <span class="rv-dot">${s.state === 'done' ? '✓' : s.state === 'rejected' || s.state === 'expired' ? '!' : n + 1}</span>
+          <span class="rv-name">${esc(s.label)}</span><span class="rv-state">${esc(STEP_WORD[s.state] || '')}</span></button></li>`).join('')}</ol>
+      </div>
+      <div class="modal-body" id="rvBody"></div>
+      <div class="modal-foot">
+        <button class="btn" type="button" id="rvRelease">Give back to the queue</button>
+        <span class="grow"></span>
+        <button class="btn" type="button" id="rvPrev" ${i === 0 ? 'disabled' : ''}>← Previous</button>
+        <button class="btn btn-primary" type="button" id="rvNext">${i === steps.length - 1 ? 'Done' : 'Next →'}</button>
+      </div>`;
+    modal.querySelectorAll('[data-step]').forEach(b => b.addEventListener('click', () => { current = steps.find(s => s.key === b.dataset.step); paint(); }));
+    $('rvPrev').addEventListener('click', () => { current = steps[Math.max(0, i - 1)]; paint(); });
+    $('rvNext').addEventListener('click', () => {
+      if (i === steps.length - 1) { closeModal(); render({ quiet: true }); return; }
+      current = steps[i + 1]; paint();
+    });
+    $('rvRelease').addEventListener('click', async () => {
+      try { await api(`/admin/work/verification/${accountId}/release`, { method: 'POST' }); } catch (err) { if (err.message !== 'unauthorized') toast('bad', 'Could not give it back', err.message); return; }
+      closeModal(); render({ quiet: true });
+    });
+    const body = $('rvBody');
+    // After any decision: reopen on the next step still waiting, from the server's own state.
+    const after = (decidedKey) => {
+      const order = steps.map(s => s.key);
+      const open = s => s.state === 'waiting' && s.key !== 'summary' && s.key !== decidedKey;
+      const nextWaiting = steps.slice(order.indexOf(decidedKey) + 1).find(open) || steps.find(open);
+      openReview(accountId, nextWaiting ? nextWaiting.key : 'summary');
+      render({ quiet: true });
+    };
+    if (current.key === 'identity') paintIdentityStep(body, v, current, after);
+    else if (current.key === 'police') paintPoliceStep(body, v, current, after);
+    else if (current.key === 'summary') paintSummaryStep(body, v, steps, s => { current = s; paint(); });
+    else paintDocStep(body, v, current, after);
+  };
+  paint();
+}
+
+/** The checks, ticked one by one; returns a function saying whether all are ticked. */
+function checklist(host, items) {
+  host.innerHTML = `<div class="rv-checks"><div class="rv-checks-h">Check on the document</div>${items.map((t, n) => `<label class="rv-check"><input type="checkbox" data-chk="${n}"><span>${t}</span></label>`).join('')}</div>`;
+  return () => [...host.querySelectorAll('[data-chk]')].every(c => c.checked);
+}
+
+/** Reject with a reason she is shown: one click for the common ones, or her own words. */
+function rejectBox(host, reasons, onReject) {
+  host.innerHTML = `<details class="rv-reject"><summary>Send it back to her…</summary>
+    <div class="rv-reasons">${reasons.map((r, n) => `<button type="button" class="chip-btn" data-reason="${n}">${esc(r)}</button>`).join('')}</div>
+    <label class="field"><span>Reason (she is shown this)</span><textarea data-reason-text maxlength="1000" placeholder="Pick one above or write what she must fix"></textarea></label>
+    <div class="row"><button class="btn btn-reject" type="button" data-reject-go>Send back</button><span class="field-err" data-reject-err hidden>Say what she must fix.</span></div></details>`;
+  const text = host.querySelector('[data-reason-text]');
+  host.querySelectorAll('[data-reason]').forEach(b => b.addEventListener('click', () => { text.value = reasons[+b.dataset.reason]; text.focus(); }));
+  host.querySelector('[data-reject-go]').addEventListener('click', () => {
+    const reason = text.value.trim();
+    if (!reason) { host.querySelector('[data-reject-err]').hidden = false; return; }
+    onReject(reason);
+  });
+}
+
+function stepNote(state, what) {
+  if (state === 'missing') return `<div class="banner banner-info">She has not sent ${what} yet. Nothing to decide - she is reminded in the app.</div>`;
+  if (state === 'done') return `<div class="banner banner-ok">Approved. Nothing more to decide here.</div>`;
+  if (state === 'rejected') return `<div class="banner banner-err">Sent back to her. Nothing to decide until she sends it again.</div>`;
+  if (state === 'expired') return `<div class="banner banner-err">Expired. She cannot take trips until a renewal is approved.</div>`;
+  return '';
+}
+
+function paintIdentityStep(body, v, step, after) {
+  body.innerHTML = `<div class="rv-split">
+      <div class="rv-files">
+        <div class="docs">
+          <div><div class="doc-label">Live selfie <span class="doc-hint" id="selfieWhen"></span></div><div class="doc" id="selfieBox"><div class="skel doc-skel"></div></div></div>
+          <div><div class="doc-label">Identity document</div><div class="doc" id="docBox"><div class="skel doc-skel"></div></div></div>
+        </div>
+        <div id="livenessBox"></div>
+      </div>
+      <div class="rv-side">
+        ${stepNote(step.state, 'her ID')}
+        <div id="rvChecks"></div>
+        <div class="row" id="rvActs" ${step.state === 'waiting' ? '' : 'hidden'}><button class="btn btn-approve" type="button" id="rvApprove" disabled>Approve identity</button><span class="subtle" id="rvWhy">Tick every check first.</span></div>
+        <div id="rvReject"></div>
+      </div></div>`;
+  const root = $('modalRoot');
+  api(`/admin/verification/${v.accountId}/document`).then(out => {
+    renderDocument(root.querySelector('#docBox'), out.url, 'Submitted identity document');
+    renderLiveSelfie(root, out.liveSelfie);
+  }).catch(err => {
+    if (err.message === 'unauthorized') return;
+    ['#docBox', '#selfieBox'].forEach(sel => { const b = root.querySelector(sel); if (b) b.innerHTML = '<div class="fallback">Nothing on file to show.</div>'; });
+  });
+  if (step.state !== 'waiting') return;
+  const allTicked = checklist(body.querySelector('#rvChecks'), reviewChecks('identity', v));
+  const approve = body.querySelector('#rvApprove');
+  body.querySelector('#rvChecks').addEventListener('change', () => {
+    approve.disabled = !allTicked();
+    body.querySelector('#rvWhy').textContent = allTicked() ? '' : 'Tick every check first.';
+  });
+  const decide = async (decision, reason) => {
+    try {
+      await api(`/admin/verification/${v.accountId}/gender-review`, { method: 'POST', body: JSON.stringify({ decision, reason }) });
+      toast('ok', decision === 'VERIFIED' ? 'Identity approved' : 'Sent back to her', decision === 'VERIFIED' ? 'Next: her documents.' : 'She has been told why.');
+      after('identity');
+    } catch (err) { if (err.message !== 'unauthorized') toast('bad', 'Could not save that decision', err.message); }
+  };
+  approve.addEventListener('click', () => decide('VERIFIED', null));
+  rejectBox(body.querySelector('#rvReject'), REJECT_REASONS.identity, reason => decide('REJECTED', reason));
+}
+
+function paintDocStep(body, v, step, after) {
+  const doc = step.doc;
+  const type = step.key;
+  const expires = type !== 'POLICE_CERTIFICATE';
+  const isInsurance = type === 'VEHICLE_INSURANCE';
+  const waiting = step.state === 'waiting';
+  const plateMismatch = type === 'VEHICLE_RC' && doc && v.vehicleRegistrationNumber && !sameNumber(doc.documentNumber, v.vehicleRegistrationNumber);
+  body.innerHTML = `<div class="rv-split">
+      <div class="rv-files">${doc && doc.fileOnFile ? '<div class="doc" data-doc-box><div class="skel doc-skel"></div></div>' : '<div class="fallback">No file on record.</div>'}</div>
+      <div class="rv-side">
+        ${stepNote(step.state, 'this document')}
+        ${doc ? `<dl class="kv">
+          <dt>She typed</dt><dd class="num">${esc(doc.documentNumber || '-')}</dd>
+          ${expires ? `<dt>Valid until</dt><dd>${expiryText(doc.validUntil, doc.status)}</dd>` : ''}
+          ${type === 'VEHICLE_RC' ? `<dt>Whose vehicle</dt><dd>${doc.vehicleOwner ? esc(OWNER_TEXT[doc.vehicleOwner] || '') + (doc.ownerName ? ` · owner <b>${esc(doc.ownerName)}</b>` : '') : '<span class="subtle">Not asked (older upload)</span>'}</dd>
+            <dt>Her profile plate</dt><dd class="num">${esc(v.vehicleRegistrationNumber || '-')} ${plateMismatch ? '<span class="badge b-red">Does not match</span>' : '<span class="badge b-green">Matches</span>'}</dd>` : ''}
+          ${isInsurance ? `<dt>She says</dt><dd>${doc.insuranceUseType === 'COMMERCIAL' ? '<span class="badge b-green">Commercial use</span>' : `<span class="badge b-red">${esc(INSURANCE_USE_TEXT[doc.insuranceUseType] || 'Not stated')}</span>`}</dd>` : ''}
+          <dt>Sent</dt><dd>${esc(time(doc.submittedAt))}</dd>
+          ${doc.status === 'REJECTED' ? `<dt>Reason given</dt><dd>“${esc(doc.rejectionReason)}”</dd>` : ''}
+        </dl>` : ''}
+        ${waiting ? `<div class="doc-fields rv-fields">
+          <label class="field"><span>Number (correct it to what the document shows)</span><input data-f="documentNumber" maxlength="64" value="${escValue(doc.documentNumber)}"><small class="field-err" data-num-err hidden></small></label>
+          ${expires ? `<label class="field"><span>Valid until</span><input type="date" data-f="validUntil" min="${todayInIndia()}" value="${escValue(doc.validUntil)}"></label>` : ''}
+          ${isInsurance ? `<label class="field"><span>Policy use</span><select data-f="insuranceUseType">
+            ${['COMMERCIAL', 'PRIVATE', 'UNKNOWN'].map(u => `<option value="${u}"${(doc.insuranceUseType || 'UNKNOWN') === u ? ' selected' : ''}>${esc(INSURANCE_USE_TEXT[u])}</option>`).join('')}</select></label>` : ''}
+        </div>
+        <div id="rvChecks"></div>
+        <div class="row"><button class="btn btn-approve" type="button" id="rvApprove" disabled>Approve ${esc(STEP_LABEL[type] || docTypeText(type))}</button><span class="subtle" id="rvWhy"></span></div>
+        <div id="rvReject"></div>` : ''}
+      </div></div>`;
+  if (doc && doc.fileOnFile) openDocFile(body.querySelector('[data-doc-box]'), doc.id, docTypeText(type));
+  if (!waiting) return;
+  const f = k => body.querySelector(`[data-f="${k}"]`);
+  const allTicked = checklist(body.querySelector('#rvChecks'), reviewChecks(type, v, doc));
+  const approve = body.querySelector('#rvApprove');
+  const why = body.querySelector('#rvWhy');
+  const check = () => {
+    const missing = [];
+    const numErr = docNumberProblem(type, f('documentNumber').value);
+    const errBox = body.querySelector('[data-num-err]');
+    errBox.hidden = !numErr; errBox.textContent = numErr || '';
+    if (numErr) missing.push('a number in the right format');
+    if (expires && !(f('validUntil') && f('validUntil').value)) missing.push('the valid-until date');
+    else if (expires && f('validUntil').value < todayInIndia()) missing.push('a date that has not passed');
+    if (isInsurance && f('insuranceUseType').value !== 'COMMERCIAL') missing.push('a commercial policy');
+    if (!allTicked()) missing.push('every check ticked');
+    approve.disabled = missing.length > 0;
+    why.textContent = missing.length ? 'Needs ' + missing.join(', ') + '.' : '';
+  };
+  body.querySelectorAll('[data-f]').forEach(el => el.addEventListener('input', check));
+  body.querySelector('#rvChecks').addEventListener('change', check);
+  check();
+  const decide = async (payload) => {
+    try {
+      await api(`/admin/verification/documents/${doc.id}/review`, { method: 'POST', body: JSON.stringify(payload) });
+      toast('ok', payload.decision === 'VERIFIED' ? `${docTypeText(type)} approved` : 'Sent back to her', payload.decision === 'VERIFIED' ? 'Recorded on her audit trail.' : 'She has been told why.');
+      after(type);
+    } catch (err) { if (err.message !== 'unauthorized') toast('bad', 'Could not save that decision', err.message); }
+  };
+  approve.addEventListener('click', () => {
+    const payload = { decision: 'VERIFIED' };
+    ['documentNumber', 'validUntil', 'insuranceUseType'].forEach(k => { const el = f(k); if (el && el.value) payload[k] = el.value.trim(); });
+    decide(payload);
+  });
+  rejectBox(body.querySelector('#rvReject'), [...(REJECT_REASONS[type] || []), ...REJECT_REASONS.common], reason => decide({ decision: 'REJECTED', reason }));
+}
+
+function paintPoliceStep(body, v, step, after) {
+  if (step.state === 'blocked') {
+    body.innerHTML = '<div class="banner banner-info">The police check is recorded once her identity is approved - it is on the woman the ID check confirmed.</div>';
+    return;
+  }
+  body.innerHTML = `<div class="rv-police-intro">
+      <div class="rv-checks"><div class="rv-checks-h">Check on the certificate</div>
+        <div class="rv-plain">The name and father's or husband's name match her ID · it is a Police Verification / Clearance Certificate · it was issued within the last ${Number(v.policeReverifyMonths) || 12} months · it says no case is pending against her.</div></div>
+    </div><div class="dx-grid">${policePanel(v)}</div>`;
+  bindPartnerDocs(body, v, () => openReview(v.accountId, 'police'));
+  const form = body.querySelector('[data-police-form]');
+  if (form) form.dataset.after = 'review';
+  POLICE_AFTER.set(v.accountId, () => after('police'));
+}
+/** Where a police decision made inside the review returns to. */
+const POLICE_AFTER = new Map();
+
+function paintSummaryStep(body, v, steps, go) {
+  const rows = steps.filter(s => s.key !== 'summary').map(s => `<li><button type="button" class="link-btn" data-go-step="${s.key}">${esc(s.label)}</button>
+      <span class="badge b-${STEP_TONE[s.state] || 'grey'}">${esc(STEP_WORD[s.state] || '')}</span></li>`).join('');
+  body.innerHTML = `${readinessBlock(v.readiness)}<h4 class="sub-h">Every step</h4><ul class="plain-list rv-summary">${rows}</ul>
+    <p class="subtle">She is told of every decision in the app. When every step is approved and in date she can go online.</p>`;
+  body.querySelectorAll('[data-go-step]').forEach(b => b.addEventListener('click', () => go(steps.find(s => s.key === b.dataset.goStep))));
 }
 
 // ---- insurance --------------------------------------------------------------
@@ -6572,13 +7055,16 @@ async function loadOverview() {
     q('/admin/live', canOpen('live')),
     q('/admin/profile-changes', can('verification.review')),
   ]);
-  const [dashboard, security, insurance] = await Promise.all([
+  const docs = (queueName) => q(`/admin/verification/document-queue?queue=${queueName}`, can('verification.review'));
+  const [dashboard, security, insurance, docsToReview, docsExpired, docsExpiring, policeDue] = await Promise.all([
     q('/admin/dashboard'),
     q('/admin/dashboard/security', can('staff.manage.owner')),
     q('/admin/insurance/status', canOpen('insurance')),
+    docs('TO_REVIEW'), docs('EXPIRED'), docs('EXPIRING'), docs('POLICE_DUE'),
   ]);
   return { queue, sos, support, payouts, bookingsToday, completedToday, noPartnerToday, routes, trust, campaigns,
-    shopsInReview, shopsAwaitingFee, shopsLive, live, changes, dashboard, security, insurance };
+    shopsInReview, shopsAwaitingFee, shopsLive, live, changes, dashboard, security, insurance,
+    docsToReview, docsExpired, docsExpiring, policeDue };
 }
 
 const OV_EXTRA = {
@@ -6675,8 +7161,17 @@ function paintOverview(d) {
   const n = (v) => (v === null || v === undefined ? '-' : Number(v).toLocaleString('en-IN'));
   const len = (a) => (Array.isArray(a) ? a.length : null);
   const total = (p) => (p && typeof p.totalItems === 'number' ? p.totalItems : null);
-  const queueN = len(d.queue), sosN = len(d.sos), routesN = len(d.routes), trustN = len(d.trust);
-  const oldest = (d.queue || []).map((r) => waited(submittedAt(r))).sort((a, b) => (b.mins || 0) - (a.mins || 0))[0];
+  const sosN = len(d.sos), routesN = len(d.routes), trustN = len(d.trust);
+  // Verification is two kinds of work: riders waiting on an ID check, and
+  // partners whose application (ID, documents) waits - counted per partner.
+  const apps = d.queue || d.docsToReview ? partnerApplications(d.queue, d.docsToReview) : null;
+  const appsN = apps ? apps.length : null;
+  const ridersN = d.queue ? d.queue.filter(isCustomer).length : null;
+  const queueN = appsN === null && ridersN === null ? null : (appsN || 0) + (ridersN || 0);
+  const docsWaitingN = len(d.docsToReview);
+  const expiredN = len(d.docsExpired), expiringN = len(d.docsExpiring), policeDueN = len(d.policeDue);
+  const oldest = [...(apps || []).map(a => a.since), ...(d.queue || []).filter(isCustomer).map(submittedAt)]
+    .filter(Boolean).map(waited).sort((a, b) => (b.mins || 0) - (a.mins || 0))[0];
   const payoutItems = d.payouts ? d.payouts.items || [] : [];
   const payoutSum = payoutItems.reduce((sum, p) => sum + Number(p.amount || 0), 0);
   const signup = d.campaigns ? (d.campaigns.promotions || []).find((p) => p.type === 'SIGNUP_CREDIT') : null;
@@ -6685,7 +7180,10 @@ function paintOverview(d) {
   const bookedToday = total(d.bookingsToday), doneToday = total(d.completedToday), missedToday = total(d.noPartnerToday);
 
   // The sidebar badges, from the same numbers.
-  if (queueN !== null) $('cQueue').textContent = queueN;
+  if (ridersN !== null) $('cQueue').textContent = ridersN;
+  if (appsN !== null) $('cApplications').textContent = appsN;
+  if (docsWaitingN !== null) $('cDocReview').textContent = docsWaitingN;
+  if (expiredN !== null) $('cDocExpired').textContent = expiredN || '';
   if (sosN !== null) $('cSos').textContent = sosN;
   if (routesN !== null) $('cRoutes').textContent = routesN;
   if (trustN !== null) $('cTrust').textContent = trustN;
@@ -6707,8 +7205,12 @@ function paintOverview(d) {
   const attention = [];
   if (sosN > 0) attention.push(['red', `${sosN} active SOS alert${sosN === 1 ? '' : 's'}: a rider or partner may need help now`, 'sos']);
   if (d.support && d.support.unresolvedHigh > 0) attention.push(['red', `${d.support.unresolvedHigh} high-priority support ticket${d.support.unresolvedHigh === 1 ? '' : 's'} unresolved`, 'support']);
-  if (oldest && oldest.mins >= 1440) attention.push(['amber', `Verification waiting ${oldest.text}: people cannot ride or drive until it is decided`, 'queue']);
-  else if (queueN > 0) attention.push(['amber', `${queueN} verification${queueN === 1 ? '' : 's'} waiting for a decision`, 'queue']);
+  if (appsN > 0) attention.push(['amber', `${appsN} partner application${appsN === 1 ? '' : 's'} to review${docsWaitingN ? ` (${docsWaitingN} document${docsWaitingN === 1 ? '' : 's'})` : ''}: she cannot drive until each is decided`, 'applications']);
+  if (ridersN > 0) attention.push(['amber', `${ridersN} rider${ridersN === 1 ? '' : 's'} waiting for an ID check before she can book`, 'queue']);
+  if (oldest && oldest.mins >= 1440) attention.unshift(['red', `Verification waiting ${oldest.text}: the oldest is past a day`, appsN > 0 ? 'applications' : 'queue']);
+  if (expiredN > 0) attention.push(['red', `${expiredN} partner document${expiredN === 1 ? '' : 's'} expired: she cannot take trips until a renewal is approved`, 'docexpired']);
+  if (policeDueN > 0) attention.push(['amber', `${policeDueN} police check${policeDueN === 1 ? '' : 's'} due within 30 days`, 'policedue']);
+  if (expiringN > 0) attention.push(['blue', `${expiringN} partner document${expiringN === 1 ? '' : 's'} expire within 30 days - a reminder call saves her a day off the road`, 'docexpiring']);
   if (d.changes && d.changes.length) attention.push(['amber', `${d.changes.length} partner${d.changes.length === 1 ? '' : 's'} changed name, photo or vehicle: riders see the old details until you decide`, 'changes']);
   if (inReview > 0) attention.push(['brand', `${inReview} marketplace shop${inReview === 1 ? '' : 's'} waiting for review`, 'sellers', 'SUBMITTED_FOR_REVIEW']);
   if (payoutItems.length) attention.push(['amber', `${payoutItems.length} payout${payoutItems.length === 1 ? '' : 's'} waiting to be paid, ${rupees(payoutSum)} in all`, 'payouts']);
@@ -6746,14 +7248,14 @@ function paintOverview(d) {
     ${liveStrip(d.live)}
     <div class="ov-grid" data-overview>
       ${kpi('bookings', 'brand', OV_ICON.bookings, n(bookedToday), "Today's bookings", `${n(doneToday)} completed · ${n(missedToday)} found no partner`, split)}
-      ${kpi('queue', 'amber', OV_ICON.check, n(queueN), 'Waiting for verification', oldest ? 'Oldest waiting ' + esc(oldest.text) : 'Nobody waiting')}
+      ${kpi(appsN > 0 || !ridersN ? 'applications' : 'queue', 'amber', OV_ICON.check, n(queueN), 'Waiting for verification', queueN ? `${n(appsN)} partner${appsN === 1 ? '' : 's'} · ${n(ridersN)} rider${ridersN === 1 ? '' : 's'}${oldest ? ' · oldest ' + esc(oldest.text) : ''}` : 'Nobody waiting')}
       ${kpi('support', 'blue', OV_ICON.chat, n(d.support ? d.support.unresolved : null), 'Open support tickets', d.support && d.support.unresolvedHigh ? d.support.unresolvedHigh + ' high priority' : 'None high priority', '', !!(d.support && d.support.unresolvedHigh))}
       ${kpi('payouts', 'green', OV_ICON.wallet, n(d.payouts ? total(d.payouts) : null), 'Payouts waiting', payoutItems.length ? rupees(payoutSum) + ' to pay' : 'Nothing to pay')}
     </div>
 
     <div class="ov-cols">
-      <section class="ov-card" aria-label="Needs attention">
-        <div class="hd"><span class="hico">${OV_EXTRA.bell}</span><h3>Needs attention</h3>
+      <section class="ov-card" aria-label="Today's work">
+        <div class="hd"><span class="hico">${OV_EXTRA.bell}</span><h3>Today's work</h3>
           <span class="tag badge ${attention.length ? 'b-amber' : 'b-green'}">${attention.length ? attention.length + ' to do' : 'All clear'}</span></div>
         <div class="bd"><div class="attn">${attention.length
           ? attention.map(([tone, text, go, status]) => `<button type="button" data-go="${go}"${status ? ` data-status="${status}"` : ''}><span class="dot ${tone}"></span><span class="txt">${esc(text)}</span><span class="chev" aria-hidden="true">›</span></button>`).join('')
@@ -7100,7 +7602,7 @@ async function renderNow(opts = {}) {
     paintRows(view, rows, narrowed && view.emptyFiltered ? view.emptyFiltered : view.empty);
     paintPager(paged);
 
-    const counts = { docreview: 'cDocReview', docexpiring: 'cDocExpiring', docexpired: 'cDocExpired', policedue: 'cPoliceDue', changes: 'cChanges', queue: 'cQueue', sos: 'cSos', bookings: 'cBookings', accounts: 'cAccounts', trust: 'cTrust', routes: 'cRoutes', feedback: 'cFeedback', shiftchecks: 'cShift' };
+    const counts = { applications: 'cApplications', docreview: 'cDocReview', docexpiring: 'cDocExpiring', docexpired: 'cDocExpired', policedue: 'cPoliceDue', changes: 'cChanges', queue: 'cQueue', sos: 'cSos', bookings: 'cBookings', accounts: 'cAccounts', trust: 'cTrust', routes: 'cRoutes', feedback: 'cFeedback', shiftchecks: 'cShift' };
     // The badge counts everything matching, not the rows on this page -
     // "25" beside Bookings when there are 400 would be a lie. Support is
     // not in this map: its badge counts unresolved tickets whatever the
@@ -7611,7 +8113,7 @@ async function refreshBadgesNow() {
       q('/admin/sellers/awaiting-count', can('marketplace.moderate')),
       q('/admin/shift-checks', can('verification.review')),
     ]);
-    set('cQueue', queue && queue.length);
+    set('cQueue', queue && queue.filter(isCustomer).length);
     set('cSos', sos && sos.length);
     set('cPayouts', payouts && payouts.totalItems);
     set('cRoutes', routes && routes.length);
@@ -7622,7 +8124,10 @@ async function refreshBadgesNow() {
     // Partners' paperwork: what is waiting, and who is off the road for it.
     if (can('verification.review')) {
       await Promise.all([
-        q('/admin/verification/document-queue?queue=TO_REVIEW').then(v => set('cDocReview', v && v.length)),
+        q('/admin/verification/document-queue?queue=TO_REVIEW').then(v => {
+          set('cDocReview', v && v.length);
+          if (v && queue) set('cApplications', partnerApplications(queue, v).length);
+        }),
         q('/admin/verification/document-queue?queue=EXPIRED').then(v => set('cDocExpired', v && (v.length || ''))),
         q('/admin/profile-changes').then(v => { if (v) $('cChanges').textContent = v.length || ''; }),
       ]).catch(() => {});
@@ -7644,6 +8149,7 @@ const TAB_ACCESS = {
   routes: anyOf('sos.respond'),
   support: anyOf('support.work'),
   hours: anyOf('service.hours.manage', 'reports.ops'),
+  applications: anyOf('verification.review'),
   queue: anyOf('verification.review'),
   docreview: anyOf('verification.review'),
   docexpiring: anyOf('verification.review'),

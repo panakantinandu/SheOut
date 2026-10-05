@@ -33,6 +33,7 @@ import type {
   ConsentStatus,
   CoverSummary,
   InsuranceUseType,
+  VehicleOwner,
   PartnerDocumentType,
   PartnerReadiness,
   TripCover,
@@ -430,7 +431,15 @@ export const verificationApi = {
   uploadPartnerDocument(
     type: PartnerDocumentType,
     file: File,
-    facts: { documentNumber?: string; issuedOn?: string; validUntil?: string; insuranceUseType?: InsuranceUseType }
+    facts: {
+      documentNumber?: string;
+      issuedOn?: string;
+      validUntil?: string;
+      insuranceUseType?: InsuranceUseType;
+      /** An RC: whose vehicle it is, and the owner's name when it is not hers. */
+      vehicleOwner?: VehicleOwner;
+      ownerName?: string;
+    }
   ): Promise<unknown> {
     const form = new FormData();
     form.append('file', file);

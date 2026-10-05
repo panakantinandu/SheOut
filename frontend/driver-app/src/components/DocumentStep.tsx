@@ -1,69 +1,116 @@
 import { useState } from 'react';
 import { Button, TextField, useTranslation } from '@sheout/design-system';
 import { ApiError, verificationApi } from '../api/client';
-import type { DocumentState, InsuranceUseType, PartnerDocumentType } from '../api/types';
-import { daysUntil, todayInIndia } from '../lib/documentDates';
+import type { DocumentState, InsuranceUseType, PartnerDocumentType, VehicleOwner } from '../api/types';
+import { daysUntil, formatDay, todayInIndia } from '../lib/documentDates';
 import { prepareDocumentPhoto } from '../lib/documentPhoto';
+import {
+  NUMBER_MAX_LENGTH,
+  earliestPoliceIssue,
+  isPlate,
+  latestValidUntil,
+  normalizeNumber,
+  numberLooksRight,
+} from '../lib/documentRules';
 import { PhotoPicker } from './verification/PhotoPicker';
 
 /** Documents that carry a printed valid-until date. The police certificate is redone on a period instead. */
 const EXPIRES: PartnerDocumentType[] = ['DRIVING_LICENCE', 'VEHICLE_RC', 'VEHICLE_INSURANCE', 'PUC', 'FITNESS_CERTIFICATE'];
 
+const OWNERS: VehicleOwner[] = ['SELF', 'FATHER', 'MOTHER', 'HUSBAND', 'SIBLING', 'OTHER_FAMILY'];
+
 /**
  * Sending one document: a photo of it, then what is printed on it - the
  * number and the date it runs out, and for a policy whether it is
  * commercial. Under every box, where on the paper to find it ("Printed as
- * 'DL No.'"), because "Number on the document" left her guessing which of
- * five numbers on a licence we meant.
+ * 'DL No.'").
  * <p>
- * An operator checks her answer against the photo and corrects it, rather
- * than transcribing it, which is what makes a review minutes rather than a
- * day. A date that has already passed is caught here, before the upload,
- * not after it as a server refusal.
+ * Each number must have the shape that document really has (see
+ * documentRules and the server's DocumentNumberRules): a licence is 15
+ * characters, an RC is a number plate, a policy has digits. She is told the
+ * moment she leaves the box, not after an upload - because a reviewer can
+ * only check a number against the photo if it is one.
+ * <p>
+ * The RC's number is the plate on her profile, already filled in: one plate,
+ * typed once. Whose vehicle it is comes next - her own, or a family
+ * member's with the owner's name as printed - because many women ride a
+ * parent's or husband's scooter, and that is welcome; the reviewer then
+ * checks the RC against that name instead of hers.
  */
 export function DocumentForm({
   type,
   state,
+  profilePlate,
   onSent,
   onCancel,
 }: {
   type: PartnerDocumentType;
   state: DocumentState | undefined;
+  /** The plate on her profile: the RC's number. */
+  profilePlate?: string | null;
   onSent: () => void;
   onCancel?: () => void;
 }) {
   const { t } = useTranslation();
+  const plateFromProfile = type === 'VEHICLE_RC' && profilePlate && isPlate(profilePlate) ? profilePlate : null;
   const [file, setFile] = useState<File | null>(null);
-  const [number, setNumber] = useState(state?.documentNumber ?? '');
+  const [number, setNumber] = useState(plateFromProfile ?? state?.documentNumber ?? '');
+  const [numberTouched, setNumberTouched] = useState(false);
   const [issuedOn, setIssuedOn] = useState('');
   const [validUntil, setValidUntil] = useState('');
   const [use, setUse] = useState<InsuranceUseType | ''>('');
+  const [owner, setOwner] = useState<VehicleOwner | ''>('');
+  const [ownerName, setOwnerName] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const expires = EXPIRES.includes(type);
   const police = type === 'POLICE_CERTIFICATE';
+  const rc = type === 'VEHICLE_RC';
+  const today = todayInIndia();
+  const latest = latestValidUntil(type, today);
+  const oldestPolice = earliestPoliceIssue(today);
+
+  const numberOk = numberLooksRight(type, number);
+  const numberError = numberTouched && number.trim() !== '' && !numberOk ? t(`verify.doc.numberFormat.${type}`) : undefined;
   const pastDate = expires && validUntil !== '' && (daysUntil(validUntil) ?? 0) < 0;
+  const tooFar = expires && validUntil !== '' && latest !== null && validUntil > latest;
+  const dateError = pastDate ? t('verify.doc.pastDate') : tooFar ? t('verify.doc.tooFar') : undefined;
+  const issueTooOld = police && issuedOn !== '' && issuedOn < oldestPolice;
+  const issueInFuture = police && issuedOn !== '' && issuedOn > today;
+  const issueError = issueTooOld ? t('verify.doc.policeTooOld') : issueInFuture ? t('verify.doc.issueFuture') : undefined;
+  const ownerNameOk = owner === 'SELF' || /^[\p{L} .'-]{2,100}$/u.test(ownerName.trim());
 
   const missing = !file
     ? t('verify.doc.needFile')
     : number.trim() === ''
       ? t('verify.doc.needNumber')
-      : expires && !validUntil
-        ? t('verify.doc.needValidUntil')
-        : type === 'VEHICLE_INSURANCE' && !use
-          ? t('verify.doc.needUse')
-          : null;
+      : !numberOk
+        ? t('verify.doc.fixNumber')
+        : expires && !validUntil
+          ? t('verify.doc.needValidUntil')
+          : police && !issuedOn
+            ? t('verify.doc.needIssuedOn')
+            : rc && !owner
+              ? t('verify.doc.needOwner')
+              : rc && !ownerNameOk
+                ? t('verify.doc.needOwnerName')
+                : type === 'VEHICLE_INSURANCE' && !use
+                  ? t('verify.doc.needUse')
+                  : null;
+  const blocked = Boolean(missing) || Boolean(dateError) || Boolean(issueError);
 
   async function send() {
-    if (!file || missing || pastDate) return;
+    if (!file || blocked) return;
     setSending(true);
     setError(null);
     try {
       await verificationApi.uploadPartnerDocument(type, await prepareDocumentPhoto(file), {
-        documentNumber: number.trim(),
+        documentNumber: normalizeNumber(type, number),
         issuedOn: police && issuedOn ? issuedOn : undefined,
         validUntil: validUntil || undefined,
         insuranceUseType: use || undefined,
+        vehicleOwner: rc && owner ? owner : undefined,
+        ownerName: rc && owner && owner !== 'SELF' ? ownerName.trim() : undefined,
       });
       setFile(null);
       onSent();
@@ -88,38 +135,90 @@ export function DocumentForm({
         <TextField
           label={t(`verify.doc.number.${type}`)}
           value={number}
-          maxLength={64}
+          maxLength={NUMBER_MAX_LENGTH[type]}
           autoCapitalize="characters"
           autoComplete="off"
-          onChange={(e) => setNumber(e.target.value)}
+          spellCheck={false}
+          readOnly={Boolean(plateFromProfile)}
+          onChange={(e) => setNumber(e.target.value.toUpperCase())}
+          onBlur={() => setNumberTouched(true)}
+          error={numberError}
           data-testid={`doc-number-${type}`}
         />
-        <p className="px-1 text-caption text-text-secondary">{t(`verify.doc.numberHint.${type}`)}</p>
+        {!numberError && (
+          <p className="px-1 text-caption text-text-secondary">
+            {plateFromProfile ? t('verify.doc.plateFromProfile') : t(`verify.doc.numberHint.${type}`)}
+          </p>
+        )}
       </div>
+
+      {rc && (
+        <fieldset className="space-y-2" data-testid="rc-owner">
+          <legend className="mb-1 text-sm font-medium text-text-primary">{t('verify.doc.ownerQuestion')}</legend>
+          <div className="flex flex-wrap gap-2">
+            {OWNERS.map((o) => (
+              <button
+                key={o}
+                type="button"
+                aria-pressed={owner === o}
+                onClick={() => setOwner(o)}
+                className={`rounded-full border px-3 py-1.5 text-sm font-medium ${
+                  owner === o ? 'border-primary bg-primary-light text-primary' : 'border-border text-text-secondary'
+                }`}
+                data-testid={`rc-owner-${o}`}
+              >
+                {t(`verify.doc.owner.${o}`)}
+              </button>
+            ))}
+          </div>
+          {owner && owner !== 'SELF' && (
+            <div className="space-y-1">
+              <TextField
+                label={t('verify.doc.ownerName')}
+                value={ownerName}
+                maxLength={100}
+                autoComplete="off"
+                onChange={(e) => setOwnerName(e.target.value)}
+                data-testid="rc-owner-name"
+              />
+              <p className="px-1 text-caption text-text-secondary">{t('verify.doc.ownerHelp')}</p>
+            </div>
+          )}
+        </fieldset>
+      )}
 
       {expires && (
         <div className="space-y-1">
           <TextField
             label={t('verify.doc.validUntil')}
             type="date"
-            min={todayInIndia()}
+            min={today}
+            max={latest ?? undefined}
             value={validUntil}
             onChange={(e) => setValidUntil(e.target.value)}
-            error={pastDate ? t('verify.doc.pastDate') : undefined}
+            error={dateError}
             data-testid={`doc-valid-${type}`}
           />
-          {!pastDate && <p className="px-1 text-caption text-text-secondary">{t(`verify.doc.validHint.${type}`)}</p>}
+          {!dateError && <p className="px-1 text-caption text-text-secondary">{t(`verify.doc.validHint.${type}`)}</p>}
         </div>
       )}
 
       {police && (
-        <TextField
-          label={t('verify.doc.issuedOn')}
-          type="date"
-          max={todayInIndia()}
-          value={issuedOn}
-          onChange={(e) => setIssuedOn(e.target.value)}
-        />
+        <div className="space-y-1">
+          <TextField
+            label={t('verify.doc.issuedOnRequired')}
+            type="date"
+            min={oldestPolice}
+            max={today}
+            value={issuedOn}
+            onChange={(e) => setIssuedOn(e.target.value)}
+            error={issueError}
+            data-testid="doc-issued-POLICE_CERTIFICATE"
+          />
+          {!issueError && (
+            <p className="px-1 text-caption text-text-secondary">{t('verify.doc.policeIssueHint', { date: formatDay(oldestPolice) })}</p>
+          )}
+        </div>
       )}
 
       {type === 'VEHICLE_INSURANCE' && (
@@ -145,8 +244,8 @@ export function DocumentForm({
 
       {error && <p className="text-sm text-danger" role="alert">{error}</p>}
       <div className="flex gap-2">
-        <Button fullWidth disabled={Boolean(missing) || pastDate || sending} onClick={send} data-testid={`doc-send-${type}`}>
-          {sending ? t('common.uploading') : missing ?? t('verify.doc.send')}
+        <Button fullWidth disabled={blocked || sending} onClick={send} data-testid={`doc-send-${type}`}>
+          {sending ? t('common.uploading') : missing ?? (dateError || issueError ? t('verify.doc.fixDate') : t('verify.doc.send'))}
         </Button>
         {onCancel && (
           <Button variant="secondary" onClick={onCancel} disabled={sending}>

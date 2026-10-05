@@ -1,4 +1,4 @@
-package com.sheout.users.internal;
+package com.sheout.sharedkernel.india;
 
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -6,6 +6,9 @@ import java.util.regex.Pattern;
 /**
  * Checks that a vehicle registration number is structurally a real Indian
  * plate.
+ * <p>
+ * Shared because two modules read plates: users stores the one on her
+ * profile, and driver verification checks the one she types off her RC.
  * <p>
  * FORMAT ONLY. This says the number is shaped like a plate the RTO could
  * have issued and carries a state code that exists. It says nothing about
@@ -124,6 +127,14 @@ public final class VehicleRegistrationNumber {
             return "";
         }
         return raw.replaceAll("[\\s-]", "").toUpperCase();
+    }
+
+    /**
+     * Whether two letters are an Indian state or union territory code,
+     * current or legacy. A driving licence number starts with the same codes.
+     */
+    public static boolean isStateCode(String code) {
+        return code != null && STATE_CODES.contains(code);
     }
 
     /** True if this is a well-formed plate of either kind, with a real state code where one applies. */

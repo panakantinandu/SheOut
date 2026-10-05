@@ -1,5 +1,6 @@
 package com.sheout.users.internal.web;
 
+import com.sheout.sharedkernel.india.VehicleRegistrationNumber;
 import com.sheout.auth.AccountRole;
 import com.sheout.auth.CurrentAccount;
 import com.sheout.auth.CurrentAccountContext;
@@ -12,7 +13,6 @@ import com.sheout.users.DriverProfileSummary;
 import com.sheout.users.OnlineStatus;
 import com.sheout.users.VehicleType;
 import com.sheout.users.internal.DriverProfileError;
-import com.sheout.users.internal.VehicleRegistrationNumber;
 import com.sheout.users.internal.DriverProfileService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -223,6 +223,8 @@ public class DriverProfileController {
             // Reached only if some future caller hits this without the raw
             // number to hand; updateMyProfile answers it with the specific
             // reason before getting here.
+            case VEHICLE_TYPE_NOT_OFFERED -> new ApiException(HttpStatus.BAD_REQUEST, "VEHICLE_TYPE_NOT_OFFERED",
+                    "SheOut takes partners on two-wheelers (a bike or scooter) for now.");
             case INVALID_REGISTRATION_NUMBER -> new ApiException(
                     HttpStatus.BAD_REQUEST, "INVALID_REGISTRATION_NUMBER",
                     VehicleRegistrationNumber.rejectionReason(null));

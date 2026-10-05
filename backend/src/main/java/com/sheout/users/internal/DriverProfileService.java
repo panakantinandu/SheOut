@@ -1,5 +1,6 @@
 package com.sheout.users.internal;
 
+import com.sheout.sharedkernel.india.VehicleRegistrationNumber;
 import com.sheout.auth.AccountSummary;
 import com.sheout.auth.AuthApi;
 import com.sheout.driververification.ShiftCheckApi;
@@ -40,6 +41,12 @@ public class DriverProfileService implements DriverProfileApi {
     private final DomainEventPublisher eventPublisher;
     private final ShiftCheckApi shiftCheckApi;
     private final DriverProfileChangeService changes;
+    /**
+     * The vehicles SheOut takes partners on with: two-wheelers only while it
+     * starts out (PARTNER_VEHICLE_TYPES, default BIKE). A partner already on
+     * another type keeps it; only choosing one is refused.
+     */
+    private final java.util.Set<VehicleType> offeredVehicleTypes;
 
     public DriverProfileService(DriverProfileRepository driverProfileRepository,
                                  AuthApi authApi,
@@ -51,8 +58,11 @@ public class DriverProfileService implements DriverProfileApi {
                                  // The partner verification bypass, only ever set with
                                  // DEV_MODE_ENABLED - see DevMode.
                                  DevMode devMode,
-                                 DriverProfileChangeService changes) {
+                                 DriverProfileChangeService changes,
+                                 @org.springframework.beans.factory.annotation.Value("${sheout.partners.vehicle-types:BIKE}")
+                                 java.util.Set<VehicleType> offeredVehicleTypes) {
         this.changes = changes;
+        this.offeredVehicleTypes = java.util.Set.copyOf(offeredVehicleTypes);
         this.eventPublisher = eventPublisher;
         this.shiftCheckApi = shiftCheckApi;
         this.driverProfileRepository = driverProfileRepository;
@@ -168,6 +178,9 @@ public class DriverProfileService implements DriverProfileApi {
             return Result.failure(DriverProfileError.INVALID_EMAIL);
         }
         DriverProfileEntity profile = found.get();
+        if (vehicleType != profile.getVehicleType() && !offeredVehicleTypes.contains(vehicleType)) {
+            return Result.failure(DriverProfileError.VEHICLE_TYPE_NOT_OFFERED);
+        }
         if (!profile.hasProfilePhoto()) {
             return Result.failure(DriverProfileError.PROFILE_PHOTO_REQUIRED);
         }

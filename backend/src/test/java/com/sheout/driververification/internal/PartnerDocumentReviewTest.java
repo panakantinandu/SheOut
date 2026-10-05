@@ -72,7 +72,7 @@ class PartnerDocumentReviewTest {
 
         assertThat(result.isSuccess()).isTrue();
         assertThat(licence.getStatus()).isEqualTo(PartnerDocumentStatus.VERIFIED);
-        assertThat(licence.getDocumentNumber()).isEqualTo("TS09 2015 0001234");
+        assertThat(licence.getDocumentNumber()).as("stored without the spaces she typed").isEqualTo("TS0920150001234");
         assertThat(licence.getReviewedBy()).isEqualTo(operator);
     }
 
@@ -123,7 +123,7 @@ class PartnerDocumentReviewTest {
         licence.setDocumentKey(null);
 
         var result = service.review(UUID.randomUUID(), operator, PartnerDocumentStatus.VERIFIED, null,
-                facts("DL1", TODAY.plusYears(1), null));
+                facts("TS0920150001234", TODAY.plusYears(1), null));
 
         assertThat(result.error()).isEqualTo(VerificationError.DOCUMENT_FILE_MISSING);
     }
@@ -133,7 +133,7 @@ class PartnerDocumentReviewTest {
         PartnerDocumentEntity policy = waiting(PartnerDocumentType.VEHICLE_INSURANCE);
 
         var result = service.review(UUID.randomUUID(), operator, PartnerDocumentStatus.VERIFIED, null,
-                facts("POL-1", TODAY.plusMonths(8), InsuranceUseType.PRIVATE));
+                facts("POL-2026-000001", TODAY.plusMonths(8), InsuranceUseType.PRIVATE));
 
         assertThat(result.error()).isEqualTo(VerificationError.INSURANCE_NOT_COMMERCIAL);
         assertThat(policy.getStatus()).isEqualTo(PartnerDocumentStatus.UNDER_REVIEW);
@@ -148,7 +148,7 @@ class PartnerDocumentReviewTest {
         waiting(PartnerDocumentType.VEHICLE_INSURANCE);
 
         var result = service.review(UUID.randomUUID(), operator, PartnerDocumentStatus.VERIFIED, null,
-                facts("POL-1", TODAY.plusMonths(8), null));
+                facts("POL-2026-000001", TODAY.plusMonths(8), null));
 
         assertThat(result.error()).isEqualTo(VerificationError.INSURANCE_NOT_COMMERCIAL);
     }
@@ -158,7 +158,7 @@ class PartnerDocumentReviewTest {
         PartnerDocumentEntity policy = waiting(PartnerDocumentType.VEHICLE_INSURANCE);
 
         var result = service.review(UUID.randomUUID(), operator, PartnerDocumentStatus.VERIFIED, null,
-                facts("POL-1", TODAY.plusMonths(8), InsuranceUseType.COMMERCIAL));
+                facts("POL-2026-000001", TODAY.plusMonths(8), InsuranceUseType.COMMERCIAL));
 
         assertThat(result.isSuccess()).isTrue();
         assertThat(result.value().insuranceUseType()).isEqualTo(InsuranceUseType.COMMERCIAL);

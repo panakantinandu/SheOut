@@ -82,6 +82,40 @@ class PartnerDocumentFlowTest {
     }
 
     @Test
+    void whatSheTypesMustBeShapedLikeTheRealDocumentAndAFamilyVehicleIsWelcome() {
+        java.util.function.Function<DocumentFacts, VerificationError> send = facts -> documents.submit(partner,
+                PartnerDocumentType.DRIVING_LICENCE, pdf(), facts, PartnerDocumentSource.PARTNER_UPLOAD, partner, false).error();
+        assertThat(send.apply(new DocumentFacts("1234567", null, today.plusYears(3), null)))
+                .isEqualTo(VerificationError.LICENCE_NUMBER_INVALID);
+        assertThat(send.apply(new DocumentFacts("TS0920150001234", null, today.plusYears(40), null)))
+                .as("a mistyped year").isEqualTo(VerificationError.VALID_UNTIL_TOO_FAR);
+
+        // ---- an RC says whose vehicle it is; a parent's is fine, with the name on it
+        java.util.function.Function<DocumentFacts, Result<PartnerDocumentSummary, VerificationError>> rc = facts ->
+                documents.submit(partner, PartnerDocumentType.VEHICLE_RC, pdf(), facts, PartnerDocumentSource.PARTNER_UPLOAD, partner, false);
+        assertThat(rc.apply(new DocumentFacts("TS09AB1234", null, today.plusYears(10), null)).error())
+                .isEqualTo(VerificationError.VEHICLE_OWNER_REQUIRED);
+        assertThat(rc.apply(new DocumentFacts("TS09AB1234", null, today.plusYears(10), null,
+                com.sheout.driververification.VehicleOwner.FATHER, " ")).error())
+                .as("someone else's needs the owner's name").isEqualTo(VerificationError.VEHICLE_OWNER_REQUIRED);
+        PartnerDocumentSummary fathers = rc.apply(new DocumentFacts("ts 09 ab 1234", null, today.plusYears(10), null,
+                com.sheout.driververification.VehicleOwner.FATHER, "  Ramesh   Kumar ")).value();
+        assertThat(fathers.documentNumber()).isEqualTo("TS09AB1234");
+        assertThat(fathers.vehicleOwner()).isEqualTo(com.sheout.driververification.VehicleOwner.FATHER);
+        assertThat(fathers.ownerName()).isEqualTo("Ramesh Kumar");
+
+        // ---- a police certificate comes with the date printed on it
+        assertThat(documents.submit(partner, PartnerDocumentType.POLICE_CERTIFICATE, pdf(),
+                new DocumentFacts("TSPVC/2026/77", null, null, null), PartnerDocumentSource.PARTNER_UPLOAD, partner, false).error())
+                .isEqualTo(VerificationError.ISSUE_DATE_REQUIRED);
+
+        // ---- and an operator cannot approve a number in a shape no RTO issues
+        PartnerDocumentSummary licence = upload(PartnerDocumentType.DRIVING_LICENCE, "TS0920150001234", today.plusYears(3), null);
+        assertThat(documents.review(licence.id(), UUID.randomUUID(), PartnerDocumentStatus.VERIFIED, null,
+                new DocumentFacts("DL1", null, null, null)).error()).isEqualTo(VerificationError.LICENCE_NUMBER_INVALID);
+    }
+
+    @Test
     void sheWorksOnlyWithEveryDocumentApprovedAndInDate() {
         // ---- nothing on file: four documents missing, in checklist order
         PartnerReadiness empty = verification.partnerReadiness(partner, "BIKE");
@@ -97,9 +131,9 @@ class PartnerDocumentFlowTest {
                 .isEqualTo(VerificationError.DOCUMENT_NUMBER_REQUIRED);
         PartnerDocumentSummary licence = upload(PartnerDocumentType.DRIVING_LICENCE, "TS0920150001234", today.plusYears(3), null);
         PartnerDocumentSummary rc = upload(PartnerDocumentType.VEHICLE_RC, "TS09AB1234", today.plusYears(10), null);
-        PartnerDocumentSummary policy = upload(PartnerDocumentType.VEHICLE_INSURANCE, "POL-77", today.plusMonths(9),
+        PartnerDocumentSummary policy = upload(PartnerDocumentType.VEHICLE_INSURANCE, "POL-2026-000077", today.plusMonths(9),
                 InsuranceUseType.PRIVATE);
-        PartnerDocumentSummary puc = upload(PartnerDocumentType.PUC, "PUC-1", today.plusMonths(6), null);
+        PartnerDocumentSummary puc = upload(PartnerDocumentType.PUC, "PUC-100001", today.plusMonths(6), null);
         assertThat(verification.partnerReadiness(partner, "BIKE").blockers())
                 .extracting(PartnerReadiness.Blocker::code).containsOnly(BlockerCode.DOCUMENT_UNDER_REVIEW);
         assertThat(verification.findDocumentsAwaitingReview()).extracting(PartnerDocumentSummary::id)
@@ -111,7 +145,7 @@ class PartnerDocumentFlowTest {
         approve(puc.id());
         assertThat(documents.review(policy.id(), operator, PartnerDocumentStatus.VERIFIED, null, null).error())
                 .isEqualTo(VerificationError.INSURANCE_NOT_COMMERCIAL);
-        PartnerDocumentSummary commercial = upload(PartnerDocumentType.VEHICLE_INSURANCE, "POL-78", today.plusMonths(9),
+        PartnerDocumentSummary commercial = upload(PartnerDocumentType.VEHICLE_INSURANCE, "POL-2026-000078", today.plusMonths(9),
                 InsuranceUseType.COMMERCIAL);
         approve(commercial.id());
 
@@ -124,13 +158,13 @@ class PartnerDocumentFlowTest {
                 .isEqualTo(PartnerDocumentType.FITNESS_CERTIFICATE);
 
         // ---- a renewal waiting for review does not take her off the road
-        PartnerDocumentSummary renewal = upload(PartnerDocumentType.PUC, "PUC-2", today.plusMonths(12), null);
+        PartnerDocumentSummary renewal = upload(PartnerDocumentType.PUC, "PUC-100002", today.plusMonths(12), null);
         PartnerReadiness waiting = verification.partnerReadiness(partner, "BIKE");
         assertThat(waiting.ready()).isTrue();
         assertThat(waiting.documents()).filteredOn(d -> d.type() == PartnerDocumentType.PUC)
                 .singleElement().satisfies(d -> {
                     assertThat(d.renewalUnderReview()).isTrue();
-                    assertThat(d.documentNumber()).isEqualTo("PUC-1");
+                    assertThat(d.documentNumber()).isEqualTo("PUC-100001");
                 });
         // ...nor does it being turned down: the earlier one is current again.
         assertThat(documents.review(renewal.id(), operator, PartnerDocumentStatus.REJECTED, "Blurred photo", null).isSuccess())
@@ -217,16 +251,18 @@ class PartnerDocumentFlowTest {
     }
 
     private void approveAll() {
-        approve(upload(PartnerDocumentType.DRIVING_LICENCE, "DL-1", today.plusYears(3), null).id());
-        approve(upload(PartnerDocumentType.VEHICLE_RC, "RC-1", today.plusYears(10), null).id());
-        approve(upload(PartnerDocumentType.VEHICLE_INSURANCE, "POL-1", today.plusMonths(9), InsuranceUseType.COMMERCIAL).id());
-        approve(upload(PartnerDocumentType.PUC, "PUC-1", today.plusMonths(6), null).id());
+        approve(upload(PartnerDocumentType.DRIVING_LICENCE, "TS0920150001234", today.plusYears(3), null).id());
+        approve(upload(PartnerDocumentType.VEHICLE_RC, "TS09AB1234", today.plusYears(10), null).id());
+        approve(upload(PartnerDocumentType.VEHICLE_INSURANCE, "POL-2026-000001", today.plusMonths(9), InsuranceUseType.COMMERCIAL).id());
+        approve(upload(PartnerDocumentType.PUC, "PUC-100001", today.plusMonths(6), null).id());
         assertThat(verification.partnerReadiness(partner, "BIKE").ready()).isTrue();
     }
 
     private PartnerDocumentSummary upload(PartnerDocumentType type, String number, LocalDate validUntil, InsuranceUseType use) {
         Result<PartnerDocumentSummary, VerificationError> result = documents.submit(partner, type, pdf(),
-                new DocumentFacts(number, null, validUntil, use), PartnerDocumentSource.PARTNER_UPLOAD, partner, false);
+                new DocumentFacts(number, null, validUntil, use,
+                        type == PartnerDocumentType.VEHICLE_RC ? com.sheout.driververification.VehicleOwner.SELF : null, null),
+                PartnerDocumentSource.PARTNER_UPLOAD, partner, false);
         assertThat(result.isSuccess()).as(String.valueOf(result.isFailure() ? result.error() : "")).isTrue();
         return result.value();
     }

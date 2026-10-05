@@ -210,6 +210,20 @@ public class VerificationController {
                             + " certificate; the background report can go beside it as extra evidence.");
             case POLICE_CERTIFICATE_TOO_OLD -> new ApiException(HttpStatus.CONFLICT, "POLICE_CERTIFICATE_TOO_OLD",
                     "That certificate is old enough that it would already be due for re-verification. Ask her for a new one.");
+            case LICENCE_NUMBER_INVALID -> new ApiException(HttpStatus.BAD_REQUEST, "LICENCE_NUMBER_INVALID",
+                    "That is not a driving licence number. It is 15 characters: 2 letters for the state, then 13 digits - for example TS09 20210012345.");
+            case REGISTRATION_NUMBER_INVALID -> new ApiException(HttpStatus.BAD_REQUEST, "REGISTRATION_NUMBER_INVALID",
+                    "That is not a vehicle number. Type it as on the number plate, for example TS09AB1234.");
+            case POLICY_NUMBER_INVALID -> new ApiException(HttpStatus.BAD_REQUEST, "POLICY_NUMBER_INVALID",
+                    "That is not a policy number. Type the Policy No. exactly as printed: 6 to 30 letters and digits.");
+            case CERTIFICATE_NUMBER_INVALID -> new ApiException(HttpStatus.BAD_REQUEST, "CERTIFICATE_NUMBER_INVALID",
+                    "That is not a certificate number. Type it exactly as printed, with its digits.");
+            case VALID_UNTIL_TOO_FAR -> new ApiException(HttpStatus.BAD_REQUEST, "VALID_UNTIL_TOO_FAR",
+                    "That valid-until date is further ahead than this document is ever issued for. Check the year.");
+            case ISSUE_DATE_REQUIRED -> new ApiException(HttpStatus.BAD_REQUEST, "ISSUE_DATE_REQUIRED",
+                    "Add the date printed on the certificate.");
+            case VEHICLE_OWNER_REQUIRED -> new ApiException(HttpStatus.BAD_REQUEST, "VEHICLE_OWNER_REQUIRED",
+                    "Say whose vehicle this is, and the owner's name as printed on the RC.");
             case PROVIDER_NOT_CONFIGURED -> new ApiException(HttpStatus.CONFLICT, "PROVIDER_NOT_CONFIGURED",
                     "No verification provider is set up. Record the result of a manual check instead.");
         };

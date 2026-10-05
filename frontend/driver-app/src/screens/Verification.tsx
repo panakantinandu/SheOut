@@ -183,7 +183,7 @@ export function Verification() {
       summary: hasPhoto ? t('verify.photo.added') : t('verify.status.todo'),
       body: <PhotoBody profile={profile} onProfile={(p) => { setProfile(p); if (p.hasProfilePhoto) sent(); }} />,
     },
-    ...vehicleDocs.map((d) => documentStep(t, d, consented, blockers, warnings, sent)),
+    ...vehicleDocs.map((d) => documentStep(t, d, consented, blockers, warnings, sent, profile?.vehicleRegistrationNumber)),
     policeStep(t, summary, docState('POLICE_CERTIFICATE'), consented, blockers, warnings, sent),
   ];
 
@@ -397,6 +397,7 @@ function documentStep(
   blockers: ReadinessBlocker[],
   warnings: ReadinessBlocker[],
   onSent: () => void,
+  profilePlate?: string | null,
 ): Step {
   const days = d.validUntil ? daysUntil(d.validUntil) : null;
   const notCommercial =
@@ -436,7 +437,7 @@ function documentStep(
     state,
     summary: line,
     body: (
-      <DocumentBody type={d.type} state={d} stepState={state} why={t(`verify.doc.why.${d.type}`)} onSent={onSent} />
+      <DocumentBody type={d.type} state={d} stepState={state} why={t(`verify.doc.why.${d.type}`)} profilePlate={profilePlate} onSent={onSent} />
     ),
   };
 }
@@ -777,6 +778,7 @@ function DocumentBody({
   stepState,
   why,
   extra,
+  profilePlate,
   onSent,
 }: {
   type: PartnerDocumentType;
@@ -784,6 +786,7 @@ function DocumentBody({
   stepState: StepState;
   why: string;
   extra?: ReactNode;
+  profilePlate?: string | null;
   onSent: () => void;
 }) {
   const { t } = useTranslation();
@@ -803,7 +806,7 @@ function DocumentBody({
       {stepState === 'waiting' && <p className="rounded-input bg-primary-light p-3 text-sm text-text-primary">{t('verify.waitingBody')}</p>}
       {stepState === 'locked' && <p className="rounded-input bg-background p-3 text-sm text-text-secondary">{t('verify.status.locked')}</p>}
       {formOpen ? (
-        <DocumentForm type={type} state={state} onSent={onSent} onCancel={renewing ? () => setRenewing(false) : undefined} />
+        <DocumentForm type={type} state={state} profilePlate={profilePlate} onSent={onSent} onCancel={renewing ? () => setRenewing(false) : undefined} />
       ) : (
         stepState === 'done' &&
         !state?.renewalUnderReview && (
