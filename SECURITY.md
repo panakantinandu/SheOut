@@ -43,7 +43,7 @@ any valid report, unless you would rather stay anonymous.
 In scope:
 
 - `sheout-backend.onrender.com` (the API)
-- `sheout-customer-app.vercel.app`, `sheout-driver-app.vercel.app`
+- `app.sheoutride.com`, `partner.sheoutride.com`
 - The source in this repository
 
 Out of scope, because they are not ours to authorise testing against:

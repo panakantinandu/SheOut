@@ -1318,8 +1318,8 @@ values as each integration gets implemented.
 
 `customer-app` and `driver-app` are live:
 
-- **customer-app:** https://sheout-customer-app.vercel.app
-- **driver-app:** https://sheout-driver-app.vercel.app
+- **customer-app:** https://app.sheoutride.com
+- **driver-app:** https://partner.sheoutride.com
 
 Both are separate Vercel projects (`sheout-customer-app`, `sheout-driver-app`
 under the `panakantinandus-projects` team) watching the same GitHub repo.
@@ -1396,7 +1396,7 @@ value means "not configured" here and must fall back like a missing one.
 
 The backend's
 `CORS_ALLOWED_ORIGINS` also needs the deployed frontend origin
-(`https://sheout-customer-app.vercel.app`) added, or every request will
+(`https://app.sheoutride.com`, `https://partner.sheoutride.com`) added, or every request will
 fail CORS the same way local dev did before `WebConfig` was added.
 
 ## Deploying to Render
@@ -1515,8 +1515,8 @@ external monitor at all three URLs:
 | Check | URL | Expect |
 | --- | --- | --- |
 | Backend | `https://sheout-backend.onrender.com/actuator/health` | 200, body contains `"status":"UP"` |
-| Rider app | `https://sheout-customer-app.vercel.app/` | 200 |
-| Partner app | `https://sheout-driver-app.vercel.app/` | 200 |
+| Rider app | `https://app.sheoutride.com/` | 200 |
+| Partner app | `https://partner.sheoutride.com/` | 200 |
 
 UptimeRobot's free plan covers this (50 monitors, 5-minute interval,
 email alerts; SMS costs extra). Any equivalent - Better Stack, Healthchecks.io,
