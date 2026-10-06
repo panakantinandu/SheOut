@@ -44,7 +44,7 @@ class ListingSearchService implements ListingSearchApi {
 
     static final String SYSTEM_PROMPT = """
             You help shoppers on SheOut Marketplace, a directory of women in India who sell from home: sarees and \
-            clothes, beauty services, tailoring, mehandi, gifts and ornaments. Prices are in Indian rupees.
+            clothes, beauty services, tailoring, mehandi, gifts, ornaments and home-cooked food. Prices are in Indian rupees.
 
             You are given the shopper's request and a list of listings, each with a ref such as p3. Choose the \
             listings that fit what the shopper is looking for and return their refs, best fit first.

@@ -44,6 +44,15 @@
       { "key": "jhumka", "title": "Kundan jhumka earrings", "description": "Gold-plated jhumkas with ruby kundan and pearl hangings. Light enough for a full day.", "price": 699, "source": "ornaments", "crop": [0.7, 0.48, 0.3, 0.52] },
       { "key": "bangles", "title": "Gold-plated bangles, set of six", "description": "Textured gold-plated bangles in sizes 2.4 to 2.8.", "price": 899, "source": "ornaments", "crop": [0.1, 0.52, 0.36, 0.48] }
     ]},
+    { "key": "amma-kitchen", "name": "Amma's Kitchen", "category": "HOME_FOOD", "area": "Mehdipatnam", "products": [
+      { "key": "biryani", "title": "Chicken dum biryani, family pack", "description": "Hyderabadi dum biryani cooked at home on order, with raita and salan. Serves four. Order a day ahead.", "price": 899, "originalPrice": 999, "source": "food", "crop": [0.36, 0.26, 0.6, 0.62] },
+      { "key": "butter-chicken", "title": "Butter chicken, 500 g", "description": "Mild, creamy butter chicken made fresh the same day. Packed hot in a sealed container.", "price": 399, "source": "food", "crop": [0.0, 0.45, 0.3, 0.33] },
+      { "key": "naan", "title": "Butter garlic naan, set of four", "description": "Soft naan brushed with garlic butter and coriander, made on the tawa at home.", "price": 160, "source": "food", "crop": [0.04, 0.18, 0.5, 0.32] }
+    ]},
+    { "key": "sravani-foods", "name": "Sravani Home Foods", "category": "HOME_FOOD", "area": "Kompally", "products": [
+      { "key": "meal-box", "title": "Biryani meal box for two", "description": "Biryani, a curry, naan, raita and mango lassi for two, cooked at home on the day.", "price": 649, "source": "food", "crop": [0.0, 0.0, 1.0, 1.0] },
+      { "key": "lassi", "title": "Mango lassi, 500 ml", "description": "Thick mango lassi made with fresh curd and a pinch of cardamom. Best chilled.", "price": 120, "source": "food", "crop": [0.8, 0.04, 0.2, 0.6] }
+    ]},
     { "key": "annapurna-home", "name": "Annapurna Home Store", "category": "OTHER", "customCategory": "Home and kitchen", "area": "Nalgonda", "products": [
       { "key": "flask", "title": "Stainless steel flask, 1 litre", "description": "Keeps tea hot for 12 hours. Leak-proof lid, easy to clean.", "price": 549, "source": "other", "crop": [0.55, 0.18, 0.2, 0.58] },
       { "key": "mug", "title": "Floral ceramic mug", "description": "350 ml mug with a hand-painted floral print. Microwave safe.", "price": 249, "source": "other", "crop": [0.66, 0.52, 0.22, 0.34] },

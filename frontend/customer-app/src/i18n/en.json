@@ -364,6 +364,7 @@
       "mehandi": "Mehandi",
       "gifts": "Gifts",
       "ornaments": "Ornaments",
+      "food": "Food",
       "other": "Other"
     },
     "legal": {
@@ -694,6 +695,7 @@
         "mehandi": "Bridal and festival designs",
         "gifts": "Hampers, handmade gifts",
         "ornaments": "Earrings, bangles, necklaces",
+        "food": "Meals, pickles, sweets, snacks",
         "other": "Anything else, in your words"
       },
       "sell": {

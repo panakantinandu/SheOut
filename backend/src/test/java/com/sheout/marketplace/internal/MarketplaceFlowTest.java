@@ -507,7 +507,7 @@ class MarketplaceFlowTest {
     @Test
     void sampleShopsAreMarkedHaveNobodyToContactAndGoWhenTurnedOff() {
         samples.removeAll();
-        assertThat(samples.ensure()).isEqualTo(12);
+        assertThat(samples.ensure()).isEqualTo(14);
         assertThat(samples.ensure()).as("a restart adds nothing twice").isZero();
 
         List<ListingCard> mehandi = directory(SellerCategory.MEHANDI, "mehandi");
@@ -522,7 +522,7 @@ class MarketplaceFlowTest {
         assertThat(directory(null, "Nalgonda")).isEmpty();
         assertThat(browse(Set.of(), null, null, null, "Nalgonda")).isNotEmpty();
 
-        assertThat(samples.removeAll()).isEqualTo(12);
+        assertThat(samples.removeAll()).isEqualTo(14);
         assertThat(directory(SellerCategory.MEHANDI, "mehandi")).noneMatch(ListingCard::sample);
         assertThat(jdbc.queryForObject("select count(*) from seller_products p join seller_profiles s on s.id = p.seller_id"
                 + " where s.sample", Integer.class)).isZero();

@@ -5,14 +5,15 @@ import tailoringArt from '../assets/seller/tailoring.webp';
 import mehandiArt from '../assets/seller/mehandi.webp';
 import giftsArt from '../assets/seller/gifts.webp';
 import ornamentsArt from '../assets/seller/ornaments.webp';
+import foodArt from '../assets/seller/food.webp';
 import otherArt from '../assets/seller/other.webp';
 
 /**
  * The SheOut Seller categories, each with its own photo and a tint from the
- * colour depth scale behind it - the six named ones, then Other, where a
+ * colour depth scale behind it - the named ones, then Other, where a
  * seller names what she sells herself. Order is the order a woman
  * browsing would expect: what to wear first, then what to have done, then
- * what to give. `key` is the i18n key under seller.categories.
+ * what to give, then food from a home kitchen. `key` is the i18n key under seller.categories.
  */
 export const SELLER_CATEGORIES: { value: SellerCategory; key: string; art: string; tint: string }[] = [
   { value: 'FASHION_SAREE', key: 'fashion', art: fashionArt, tint: 'bg-primary-light' },
@@ -21,6 +22,7 @@ export const SELLER_CATEGORIES: { value: SellerCategory; key: string; art: strin
   { value: 'MEHANDI', key: 'mehandi', art: mehandiArt, tint: 'bg-accent-orange-tint' },
   { value: 'GIFTS', key: 'gifts', art: giftsArt, tint: 'bg-primary-light' },
   { value: 'ORNAMENTS', key: 'ornaments', art: ornamentsArt, tint: 'bg-accent-blue-tint' },
+  { value: 'HOME_FOOD', key: 'food', art: foodArt, tint: 'bg-accent-orange-tint' },
   { value: 'OTHER', key: 'other', art: otherArt, tint: 'bg-accent-green-tint' },
 ];
 

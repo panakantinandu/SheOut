@@ -293,7 +293,7 @@ export interface PaymentSummary {
 
 // ---------------------------------------------------------------- SheOut Seller
 
-export type SellerCategory = 'FASHION_SAREE' | 'BEAUTY_SERVICES' | 'TAILORING' | 'MEHANDI' | 'GIFTS' | 'ORNAMENTS' | 'OTHER';
+export type SellerCategory = 'FASHION_SAREE' | 'BEAUTY_SERVICES' | 'TAILORING' | 'MEHANDI' | 'GIFTS' | 'ORNAMENTS' | 'HOME_FOOD' | 'OTHER';
 
 export type SellerStatus = 'DRAFT' | 'SUBMITTED_FOR_REVIEW' | 'APPROVED_AWAITING_PAYMENT' | 'ACTIVE' | 'REJECTED' | 'SUSPENDED' | 'LAPSED';
 
