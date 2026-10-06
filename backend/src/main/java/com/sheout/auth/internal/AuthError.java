@@ -71,5 +71,11 @@ public enum AuthError {
      * Said only after the code proves the number is hers, so it cannot be
      * used to learn whether a number is registered.
      */
-    PHONE_ALREADY_REGISTERED
+    PHONE_ALREADY_REGISTERED,
+    /**
+     * Signing in (not signing up) with a number that has no account in this
+     * app. Said only after the code proved the number is hers - see
+     * AuthService.verifyOtp - and the code is left valid for "create it".
+     */
+    NO_ACCOUNT
 }

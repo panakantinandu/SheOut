@@ -94,6 +94,20 @@ public class OtpService {
      * comment in the mismatch branch.
      */
     public VerificationOutcome verifyCode(String phoneNumber, AccountRole role, String code) {
+        VerificationOutcome outcome = checkCode(phoneNumber, role, code);
+        if (outcome == VerificationOutcome.MATCHED) {
+            consume(phoneNumber, role);
+        }
+        return outcome;
+    }
+
+    /**
+     * verifyCode without spending a right code: a wrong one still counts
+     * against MAX_ATTEMPTS. For "no account on this number - create one?",
+     * where the same code is sent again once she says yes, inside its normal
+     * lifetime. Call consume when the code has done its job.
+     */
+    public VerificationOutcome checkCode(String phoneNumber, AccountRole role, String code) {
         String stored = redisTemplate.opsForValue().get(key(phoneNumber, role));
         if (stored == null) {
             return VerificationOutcome.NOT_FOUND_OR_EXPIRED;
@@ -115,9 +129,13 @@ public class OtpService {
             }
             return VerificationOutcome.MISMATCH;
         }
+        return VerificationOutcome.MATCHED;
+    }
+
+    /** Deletes a code that has been used, so it cannot be used again. */
+    public void consume(String phoneNumber, AccountRole role) {
         redisTemplate.delete(key(phoneNumber, role));
         redisTemplate.delete(attemptKey(phoneNumber, role));
-        return VerificationOutcome.MATCHED;
     }
 
     /** True once this number has used up its allowance of wrong guesses. */

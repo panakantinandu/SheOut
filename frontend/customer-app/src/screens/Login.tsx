@@ -104,6 +104,12 @@ export function Login() {
   const [attempt, setAttempt] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  /**
+   * Set when the Login tab's code was right but the number has no rider
+   * account: she is asked, rather than given one. Told only after the code,
+   * for the reason afterSignIn gives about not revealing who is registered.
+   */
+  const [noAccountCode, setNoAccountCode] = useState<string | null>(null);
   /** Non-error feedback, e.g. 'that number is already registered'. */
   const location = useLocation();
   // Set by another screen that sent her here with something to say - account deletion does.
@@ -136,12 +142,13 @@ export function Login() {
    * has already proved the number is theirs, so there is nothing left to
    * disclose.
    */
-  async function afterSignIn(session: AuthSession) {
+  async function afterSignIn(session: AuthSession, askedFirst = false) {
     login(session);
 
     if (mode === 'signup' && !session.newAccount) {
       setNotice(t('login.alreadyRegistered'));
-    } else if (mode === 'login' && session.newAccount) {
+    } else if (mode === 'login' && session.newAccount && !askedFirst) {
+      // Google's Login button still signs up; a phone number now asks first.
       setNotice(t('login.createdForYou'));
     }
 
@@ -165,10 +172,11 @@ export function Login() {
     } else if (needsProfile) {
       // Said on the screen she lands on - set here and navigated away from,
       // the notice was never seen. A number from the other app becomes a new
-      // account in this one, and this is where she learns that.
+      // account in this one, and this is where she learns that - unless she
+      // was asked and said yes, when there is nothing to tell her.
       navigate('/complete-profile', {
         replace: true,
-        state: session.newAccount ? { notice: t('login.createdForYou') } : undefined,
+        state: session.newAccount && !askedFirst ? { notice: t('login.createdForYou') } : undefined,
       });
     } else {
       // Long enough to read the notice before the screen changes; skipped
@@ -224,9 +232,32 @@ export function Login() {
     setError(null);
     setSubmitting(true);
     try {
-      const session = await authApi.verifyOtp(phoneNumber, entered);
+      // The Login tab never creates an account on its own - see noAccountCode.
+      const session = await authApi.verifyOtp(phoneNumber, entered, mode === 'signup');
       await afterSignIn(session);
     } catch (err) {
+      if (err instanceof ApiError && err.body?.error === 'NO_ACCOUNT') {
+        setNoAccountCode(entered);
+        return;
+      }
+      setError(err instanceof ApiError ? err.message : t('login.verifyError'));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  /** "Create my account": the same code again, which the server kept for exactly this. */
+  async function createAccount() {
+    if (!noAccountCode) return;
+    setError(null);
+    setSubmitting(true);
+    try {
+      const session = await authApi.verifyOtp(phoneNumber, noAccountCode, true);
+      await afterSignIn(session, true);
+    } catch (err) {
+      // Most likely the code ran out while she decided: back to a fresh one.
+      setNoAccountCode(null);
+      setCode('');
       setError(err instanceof ApiError ? err.message : t('login.verifyError'));
     } finally {
       setSubmitting(false);
@@ -341,6 +372,26 @@ export function Login() {
                 </span>
               </Button>
             </form>
+          ) : noAccountCode ? (
+            <div className="space-y-4 motion-safe:animate-fade-slide-in" role="alertdialog" aria-labelledby="no-account-title" data-testid="no-account">
+              <div className="rounded-input bg-primary-light px-4 py-3">
+                <p id="no-account-title" className="font-heading text-card-title text-text-primary">{t('login.noAccount.title')}</p>
+                <p className="mt-1 text-sm text-text-secondary">{t('login.noAccount.body', { phone: phoneNumber })}</p>
+              </div>
+              {error && <p className="text-sm text-danger" role="alert">{error}</p>}
+              <Button fullWidth disabled={submitting} onClick={() => void createAccount()} data-testid="no-account-create">
+                {submitting ? t('login.verifying') : t('login.noAccount.create')}
+              </Button>
+              <Button
+                variant="secondary"
+                fullWidth
+                disabled={submitting}
+                onClick={() => { setNoAccountCode(null); setCode(''); setStep('phone'); setError(null); setNotice(null); }}
+                data-testid="no-account-other-number"
+              >
+                {t('login.noAccount.otherNumber')}
+              </Button>
+            </div>
           ) : (
             <form onSubmit={handleVerifyOtp} className="space-y-4 motion-safe:animate-fade-slide-in">
               <p className="text-center text-sm text-text-secondary">{t('login.codeSentTo', { phone: phoneNumber })}</p>

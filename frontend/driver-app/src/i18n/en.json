@@ -216,6 +216,12 @@
     },
     "alreadyRegistered": "That number is already registered, so we are signing you in instead.",
     "createdForYou": "There was no partner account on this number yet, so we’ve set one up for you.",
+    "noAccount": {
+      "title": "No partner account on this number yet",
+      "body": "We didn’t find a SheOut partner account for {{phone}}. Create one now, or check the number.",
+      "create": "Create my account",
+      "otherNumber": "Use a different number"
+    },
     "invalidPhone": "Enter a valid 10-digit mobile number",
     "sendError": "Could not send the code. Please check your connection and try again.",
     "verifyError": "Could not verify code",

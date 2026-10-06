@@ -117,12 +117,27 @@ public class AuthService implements AuthApi {
      */
     @Transactional
     public Result<AuthenticatedSession, AuthError> verifyOtp(String phoneNumber, String code, AccountRole role, String userAgent) {
+        return verifyOtp(phoneNumber, code, role, userAgent, true);
+    }
+
+    /**
+     * createIfMissing false is the Login tab: a number with no account in
+     * this app is answered NO_ACCOUNT instead of silently becoming a new one
+     * (a mistyped number, or a partner opening the rider app, used to land in
+     * a fresh account without being asked). It is answered only after the
+     * code is right, so it says nothing to somebody who does not own the
+     * number - see requestOtp - and the code is left valid, so "Create my
+     * account" sends the same one again with createIfMissing true.
+     */
+    @Transactional
+    public Result<AuthenticatedSession, AuthError> verifyOtp(String phoneNumber, String code, AccountRole role, String userAgent,
+                                                            boolean createIfMissing) {
         // Before the code is looked at, so a code requested while the switch
         // was on cannot be spent after it was turned off.
         if (role == AccountRole.ADMIN && !adminPhoneLoginEnabled) {
             return Result.failure(AuthError.ADMIN_PHONE_LOGIN_DISABLED);
         }
-        OtpService.VerificationOutcome outcome = otpService.verifyCode(phoneNumber, role, code);
+        OtpService.VerificationOutcome outcome = otpService.checkCode(phoneNumber, role, code);
         if (outcome == OtpService.VerificationOutcome.NOT_FOUND_OR_EXPIRED) {
             return Result.failure(AuthError.OTP_NOT_FOUND_OR_EXPIRED);
         }
@@ -137,11 +152,17 @@ public class AuthService implements AuthApi {
         // so this cannot be used to learn whether a number is blocked.
         List<AccountEntity> onThisNumber = accountRepository.findByPhoneNumberOrderByCreatedAtAsc(phoneNumber);
         if (onThisNumber.stream().anyMatch(AccountEntity::isBlocked)) {
+            otpService.consume(phoneNumber, role);
             return Result.failure(AuthError.ACCOUNT_BLOCKED);
         }
 
         Optional<AccountEntity> existing = onThisNumber.stream().filter(a -> a.getRole() == role).findFirst();
         boolean isNewAccount = existing.isEmpty();
+        if (isNewAccount && !createIfMissing && role != AccountRole.ADMIN) {
+            return Result.failure(AuthError.NO_ACCOUNT);
+        }
+        // From here on the code has done its job.
+        otpService.consume(phoneNumber, role);
 
         AccountEntity account;
         if (isNewAccount) {

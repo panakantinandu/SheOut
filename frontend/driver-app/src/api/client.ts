@@ -224,10 +224,11 @@ export const authApi = {
     });
   },
 
-  async verifyOtp(phoneNumber: string, code: string): Promise<AuthSession> {
+  /** createAccount false (the Login tab): a number with no account answers 404 NO_ACCOUNT instead of signing up. */
+  async verifyOtp(phoneNumber: string, code: string, createAccount = true): Promise<AuthSession> {
     const session = await request<AuthSession>('/api/v1/auth/otp/verify', {
       method: 'POST',
-      body: { phoneNumber, code, role: 'DRIVER' },
+      body: { phoneNumber, code, role: 'DRIVER', createAccount },
       auth: false,
     });
     setStoredToken(session.accessToken);

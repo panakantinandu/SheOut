@@ -91,9 +91,18 @@ public class AuthController {
     public ResponseEntity<VerifyOtpResponse> verifyOtp(@Valid @RequestBody VerifyOtpRequest request, HttpServletRequest http) {
         otpRateLimiter.checkVerify(request.phoneNumber(), request.role());
         checkClient("otp-verify", http);
+        // Absent means yes: apps installed before the Login tab asked first
+        // keep signing up the way they always did.
+        boolean createIfMissing = request.createAccount() == null || request.createAccount();
         Result<AuthenticatedSession, AuthError> result = authService.verifyOtp(
-                request.phoneNumber(), request.code(), request.role(), http.getHeader("User-Agent"));
+                request.phoneNumber(), request.code(), request.role(), http.getHeader("User-Agent"), createIfMissing);
         if (result.isFailure()) {
+            if (result.error() == AuthError.NO_ACCOUNT) {
+                // The code was right - she is about to send it again with
+                // "create my account", and must not have used up a guess.
+                otpRateLimiter.releaseVerify(request.phoneNumber(), request.role());
+                rateLimiter.release(clientKey("otp-verify", http));
+            }
             throw toApiException(result.error());
         }
         // Signing in is not what these limits are against - see
@@ -203,6 +212,8 @@ public class AuthController {
             case PHONE_ALREADY_REGISTERED ->
                     new ApiException(HttpStatus.CONFLICT, "PHONE_ALREADY_REGISTERED",
                             "This number already has a SheOut rider account. Sign out and sign in with this number instead.");
+            case NO_ACCOUNT ->
+                    new ApiException(HttpStatus.NOT_FOUND, "NO_ACCOUNT", "There is no SheOut account on this number yet.");
         };
     }
 
@@ -215,7 +226,9 @@ public class AuthController {
     public record VerifyOtpRequest(
             @NotBlank @Pattern(regexp = "^\\+[1-9]\\d{7,14}$", message = "must be a valid E.164 phone number") String phoneNumber,
             @NotBlank @Pattern(regexp = "^\\d{6}$", message = "must be a 6-digit code") String code,
-            @NotNull AccountRole role
+            @NotNull AccountRole role,
+            // False from the Login tab: no account is created without asking.
+            Boolean createAccount
     ) {
     }
 
