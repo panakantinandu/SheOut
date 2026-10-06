@@ -13,7 +13,10 @@ module table below.
   as a modular monolith.
 - **Data:** PostgreSQL (primary store), Redis (cache / ephemeral state).
 - **Frontend:** React + Vite, two separate PWAs - `customer-app` and
-  `driver-app`.
+  `driver-app` - plus `marketing-site`, the static public site for
+  sheoutride.com (`npm run dev` in it, port 5176). Its copy and links all live
+  in `marketing-site/src/content.ts`; the hero video is
+  `marketing-site/public/media/hero-loop.{webm,mp4}` with `hero-poster.webp`.
 
 ## Architecture: modular monolith
 

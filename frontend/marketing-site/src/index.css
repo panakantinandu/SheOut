@@ -1,0 +1,191 @@
+/* The apps' palette, so the site and the apps are one brand. Before Tailwind's layers. */
+@import '@sheout/design-system/theme.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply bg-background;
+    scroll-behavior: smooth;
+    /* The sticky header must not cover a section someone jumped to. */
+    scroll-padding-top: 5.5rem;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-background font-sans text-text-primary antialiased;
+    overflow-x: hidden;
+  }
+  h1, h2, h3 {
+    @apply font-heading;
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
+  }
+  :focus-visible {
+    outline: 3px solid rgb(var(--c-accent-orange));
+    outline-offset: 3px;
+    border-radius: 6px;
+  }
+
+  /* Less movement asked for: none at all, not "faster". Same rule as the apps. */
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  .wrap {
+    @apply mx-auto w-full max-w-site px-5 sm:px-8;
+  }
+  .eyebrow {
+    @apply font-heading text-xs font-semibold uppercase tracking-[0.18em] text-primary-mid sm:text-sm;
+  }
+  .section-title {
+    @apply font-heading text-[2rem] font-bold leading-[1.1] tracking-tight sm:text-5xl;
+  }
+  /* The flowing brand gradient the apps use on their screen titles. */
+  .text-flow {
+    background: linear-gradient(90deg, var(--title-a), var(--title-b), var(--title-c));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .text-flow-light {
+    background: linear-gradient(90deg, #f5d0fe, #fdba74, #fde68a);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .btn {
+    @apply relative inline-flex min-h-[48px] items-center justify-center gap-2 overflow-hidden rounded-full px-6 font-heading text-base font-semibold
+           transition-[transform,box-shadow,background-color,color] duration-200 ease-out-expo active:scale-[0.97];
+  }
+  .btn-primary {
+    @apply btn bg-primary text-white shadow-[0_10px_30px_-10px_rgba(74,26,158,0.7)] hover:-translate-y-0.5 hover:bg-primary-dark hover:shadow-[0_16px_36px_-12px_rgba(74,26,158,0.8)];
+  }
+  .btn-light {
+    @apply btn bg-white text-primary shadow-[0_12px_32px_-12px_rgba(0,0,0,0.5)] hover:-translate-y-0.5;
+  }
+  .btn-ghost-light {
+    @apply btn border border-white/35 bg-white/10 text-white backdrop-blur-md hover:-translate-y-0.5 hover:bg-white/20;
+  }
+  .btn-outline {
+    @apply btn border-2 border-primary/20 bg-white text-primary hover:-translate-y-0.5 hover:border-primary/40;
+  }
+  /* A soft light passing across a button now and then. */
+  .btn-sheen::after {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 40%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+    animation: sheen 5.5s ease-in-out 2s infinite;
+    pointer-events: none;
+  }
+}
+
+/*
+ * Scroll reveal. Content is visible by default; it is only hidden once the
+ * script has marked <html class="js">, and Reveal.tsx shows it as it scrolls
+ * into view. --d staggers siblings.
+ */
+.js [data-reveal] {
+  opacity: 0;
+  transform: translate3d(0, 28px, 0);
+  transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+  transition-delay: var(--d, 0ms);
+}
+.js [data-reveal='left'] { transform: translate3d(-36px, 0, 0); }
+.js [data-reveal='right'] { transform: translate3d(36px, 0, 0); }
+.js [data-reveal='zoom'] { transform: scale(0.94); }
+.js [data-reveal].is-in {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .js [data-reveal] { opacity: 1; transform: none; }
+}
+
+/* A phone, drawn in CSS so the screenshots stay crisp at any size. */
+.device {
+  position: relative;
+  aspect-ratio: 9 / 18.6;
+  border-radius: 13% / 6.4%;
+  padding: 3.2%;
+  background: linear-gradient(145deg, #2b2140, #0f0819 55%);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.08) inset,
+    0 40px 80px -30px rgba(36, 10, 80, 0.55),
+    0 18px 36px -18px rgba(0, 0, 0, 0.45);
+}
+.device > .device-screen {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 10.5% / 5.1%;
+  background: #fff;
+}
+.device img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+}
+
+/* Route line on the safety card: drawn once it is in view. Keyframes here, not in
+   the Tailwind config, which only emits keyframes for classes it sees used. */
+@keyframes draw-route {
+  to { stroke-dashoffset: 0; }
+}
+.route-path {
+  stroke-dasharray: var(--route-length, 600);
+  stroke-dashoffset: var(--route-length, 600);
+}
+.is-in .route-path {
+  animation: draw-route 2.6s cubic-bezier(0.65, 0, 0.35, 1) 0.3s forwards;
+}
+
+/* FAQ answers open by animating the row's height from 0fr to 1fr - no measuring. */
+.collapse-rows {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.collapse-rows[data-open='true'] {
+  grid-template-rows: 1fr;
+}
+.collapse-rows > div {
+  overflow: hidden;
+}
+
+/*
+ * Pieces inside a revealed card that arrive one after another (the safety
+ * checklist, the pickup code). Hidden only when script runs; shown with the
+ * card. --sd is each piece's delay.
+ */
+@keyframes seq-rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes seq-pop {
+  from { opacity: 0; transform: scale(0.7); }
+  to { opacity: 1; transform: none; }
+}
+.js .seq { opacity: 0; }
+.js .is-in .seq {
+  opacity: 1;
+  animation: seq-rise 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: var(--sd, 0ms);
+}
+.js .is-in .seq-pop { animation-name: seq-pop; }

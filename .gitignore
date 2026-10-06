@@ -47,6 +47,7 @@ frontend/*/.vercel
 # because the service worker served index.html for repeat visitors.
 !frontend/customer-app/vercel.json
 !frontend/driver-app/vercel.json
+!frontend/marketing-site/vercel.json
 
 # Redis writes a snapshot into whatever directory it was started from, which
 # on this machine is the repo root. It can hold live OTP codes and rate-limit
