@@ -229,7 +229,7 @@ export function SellerProduct() {
                   </div>
                 </div>
                 <Button
-                  variant="secondary"
+                  variant="accent"
                   fullWidth
                   icon={<Package className="h-4 w-4" />}
                   disabled={fetchingPickup}

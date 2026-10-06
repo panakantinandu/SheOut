@@ -1,7 +1,7 @@
 import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { cn } from '../lib/cn';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'success';
+export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'success' | 'accent';
 export type ButtonSize = 'md' | 'lg';
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -19,6 +19,10 @@ const variantClasses: Record<ButtonVariant, string> = {
   danger: 'bg-danger text-text-inverse shadow-lift hover:brightness-95',
   // The strong shade, not the base: a white label on the base green is 2.7:1.
   success: 'bg-accent-green-strong text-text-inverse shadow-lift hover:brightness-95',
+  // Parcel amber, for a second action that must still read as a button when
+  // it sits on a white card (secondary is white too, and vanished there). The
+  // strong shade again: white on it is 6:1 in light, and dark mode flips both.
+  accent: 'bg-accent-orange-strong text-text-inverse shadow-lift hover:brightness-95',
 };
 
 // A minimum height, not a fixed one: a label that needs a second line - a
