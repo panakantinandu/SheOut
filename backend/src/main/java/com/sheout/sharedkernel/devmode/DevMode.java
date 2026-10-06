@@ -10,7 +10,8 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 /**
  * Every dev/test bypass in the application, behind one switch.
@@ -30,8 +31,11 @@ import java.util.Optional;
  *   <li>the fixed-code prefix (DEV_OTP_TEST_PREFIX + DEV_OTP_TEST_CODE) -
  *       the same, for every number starting with the prefix;</li>
  *   <li>writing sign-in codes into the log (LOG_OTP_CODES);</li>
- *   <li>the rider and partner verification bypasses (VERIFIED_BYPASS_PHONE,
- *       VERIFIED_DRIVER_BYPASS_PHONE).</li>
+ *   <li>the rider and partner test accounts (VERIFIED_BYPASS_PHONE,
+ *       VERIFIED_DRIVER_BYPASS_PHONE) - each a comma-separated list of numbers
+ *       treated as verified, for running live trips before launch. A listed
+ *       number only counts if it also signs in with a fixed code, so a typo
+ *       can never mark a real person's number as verified.</li>
  * </ul>
  * ADMIN_BOOTSTRAP_PHONE is not here on purpose: it is not a bypass but how
  * an operator account comes to exist, and production needs it.
@@ -53,8 +57,8 @@ public class DevMode {
     private final String testPrefix;
     private final String testPrefixCode;
     private final boolean logOtpCodes;
-    private final String verifiedRiderPhone;
-    private final String verifiedPartnerPhone;
+    private final Set<String> verifiedRiderPhones;
+    private final Set<String> verifiedPartnerPhones;
 
     public DevMode(@Value("${sheout.dev-mode.enabled:false}") boolean enabled,
                    @Value("${sheout.auth.dev-otp-numbers:}") String numberList,
@@ -93,16 +97,16 @@ public class DevMode {
         if (!numbers.isEmpty()) configured.add(numbers.size() + " fixed-code number(s)");
         if (prefix != null && prefixCode != null) configured.add("fixed-code prefix " + mask(prefix));
         if (logOtpCodes) configured.add("sign-in codes written to the log");
-        if (!verifiedRiderPhone.isBlank()) configured.add("rider verification bypass");
-        if (!verifiedPartnerPhone.isBlank()) configured.add("partner verification bypass");
+        if (!verifiedRiderPhone.isBlank()) configured.add("rider test accounts");
+        if (!verifiedPartnerPhone.isBlank()) configured.add("partner test accounts");
 
         if (enabled) {
             this.fixedCodeNumbers = Collections.unmodifiableMap(numbers);
             this.testPrefix = prefixCode == null ? null : prefix;
             this.testPrefixCode = prefixCode;
             this.logOtpCodes = logOtpCodes;
-            this.verifiedRiderPhone = verifiedRiderPhone.trim();
-            this.verifiedPartnerPhone = verifiedPartnerPhone.trim();
+            this.verifiedRiderPhones = testAccounts("VERIFIED_BYPASS_PHONE", verifiedRiderPhone);
+            this.verifiedPartnerPhones = testAccounts("VERIFIED_DRIVER_BYPASS_PHONE", verifiedPartnerPhone);
             log.warn("DEV MODE IS ON. Active bypasses: {}. Set DEV_MODE_ENABLED=false before real users.",
                     configured.isEmpty() ? "none configured" : String.join(", ", configured));
         } else {
@@ -110,8 +114,8 @@ public class DevMode {
             this.testPrefix = null;
             this.testPrefixCode = null;
             this.logOtpCodes = false;
-            this.verifiedRiderPhone = "";
-            this.verifiedPartnerPhone = "";
+            this.verifiedRiderPhones = Set.of();
+            this.verifiedPartnerPhones = Set.of();
             if (!configured.isEmpty()) {
                 // Said out loud: somebody reading the settings would otherwise
                 // believe these were live.
@@ -149,14 +153,56 @@ public class DevMode {
         return logOtpCodes;
     }
 
-    /** The one rider number allowed to book unverified, if any. Empty with dev mode off. */
-    public Optional<String> verifiedRiderBypassPhone() {
-        return verifiedRiderPhone.isBlank() ? Optional.empty() : Optional.of(verifiedRiderPhone);
+    /** Rider numbers treated as verified. Empty with dev mode off. */
+    public Set<String> verifiedRiderBypassPhones() {
+        return verifiedRiderPhones;
     }
 
-    /** The one partner number allowed to go online unverified, if any. Empty with dev mode off. */
-    public Optional<String> verifiedPartnerBypassPhone() {
-        return verifiedPartnerPhone.isBlank() ? Optional.empty() : Optional.of(verifiedPartnerPhone);
+    /** Partner numbers treated as verified and shift-checked. Empty with dev mode off. */
+    public Set<String> verifiedPartnerBypassPhones() {
+        return verifiedPartnerPhones;
+    }
+
+    /** Whether this rider number is a test account. Always false with dev mode off. */
+    public boolean isTestRider(String phoneNumber) {
+        return phoneNumber != null && verifiedRiderPhones.contains(phoneNumber);
+    }
+
+    /** Whether this partner number is a test account. Always false with dev mode off. */
+    public boolean isTestPartner(String phoneNumber) {
+        return phoneNumber != null && verifiedPartnerPhones.contains(phoneNumber);
+    }
+
+    /** "+91..., +91..." (commas or spaces) as a set of numbers. */
+    public static Set<String> phoneList(String raw) {
+        Set<String> out = new LinkedHashSet<>();
+        if (raw == null) {
+            return out;
+        }
+        for (String entry : raw.split("[,\\s]+")) {
+            if (!entry.isBlank()) {
+                out.add(entry.trim());
+            }
+        }
+        return out;
+    }
+
+    /**
+     * The listed numbers that also sign in with a fixed code. One that does
+     * not is somebody's real number - a typo, most likely - and treating it
+     * as verified would hand a stranger a verified account. Refused, and said.
+     */
+    private Set<String> testAccounts(String setting, String raw) {
+        Set<String> kept = new LinkedHashSet<>();
+        for (String number : phoneList(raw)) {
+            if (fixedOtpCodeFor(number) != null) {
+                kept.add(number);
+            } else {
+                log.error("Ignoring a {} entry ending {}: it is not a fixed-code test number", setting,
+                        number.length() > 4 ? number.substring(number.length() - 4) : number);
+            }
+        }
+        return Collections.unmodifiableSet(kept);
     }
 
     private static void addNumber(Map<String, String> numbers, String phoneNumber, String code) {

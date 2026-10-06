@@ -70,7 +70,8 @@ public class BookingService implements BookingApi {
     private final DomainEventPublisher eventPublisher;
     private final AuthApi authApi;
     private final ServiceArea serviceArea;
-    private final String verifiedBypassPhone;
+    /** Rider test accounts (see DevMode) - empty unless dev mode is on. */
+    private final java.util.Set<String> verifiedBypassPhones;
     private final Duration partnerPaymentHold;
     private final DriverLocationApi locationStore;
     private final DropoffGeofence dropoffGeofence;
@@ -126,7 +127,7 @@ public class BookingService implements BookingApi {
                            CampaignsApi campaigns,
                            com.sheout.booking.ServiceHoursApi serviceHours) {
         this(bookingRepository, verificationApi, fareCalculator, eventPublisher, authApi, serviceArea,
-                devMode.verifiedRiderBypassPhone().orElse(""), partnerPaymentHoldMinutes, locationStore,
+                String.join(",", devMode.verifiedRiderBypassPhones()), partnerPaymentHoldMinutes, locationStore,
                 dropoffRadiusMetres, driverLocationMaxAgeSeconds, pickupRadiusMetres, routeChecker, campaigns,
                 BookingWindow.from(serviceHours));
     }
@@ -156,7 +157,7 @@ public class BookingService implements BookingApi {
         this.eventPublisher = eventPublisher;
         this.authApi = authApi;
         this.serviceArea = serviceArea;
-        this.verifiedBypassPhone = verifiedBypassPhone;
+        this.verifiedBypassPhones = DevMode.phoneList(verifiedBypassPhone);
         this.locationStore = locationStore;
         this.dropoffGeofence = new DropoffGeofence(
                 dropoffRadiusMetres, Duration.ofSeconds(driverLocationMaxAgeSeconds));
@@ -1041,11 +1042,11 @@ public class BookingService implements BookingApi {
     }
 
     private boolean isVerifiedBypassAccount(UUID customerId) {
-        if (verifiedBypassPhone.isBlank()) {
+        if (verifiedBypassPhones.isEmpty()) {
             return false;
         }
         return authApi.findAccount(customerId)
-                .map(account -> verifiedBypassPhone.equals(account.phoneNumber()))
+                .map(account -> verifiedBypassPhones.contains(account.phoneNumber()))
                 .orElse(false);
     }
 

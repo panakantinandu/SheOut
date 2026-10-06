@@ -2,6 +2,8 @@ package com.sheout.driververification.internal;
 
 import com.sheout.auth.AccountRegistered;
 import com.sheout.auth.AccountRole;
+import com.sheout.auth.AuthApi;
+import com.sheout.sharedkernel.devmode.DevMode;
 import com.sheout.driververification.AccountVerified;
 import com.sheout.driververification.VerificationRejected;
 import com.sheout.driververification.VerificationSubmitted;
@@ -64,6 +66,8 @@ public class VerificationService implements VerificationApi {
     private final VerificationAudit audit;
     private final PoliceVerificationService police;
     private final VerificationConsent consent;
+    private final AuthApi authApi;
+    private final DevMode devMode;
 
     public VerificationService(VerificationRecordRepository repository,
                                 VerificationFunnelRepository funnel,
@@ -76,7 +80,10 @@ public class VerificationService implements VerificationApi {
                                 PartnerDocumentService partnerDocuments,
                                 VerificationAudit audit,
                                 PoliceVerificationService police,
-                                VerificationConsent consent) {
+                                VerificationConsent consent,
+                                AuthApi authApi,
+                                // Test accounts, read as verified - dev mode only.
+                                DevMode devMode) {
         this.repository = repository;
         this.funnel = funnel;
         this.documentStorage = documentStorage;
@@ -86,6 +93,25 @@ public class VerificationService implements VerificationApi {
         this.audit = audit;
         this.police = police;
         this.consent = consent;
+        this.authApi = authApi;
+        this.devMode = devMode;
+    }
+
+    /**
+     * A test account listed in VERIFIED_BYPASS_PHONE (riders) or
+     * VERIFIED_DRIVER_BYPASS_PHONE (partners) - dev mode only, see DevMode.
+     * It is reported verified wherever verification is asked about, so every
+     * screen and every rule agrees, and nothing fake is written: the moment
+     * dev mode is switched off it is an ordinary unverified account again.
+     */
+    private boolean isTestAccount(UUID accountId) {
+        if (devMode.verifiedRiderBypassPhones().isEmpty() && devMode.verifiedPartnerBypassPhones().isEmpty()) {
+            return false;
+        }
+        return authApi.findAccount(accountId)
+                .map(a -> a.role() == AccountRole.CUSTOMER ? devMode.isTestRider(a.phoneNumber())
+                        : a.role() == AccountRole.DRIVER && devMode.isTestPartner(a.phoneNumber()))
+                .orElse(false);
     }
 
     /**
@@ -512,6 +538,14 @@ public class VerificationService implements VerificationApi {
     @Override
     @Transactional(readOnly = true)
     public PartnerReadiness partnerReadiness(UUID accountId, String vehicleType) {
+        PartnerReadiness real = realPartnerReadiness(accountId, vehicleType);
+        if (real.ready() || !isTestAccount(accountId)) {
+            return real;
+        }
+        return new PartnerReadiness(true, List.of(), List.of(), real.documents());
+    }
+
+    private PartnerReadiness realPartnerReadiness(UUID accountId, String vehicleType) {
         Optional<VerificationRecordEntity> found = repository.findByAccountId(accountId);
         List<Blocker> blockers = new java.util.ArrayList<>();
         List<Blocker> warnings = new java.util.ArrayList<>();

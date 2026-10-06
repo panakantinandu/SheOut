@@ -22,6 +22,7 @@ import com.sheout.dispatch.internal.redis.OfferStore;
 import com.sheout.dispatch.internal.redis.TripTrailStore;
 import com.sheout.dispatch.internal.redis.RoundState;
 import com.sheout.sharedkernel.Result;
+import com.sheout.sharedkernel.devmode.DevMode;
 import com.sheout.sharedkernel.event.DomainEventPublisher;
 import com.sheout.sharedkernel.geo.GeoDistance;
 import com.sheout.users.DriverProfileApi;
@@ -64,6 +65,7 @@ public class DispatchService implements com.sheout.dispatch.NearbyPartnerApi {
     private final DomainEventPublisher eventPublisher;
     private final ApproachStore approachStore;
     private final TripTrailStore trailStore;
+    private final DevMode devMode;
 
     private final double initialRadiusKm;
     private final double radiusExpansionFactor;
@@ -99,8 +101,11 @@ public class DispatchService implements com.sheout.dispatch.NearbyPartnerApi {
             @Value("${sheout.dispatch.search-timeout-seconds:90}") long searchTimeoutSeconds,
             // How close to the pickup counts as arriving. Close enough that
             // "look up now" is true; far enough that the rider has time to.
-            @Value("${sheout.dispatch.arriving-radius-metres:300}") double arrivingRadiusMetres
+            @Value("${sheout.dispatch.arriving-radius-metres:300}") double arrivingRadiusMetres,
+            // Test accounts: a test partner is only ever matched with a test rider.
+            DevMode devMode
     ) {
+        this.devMode = devMode;
         this.locationStore = locationStore;
         this.nearbyPreview = nearbyPreview;
         this.offerStore = offerStore;
@@ -297,7 +302,8 @@ public class DispatchService implements com.sheout.dispatch.NearbyPartnerApi {
         if (!offerStore.hasOffer(bookingId, driverId)) {
             return Result.failure(DispatchError.OFFER_NOT_FOUND);
         }
-        if (!isAvailableNow(driverId)) {
+        UUID riderId = bookingApi.findById(bookingId).map(BookingSummary::customerId).orElse(null);
+        if (!isAvailableNow(driverId, riderId)) {
             offerStore.removeOffer(bookingId, driverId);
             return Result.failure(DispatchError.DRIVER_NO_LONGER_ELIGIBLE);
         }
@@ -434,7 +440,7 @@ public class DispatchService implements com.sheout.dispatch.NearbyPartnerApi {
                 .filter(candidate -> locationStore.findLocation(candidate.driverId())
                         .map(location -> location.recordedAt().isAfter(freshSince))
                         .orElse(false))
-                .filter(candidate -> isEligible(candidate.driverId(), state.category()))
+                .filter(candidate -> isEligible(candidate.driverId(), state.category(), state.customerId()))
                 // One person can hold a rider account and a partner account
                 // on the same number. Her own ride is never offered to her.
                 .filter(candidate -> !authApi.samePerson(candidate.driverId(), state.customerId()))
@@ -497,7 +503,7 @@ public class DispatchService implements com.sheout.dispatch.NearbyPartnerApi {
      * second check somewhere else would recreate exactly the drift this
      * method exists to prevent.
      */
-    private boolean isAvailableNow(UUID driverId) {
+    private boolean isAvailableNow(UUID driverId, UUID riderId) {
         Optional<DriverProfileSummary> profile = driverProfileApi.findByAccountId(driverId);
         if (profile.isEmpty() || profile.get().onlineStatus() != OnlineStatus.ONLINE) {
             return false;
@@ -519,6 +525,13 @@ public class DispatchService implements com.sheout.dispatch.NearbyPartnerApi {
         if (bookingApi.hasActiveTripAsDriver(driverId)) {
             return false;
         }
+        // A test account (VERIFIED_DRIVER_BYPASS_PHONE, dev mode only) skips
+        // the documents and the daily selfie, so she is kept to test riders
+        // only: never a real customer's trip, and never in the "partners near
+        // you" preview (riderId null), which any rider may be looking at.
+        if (isTestPartner(driverId)) {
+            return riderId != null && isTestRider(riderId);
+        }
         // Her start-of-shift selfie has lapsed, or is held for review. The
         // users module takes her offline within minutes; this stops offers
         // in the meantime. See ShiftCheckApi.
@@ -526,6 +539,16 @@ public class DispatchService implements com.sheout.dispatch.NearbyPartnerApi {
             return false;
         }
         return driverProfileApi.isCurrentlyVerified(driverId);
+    }
+
+    private boolean isTestPartner(UUID driverId) {
+        return !devMode.verifiedPartnerBypassPhones().isEmpty()
+                && authApi.findAccount(driverId).map(a -> devMode.isTestPartner(a.phoneNumber())).orElse(false);
+    }
+
+    private boolean isTestRider(UUID riderId) {
+        return !devMode.verifiedRiderBypassPhones().isEmpty()
+                && authApi.findAccount(riderId).map(a -> devMode.isTestRider(a.phoneNumber())).orElse(false);
     }
 
     /** How long a partner's "could be shown near a rider" answer is reused - see isEligibleForPreview. */
@@ -563,7 +586,7 @@ public class DispatchService implements com.sheout.dispatch.NearbyPartnerApi {
             if (previewEligibility.size() >= PREVIEW_ELIGIBILITY_MAX) {
                 previewEligibility.clear();
             }
-            boolean available = isAvailableNow(driverId);
+            boolean available = isAvailableNow(driverId, null);
             VehicleType vehicleType = available
                     ? driverProfileApi.findByAccountId(driverId).map(DriverProfileSummary::vehicleType).orElse(null)
                     : null;
@@ -573,8 +596,8 @@ public class DispatchService implements com.sheout.dispatch.NearbyPartnerApi {
         return known.available() && known.vehicleType() != null && vehicleMatches(known.vehicleType(), category);
     }
 
-    private boolean isEligible(UUID driverId, BookingCategory category) {
-        if (!isAvailableNow(driverId)) {
+    private boolean isEligible(UUID driverId, BookingCategory category, UUID riderId) {
+        if (!isAvailableNow(driverId, riderId)) {
             return false;
         }
         return driverProfileApi.findByAccountId(driverId)

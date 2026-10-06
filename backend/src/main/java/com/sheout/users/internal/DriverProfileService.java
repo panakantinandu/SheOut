@@ -37,7 +37,8 @@ public class DriverProfileService implements DriverProfileApi {
     private final VerificationApi verificationApi;
     private final DocumentStorage documentStorage;
     private final ServiceArea serviceArea;
-    private final String verifiedDriverBypassPhone;
+    /** Partner test accounts - see DevMode and isVerifiedBypassAccount. */
+    private final DevMode devMode;
     private final DomainEventPublisher eventPublisher;
     private final ShiftCheckApi shiftCheckApi;
     private final DriverProfileChangeService changes;
@@ -70,7 +71,7 @@ public class DriverProfileService implements DriverProfileApi {
         this.verificationApi = verificationApi;
         this.documentStorage = documentStorage;
         this.serviceArea = serviceArea;
-        this.verifiedDriverBypassPhone = devMode.verifiedPartnerBypassPhone().orElse("");
+        this.devMode = devMode;
     }
 
     @Override
@@ -343,9 +344,10 @@ public class DriverProfileService implements DriverProfileApi {
             return Result.failure(DriverProfileError.DATE_OF_BIRTH_REQUIRED);
         }
         // Last, because it is the one she does every day: a selfie now, and
-        // on a two-wheeler a photo with her helmet on. Not bypassable, for
-        // the photo's reason - it needs nobody's approval. See ShiftCheckApi.
-        if (requested == OnlineStatus.ONLINE) {
+        // on a two-wheeler a photo with her helmet on. See ShiftCheckApi.
+        // A test account skips it: her face is matched against the selfie she
+        // was verified with, and a test account was never verified with one.
+        if (requested == OnlineStatus.ONLINE && !isVerifiedBypassAccount(accountId)) {
             ShiftCheckState shift = shiftCheckApi.stateFor(accountId);
             if (shift.underReview()) {
                 return Result.failure(DriverProfileError.SHIFT_CHECK_UNDER_REVIEW);
@@ -367,10 +369,10 @@ public class DriverProfileService implements DriverProfileApi {
     }
 
     /**
-     * See DriverProfileApi.isCurrentlyVerified. Intentionally the real
-     * check with no bypass: the testing bypass may let a QA account go
-     * ONLINE, but it must not make that account eligible to be offered a
-     * real customer's booking.
+     * See DriverProfileApi.isCurrentlyVerified. A partner test account reads
+     * as ready here (driver-verification reports her verified), so this alone
+     * no longer keeps her from real riders: DispatchService only ever offers
+     * a test partner a test rider's trip.
      */
     @Override
     public boolean isCurrentlyVerified(UUID accountId) {
@@ -426,7 +428,7 @@ public class DriverProfileService implements DriverProfileApi {
         int count = 0;
         for (DriverProfileEntity profile : driverProfileRepository.findByOnlineStatus(OnlineStatus.ONLINE)) {
             ShiftCheckState shift = shiftCheckApi.stateFor(profile.getAccountId());
-            if (shift.valid() && !shift.underReview()) {
+            if ((shift.valid() && !shift.underReview()) || isVerifiedBypassAccount(profile.getAccountId())) {
                 continue;
             }
             profile.setOnlineStatus(OnlineStatus.OFFLINE);
@@ -446,12 +448,17 @@ public class DriverProfileService implements DriverProfileApi {
                 profile.getVehicleType() == null ? null : profile.getVehicleType().name());
     }
 
+    /**
+     * A partner test account (VERIFIED_DRIVER_BYPASS_PHONE, dev mode only):
+     * no documents and no daily selfie, so testers can run live trips. It is
+     * dispatch that keeps her away from real riders - see DispatchService.
+     */
     private boolean isVerifiedBypassAccount(UUID accountId) {
-        if (verifiedDriverBypassPhone.isBlank()) {
+        if (devMode.verifiedPartnerBypassPhones().isEmpty()) {
             return false;
         }
         return authApi.findAccount(accountId)
-                .map(account -> verifiedDriverBypassPhone.equals(account.phoneNumber()))
+                .map(account -> devMode.isTestPartner(account.phoneNumber()))
                 .orElse(false);
     }
 

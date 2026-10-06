@@ -32,10 +32,10 @@ public interface DriverProfileApi {
      * keeps the rule itself in one place: the same module that gates going
      * ONLINE decides who stays eligible, so the two cannot drift apart.
      * <p>
-     * Deliberately stricter than the ONLINE gate: it does NOT honour
-     * sheout.testing.verified-driver-bypass-phone. That bypass exists to
-     * let a QA account toggle itself online without an admin review, and
-     * that is as far as it should reach. A driver who is not actually
+     * A partner test account (sheout.testing.verified-driver-bypass-phone,
+     * dev mode only) answers true here, because driver-verification reports
+     * her verified. What keeps her from a real customer is dispatch: it only
+     * offers a test partner a test rider's trip. A driver who is not actually
      * verified must never be offered a real customer's booking, which is
      * the entire point of the check. Do not use DriverProfileSummary's
      * `verified` field for this - it is a cached projection of an
