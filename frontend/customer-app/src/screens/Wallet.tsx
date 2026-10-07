@@ -8,7 +8,6 @@ import { openRazorpayCheckout } from '../lib/razorpayCheckout';
 import { apiErrorText } from '../lib/apiErrors';
 import { useTranslation } from '@sheout/design-system';
 import { PromotionsCard } from '../components/PromotionsCard';
-import { useAppDrawer } from '../components/AppDrawer';
 
 const QUICK_AMOUNTS = [100, 200, 500, 1000];
 
@@ -36,7 +35,6 @@ interface WalletRouteState {
 export function Wallet() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const drawer = useAppDrawer();
   const location = useLocation();
   const routeState = (location.state as WalletRouteState | null) ?? {};
 
@@ -172,7 +170,7 @@ export function Wallet() {
       {routeState.returnTo ? (
         <TopHeader variant="back" title={t('wallet.title')} onBack={() => navigate(routeState.returnTo!)} />
       ) : (
-        <TopHeader variant="plain" title={t('wallet.title')} onMenuClick={drawer.open} />
+        <TopHeader variant="plain" title={t('wallet.title')} />
       )}
 
       {loadError && !wallet && (

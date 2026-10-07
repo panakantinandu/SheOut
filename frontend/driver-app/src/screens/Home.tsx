@@ -1,4 +1,4 @@
-import { Bell, CloudOff, Hourglass, Menu, RefreshCw } from 'lucide-react';
+import { Bell, CloudOff, Hourglass, RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ASSISTANT_NAME, AggregateRatingText, AssistantFab, BellBadge, FlowingTitle, Button, Card, IconCircle, PushPromptCard, RotatingText, SkeletonList, SkyIcon, bookingStatusLabel, useDayPart, usePushMessages, usePushNotifications, useUnreadNotifications, ServiceArt, serviceArtFor } from '@sheout/design-system';
@@ -14,7 +14,6 @@ import {
   verificationApi,
 } from '../api/client';
 import { apiErrorText } from '../lib/apiErrors';
-import { useAppDrawer } from '../components/AppDrawer';
 import type { AggregateRating, BookingSummary, DriverProfileSummary, PaymentHold, VerificationSummary } from '../api/types';
 import { RatingPrompt } from '../components/RatingPrompt';
 import { readPositionOnce, useShareLocation } from '../lib/LocationBroadcastContext';
@@ -92,7 +91,6 @@ function LoadError({ title, detail, onRetry }: { title: string; detail: string; 
  */
 export function Home() {
   const { t } = useTranslation();
-  const drawer = useAppDrawer();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<DriverProfileSummary | null>(null);
   const [verification, setVerification] = useState<VerificationSummary | null>(null);
@@ -399,19 +397,11 @@ export function Home() {
 
   return (
     <div className="space-y-4">
-      {/* An app bar: the menu, SheOut Partner by name, then the bell and SOS.
+      {/* An app bar: SheOut Partner by name, then the bell and SOS.
           SOS keeps its word label and its sheet; it no longer takes a row of
           its own. Always here, online or not: the drive home after the last
           trip is still a drive alone. */}
       <header className="flex items-center gap-2" data-testid="home-header">
-        <button
-          type="button"
-          onClick={drawer.open}
-          aria-label={t('home.menu')}
-          className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-text-primary hover:bg-background"
-        >
-          <Menu className="h-6 w-6" aria-hidden="true" />
-        </button>
         <div className="min-w-0 flex-1">
           <BrandStrip />
         </div>

@@ -75,7 +75,6 @@
     "registrationNo": "Registration No.",
     "notSet": "Not set",
     "editDetails": "Edit Details",
-    "payouts": "Payouts & bank details",
     "deletedNotice": "Your account has been deleted. Your personal details have been removed.",
     "change": {
       "pendingTitle": "Waiting for SheOut to check",
@@ -92,12 +91,11 @@
       "rejectedBody": "Your earlier details are still in use. Fix this and save again, or contact support."
     },
     "editProfile": "Edit your profile and photo",
-    "sectionMore": "More",
     "sectionWork": "Work",
-    "sectionHelp": "Help",
     "verificationSub": "ID, documents and police check",
-    "payoutsSub": "Where your earnings are paid",
-    "editDetailsSub": "Name, email, date of birth and vehicle"
+    "editDetailsSub": "Name, email, date of birth and vehicle",
+    "help": "Help & support",
+    "helpSub": "Ask {{name}}, raise an issue or call us"
   },
   "vehicle": {
     "type": "Vehicle Type",
@@ -159,11 +157,7 @@
     "googleMaps": "Google Maps"
   },
   "drawer": {
-    "partner": "SheOut partner",
     "language": "Language",
-    "payouts": "Wallet & payouts",
-    "helpAndInfo": "Help & info",
-    "support": "Contact Support",
     "version": "SheOut Partner version {{version}}",
     "languageSaved": "Language changed",
     "languageSavedLocally": "Language changed on this phone. It will be saved to your account next time."
@@ -346,7 +340,6 @@
     "recentTrips": "Recent trips",
     "askCardTitle": "Ask SheOut",
     "askCardBody": "Questions about rides, payments or verification? Ask {{name}}.",
-    "menu": "Menu",
     "hero": {
       "offline": {
         "title": "You're offline",

@@ -7,12 +7,10 @@ import { ServiceHoursNotice } from '../components/ServiceHoursNotice';
 import { useServiceStatus } from '../lib/useServiceStatus';
 import { UnpaidTripBanner } from '../components/UnpaidTripBanner';
 import { LiveTripBanner } from '../components/LiveTripBanner';
-import { useAppDrawer } from '../components/AppDrawer';
 import { Reveal } from '../components/Reveal';
 import { RideHero } from '../components/home/RideHero';
 import { CommunityCard } from '../components/home/CommunityCard';
 import { CategoryMarquee } from '../components/home/CategoryMarquee';
-import { QuickAccess } from '../components/home/QuickAccess';
 import { AllServicesSheet } from '../components/home/AllServicesSheet';
 
 import { SELLER_CATEGORIES } from '../lib/seller';
@@ -64,7 +62,6 @@ const SERVICES = [
 export function Home() {
   const { t } = useTranslation();
   const lng = useAppLanguage();
-  const drawer = useAppDrawer();
   // Operators edit the English banners in the console; other languages use
   // the translated defaults until the content module has per-language copy.
   const fromContent = (key: string, fallbackKey: string) => (lng === 'en' ? contentText(copy, key, t(fallbackKey)) : t(fallbackKey));
@@ -112,12 +109,6 @@ export function Home() {
         titleHighlight={firstName}
         titleIcon={<SkyIcon part={dayPart} size={26} />}
         subtitle={<RotatingText lines={dayLines} />}
-        // No side-drawer/menu screen exists - "Open menu" goes to the
-        // closest thing that already serves that purpose (account/settings).
-        // The drawer, not Profile: Profile already has its own tab, and the
-        // menu opening the same screen as the tab beside it was two ways to
-        // one place. See AppDrawer.
-        onMenuClick={drawer.open}
         // Real notification history - see the Notifications screen.
         onBellClick={() => navigate('/notifications')}
         unreadCount={unreadCount}
@@ -255,23 +246,6 @@ export function Home() {
         artAlt={t('home.threeWomen')}
       />
 
-      <Reveal>
-        {/* Four tiles, four destinations. Live Track and History used to
-            both open /bookings, which is where the Bookings tab goes too -
-            so three of the app's entry points showed one identical list and
-            two of them earned their place on the screen by doing nothing.
-            They now open the same screen scoped to genuinely different
-            questions: what is happening now, and what already happened. */}
-        <QuickAccess
-          title={t('home.quickAccess')}
-          items={[
-            { key: 'sos', label: t('home.sos'), sub: t('home.quick.sos'), onOpen: () => navigate('/sos') },
-            { key: 'live', label: t('home.liveTrack'), sub: t('home.quick.live'), onOpen: () => navigate('/bookings?view=live') },
-            { key: 'wallet', label: t('home.wallet'), sub: t('home.quick.wallet'), onOpen: () => navigate('/wallet') },
-            { key: 'history', label: t('home.history'), sub: t('home.quick.history'), onOpen: () => navigate('/bookings?view=history') },
-          ]}
-        />
-      </Reveal>
 
       {/* Room at the foot, so the assistant in the corner never sits on the last card. */}
       <div className="h-14" aria-hidden="true" />

@@ -33,11 +33,7 @@
     "services": "Services",
     "communityTitle": "Women Supporting Women",
     "communitySubtitle": "Safe · Together · Empowered",
-    "quickAccess": "Quick Access",
     "sos": "SOS",
-    "liveTrack": "Live Track",
-    "wallet": "Wallet",
-    "history": "History",
     "serviceSeller": "Marketplace",
     "serviceRideBody": "Ride with a woman partner",
     "serviceParcelBody": "Send it across the city",
@@ -51,12 +47,6 @@
       "sell": "Sell your products"
     },
     "allServices": "All services",
-    "quick": {
-      "sos": "Alert your contacts",
-      "live": "Your trip, right now",
-      "wallet": "Balance and top-up",
-      "history": "Your past trips"
-    },
     "agent": {
       "hello": "Hi {{name}}! I am here if you need me",
       "line1": "Where would you like to go today?",
@@ -135,18 +125,19 @@
     "sectionAccount": "Account",
     "sectionSafety": "Safety",
     "sectionPayments": "Payments",
-    "sectionSupport": "Support",
     "emergencyContacts": "Emergency Contacts",
     "emergencyContactsSub": "Who an SOS alerts",
     "deletedNotice": "Your account has been deleted. Your personal details have been removed.",
     "loading": "Loading your details",
     "editProfile": "Edit your profile and photo",
-    "sectionMore": "More",
     "verified": "Verified",
     "notVerified": "Not verified yet",
     "verifyToRide": "Needed before your first ride",
-    "personalDetailsSub": "Name, photo, date of birth, email",
-    "addressesSub": "Home, work and other places"
+    "addressesSub": "Home, work and other places",
+    "help": "Help & support",
+    "helpSub": "Ask {{name}}, raise an issue or call us",
+    "shopSub_one": "{{count}} product, plan and shop details",
+    "shopSub_other": "{{count}} products, plan and shop details"
   },
   "help": {
     "toPlace": "to {{place}}",
@@ -347,12 +338,9 @@
     "comingSoon": "Coming soon",
     "rate": "Rate the App",
     "rateSoon": "Rating opens once SheOut is in the app stores. Thank you for wanting to!",
-    "helpAndInfo": "Help & info",
-    "support": "Contact Support",
     "version": "SheOut version {{version}}",
     "languageSaved": "Language changed",
     "languageSavedLocally": "Language changed on this phone. It will be saved to your account next time.",
-    "profile": "My profile",
     "sell": "Sell on SheOut",
     "safety": "Safety Center"
   },
@@ -841,11 +829,8 @@
       "removed": "Pickup point removed"
     },
     "myShop": "My shop",
-    "myShopSub": "Plan, shop details and pickup point",
     "myProducts": {
       "title": "My products",
-      "rowSub_one": "{{count}} product - find by code, update stock",
-      "rowSub_other": "{{count}} products - find by code, update stock",
       "findLabel": "Find by product code or name",
       "found": "Found {{code}}",
       "filter": {

@@ -33,11 +33,7 @@
     "services": "सेवाएँ",
     "communityTitle": "महिलाओं का साथ, महिलाओं के लिए",
     "communitySubtitle": "सुरक्षित · एक साथ · सशक्त",
-    "quickAccess": "जल्दी पहुँच",
     "sos": "SOS",
-    "liveTrack": "लाइव ट्रैक",
-    "wallet": "वॉलेट",
-    "history": "इतिहास",
     "serviceSeller": "मार्केटप्लेस",
     "serviceRideBody": "महिला पार्टनर के साथ सवारी",
     "serviceParcelBody": "शहर में कहीं भी भेजें",
@@ -51,12 +47,6 @@
       "sell": "अपना सामान बेचें"
     },
     "allServices": "सभी सेवाएँ",
-    "quick": {
-      "sos": "अपनों को तुरंत बताएँ",
-      "live": "आपकी यात्रा, अभी",
-      "wallet": "बैलेंस और टॉप-अप",
-      "history": "आपकी पिछली यात्राएँ"
-    },
     "agent": {
       "hello": "नमस्ते {{name}}! ज़रूरत हो तो मैं यहीं हूँ",
       "line1": "आज आप कहाँ जाना चाहेंगी?",
@@ -135,18 +125,19 @@
     "sectionAccount": "खाता",
     "sectionSafety": "सुरक्षा",
     "sectionPayments": "भुगतान",
-    "sectionSupport": "सपोर्ट",
     "emergencyContacts": "इमरजेंसी संपर्क",
     "emergencyContactsSub": "SOS किसे सूचित करता है",
     "deletedNotice": "आपका खाता हटा दिया गया है। आपकी निजी जानकारी मिटा दी गई है।",
     "loading": "आपकी जानकारी लोड हो रही है",
     "editProfile": "अपनी प्रोफ़ाइल और फ़ोटो बदलें",
-    "sectionMore": "और भी",
     "verified": "सत्यापित",
     "notVerified": "अभी सत्यापित नहीं",
     "verifyToRide": "पहली राइड से पहले ज़रूरी",
-    "personalDetailsSub": "नाम, फ़ोटो, जन्म तिथि, ईमेल",
-    "addressesSub": "घर, ऑफ़िस और अन्य जगहें"
+    "addressesSub": "घर, ऑफ़िस और अन्य जगहें",
+    "help": "मदद और सहायता",
+    "helpSub": "{{name}} से पूछें, समस्या बताएं या हमें कॉल करें",
+    "shopSub_one": "{{count}} प्रोडक्ट, प्लान और दुकान की जानकारी",
+    "shopSub_other": "{{count}} प्रोडक्ट, प्लान और दुकान की जानकारी"
   },
   "help": {
     "toPlace": "{{place}} तक",
@@ -347,12 +338,9 @@
     "comingSoon": "जल्द आ रहा है",
     "rate": "ऐप को रेटिंग दें",
     "rateSoon": "SheOut के ऐप स्टोर पर आने के बाद रेटिंग खुलेगी। आपकी रुचि के लिए धन्यवाद!",
-    "helpAndInfo": "सहायता और जानकारी",
-    "support": "सपोर्ट से संपर्क करें",
     "version": "SheOut वर्शन {{version}}",
     "languageSaved": "भाषा बदल दी गई",
     "languageSavedLocally": "इस फ़ोन पर भाषा बदल दी गई। अगली बार आपके खाते में सेव हो जाएगी।",
-    "profile": "मेरी प्रोफ़ाइल",
     "sell": "SheOut पर बेचें",
     "safety": "सुरक्षा केंद्र"
   },
@@ -841,11 +829,8 @@
       "removed": "पिकअप पॉइंट हटा दिया गया"
     },
     "myShop": "मेरी दुकान",
-    "myShopSub": "प्लान, दुकान की जानकारी और पिकअप पॉइंट",
     "myProducts": {
       "title": "मेरे प्रोडक्ट",
-      "rowSub_one": "{{count}} प्रोडक्ट - कोड से ढूँढें, स्टॉक बदलें",
-      "rowSub_other": "{{count}} प्रोडक्ट - कोड से ढूँढें, स्टॉक बदलें",
       "findLabel": "प्रोडक्ट कोड या नाम से ढूँढें",
       "found": "{{code}} मिल गया",
       "filter": {

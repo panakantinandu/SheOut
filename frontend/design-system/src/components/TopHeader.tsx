@@ -105,7 +105,8 @@ export function TopHeader(props: TopHeaderProps) {
     );
   }
 
-  const menu = (
+  // Only when the screen has a menu to open: a button that does nothing is worse than none.
+  const menu = props.onMenuClick ? (
     <button
       type="button"
       onClick={props.onMenuClick}
@@ -115,7 +116,7 @@ export function TopHeader(props: TopHeaderProps) {
     >
       <Menu className="h-5 w-5" />
     </button>
-  );
+  ) : null;
   const bell = (
     <button
       type="button"

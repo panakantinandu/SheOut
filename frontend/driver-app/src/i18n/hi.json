@@ -75,7 +75,6 @@
     "registrationNo": "रजिस्ट्रेशन नं.",
     "notSet": "सेट नहीं है",
     "editDetails": "जानकारी बदलें",
-    "payouts": "पेआउट और बैंक विवरण",
     "deletedNotice": "आपका खाता हटा दिया गया है। आपकी निजी जानकारी मिटा दी गई है।",
     "change": {
       "pendingTitle": "SheOut की जाँच बाकी है",
@@ -92,12 +91,11 @@
       "rejectedBody": "आपकी पुरानी जानकारी ही इस्तेमाल हो रही है। इसे ठीक करके फिर सेव करें, या सपोर्ट से संपर्क करें।"
     },
     "editProfile": "अपनी प्रोफ़ाइल और फ़ोटो बदलें",
-    "sectionMore": "और भी",
     "sectionWork": "काम",
-    "sectionHelp": "मदद",
     "verificationSub": "आईडी, दस्तावेज़ और पुलिस जाँच",
-    "payoutsSub": "आपकी कमाई कहाँ भेजी जाती है",
-    "editDetailsSub": "नाम, ईमेल, जन्म तिथि और वाहन"
+    "editDetailsSub": "नाम, ईमेल, जन्म तिथि और वाहन",
+    "help": "मदद और सहायता",
+    "helpSub": "{{name}} से पूछें, समस्या बताएं या हमें कॉल करें"
   },
   "vehicle": {
     "type": "वाहन का प्रकार",
@@ -159,11 +157,7 @@
     "googleMaps": "Google Maps"
   },
   "drawer": {
-    "partner": "SheOut पार्टनर",
     "language": "भाषा",
-    "payouts": "वॉलेट और पेआउट",
-    "helpAndInfo": "सहायता और जानकारी",
-    "support": "सपोर्ट से संपर्क करें",
     "version": "SheOut पार्टनर वर्शन {{version}}",
     "languageSaved": "भाषा बदल दी गई",
     "languageSavedLocally": "इस फ़ोन पर भाषा बदल दी गई। अगली बार आपके खाते में सेव हो जाएगी।"
@@ -346,7 +340,6 @@
     "recentTrips": "हाल की ट्रिप",
     "askCardTitle": "SheOut से पूछें",
     "askCardBody": "राइड, भुगतान या सत्यापन के बारे में सवाल? {{name}} से पूछें।",
-    "menu": "मेनू",
     "hero": {
       "offline": {
         "title": "आप ऑफ़लाइन हैं",
