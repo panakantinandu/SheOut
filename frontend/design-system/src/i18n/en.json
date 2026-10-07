@@ -518,5 +518,9 @@
     "retake": "Retake",
     "useAnyway": "Use anyway",
     "useAnywayHint": "If you send it as it is, a reviewer will look at it closely and may ask you for a clearer one."
+  },
+  "loadFailed": {
+    "body": "Check that you are connected to the internet, then try again. Nothing you sent is lost.",
+    "retry": "Try again"
   }
 }
