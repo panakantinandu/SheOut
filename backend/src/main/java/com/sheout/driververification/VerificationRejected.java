@@ -18,11 +18,22 @@ public class VerificationRejected extends DomainEvent {
     private final UUID accountId;
     private final AccountRole role;
     private final String reason;
+    private final String code;
 
     public VerificationRejected(UUID accountId, AccountRole role, String reason) {
+        this(accountId, role, reason, null);
+    }
+
+    public VerificationRejected(UUID accountId, AccountRole role, String reason, String code) {
         this.accountId = accountId;
         this.role = role;
         this.reason = reason;
+        this.code = code;
+    }
+
+    /** The RejectionReason it was sent back for, so she is told in her own language; null for an older, typed reason. */
+    public String code() {
+        return code;
     }
 
     public UUID accountId() {

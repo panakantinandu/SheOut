@@ -87,6 +87,9 @@ record DeliveryPolicy(boolean push, boolean emailFallback, boolean smsFallback, 
             // Operations, not a rider: push to whoever is on duty, and an
             // email so it is still visible to somebody who was not.
             case VERIFICATION_SUBMITTED -> PUSH_AND_EMAIL;
+            // Her own progress, after a wait on a person: push and email both,
+            // like the verified and rejected answers it sits between.
+            case VERIFICATION_PROGRESS -> PUSH_AND_EMAIL;
             case SUPPORT_REPLY -> PUSH_THEN_EMAIL_THEN_SMS;
             case PAYMENT_RECEIPT -> EMAIL;
             // SOS contact texts are sent by SosService itself - to other

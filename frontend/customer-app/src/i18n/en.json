@@ -242,7 +242,9 @@
     "needBoth": "Add your ID and take a selfie to continue",
     "needId": "Add your ID to continue",
     "submitForReview": "Submit for review",
-    "checkingPhoto": "Checking the photo..."
+    "checkingPhoto": "Checking the photo...",
+    "waitHoursLine": "People check between {{from}} and {{to}}, every day.",
+    "howToFix": "How to fix it"
   },
   "payments": {
     "history": "Payment History",
@@ -1442,5 +1444,10 @@
     "preferences": "Preferences",
     "security": "Security",
     "aboutLegal": "About & legal"
+  },
+  "reject": {
+    "ID_NAME_MISMATCH": "The name on your ID is not the name on your profile. Correct your name in Profile, or send an ID with your name on it.",
+    "ID_UNREADABLE": "Your ID is not readable. Take the photo again flat, in good light, with all four corners showing.",
+    "NOT_A_GOVERNMENT_ID": "This is not a government photo ID. Send your Aadhaar, passport, voter ID or driving licence."
   }
 }

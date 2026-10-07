@@ -75,7 +75,7 @@ public enum RejectionReason {
 
     // ---- insurance
     NOT_COMMERCIAL(Scope.INSURANCE, false,
-            "This is a private policy. Riders need a commercial policy. Ask your insurer for one.");
+            "This is a private policy. Carrying paying passengers needs a commercial policy. Ask your insurer for one.");
 
     /** What a reason can be given for. */
     public enum Scope {

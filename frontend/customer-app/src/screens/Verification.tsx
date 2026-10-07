@@ -9,6 +9,8 @@ import {
   LiveSelfieCapture,
   PhotoQualityNotice,
   checkPhoto,
+  formatClockTime,
+  useAppLanguage,
   photoWarningsParam,
   IconCircle,
   SkeletonCard,
@@ -17,6 +19,7 @@ import {
   verificationStatusLabel,
 } from '@sheout/design-system';
 import { ApiError, verificationApi } from '../api/client';
+import { RejectionFix } from '../components/RejectionFix';
 import type { LiveSelfieResult, PhotoWarning } from '@sheout/design-system';
 import type { VerificationSummary, VerificationTurnaround } from '../api/types';
 import { useTranslation } from '@sheout/design-system';
@@ -145,6 +148,7 @@ export function Verification() {
   const isVerified = gender === 'VERIFIED';
   const isUnderReview = gender === 'UNDER_REVIEW';
   const isRejected = gender === 'REJECTED';
+  const language = useAppLanguage();
 
   /** "about 4 hours" / "about 30 minutes", from what reviews really take. */
   const waitText = turnaround
@@ -197,9 +201,10 @@ export function Verification() {
               {/* The rejection is useless without the reason an operator
                   wrote; it is the whole difference between "try again" and
                   "try again with a clearer photo of the front". */}
-              {isRejected && status.rejectionReason && (
+              {isRejected && (status.rejectionCode || status.rejectionReason) && (
                 <p className="mt-2 rounded-input bg-background px-3 py-2 text-sm text-text-primary" data-testid="rejection-reason">
-                  {status.rejectionReason}
+                  <span className="block font-semibold">{t('verification.howToFix')}</span>
+                  <RejectionFix code={status.rejectionCode} reason={status.rejectionReason} />
                 </p>
               )}
             </div>
@@ -212,6 +217,14 @@ export function Verification() {
                 <IconCircle size="sm" tone="soft" icon={<Clock />} />
                 <div>
                   <p className="text-sm font-semibold text-text-primary">{waitLine ?? t('verification.waitUnknown')}</p>
+                  {turnaround?.reviewHoursFrom && turnaround.reviewHoursTo && (
+                    <p className="mt-1 text-sm text-text-secondary" data-testid="verification-hours">
+                      {t('verification.waitHoursLine', {
+                        from: formatClockTime(turnaround.reviewHoursFrom, language),
+                        to: formatClockTime(turnaround.reviewHoursTo, language),
+                      })}
+                    </p>
+                  )}
                   <p className="mt-1 text-sm text-text-secondary">{t('verification.waitBody')}</p>
                 </div>
               </div>

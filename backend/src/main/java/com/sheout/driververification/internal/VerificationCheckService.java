@@ -85,13 +85,16 @@ public class VerificationCheckService {
     private final VerificationAudit audit;
     private final ObjectProvider<ApplicantProfiles> profiles;
     private final FlaggedDocumentNumberRepository flagged;
+    private final com.sheout.sharedkernel.event.DomainEventPublisher events;
     private final Clock clock;
 
     VerificationCheckService(VerificationCheckRepository checks, VerificationRecordRepository records,
                              PartnerDocumentRepository documents, PoliceVerificationRepository policeDecisions,
                              DocumentRequirements requirements, CheckProviders providers, CheckRules rules,
                              VerificationAudit audit, ObjectProvider<ApplicantProfiles> profiles,
-                             FlaggedDocumentNumberRepository flagged) {
+                             FlaggedDocumentNumberRepository flagged,
+                             com.sheout.sharedkernel.event.DomainEventPublisher events) {
+        this.events = events;
         this.flagged = flagged;
         this.checks = checks;
         this.records = records;
@@ -139,6 +142,8 @@ public class VerificationCheckService {
         ApplicantProfile profile = profile(accountId);
         Map<CheckType, VerificationCheckEntity> existing = new EnumMap<>(CheckType.class);
         checks.findByAccountId(accountId).forEach(c -> existing.put(c.getType(), c));
+        Map<CheckType, Snapshot> before = new EnumMap<>(CheckType.class);
+        existing.forEach((type, row) -> before.put(type, Snapshot.of(row)));
         Instant now = clock.instant();
         List<VerificationCheckEntity> current = new ArrayList<>();
         for (Plan plan : plan(record, profile)) {
@@ -151,7 +156,69 @@ public class VerificationCheckService {
             }
             current.add(row);
         }
+        if (!before.isEmpty()) {
+            Map<CheckType, Snapshot> after = new EnumMap<>(CheckType.class);
+            current.forEach(row -> after.put(row.getType(), Snapshot.of(row)));
+            stages(record, before, after).forEach(stage ->
+                    events.publish(new com.sheout.driververification.VerificationStageReached(accountId, record.getRole(), stage)));
+        }
         return view(accountId, record.getRole(), current);
+    }
+
+    /** What a check looked like, for telling a step forward from a step that was already taken. */
+    record Snapshot(boolean required, CheckStatus status, String subjectVersion) {
+        static Snapshot of(VerificationCheckEntity row) {
+            return new Snapshot(row.isRequired(), row.getStatus(), row.getSubjectVersion());
+        }
+    }
+
+    /**
+     * The stages she has just reached, between the checks as they were and as
+     * they are. Only ever called for an account whose checks already existed,
+     * so the first look at an old account never announces anything.
+     */
+    static List<com.sheout.driververification.VerificationStageReached.Stage> stages(
+            VerificationRecordEntity record, Map<CheckType, Snapshot> before, Map<CheckType, Snapshot> after) {
+        List<com.sheout.driververification.VerificationStageReached.Stage> out = new ArrayList<>();
+        Snapshot idBefore = before.get(CheckType.IDENTITY);
+        Snapshot idAfter = after.get(CheckType.IDENTITY);
+        if (idAfter != null && idAfter.subjectVersion() != null && idAfter.status() != CheckStatus.APPROVED_BY_PERSON
+                && (idBefore == null || !Objects.equals(idBefore.subjectVersion(), idAfter.subjectVersion()))) {
+            out.add(com.sheout.driververification.VerificationStageReached.Stage.ID_RECEIVED);
+        }
+        if (record.getRole() != AccountRole.DRIVER) {
+            return out;
+        }
+        if (idAfter != null && idAfter.status() == CheckStatus.APPROVED_BY_PERSON
+                && (idBefore == null || idBefore.status() != CheckStatus.APPROVED_BY_PERSON)) {
+            out.add(com.sheout.driververification.VerificationStageReached.Stage.IDENTITY_APPROVED);
+        }
+        if (!allSent(before) && allSent(after)) {
+            out.add(com.sheout.driververification.VerificationStageReached.Stage.VEHICLE_PAPERS_RECEIVED);
+        }
+        if (!allApproved(before) && allApproved(after)) {
+            out.add(com.sheout.driververification.VerificationStageReached.Stage.VEHICLE_APPROVED);
+        }
+        Snapshot policeBefore = before.get(CheckType.BACKGROUND);
+        Snapshot policeAfter = after.get(CheckType.BACKGROUND);
+        if (policeAfter != null && policeAfter.subjectVersion() != null && policeAfter.subjectVersion().startsWith("doc:")
+                && policeAfter.status() != CheckStatus.APPROVED_BY_PERSON
+                && (policeBefore == null || !Objects.equals(policeBefore.subjectVersion(), policeAfter.subjectVersion()))) {
+            out.add(com.sheout.driververification.VerificationStageReached.Stage.SAFETY_CHECK_RECEIVED);
+        }
+        return out;
+    }
+
+    private static boolean allSent(Map<CheckType, Snapshot> checks) {
+        List<Snapshot> papers = PARTNER_DOCUMENT_CHECKS.stream().map(checks::get).filter(Objects::nonNull)
+                .filter(Snapshot::required).toList();
+        return !papers.isEmpty() && papers.stream().allMatch(s -> s.subjectVersion() != null && s.status() != CheckStatus.PENDING);
+    }
+
+    private static boolean allApproved(Map<CheckType, Snapshot> checks) {
+        List<Snapshot> papers = PARTNER_DOCUMENT_CHECKS.stream().map(checks::get).filter(Objects::nonNull)
+                .filter(Snapshot::required).toList();
+        return !papers.isEmpty() && papers.stream().allMatch(s -> s.status().satisfied());
     }
 
     // ------------------------------------------------------------- decisions

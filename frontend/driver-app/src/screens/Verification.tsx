@@ -25,6 +25,7 @@ import {
   Card,
   DocumentMasker,
   LiveSelfieCapture,
+  SafetyText,
   PARTNER_VERIFICATION_CONSENT,
   SkeletonCard,
   TextField,
@@ -42,10 +43,12 @@ import type {
   DriverProfileSummary,
   PartnerDocumentType,
   PartnerReadiness,
+  VerificationTurnaround,
   ReadinessBlocker,
   VerificationSummary,
 } from '../api/types';
 import { ApplicantFacts, DocumentForm } from '../components/DocumentStep';
+import { RejectionFix, WaitLine } from '../components/verification/RejectionFix';
 import { findFaceIn } from '../lib/faceMatch';
 import { PhotoPicker } from '../components/verification/PhotoPicker';
 import { blockerText } from '../lib/readinessText';
@@ -70,7 +73,23 @@ interface Step {
   state: StepState;
   /** One line under the title: where it stands, or why it needs her. */
   summary: string;
+  /** In place of summary when it needs more than a string: a fix in her language, with the English beneath. */
+  summaryNode?: ReactNode;
   body: ReactNode;
+}
+
+/** The four stages she moves through; the first three are the sections of steps. */
+type Stage = Section | 'ready';
+const STAGES: Stage[] = ['you', 'vehicle', 'police', 'ready'];
+type StageState = 'done' | 'waiting' | 'fix' | 'todo';
+
+/** Where one stage stands, from its steps: fixing beats waiting beats done. */
+function stageStateOf(steps: Step[]): StageState {
+  if (steps.length === 0) return 'done';
+  if (steps.some((s) => s.state === 'fix')) return 'fix';
+  if (steps.every((s) => s.state === 'done' || s.state === 'soon')) return 'done';
+  if (steps.every((s) => s.state === 'done' || s.state === 'soon' || s.state === 'waiting')) return 'waiting';
+  return 'todo';
 }
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
@@ -118,6 +137,9 @@ export function Verification() {
   /** The step she opened; undefined follows the next step, so it moves on by itself after a send. */
   const [openKey, setOpenKey] = useState<string | null | undefined>(undefined);
   const [showReady, setShowReady] = useState<boolean | null>(null);
+  /** The stage she tapped on the tracker; null follows the stage of her next step. */
+  const [stageOpen, setStageOpen] = useState<Stage | null>(null);
+  const [turnaround, setTurnaround] = useState<VerificationTurnaround | null>(null);
   const rows = useRef<Record<string, HTMLDivElement | null>>({});
 
   function load() {
@@ -133,6 +155,7 @@ export function Verification() {
       })
       .catch(() => setReadinessFailed(true));
     verificationApi.getConsent().then(setConsent).catch(() => {});
+    verificationApi.turnaround().then(setTurnaround).catch(() => {});
     usersApi.getMyProfile().then(setProfile).catch(() => {});
   }
 
@@ -142,6 +165,7 @@ export function Verification() {
   function sent() {
     showToast(t('verify.sentToast'));
     setOpenKey(undefined);
+    setStageOpen(null);
     load();
   }
 
@@ -207,16 +231,32 @@ export function Verification() {
   }
 
   const sections: { id: Section; label: string }[] = [
-    { id: 'you', label: t('verify.sections.you') },
-    { id: 'vehicle', label: t('verify.sections.vehicle') },
-    { id: 'police', label: t('verify.sections.police') },
+    { id: 'you', label: t('verify.stage.you') },
+    { id: 'vehicle', label: t('verify.stage.vehicle') },
+    { id: 'police', label: t('verify.stage.police') },
   ];
+  const stageStates: Record<Stage, StageState> = {
+    you: stageStateOf(steps.filter((s) => s.section === 'you')),
+    vehicle: stageStateOf(steps.filter((s) => s.section === 'vehicle')),
+    police: stageStateOf(steps.filter((s) => s.section === 'police')),
+    ready: ready ? 'done' : 'todo',
+  };
+  // The stage shown: the one she tapped, else the one her next step is in,
+  // else the first not finished - so she sees one stage at a time.
+  const shownStage: Stage = stageOpen ?? next?.section ?? STAGES.find((s) => stageStates[s] !== 'done') ?? 'ready';
 
   return (
     <ApplicantFacts.Provider value={{ name: profile?.name, dateOfBirth: profile?.dateOfBirth }}>
     <div className="space-y-6 pb-6">
       <TopHeader variant="back" title={t('verify.title')} onBack={goBack} />
       {error && <p className="text-sm text-danger">{error}</p>}
+
+      {/* The four stages, where she is in them, and that nothing is lost if she stops. */}
+      <StageTracker states={stageStates} shown={shownStage} onPick={(s) => { setStageOpen(s); setOpenKey(undefined); }} />
+      <div className="space-y-1 px-1">
+        <p className="text-caption text-text-secondary" data-testid="verify-saved">{t('verify.savedNote')}</p>
+        {!ready && <WaitLine turnaround={turnaround} />}
+      </div>
 
       {/* Where she is, and the one thing to do next. */}
       <Card tone={ready ? 'success' : 'default'} className="space-y-4" data-testid="readiness-card" data-state={ready ? 'ready' : next ? 'next' : 'waiting'}>
@@ -247,8 +287,13 @@ export function Verification() {
           <div>
             <p className="text-caption font-semibold uppercase tracking-wide text-text-secondary">{t('verify.nextLabel')}</p>
             <p className="mt-1 font-heading text-card-title text-text-primary" data-testid="verify-next">{next.title}</p>
-            {next.state === 'fix' && <p className="mt-1 text-sm text-danger">{next.summary}</p>}
-            <Button fullWidth className="mt-3" onClick={() => openStep(next.key)} data-testid="verify-continue">
+            {next.state === 'fix' && (
+              <p className="mt-1 text-sm text-danger">
+                <span className="font-semibold">{t('verify.howToFix')}: </span>
+                {next.summaryNode ?? next.summary}
+              </p>
+            )}
+            <Button fullWidth className="mt-3" onClick={() => { setStageOpen(null); openStep(next.key); }} data-testid="verify-continue">
               {t('verify.continue')}
             </Button>
           </div>
@@ -313,9 +358,21 @@ export function Verification() {
         </Card>
       )}
 
+      {shownStage === 'ready' && (
+        <Card className="space-y-2 p-4" data-testid="stage-ready">
+          <p className="font-heading text-card-title text-text-primary">{ready ? t('verify.readyTitle') : t('verify.stage.ready')}</p>
+          <p className="text-sm text-text-secondary">{ready ? t('verify.readyBody') : t('verify.stage.readyBody')}</p>
+        </Card>
+      )}
+      {shownStage === 'police' && (
+        <p className="px-1 text-caption text-text-secondary">
+          <SafetyText k="verifyStage.policeWhy" />
+        </p>
+      )}
+
       {sections.map((section) => {
         const inSection = steps.filter((s) => s.section === section.id);
-        if (inSection.length === 0) return null;
+        if (inSection.length === 0 || section.id !== shownStage) return null;
         return (
           <section key={section.id} className="space-y-2">
             <h2 className="px-1 text-caption font-semibold uppercase tracking-wide text-text-secondary">{section.label}</h2>
@@ -388,6 +445,7 @@ function idStep(t: Translate, summary: VerificationSummary, consented: boolean, 
                 ? t('verify.status.rejected', { reason: summary.rejectionReason })
                 : t('verify.status.rejectedNoReason')
               : t('verify.status.todo'),
+    summaryNode: state === 'fix' ? <RejectionFix code={summary.rejectionCode} reason={summary.rejectionReason} /> : undefined,
     body: state === 'todo' || state === 'fix' ? <IdBody onSent={onSent} /> : <StateNote state={state} why={t('verify.id.why')} />,
   };
 }
@@ -446,6 +504,7 @@ function documentStep(
     title: t(`verify.doc.type.${d.type}`),
     state,
     summary: line,
+    summaryNode: d.status === 'REJECTED' ? <RejectionFix code={d.rejectionCode} reason={d.rejectionReason} type={d.type} /> : undefined,
     body: (
       <DocumentBody
         type={d.type}
@@ -498,6 +557,9 @@ function policeStep(
     title: t('verify.doc.type.POLICE_CERTIFICATE'),
     state,
     summary: line,
+    summaryNode: doc?.status === 'REJECTED'
+      ? <RejectionFix code={doc.rejectionCode} reason={doc.rejectionReason} type="POLICE_CERTIFICATE" />
+      : undefined,
     body: (
       <DocumentBody
         type="POLICE_CERTIFICATE"
@@ -509,6 +571,53 @@ function policeStep(
       />
     ),
   };
+}
+
+// ---------------------------------------------------------------- stages
+
+/**
+ * Identity, Licence and vehicle, Safety check, Ready: where she is, at a
+ * glance, and a way to look at any stage. A tick for a finished stage, a
+ * clock for one being checked, a warning for one that needs a fix.
+ */
+function StageTracker({ states, shown, onPick }: { states: Record<Stage, StageState>; shown: Stage; onPick: (s: Stage) => void }) {
+  const { t } = useTranslation();
+  return (
+    <nav aria-label={t('verify.stage.label')} data-testid="stage-tracker">
+      <ol className="grid grid-cols-4 gap-1">
+        {STAGES.map((stage, i) => {
+          const state = states[stage];
+          const on = stage === shown;
+          const marker =
+            state === 'done' ? <Check className="h-4 w-4" strokeWidth={3} aria-hidden="true" />
+              : state === 'waiting' ? <Clock className="h-4 w-4" aria-hidden="true" />
+                : state === 'fix' ? <AlertCircle className="h-4 w-4" aria-hidden="true" />
+                  : <span className="text-sm font-bold">{i + 1}</span>;
+          const tone =
+            state === 'done' ? 'bg-accent-green text-text-inverse'
+              : state === 'fix' ? 'bg-accent-red-tint text-danger'
+                : state === 'waiting' ? 'bg-primary-light text-primary'
+                  : 'border-2 border-primary text-primary';
+          return (
+            <li key={stage}>
+              <button
+                type="button"
+                onClick={() => onPick(stage)}
+                aria-current={on ? 'step' : undefined}
+                className={`flex w-full flex-col items-center gap-1 rounded-input px-1 py-2 text-center ${on ? 'bg-primary-light' : ''}`}
+                data-testid={`stage-${stage}`}
+                data-state={state}
+              >
+                <span className={`flex h-8 w-8 items-center justify-center rounded-full ${tone}`}>{marker}</span>
+                <span className="text-caption font-semibold leading-tight text-text-primary">{t(`verify.stage.${stage}`)}</span>
+                <span className="text-[11px] leading-tight text-text-secondary">{t(`verify.stage.state.${state}`)}</span>
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
+  );
 }
 
 // ---------------------------------------------------------------- rows
@@ -542,7 +651,7 @@ function StepRow({
         <StepMarker number={number} state={step.state} />
         <span className="min-w-0 flex-1">
           <span className="block text-sm font-semibold text-text-primary">{step.title}</span>
-          <span className={`mt-0.5 block text-caption ${tone}`}>{step.summary}</span>
+          <span className={`mt-0.5 block text-caption ${tone}`}>{step.summaryNode ?? step.summary}</span>
         </span>
         <ChevronDown className={`h-5 w-5 shrink-0 text-text-secondary transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true" />
       </button>

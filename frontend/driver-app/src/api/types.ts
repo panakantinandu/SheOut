@@ -19,8 +19,10 @@ export interface VerificationSummary {
   genderVerificationStatus: VerificationStatus;
   policeVerificationStatus: VerificationStatus | null;
   documentSubmitted: boolean;
-  /** What the operator wrote, when the last decision was a rejection. */
+  /** What she is told, when the last decision was a rejection. */
   rejectionReason: string | null;
+  /** Why, from the reviewer's list: the app says how to fix it in her language. Null for an older, typed reason. */
+  rejectionCode: string | null;
   updatedAt: string;
 }
 
@@ -36,6 +38,9 @@ export interface VerificationTurnaround {
   typicalMinutes: number;
   measured: boolean;
   sampleSize: number;
+  /** When people review, in India: "09:00" and "21:00". */
+  reviewHoursFrom: string | null;
+  reviewHoursTo: string | null;
 }
 
 export type VehicleType = 'BIKE' | 'AUTO' | 'CAB';
@@ -505,6 +510,8 @@ export interface DocumentState {
   submittedAt: string | null;
   /** A newer upload is waiting while this one still counts. */
   renewalUnderReview: boolean;
+  /** Why it was sent back, from the reviewer's list. Null for an older, typed reason. */
+  rejectionCode: string | null;
 }
 
 /** GET /api/v1/users/driver/me/readiness - the same answer going online is decided on. */

@@ -26,6 +26,8 @@ public enum NotificationType {
 
     /** To operations: somebody is waiting on a review. */
     VERIFICATION_SUBMITTED,
+    /** To her: a stage of her verification moved forward - we have it, or it is approved and here is what is next. */
+    VERIFICATION_PROGRESS,
     /** The rider's own record of an SOS she raised and who it reached. */
     SOS_ALERT,
     /** An SOS raised by a rider, sent to operators. */
