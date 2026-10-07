@@ -104,6 +104,18 @@ public class ShiftCheckController {
     public record QueueRow(ShiftCheckService.ReviewItem check, String phoneNumber) {
     }
 
+    /** How many checks were held this week (or the given one, 2026-W41), and what became of them. */
+    @RequiresPermission(Permission.VERIFICATION_REVIEW)
+    @GetMapping("/api/v1/admin/shift-checks/holds")
+    public ResponseEntity<ShiftCheckService.WeeklyHolds> holds(@RequestParam(name = "week", required = false) String week) {
+        String which = week == null || week.isBlank() ? com.sheout.driververification.internal.ReviewOversightService.currentWeek() : week.trim();
+        java.time.LocalDate monday = com.sheout.driververification.internal.ReviewOversightService.mondayOfWeek(which);
+        if (monday == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_WEEK", "Write the week like 2026-W41.");
+        }
+        return ResponseEntity.ok(service.weeklyHolds(monday, which));
+    }
+
     @RequiresPermission(Permission.VERIFICATION_REVIEW)
     @PostMapping("/api/v1/admin/shift-checks/{checkId}/review")
     public ResponseEntity<ShiftCheckService.ReviewItem> review(@PathVariable UUID checkId,

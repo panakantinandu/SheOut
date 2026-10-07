@@ -28,6 +28,10 @@ public enum NotificationType {
     VERIFICATION_SUBMITTED,
     /** To her: a stage of her verification moved forward - we have it, or it is approved and here is what is next. */
     VERIFICATION_PROGRESS,
+    /** To her: her start-of-shift selfie is held for a person, who looks and when. */
+    SHIFT_CHECK_HELD,
+    /** To operations: a partner's start-of-shift check is held and she cannot work until somebody looks. */
+    SHIFT_CHECK_HELD_STAFF,
     /** The rider's own record of an SOS she raised and who it reached. */
     SOS_ALERT,
     /** An SOS raised by a rider, sent to operators. */

@@ -1055,6 +1055,12 @@
   .ck-failed textarea { width: 100%; min-height: 60px; }
   .names-table td { padding: 4px 8px 4px 0; vertical-align: top; font-size: 13px; }
   .sample-week { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+  .cmp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .cmp-fig { margin: 0; }
+  .cmp-fig img { width: 100%; max-height: 420px; object-fit: contain; border-radius: 10px; background: var(--bg); }
+  .cmp-fig figcaption { font-size: 12px; color: var(--muted); margin-top: 4px; text-align: center; }
+  .holds-strip { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px; }
+  @media (max-width: 600px) { .cmp-grid { grid-template-columns: 1fr; } }
   .modal-foot .grow { flex: 1; }
   .rv-police-intro { margin-bottom: 12px; }
   .rv-summary li { justify-content: space-between; }
@@ -3780,6 +3786,7 @@ const VIEWS = {
       { key: 'act', label: '', sort: null },
     ],
     load: () => api('/admin/shift-checks'),
+    above: host => paintHolds(host),
     cell: (r, key) => {
       const c = r.check;
       if (key === 'partner') return `<span class="num strong">${esc(r.phoneNumber || 'Unknown')}</span>`;
@@ -3794,7 +3801,9 @@ const VIEWS = {
         return pic(c.referenceSelfieUrl, 'Verified selfie') + pic(c.selfieUrl, 'Today') + pic(c.helmetUrl, 'Helmet');
       }
       if (key === 'when') { const w = waited(c.submittedAt); return `<span class="subtle">${time(c.submittedAt)}</span><div class="wait ${w.cls}">${w.text}</div>`; }
-      if (key === 'act') return `<button class="btn" data-shiftclear="${esc(c.checkId)}" type="button">It is her</button>
+      if (key === 'act') return c.status === 'NEEDS_REVIEW'
+        ? `<button class="btn btn-primary" data-shiftcompare="${esc(c.checkId)}" type="button">Compare and decide</button>`
+        : `<button class="btn" data-shiftclear="${esc(c.checkId)}" type="button">It is her</button>
         <button class="btn btn-reject" data-shiftreject="${esc(c.checkId)}" type="button">Not her</button>`;
       return '—';
     },
@@ -7451,6 +7460,74 @@ function staffStatus(m) {
   return '<span class="badge b-green">Active</span>';
 }
 
+// ---- held shift checks ---------------------------------------------------------------
+/**
+ * A held start-of-shift check, decided in one place: her verified selfie
+ * beside today's, large. "It is her" clears in one click, and only once both
+ * photos have loaded - it is not available to anybody who has not seen them.
+ * "Not her" still asks what was seen, because she is then asked for a new
+ * selfie and the note is the record of why.
+ */
+function openShiftCompare(row) {
+  const c = row.check;
+  const photo = (url, label) => url
+    ? `<figure class="cmp-fig"><img src="${escValue(url)}" alt="${escValue(label)}" data-cmp-img><figcaption>${esc(label)}</figcaption></figure>`
+    : `<figure class="cmp-fig"><div class="fallback">${esc(label)}: none on file</div><figcaption>${esc(label)}</figcaption></figure>`;
+  openModal(`<div class="modal-head"><h3>Is this the same woman?</h3>
+      <p>${esc(row.phoneNumber || '')} · did not match three times running${c.serverSimilarity != null ? ` · server face match ${Math.round(c.serverSimilarity)}%` : ''}</p></div>
+    <div class="modal-body"><div class="cmp-grid">${photo(c.referenceSelfieUrl, 'Verified selfie')}${photo(c.selfieUrl, 'Today')}</div>
+      ${c.helmetUrl ? `<p class="subtle">Helmet photo: <a href="${escValue(c.helmetUrl)}" target="_blank" rel="noopener">open</a></p>` : ''}
+      <p class="subtle" data-cmp-wait>Loading both photos…</p></div>
+    <div class="modal-foot"><button class="btn" type="button" data-cancel>Close</button><span class="grow"></span>
+      <button class="btn btn-reject" type="button" data-cmp-reject>Not her</button>
+      <button class="btn btn-approve" type="button" data-cmp-clear disabled>It is her</button></div>`, { wide: true });
+  const root = $('modalRoot');
+  const clearBtn = root.querySelector('[data-cmp-clear]');
+  const imgs = [...root.querySelectorAll('[data-cmp-img]')];
+  const ready = () => {
+    const both = imgs.length === 2 && imgs.every(i => i.complete && i.naturalWidth > 0);
+    clearBtn.disabled = !both;
+    root.querySelector('[data-cmp-wait]').textContent = both ? '' : imgs.length < 2
+      ? 'Both photos are needed to clear her here. Without her verified selfie, call her or send it back.'
+      : 'Loading both photos…';
+  };
+  imgs.forEach(i => { i.addEventListener('load', ready); i.addEventListener('error', ready); });
+  ready();
+  root.querySelector('[data-cancel]').addEventListener('click', closeModal);
+  const decide = async (decision, note) => {
+    try {
+      await api(`/admin/shift-checks/${c.checkId}/review`, { method: 'POST', body: JSON.stringify({ decision, note }) });
+      closeModal();
+      toast('ok', decision === 'CLEAR' ? 'Cleared' : 'Not her', decision === 'CLEAR' ? 'She can go online now.' : 'She will be asked for a new selfie.');
+      render();
+    } catch (err) { if (err.message !== 'unauthorized') toast('bad', 'Could not record that decision', err.message); }
+  };
+  clearBtn.addEventListener('click', () => decide('CLEAR', 'Compared both photos: same woman.'));
+  root.querySelector('[data-cmp-reject]').addEventListener('click', async () => {
+    const ok = await confirmAction({
+      title: 'Not the same woman?',
+      message: 'This check stops counting and she has to take a new selfie before she can work. If you believe somebody else is using her account, block the account from Accounts as well.',
+      confirmLabel: 'Not her', tone: 'reject', withReason: true, reasonRequired: true,
+      reasonLabel: 'What you saw (kept with the check)', reasonPlaceholder: 'e.g. A different person in the selfie', reasonMaxLength: 500,
+    });
+    if (ok) decide('REJECT', ok.reason);
+  });
+}
+
+/** This week's holds above the Selfie Checks list: how many, and what became of them. */
+async function paintHolds(host) {
+  host.innerHTML = '<div class="subtle">Loading this week\'s holds…</div>';
+  try {
+    const h = await api('/admin/shift-checks/holds');
+    host.innerHTML = `<div class="holds-strip"><b>${esc(h.week)}:</b> ${h.held} check${h.held === 1 ? '' : 's'} held
+      · <span class="badge b-green">${h.itWasHer} her</span> <span class="badge b-red">${h.notHer} not her</span>
+      <span class="badge b-amber">${h.stillHeld} still waiting</span>
+      ${h.medianMinutesToDecision != null ? `<span class="subtle">· a person decided in ${h.medianMinutesToDecision} min (median)</span>` : ''}</div>`;
+  } catch (err) {
+    if (err.message !== 'unauthorized') host.innerHTML = `<div class="subtle">Could not load this week's holds: ${esc(err.message)}</div>`;
+  }
+}
+
 // ---- verification oversight -----------------------------------------------------
 /** The week the sample page shows; null is this week. */
 let SAMPLE_WEEK = null;
@@ -8700,6 +8777,12 @@ $('rows').addEventListener('click', async e => {
     return;
   }
 
+  const compareBtn = e.target.closest('[data-shiftcompare]');
+  if (compareBtn) {
+    openShiftCompare(lastRows[Number(compareBtn.closest('tr[data-i]').dataset.i)]);
+    return;
+  }
+
   const shiftBtn = e.target.closest('[data-shiftclear], [data-shiftreject]');
   if (shiftBtn) {
     const row = lastRows[Number(shiftBtn.closest('tr[data-i]').dataset.i)];
@@ -9340,6 +9423,12 @@ function connectLive() {
     raiseTripAlert(safeJson(e.data) || {});
     refreshBadges();
     if (tab === 'live' || tab === 'overview') render({ quiet: true });
+  });
+  // A partner's start-of-shift check is held: she cannot work until somebody looks.
+  liveSource.addEventListener('shift-check-held', () => {
+    refreshBadges();
+    toast('bad', 'A partner is held at her shift selfie', 'She cannot go online until somebody compares the photos. Open Selfie Checks.');
+    if (tab === 'shiftchecks') render({ quiet: true });
   });
   liveSource.addEventListener('approval', () => {
     refreshApprovalCount();

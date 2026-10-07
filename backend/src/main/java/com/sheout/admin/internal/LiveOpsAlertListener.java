@@ -31,6 +31,12 @@ class LiveOpsAlertListener {
                 + (event.bookingId() != null) + "}");
     }
 
+    /** A start-of-shift check held for a person: every console that reviews verification hears at once. */
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void onShiftCheckHeld(com.sheout.driververification.ShiftCheckNeedsReview event) {
+        live.publish("shift-check-held", Permission.VERIFICATION_REVIEW, "{\"accountId\":\"" + event.accountId() + "\"}");
+    }
+
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onTripAlert(TripAlertRaised event) {
         live.publish("trip-alert", Permission.SOS_RESPOND, "{\"alertId\":\"" + event.alertId() + "\",\"bookingId\":\""

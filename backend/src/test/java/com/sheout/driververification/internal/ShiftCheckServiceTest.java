@@ -90,7 +90,7 @@ class ShiftCheckServiceTest {
         when(storage.load("selfie-on-file")).thenReturn(Optional.of(new byte[]{1, 2, 3}));
         ServerFaceCheck server = mock(ServerFaceCheck.class);
         when(server.similarity(any(), any())).thenReturn(similarity);
-        return new ShiftCheckService(checks, records, storage, events, true, 12, 0.55, 3, server, 90);
+        return new ShiftCheckService(checks, records, storage, events, true, 12, 0.55, 3, server, 90, 30, "09:00-21:00");
     }
 
     /** A tampered phone reporting a match for somebody else is overruled. */
@@ -180,6 +180,38 @@ class ShiftCheckServiceTest {
         verify(events).publish(any(ShiftCheckNeedsReview.class));
         // Held means held: no new prompts until an operator looks.
         assertThat(service.issueChallenge(partner).isFailure()).isTrue();
+    }
+
+    @Test
+    void aHoldTellsHerWhoLooksAndWhenAndIsCountedForTheWeek() {
+        verifiedWithSelfie();
+        ShiftCheckService service = serviceWithServerCheck(Optional.empty());
+        attempt(service, 0.8, null, false);
+        attempt(service, 0.8, null, false);
+        ShiftCheckService.Status held = attempt(service, 0.8, null, false);
+
+        assertThat(held.reviewTargetMinutes()).isEqualTo(30);
+        assertThat(held.reviewHoursFrom()).isEqualTo("09:00");
+        assertThat(held.reviewHoursTo()).isEqualTo("21:00");
+        org.mockito.ArgumentCaptor<ShiftCheckNeedsReview> event = org.mockito.ArgumentCaptor.forClass(ShiftCheckNeedsReview.class);
+        verify(events).publish(event.capture());
+        assertThat(event.getValue().reviewTargetMinutes()).isEqualTo(30);
+        assertThat(event.getValue().reviewHoursTo()).isEqualTo("21:00");
+
+        ShiftCheckEntity heldRow = rows.get(rows.size() - 1);
+        assertThat(heldRow.getHeldAt()).as("kept for the weekly count").isNotNull();
+
+        // ---- one click clears it, and the hold still counts for the week
+        when(checks.findById(heldRow.getId())).thenReturn(Optional.of(heldRow));
+        when(checks.findByHeldAtBetween(any(), any())).thenReturn(List.of(heldRow));
+        heldRow.recordReview(ShiftCheckEntity.Status.CLEARED, UUID.randomUUID(), "same woman", java.time.Instant.now());
+        java.time.LocalDate monday = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Kolkata"))
+                .with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY));
+        ShiftCheckService.WeeklyHolds week = service.weeklyHolds(monday, "this-week");
+        assertThat(week.held()).isEqualTo(1);
+        assertThat(week.itWasHer()).isEqualTo(1);
+        assertThat(week.stillHeld()).isZero();
+        assertThat(week.medianMinutesToDecision()).isNotNull();
     }
 
     @Test
