@@ -30,10 +30,12 @@ class AccountDeletionDocumentListener {
     private final ShiftCheckService shiftChecks;
     private final PartnerDocumentService partnerDocuments;
     private final PoliceVerificationService police;
+    private final VerificationCheckService checks;
 
     AccountDeletionDocumentListener(VerificationRecordRepository records, DocumentStorage documentStorage,
                                     ShiftCheckService shiftChecks, PartnerDocumentService partnerDocuments,
-                                    PoliceVerificationService police) {
+                                    PoliceVerificationService police, VerificationCheckService checks) {
+        this.checks = checks;
         this.records = records;
         this.documentStorage = documentStorage;
         this.shiftChecks = shiftChecks;
@@ -52,6 +54,9 @@ class AccountDeletionDocumentListener {
         // Her police certificate numbers and any rejection note; the
         // decisions and their dates stay, like the statuses below.
         police.eraseFor(event.accountId());
+        // What the automatic checks noticed (a typed name, a matching number)
+        // and any override note; each check's status and who decided stay.
+        checks.eraseFor(event.accountId());
         records.findByAccountId(event.accountId()).ifPresent(record -> {
             if (record.getAadhaarDocumentKey() != null) {
                 documentStorage.delete(record.getAadhaarDocumentKey());

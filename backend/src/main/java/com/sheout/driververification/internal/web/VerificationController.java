@@ -226,6 +226,11 @@ public class VerificationController {
                     "Say whose vehicle this is, and the owner's name as printed on the RC.");
             case PROVIDER_NOT_CONFIGURED -> new ApiException(HttpStatus.CONFLICT, "PROVIDER_NOT_CONFIGURED",
                     "No verification provider is set up. Record the result of a manual check instead.");
+            case CHECK_FAILED -> new ApiException(HttpStatus.CONFLICT, "CHECK_FAILED",
+                    "A check on this failed automatically. Send it back to her with a reason, or, where the check"
+                            + " allows it, ask for an override with a note and a second person's sign-off.");
+            case FINDINGS_NOT_ACKNOWLEDGED -> new ApiException(HttpStatus.CONFLICT, "FINDINGS_NOT_ACKNOWLEDGED",
+                    "Tick each thing the automatic checks noticed, to say you looked at it, before approving.");
         };
     }
 

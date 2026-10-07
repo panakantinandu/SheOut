@@ -3,6 +3,8 @@ package com.sheout.driververification.internal;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sheout.driververification.CheckFinding;
+import com.sheout.driververification.CheckType;
 import com.sheout.driververification.InsuranceUseType;
 import com.sheout.driververification.PartnerDocumentExpiring;
 import com.sheout.driververification.PartnerDocumentRejected;
@@ -95,17 +97,28 @@ public class PartnerDocumentService {
     private final ObjectMapper json;
     private final VerificationConsent consent;
     private final Clock clock;
+    /** Null when built by hand in a unit test: no checks are worked out. */
+    private final VerificationCheckService checks;
 
     @Autowired
     public PartnerDocumentService(PartnerDocumentRepository documents, DocumentStorage storage,
                                   DocumentRequirements requirements, VerificationAudit audit,
-                                  DomainEventPublisher events, ObjectMapper json, VerificationConsent consent) {
-        this(documents, storage, requirements, audit, events, json, consent, Clock.systemUTC());
+                                  DomainEventPublisher events, ObjectMapper json, VerificationConsent consent,
+                                  VerificationCheckService checks) {
+        this(documents, storage, requirements, audit, events, json, consent, Clock.systemUTC(), checks);
     }
 
     PartnerDocumentService(PartnerDocumentRepository documents, DocumentStorage storage,
                            DocumentRequirements requirements, VerificationAudit audit,
                            DomainEventPublisher events, ObjectMapper json, VerificationConsent consent, Clock clock) {
+        this(documents, storage, requirements, audit, events, json, consent, clock, null);
+    }
+
+    private PartnerDocumentService(PartnerDocumentRepository documents, DocumentStorage storage,
+                                   DocumentRequirements requirements, VerificationAudit audit,
+                                   DomainEventPublisher events, ObjectMapper json, VerificationConsent consent, Clock clock,
+                                   VerificationCheckService checks) {
+        this.checks = checks;
         this.documents = documents;
         this.storage = storage;
         this.requirements = requirements;
@@ -221,6 +234,7 @@ public class PartnerDocumentService {
         documents.save(document);
         audit.record(accountId, actorId, actorRoleFor(source), VerificationAudit.DOCUMENT_UPLOADED, document.getId(), type,
                 source == PartnerDocumentSource.OPERATOR_UPLOAD ? "Uploaded by an operator on her behalf" : null);
+        refreshChecks(accountId);
         return Result.success(toSummary(document));
     }
 
@@ -259,6 +273,30 @@ public class PartnerDocumentService {
     public Result<PartnerDocumentSummary, VerificationError> review(
             UUID documentId, UUID operatorId, PartnerDocumentStatus decision, String reason, DocumentFacts corrections,
             String governmentCheck, LocalDate pucValidUntil) {
+        return review(documentId, operatorId, decision, reason, corrections, governmentCheck, pucValidUntil, null);
+    }
+
+    /**
+     * The same decision, with what the reviewer ticked. Approving a document
+     * a check covers (licence, RC, insurance) needs that check clear: not
+     * failed automatically, and everything the automatic checks noticed
+     * acknowledged - see VerificationCheckService.mayApprove.
+     */
+    @Transactional
+    public Result<PartnerDocumentSummary, VerificationError> review(
+            UUID documentId, UUID operatorId, PartnerDocumentStatus decision, String reason, DocumentFacts corrections,
+            String governmentCheck, LocalDate pucValidUntil, java.util.Set<CheckFinding> acknowledged) {
+        Result<PartnerDocumentSummary, VerificationError> result = decide(documentId, operatorId, decision, reason,
+                corrections, governmentCheck, pucValidUntil, acknowledged);
+        if (result.isSuccess()) {
+            refreshChecks(result.value().accountId());
+        }
+        return result;
+    }
+
+    private Result<PartnerDocumentSummary, VerificationError> decide(
+            UUID documentId, UUID operatorId, PartnerDocumentStatus decision, String reason, DocumentFacts corrections,
+            String governmentCheck, LocalDate pucValidUntil, java.util.Set<CheckFinding> acknowledged) {
         if (decision != PartnerDocumentStatus.VERIFIED && decision != PartnerDocumentStatus.REJECTED) {
             return Result.failure(VerificationError.INVALID_DECISION);
         }
@@ -289,6 +327,14 @@ public class PartnerDocumentService {
             restoreEarlierIfStillValid(document, operatorId, now, today);
             events.publish(new PartnerDocumentRejected(document.getAccountId(), document.getType(), reason.trim()));
             return Result.success(toSummary(document));
+        }
+
+        CheckType checkType = VerificationCheckService.checkFor(document.getType());
+        if (checks != null && checkType != null && checkType != CheckType.BACKGROUND) {
+            Result<Void, VerificationError> clear = checks.mayApprove(document.getAccountId(), List.of(checkType), acknowledged);
+            if (clear.isFailure()) {
+                return Result.failure(clear.error());
+            }
         }
 
         // Nothing is approved in a shape no RTO, insurer or police force
@@ -874,6 +920,12 @@ public class PartnerDocumentService {
             case OPERATOR_UPLOAD -> VerificationAudit.ACTOR_OPERATOR;
             case PROVIDER -> VerificationAudit.ACTOR_PROVIDER;
         };
+    }
+
+    private void refreshChecks(UUID accountId) {
+        if (checks != null) {
+            checks.refresh(accountId);
+        }
     }
 
     static String plain(LocalDate date) {
