@@ -159,6 +159,8 @@
   "drawer": {
     "partner": "SheOut पार्टनर",
     "language": "भाषा",
+    "payouts": "वॉलेट और पेआउट",
+    "helpAndInfo": "सहायता और जानकारी",
     "version": "SheOut पार्टनर वर्शन {{version}}",
     "languageSaved": "भाषा बदल दी गई",
     "languageSavedLocally": "इस फ़ोन पर भाषा बदल दी गई। अगली बार आपके खाते में सेव हो जाएगी।"

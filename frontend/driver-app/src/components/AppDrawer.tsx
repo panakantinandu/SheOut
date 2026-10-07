@@ -1,7 +1,7 @@
-import { Gift, LifeBuoy, Settings } from 'lucide-react';
+import { Gift, Landmark, LifeBuoy, Settings } from 'lucide-react';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Avatar, Drawer, useTranslation, vehicleLabel } from '@sheout/design-system';
+import { ASSISTANT_NAME, Avatar, Drawer, useTranslation, vehicleLabel } from '@sheout/design-system';
 import { usersApi } from '../api/client';
 import type { DriverProfileSummary } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
@@ -20,14 +20,12 @@ export function useAppDrawer(): DrawerControls {
 }
 
 /**
- * The partner app's menu: the app-wide places - Refer a Friend, Help &
- * support and Settings - and nothing that is on a tab.
- * <p>
- * Each place is in one spot only. Her details, vehicle and verification are
- * the Profile tab; payouts are in the Earnings tab. The menu used to repeat
- * Profile entry for entry. The header shows who is signed in and opens
- * Profile, as a menu header does in most apps. No Seller entry: that is a
- * rider feature.
+ * The partner app's menu: the things she does that are not a tab - her
+ * wallet and payouts, Refer a Friend, then help and Settings. The Profile
+ * tab is the things about her (details, vehicle, verification), so each
+ * destination has one home; the menu used to repeat Profile entry for entry.
+ * The header shows who is signed in and opens Profile, as a menu header does
+ * in most apps. No Seller entry: that is a rider feature.
  */
 export function AppDrawerProvider({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
@@ -71,9 +69,16 @@ export function AppDrawerProvider({ children }: { children: ReactNode }) {
           {
             key: 'main',
             items: [
+              { key: 'payouts', label: t('drawer.payouts'), icon: <Landmark />, onClick: () => go('/payouts') },
               { key: 'refer', label: t('refer.title'), icon: <Gift />, onClick: () => go('/refer') },
-              { key: 'help', label: t('profile.help'), icon: <LifeBuoy />, onClick: () => go('/help') },
-              { key: 'settings', label: t('settings.title'), icon: <Settings />, onClick: () => go('/settings') },
+            ],
+          },
+          {
+            key: 'help',
+            title: t('drawer.helpAndInfo'),
+            items: [
+              { key: 'help', label: t('profile.help'), sublabel: t('profile.helpSub', { name: ASSISTANT_NAME }), icon: <LifeBuoy />, onClick: () => go('/help') },
+              { key: 'settings', label: t('settings.title'), sublabel: t('settings.sub'), icon: <Settings />, onClick: () => go('/settings') },
             ],
           },
         ]}

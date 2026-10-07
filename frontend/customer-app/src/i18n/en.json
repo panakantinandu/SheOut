@@ -135,9 +135,7 @@
     "verifyToRide": "Needed before your first ride",
     "addressesSub": "Home, work and other places",
     "help": "Help & support",
-    "helpSub": "Ask {{name}}, raise an issue or call us",
-    "shopSub_one": "{{count}} product, plan and shop details",
-    "shopSub_other": "{{count}} products, plan and shop details"
+    "helpSub": "Ask {{name}}, raise an issue or call us"
   },
   "help": {
     "toPlace": "to {{place}}",
@@ -338,6 +336,7 @@
     "comingSoon": "Coming soon",
     "rate": "Rate the App",
     "rateSoon": "Rating opens once SheOut is in the app stores. Thank you for wanting to!",
+    "helpAndInfo": "Help & info",
     "version": "SheOut version {{version}}",
     "languageSaved": "Language changed",
     "languageSavedLocally": "Language changed on this phone. It will be saved to your account next time.",
@@ -829,8 +828,11 @@
       "removed": "Pickup point removed"
     },
     "myShop": "My shop",
+    "myShopSub": "Plan, shop details and pickup point",
     "myProducts": {
       "title": "My products",
+      "rowSub_one": "{{count}} product - find by code, update stock",
+      "rowSub_other": "{{count}} products - find by code, update stock",
       "findLabel": "Find by product code or name",
       "found": "Found {{code}}",
       "filter": {

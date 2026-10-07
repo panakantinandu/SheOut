@@ -1,10 +1,11 @@
-import { Gift, LifeBuoy, Settings, ShieldCheck } from 'lucide-react';
+import { Gift, LifeBuoy, Package, Settings, ShieldCheck, ShoppingBag, Store } from 'lucide-react';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Avatar, Drawer, phoneDisplay, useTranslation } from '@sheout/design-system';
+import { ASSISTANT_NAME, Avatar, Drawer, phoneDisplay, useTranslation } from '@sheout/design-system';
 import { usersApi } from '../api/client';
 import type { CustomerProfileSummary } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
+import { useMyShop } from '../lib/useMyShop';
 
 const APP_VERSION = '0.1.0';
 
@@ -20,14 +21,16 @@ export function useAppDrawer(): DrawerControls {
 }
 
 /**
- * The rider app's menu: the app-wide places - Safety Center, Refer a
- * Friend, Help & support and Settings - and nothing that is on a tab.
+ * The rider app's menu: the things she does that are not a tab. The
+ * Profile tab is the things about her (details, ID check, emergency
+ * contacts, saved addresses); her money is the Wallet tab. Each destination
+ * is in exactly one of those places - the menu used to repeat Profile entry
+ * for entry, so Settings and My Products each had two ways in.
  * <p>
- * Each place is in one spot only. What is about her (details, ID, emergency
- * contacts, addresses, her shop) is on the Profile tab; her money is the
- * Wallet tab. The menu used to repeat Profile entry for entry, so Settings
- * and My Products each had two ways in. The header shows who is signed in
- * and opens Profile, as a menu header does in most apps.
+ * Three groups: safety and rewards; the Marketplace, where a seller also
+ * finds her shop and products (a buyer, the way to start selling); and help
+ * and Settings. The header shows who is signed in and opens Profile, as a
+ * menu header does in most apps.
  */
 export function AppDrawerProvider({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
@@ -35,6 +38,7 @@ export function AppDrawerProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [profile, setProfile] = useState<CustomerProfileSummary | null>(null);
+  const shop = useMyShop(isOpen && isAuthenticated);
 
   useEffect(() => {
     if (!isOpen || !isAuthenticated) return;
@@ -77,8 +81,33 @@ export function AppDrawerProvider({ children }: { children: ReactNode }) {
             items: [
               { key: 'safety', label: t('drawer.safety'), icon: <ShieldCheck />, onClick: () => go('/safety') },
               { key: 'refer', label: t('drawer.refer'), icon: <Gift />, onClick: () => go('/refer') },
-              { key: 'help', label: t('profile.help'), icon: <LifeBuoy />, onClick: () => go('/help') },
-              { key: 'settings', label: t('settings.title'), icon: <Settings />, onClick: () => go('/settings') },
+            ],
+          },
+          {
+            key: 'marketplace',
+            title: t('home.market.title'),
+            items: [
+              { key: 'marketplace', label: t('home.market.title'), sublabel: t('home.market.body'), icon: <ShoppingBag />, onClick: () => go('/seller') },
+              ...(shop
+                ? [
+                    { key: 'shop', label: t('seller.myShop'), sublabel: t('seller.myShopSub'), icon: <Store />, onClick: () => go('/seller/manage') },
+                    {
+                      key: 'products',
+                      label: t('seller.myProducts.title'),
+                      sublabel: t('seller.myProducts.rowSub', { count: shop.products.length }),
+                      icon: <Package />,
+                      onClick: () => go('/seller/my-products'),
+                    },
+                  ]
+                : [{ key: 'sell', label: t('drawer.sell'), icon: <Store />, onClick: () => go('/seller/manage') }]),
+            ],
+          },
+          {
+            key: 'help',
+            title: t('drawer.helpAndInfo'),
+            items: [
+              { key: 'help', label: t('profile.help'), sublabel: t('profile.helpSub', { name: ASSISTANT_NAME }), icon: <LifeBuoy />, onClick: () => go('/help') },
+              { key: 'settings', label: t('settings.title'), sublabel: t('settings.sub'), icon: <Settings />, onClick: () => go('/settings') },
             ],
           },
         ]}

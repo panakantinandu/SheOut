@@ -1,4 +1,4 @@
-import { BadgeCheck, Camera, ChevronRight, MapPin, ShieldAlert, Store } from 'lucide-react';
+import { BadgeCheck, Camera, ChevronRight, MapPin, ShieldAlert } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -14,14 +14,13 @@ import {
 import { useAppDrawer } from '../components/AppDrawer';
 import { ApiError, usersApi } from '../api/client';
 import type { CustomerProfileSummary } from '../api/types';
-import { useMyShop } from '../lib/useMyShop';
 
 /**
- * Who she is on SheOut, and the things that are hers: her ID check and
- * emergency contacts, her places and her shop. Each destination is in one
- * place in the app: her details open from the card at the top; payment
- * history lives in Wallet; products are inside My shop; Safety Center,
- * Refer a Friend, Help and Settings are in the menu (see AppDrawer).
+ * Who she is on SheOut: her details (the card at the top), her ID check and
+ * emergency contacts, and her saved addresses. Only what is about her -
+ * what she does is in the menu (Safety Center, Refer, the Marketplace with
+ * her shop and products, Help, Settings; see AppDrawer) and her money is the
+ * Wallet tab, so every destination has one home.
  * <p>
  * The card at the top is her: tap it (or the camera on her photo) to change
  * her name, photo or email.
@@ -32,8 +31,6 @@ export function Profile() {
   const drawer = useAppDrawer();
   const [profile, setProfile] = useState<CustomerProfileSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
-  // A seller sees her shop and products here; anyone else, the way to start one.
-  const shop = useMyShop();
 
   useEffect(() => {
     usersApi
@@ -96,13 +93,6 @@ export function Profile() {
         <h2 className="mb-3 font-heading text-section text-text-primary">{t('profile.sectionAccount')}</h2>
         <Card className="divide-y divide-border p-0">
           <ListRow icon={icon(<MapPin />)} label={t('addresses.title')} sublabel={t('profile.addressesSub')} onClick={() => navigate('/profile/addresses')} />
-          {/* One way into selling: My shop holds her products, with Manage all. */}
-          <ListRow
-            icon={icon(<Store />)}
-            label={shop ? t('seller.myShop') : t('drawer.sell')}
-            sublabel={shop ? t('profile.shopSub', { count: shop.products.length }) : undefined}
-            onClick={() => navigate('/seller/manage')}
-          />
         </Card>
       </section>
 

@@ -159,6 +159,8 @@
   "drawer": {
     "partner": "SheOut పార్ట్‌నర్",
     "language": "భాష",
+    "payouts": "వాలెట్ & పేఅవుట్‌లు",
+    "helpAndInfo": "సహాయం & సమాచారం",
     "version": "SheOut పార్ట్‌నర్ వెర్షన్ {{version}}",
     "languageSaved": "భాష మార్చబడింది",
     "languageSavedLocally": "ఈ ఫోన్‌లో భాష మార్చబడింది. తదుపరిసారి మీ ఖాతాలో సేవ్ అవుతుంది."

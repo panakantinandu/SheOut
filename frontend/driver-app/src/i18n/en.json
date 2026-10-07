@@ -159,6 +159,8 @@
   "drawer": {
     "partner": "SheOut partner",
     "language": "Language",
+    "payouts": "Wallet & payouts",
+    "helpAndInfo": "Help & info",
     "version": "SheOut Partner version {{version}}",
     "languageSaved": "Language changed",
     "languageSavedLocally": "Language changed on this phone. It will be saved to your account next time."
