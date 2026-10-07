@@ -132,6 +132,9 @@ public interface VerificationApi {
      */
     VerificationChecks checksFor(UUID accountId);
 
+    /** Her name everywhere it is written, compared with her profile - see NameOnFile. */
+    List<NameOnFile> namesOnFile(UUID accountId);
+
     /** Who did what to her verification, newest first - including every time a document was opened. */
     List<VerificationAuditEntry> auditTrail(UUID accountId);
 

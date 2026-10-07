@@ -50,6 +50,10 @@ public class PartnerDocumentEntity extends BaseEntity {
     @Column(length = 1000)
     private String rejectionReason;
 
+    /** Why, as one of RejectionReason; null before the list, and when not rejected. */
+    @Column(length = 40)
+    private String rejectionCode;
+
     private UUID reviewedBy;
     private Instant reviewedAt;
 
@@ -208,13 +212,23 @@ public class PartnerDocumentEntity extends BaseEntity {
         this.reviewedBy = operatorId;
         this.reviewedAt = at;
         this.rejectionReason = null;
+        this.rejectionCode = null;
     }
 
     void markRejected(UUID operatorId, Instant at, String reason) {
+        markRejected(operatorId, at, reason, null);
+    }
+
+    void markRejected(UUID operatorId, Instant at, String reason, String code) {
         this.status = PartnerDocumentStatus.REJECTED;
         this.reviewedBy = operatorId;
         this.reviewedAt = at;
         this.rejectionReason = reason;
+        this.rejectionCode = code;
+    }
+
+    public String getRejectionCode() {
+        return rejectionCode;
     }
 
     void markExpired(Instant at) {

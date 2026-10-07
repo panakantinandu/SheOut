@@ -48,11 +48,20 @@ public class PartnerVerificationOpsService {
     private final VerificationApi verification;
     private final DriverProfileApi driverProfiles;
     private final AuthApi auth;
+    /** Null when built by hand in a unit test: a rider's name and date of birth are then not shown. */
+    private final com.sheout.users.CustomerProfileApi customerProfiles;
 
     PartnerVerificationOpsService(VerificationApi verification, DriverProfileApi driverProfiles, AuthApi auth) {
+        this(verification, driverProfiles, auth, null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    PartnerVerificationOpsService(VerificationApi verification, DriverProfileApi driverProfiles, AuthApi auth,
+                                  com.sheout.users.CustomerProfileApi customerProfiles) {
         this.verification = verification;
         this.driverProfiles = driverProfiles;
         this.auth = auth;
+        this.customerProfiles = customerProfiles;
     }
 
     public Optional<PartnerVerificationView> partner(UUID accountId) {
@@ -65,9 +74,12 @@ public class PartnerVerificationOpsService {
         Map<UUID, String> actors = new HashMap<>();
         List<PartnerVerificationView.AuditRow> audit = verification.auditTrail(accountId).stream()
                 .map(e -> auditRow(e, actors)).toList();
+        // A rider has no partner profile: her name and date of birth are on her rider profile.
+        Optional<com.sheout.users.CustomerProfileSummary> rider = profile.isPresent() || customerProfiles == null
+                ? Optional.empty() : customerProfiles.findByAccountId(accountId);
         return Optional.of(new PartnerVerificationView(
                 accountId,
-                profile.map(DriverProfileSummary::name).orElse(null),
+                profile.map(DriverProfileSummary::name).or(() -> rider.map(com.sheout.users.CustomerProfileSummary::name)).orElse(null),
                 phoneOf(accountId),
                 vehicle,
                 profile.map(DriverProfileSummary::vehicleRegistrationNumber).orElse(null),
@@ -80,7 +92,14 @@ public class PartnerVerificationOpsService {
                 verification.consentStatus(accountId),
                 audit,
                 verification.policeReverifyMonths(),
-                profile.map(DriverProfileSummary::dateOfBirth).orElse(null)));
+                profile.map(DriverProfileSummary::dateOfBirth).or(() -> rider.map(com.sheout.users.CustomerProfileSummary::dateOfBirth))
+                        .orElse(null),
+                summary.get().role(),
+                summary.get().genderVerificationStatus() == com.sheout.driververification.VerificationStatus.REJECTED
+                        ? summary.get().rejectionReason() : null,
+                summary.get().rejectionCode(),
+                verification.checksFor(accountId),
+                verification.namesOnFile(accountId)));
     }
 
     public List<DocumentQueueRow> documentQueue(Queue queue) {

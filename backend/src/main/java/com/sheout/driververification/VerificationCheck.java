@@ -34,6 +34,7 @@ public record VerificationCheck(
     }
 
     /** Whether a person may accept this check over its failure, with a note and a second sign-off. */
+    @com.fasterxml.jackson.annotation.JsonProperty("overridable")
     public boolean overridable() {
         return status == CheckStatus.FAILED_AUTO
                 && findings.stream().anyMatch(f -> f.code().fails())

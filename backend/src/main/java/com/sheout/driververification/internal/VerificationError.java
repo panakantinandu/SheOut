@@ -143,5 +143,35 @@ public enum VerificationError {
     CHECK_FAILED,
 
     /** Approving past something the automatic checks noticed, without the reviewer acknowledging it. */
-    FINDINGS_NOT_ACKNOWLEDGED
+    FINDINGS_NOT_ACKNOWLEDGED,
+
+    /** Sending something back without a reason from the list. */
+    REASON_CODE_REQUIRED,
+
+    /** A reason from the list that does not fit what is being sent back (a licence reason for her ID). */
+    INVALID_REJECTION_REASON,
+
+    /** An override asked for a check that has not failed, or whose failure cannot be overridden. */
+    NOT_OVERRIDABLE,
+
+    /** An override asked for without a written note saying why. */
+    OVERRIDE_NOTE_REQUIRED,
+
+    /** She sent something new since the override was asked for: it is about something else now. */
+    CHECK_CHANGED,
+
+    /** An override for this check is already waiting for a second person. */
+    OVERRIDE_ALREADY_ASKED,
+
+    /** The same person asked and signed off, or gave a second look at her own decision. */
+    NEEDS_SECOND_PERSON,
+
+    /** A week not written as 2026-W41. */
+    INVALID_WEEK,
+
+    /** A second look at an account that is not in that week's sample. */
+    NOT_IN_SAMPLE,
+
+    /** That account already had its second look for that week. */
+    ALREADY_LOOKED
 }

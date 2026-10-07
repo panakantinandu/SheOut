@@ -48,6 +48,7 @@ public class VerificationAudit {
     static final String CHECK_UPDATED = "CHECK_UPDATED";
     static final String CHECK_OVERRIDE_REQUESTED = "CHECK_OVERRIDE_REQUESTED";
     static final String CHECK_OVERRIDDEN = "CHECK_OVERRIDDEN";
+    static final String SAMPLE_SECOND_LOOK = "SAMPLE_SECOND_LOOK";
 
     private final VerificationAuditRepository repository;
     private final StaffAudit staffAudit;

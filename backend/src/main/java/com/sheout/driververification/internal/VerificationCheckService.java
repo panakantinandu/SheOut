@@ -9,6 +9,8 @@ import com.sheout.driververification.ApplicantProfiles.ApplicantProfile;
 import com.sheout.driververification.CheckFinding;
 import com.sheout.driververification.CheckStatus;
 import com.sheout.driververification.CheckType;
+import com.sheout.driververification.NameOnFile;
+import com.sheout.driververification.RejectionReason;
 import com.sheout.driververification.PartnerDocumentStatus;
 import com.sheout.driververification.PartnerDocumentType;
 import com.sheout.driververification.VerificationCheck;
@@ -82,12 +84,15 @@ public class VerificationCheckService {
     private final CheckRules rules;
     private final VerificationAudit audit;
     private final ObjectProvider<ApplicantProfiles> profiles;
+    private final FlaggedDocumentNumberRepository flagged;
     private final Clock clock;
 
     VerificationCheckService(VerificationCheckRepository checks, VerificationRecordRepository records,
                              PartnerDocumentRepository documents, PoliceVerificationRepository policeDecisions,
                              DocumentRequirements requirements, CheckProviders providers, CheckRules rules,
-                             VerificationAudit audit, ObjectProvider<ApplicantProfiles> profiles) {
+                             VerificationAudit audit, ObjectProvider<ApplicantProfiles> profiles,
+                             FlaggedDocumentNumberRepository flagged) {
+        this.flagged = flagged;
         this.checks = checks;
         this.records = records;
         this.documents = documents;
@@ -177,6 +182,129 @@ public class VerificationCheckService {
             }
         }
         return Result.success(null);
+    }
+
+    // ------------------------------------------------------- remembered numbers
+
+    /**
+     * A number a person turned down for fraud or a confirmed mismatch, kept
+     * so it fails its check if it comes back on any account. Only for a
+     * reason that says so (RejectionReason.remembersNumber): never an
+     * expired document, a blurry photo or a typing mistake.
+     */
+    @Transactional
+    public void rememberNumber(PartnerDocumentEntity document, RejectionReason reason, UUID operatorId) {
+        if (reason == null || !reason.remembersNumber() || document.getDocumentNumber() == null
+                || flagged.existsByDocumentId(document.getId())) {
+            return;
+        }
+        flagged.save(new FlaggedDocumentNumberEntity(document.getType(), document.getDocumentNumber(), reason.name(),
+                document.getAccountId(), document.getId(), operatorId));
+    }
+
+    // ---------------------------------------------------------------- overrides
+
+    /**
+     * What an override carries from the person who asks to the person who
+     * signs off. subjectVersion pins it to what she had sent when it was
+     * asked: if she sends something new meanwhile, the override is refused.
+     */
+    public record OverrideRequest(UUID accountId, CheckType type, String subjectVersion, String note, UUID requestedBy) {
+    }
+
+    /**
+     * The first person's half: a failed check that may be overridden, and a
+     * written note (at least a sentence) on why. Recorded on her audit trail;
+     * nothing changes until a second person signs off (applyOverride).
+     */
+    @Transactional
+    public Result<OverrideRequest, VerificationError> prepareOverride(UUID accountId, CheckType type, String note, UUID requestedBy) {
+        String trimmed = note == null ? "" : note.trim().replaceAll("\\s+", " ");
+        if (trimmed.length() < 10) {
+            return Result.failure(VerificationError.OVERRIDE_NOTE_REQUIRED);
+        }
+        if (trimmed.length() > 1000) {
+            trimmed = trimmed.substring(0, 1000);
+        }
+        Optional<VerificationCheck> check = refresh(accountId).find(type);
+        if (check.isEmpty() || !check.get().overridable()) {
+            return Result.failure(VerificationError.NOT_OVERRIDABLE);
+        }
+        VerificationCheckEntity row = checks.findByAccountIdAndType(accountId, type).orElseThrow();
+        audit.record(accountId, requestedBy, VerificationAudit.ACTOR_OPERATOR, VerificationAudit.CHECK_OVERRIDE_REQUESTED,
+                row.getSubjectId(), null, type + ": " + trimmed);
+        return Result.success(new OverrideRequest(accountId, type, row.getSubjectVersion(), trimmed, requestedBy));
+    }
+
+    /**
+     * The second person's half, run when they approve it (staff Approvals).
+     * Refused if it is the same person, if she has sent something new, or if
+     * the check no longer fails in a way that may be overridden.
+     */
+    @Transactional
+    public Result<VerificationCheck, VerificationError> applyOverride(OverrideRequest request, UUID approvedBy) {
+        if (approvedBy == null || approvedBy.equals(request.requestedBy())) {
+            return Result.failure(VerificationError.NEEDS_SECOND_PERSON);
+        }
+        refresh(request.accountId());
+        Optional<VerificationCheckEntity> found = checks.findByAccountIdAndType(request.accountId(), request.type());
+        if (found.isEmpty() || !Objects.equals(found.get().getSubjectVersion(), request.subjectVersion())) {
+            return Result.failure(VerificationError.CHECK_CHANGED);
+        }
+        VerificationCheckEntity row = found.get();
+        if (!toView(row).overridable()) {
+            return Result.failure(VerificationError.NOT_OVERRIDABLE);
+        }
+        row.recordOverride(request.note(), request.requestedBy(), approvedBy);
+        row.decide(CheckStatus.APPROVED_BY_PERSON, "Accepted over a failed check by two people.", approvedBy,
+                VerificationAudit.ACTOR_OPERATOR, clock.instant());
+        checks.save(row);
+        audit.record(request.accountId(), approvedBy, VerificationAudit.ACTOR_OPERATOR, VerificationAudit.CHECK_OVERRIDDEN,
+                row.getSubjectId(), null, request.type() + ": asked for by " + request.requestedBy() + ". " + request.note());
+        return Result.success(toView(row));
+    }
+
+    // ---------------------------------------------------------------- names
+
+    /**
+     * Her name everywhere it is written, against her profile, for the
+     * reviewer: the profile, the name she typed for her licence (or that she
+     * declared it the same), and the RC's owner. The ID's name is not typed
+     * anywhere, so it says to read it off the photo.
+     */
+    @Transactional(readOnly = true)
+    public List<NameOnFile> namesOnFile(UUID accountId) {
+        ApplicantProfile profile = profile(accountId);
+        String profileName = profile == null ? null : profile.name();
+        List<NameOnFile> out = new ArrayList<>();
+        out.add(new NameOnFile("Profile", profileName, "PROFILE"));
+        out.add(new NameOnFile("ID document", null, "READ_FROM_PHOTO"));
+        documents.findByAccountIdAndTypeAndSupersededAtIsNull(accountId, PartnerDocumentType.DRIVING_LICENCE).ifPresent(licence -> {
+            Map<String, Object> meta = CheckRules.metadata(licence);
+            if (Boolean.TRUE.equals(meta.get(CheckRules.META_NAME_DECLARED))) {
+                out.add(new NameOnFile("Licence", profileName, "DECLARED"));
+            } else if (meta.get(CheckRules.META_NAME_ON_DOCUMENT) != null) {
+                String typed = meta.get(CheckRules.META_NAME_ON_DOCUMENT).toString();
+                out.add(new NameOnFile("Licence", typed, profileName == null ? "DIFFERENT"
+                        : NameMatcher.compare(typed, profileName).name()));
+            } else {
+                out.add(new NameOnFile("Licence", null, "READ_FROM_PHOTO"));
+            }
+        });
+        documents.findByAccountIdAndTypeAndSupersededAtIsNull(accountId, PartnerDocumentType.VEHICLE_RC).ifPresent(rc -> {
+            Map<String, Object> meta = CheckRules.metadata(rc);
+            Object owner = meta.get("vehicleOwner");
+            if ("SELF".equals(owner)) {
+                out.add(new NameOnFile("RC owner", profileName, "DECLARED"));
+            } else if (owner != null) {
+                Object name = meta.get("ownerName");
+                out.add(new NameOnFile("RC owner (" + owner.toString().toLowerCase(java.util.Locale.ROOT).replace('_', ' ') + ")",
+                        name == null ? null : name.toString(), "FAMILY"));
+            } else {
+                out.add(new NameOnFile("RC owner", null, "READ_FROM_PHOTO"));
+            }
+        });
+        return out;
     }
 
     /** Account deletion: see VerificationCheckEntity.eraseForDeletion. */

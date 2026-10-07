@@ -24,6 +24,15 @@ public record VerificationSummary(
         String rejectionReason,
         Instant updatedAt,
         /** When her documents were last sent in - null until they are. Not updatedAt, which a review moves. */
-        Instant documentSubmittedAt
+        Instant documentSubmittedAt,
+        /** Why a person sent her ID back, from RejectionReason - the apps say it in her language. Null otherwise. */
+        String rejectionCode
 ) {
+
+    public VerificationSummary(UUID accountId, AccountRole role, VerificationStatus genderVerificationStatus,
+                               VerificationStatus policeVerificationStatus, boolean documentSubmitted, String rejectionReason,
+                               Instant updatedAt, Instant documentSubmittedAt) {
+        this(accountId, role, genderVerificationStatus, policeVerificationStatus, documentSubmitted, rejectionReason, updatedAt,
+                documentSubmittedAt, null);
+    }
 }

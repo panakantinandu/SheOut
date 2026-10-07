@@ -1045,6 +1045,16 @@
   .chip-btn { border: 1px solid var(--line); background: var(--panel); color: var(--text); border-radius: 999px; padding: 5px 10px; font: inherit; font-size: 12px; cursor: pointer; text-align: left; }
   .chip-btn:hover { border-color: var(--red); }
   .rv-reject textarea { width: 100%; min-height: 70px; }
+  .rv-reasons.coded { display: grid; gap: 2px; }
+  .ck-row { padding: 8px 0; border-top: 1px solid var(--line-soft); }
+  .ck-row:first-of-type { border-top: 0; padding-top: 0; }
+  .ck-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px; }
+  .ck-findings { margin: 6px 0 0; padding-left: 18px; font-size: 13px; line-height: 1.45; }
+  .ck-who { margin-top: 4px; }
+  .ck-failed { border: 1px solid var(--red-line); background: var(--red-bg); border-radius: 10px; padding: 10px 12px; display: grid; gap: 8px; font-size: 13px; }
+  .ck-failed textarea { width: 100%; min-height: 60px; }
+  .names-table td { padding: 4px 8px 4px 0; vertical-align: top; font-size: 13px; }
+  .sample-week { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
   .modal-foot .grow { flex: 1; }
   .rv-police-intro { margin-bottom: 12px; }
   .rv-summary li { justify-content: space-between; }
@@ -1859,6 +1869,14 @@
       <button data-tab="changes" aria-current="false">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="7" r="4"/><path d="M11.5 15H7a4 4 0 0 0-4 4v2"/><path d="M21.4 16.6a1 1 0 0 0-3-3l-4 4a2 2 0 0 0-.5.9l-.8 2.8a.5.5 0 0 0 .6.6l2.8-.8a2 2 0 0 0 .9-.5z"/></svg>
         <span class="nl">Profile Changes</span> <span class="count" id="cChanges"></span>
+      </button>
+      <button data-tab="vsample" aria-current="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/><path d="m8.5 11 1.8 1.8 3.2-3.3"/></svg>
+        <span class="nl">Weekly second look</span>
+      </button>
+      <button data-tab="vrates" aria-current="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+        <span class="nl">Reviewer override rates</span>
       </button>
       <div class="label">Operations</div>
       <button data-tab="bookings" aria-current="false">
@@ -2896,7 +2914,7 @@ const VIEWS = {
 
   queue: {
     title: 'Rider ID checks',
-    desc: 'Riders who sent their ID and a live selfie and are waiting to be allowed to book. Partners are reviewed under Partner applications. Every approval here is a human decision; nothing is checked automatically.',
+    desc: 'Riders who sent their ID and a live selfie and are waiting to be allowed to book. Partners are reviewed under Partner applications. The software only flags what to look at; every approval and every rejection here is a person\'s decision.',
     cardTitle: 'Awaiting review',
     hint: 'Select a row to see the document and decide',
     empty: { icon: ICON_EMPTY_QUEUE, title: 'Nobody awaiting review', text: 'When a driver or customer submits a document they will appear here.' },
@@ -2931,7 +2949,7 @@ const VIEWS = {
         : '<span class="badge b-grey">None</span>';
       return '—';
     },
-    onRowClick: async r => { if (await takeForReview(r.accountId)) openDriver(r); },
+    onRowClick: async r => { if (await takeForReview(r.accountId)) openReview(r.accountId); },
     openLabel: 'Review',
   },
 
@@ -2964,6 +2982,30 @@ const VIEWS = {
     empty: { icon: ICON_EMPTY_LIST, title: 'No expired documents', text: 'Every partner\'s approved documents are in date.' },
     dateLabel: 'Expired on', date: r => r.validUntil,
   }),
+  /**
+   * One in ten cases decided this week - by a person, or passed by the
+   * software - drawn the same way for everyone who opens it, for a second
+   * reviewer to look at. Auto-passed cases are in it on purpose.
+   */
+  vsample: {
+    title: 'Weekly second look',
+    desc: 'One in ten verification cases decided this week, by a person or passed automatically, for somebody else to look at again. The draw is random but fixed for the week, so it cannot be re-rolled. Open a case, then say whether you agree.',
+    cardTitle: 'This week\'s sample',
+    custom: true,
+    columns: [],
+    load: () => api('/admin/verification/sample' + (SAMPLE_WEEK ? '?week=' + encodeURIComponent(SAMPLE_WEEK) : '')),
+    paint: paintSample,
+  },
+  vrates: {
+    title: 'Reviewer override rates',
+    desc: 'Each reviewer\'s decisions over the last 30 days, and how often they asked to override a check that failed automatically. A rate well above the others is the one to sit down and look at together.',
+    cardTitle: 'Last 30 days',
+    custom: true,
+    columns: [],
+    load: () => api('/admin/verification/reviewer-stats?days=30'),
+    paint: paintRates,
+  },
+
   policedue: docQueueView({
     queue: 'POLICE_DUE',
     title: 'Police re-verification due',
@@ -3399,7 +3441,7 @@ const VIEWS = {
 
   approvals: {
     title: 'Approvals',
-    desc: 'What one person cannot do alone: marking payouts paid, refunds above the limit, adding or changing a manager or owner, resetting a sign-in, changing an insurance policy, and every download of data. One person asks; somebody else approves; only then does it happen. Nobody approves their own request.',
+    desc: 'What one person cannot do alone: marking payouts paid, refunds above the limit, adding or changing a manager or owner, resetting a sign-in, changing an insurance policy, accepting a verification check that failed automatically, and every download of data. One person asks; somebody else approves; only then does it happen. Nobody approves their own request.',
     cardTitle: 'Approvals',
     hint: 'Requests expire after 72 hours',
     custom: true,
@@ -5018,46 +5060,20 @@ function reviewChecks(key, v, doc) {
     default: return [];
   }
 }
-const REJECT_REASONS = {
-  common: [
-    'The photo is blurry or cut off. Photograph the whole document flat, in good light, with all four corners showing.',
-    'The number you typed does not match the document. Send it again and type the number exactly as printed.',
-    'The date you typed does not match the document. Send it again with the date printed on it.',
-    'This document has expired. Send the renewed one.',
-  ],
-  identity: [
-    'The ID is not readable. Photograph it flat, in good light, with all four corners showing.',
-    'The name on your ID does not match the name on your profile.',
-    'The live selfie does not match the photo on your ID. Take the selfie again in good light, facing the camera.',
-    'This is not a government photo ID. Send your Aadhaar, passport, voter ID or driving licence.',
-  ],
-  DRIVING_LICENCE: [
-    'This is a learner\'s licence. A permanent driving licence is needed.',
-    'This licence is not for two-wheelers. It needs MCWG or MCWOG under class of vehicle.',
-    'The name on the licence does not match your ID.',
-  ],
-  VEHICLE_RC: [
-    'The vehicle number on the RC does not match the number on your profile.',
-    'This RC is not for a two-wheeler.',
-    'The owner\'s name on the RC does not match what you told us. Send it again and choose whose vehicle it is.',
-  ],
-  VEHICLE_INSURANCE: [
-    'This is a private policy. A commercial policy is needed to carry paying riders. Ask your insurer for one.',
-    'This policy is for a different vehicle.',
-  ],
-  PUC: ['This PUC certificate is for a different vehicle.'],
-  FITNESS_CERTIFICATE: ['This certificate is for a different vehicle.'],
-};
 
 const STEP_LABEL = { DRIVING_LICENCE: 'Licence', VEHICLE_RC: 'RC', VEHICLE_INSURANCE: 'Insurance', PUC: 'PUC', FITNESS_CERTIFICATE: 'Fitness' };
 const REVIEW_DOC_ORDER = ['DRIVING_LICENCE', 'VEHICLE_RC', 'VEHICLE_INSURANCE', 'PUC', 'FITNESS_CERTIFICATE'];
 const STEP_TONE = { waiting: 'amber', done: 'green', rejected: 'red', missing: 'grey', expired: 'red', blocked: 'grey' };
 const STEP_WORD = { waiting: 'To review', done: 'Approved', rejected: 'Sent back', missing: 'Not sent', expired: 'Expired', blocked: 'After identity' };
 
-/** Her steps, in the order she does them, each with where it stands. */
+/** Her steps, in the order she does them, each with where it stands. A rider has only her identity. */
 function reviewSteps(v) {
   const g = v.genderVerificationStatus;
   const steps = [{ key: 'identity', label: 'Identity', state: g === 'UNDER_REVIEW' ? 'waiting' : g === 'VERIFIED' ? 'done' : g === 'REJECTED' ? 'rejected' : 'missing' }];
+  if (v.role === 'CUSTOMER') {
+    steps.push({ key: 'summary', label: 'Summary', state: g === 'VERIFIED' ? 'done' : 'waiting' });
+    return steps;
+  }
   const required = (v.readiness.documents || []).filter(s => s.required).map(s => s.type);
   REVIEW_DOC_ORDER.filter(t => required.includes(t)).forEach(type => {
     const doc = v.documents.find(d => d.type === type && !d.supersededAt);
@@ -5102,8 +5118,9 @@ async function openReview(accountId, startKey) {
     const modal = $('modalRoot').querySelector('.modal');
     modal.innerHTML = `
       <div class="modal-head rv-head">
-        <h3>${esc(v.name || 'Name not set')} <span class="subtle">${esc(VEHICLE_TEXT[v.vehicleType] || '')}${v.vehicleRegistrationNumber ? ' · <span class="num">' + esc(v.vehicleRegistrationNumber) + '</span>' : ''}</span></h3>
-        <p>${left ? `${left} step${left === 1 ? '' : 's'} waiting for you` : 'Nothing waiting for a decision'} · ${esc(v.phoneNumber || '')}</p>
+        <h3>${esc(v.name || 'Name not set')} <span class="subtle">${v.role === 'CUSTOMER' ? 'Rider' : esc(VEHICLE_TEXT[v.vehicleType] || '')}${v.vehicleRegistrationNumber ? ' · <span class="num">' + esc(v.vehicleRegistrationNumber) + '</span>' : ''}</span></h3>
+        <p>${left ? `${left} step${left === 1 ? '' : 's'} waiting for you` : 'Nothing waiting for a decision'} · ${esc(v.phoneNumber || '')}
+          ${v.checks && OVERALL_TEXT[v.checks.overall] ? ` · <span class="badge b-${OVERALL_TEXT[v.checks.overall][0]}">${esc(OVERALL_TEXT[v.checks.overall][1])}</span>` : ''}</p>
         <ol class="rv-steps" role="tablist">${steps.map((s, n) => `<li><button type="button" role="tab" aria-selected="${s === current}" data-step="${s.key}" class="rv-step s-${s.state}${s === current ? ' on' : ''}">
           <span class="rv-dot">${s.state === 'done' ? '✓' : s.state === 'rejected' || s.state === 'expired' ? '!' : n + 1}</span>
           <span class="rv-name">${esc(s.label)}</span><span class="rv-state">${esc(STEP_WORD[s.state] || '')}</span></button></li>`).join('')}</ol>
@@ -5148,18 +5165,134 @@ function checklist(host, items) {
   return () => [...host.querySelectorAll('[data-chk]')].every(c => c.checked);
 }
 
-/** Reject with a reason she is shown: one click for the common ones, or her own words. */
-function rejectBox(host, reasons, onReject) {
-  host.innerHTML = `<details class="rv-reject"><summary>Send it back to her…</summary>
-    <div class="rv-reasons">${reasons.map((r, n) => `<button type="button" class="chip-btn" data-reason="${n}">${esc(r)}</button>`).join('')}</div>
-    <label class="field"><span>Reason (she is shown this)</span><textarea data-reason-text maxlength="1000" placeholder="Pick one above or write what she must fix"></textarea></label>
-    <div class="row"><button class="btn btn-reject" type="button" data-reject-go>Send back</button><span class="field-err" data-reject-err hidden>Say what she must fix.</span></div></details>`;
-  const text = host.querySelector('[data-reason-text]');
-  host.querySelectorAll('[data-reason]').forEach(b => b.addEventListener('click', () => { text.value = reasons[+b.dataset.reason]; text.focus(); }));
+/** The server's list of reasons (RejectionReason), per document type, fetched once. */
+const REASON_CACHE = new Map();
+function reasonsFor(type) {
+  const key = type || 'IDENTITY';
+  if (!REASON_CACHE.has(key)) {
+    REASON_CACHE.set(key, api('/admin/verification/rejection-reasons' + (type ? '?documentType=' + encodeURIComponent(type) : ''))
+      .catch(err => { REASON_CACHE.delete(key); throw err; }));
+  }
+  return REASON_CACHE.get(key);
+}
+
+/**
+ * Send it back with a reason from the list. She is shown that reason's
+ * message, in her own language; the note is for staff only. type is the
+ * document type, or null for her ID and selfie. preselect opens the box
+ * with a reason already chosen (an expired licence, under 18).
+ */
+function rejectBox(host, type, onReject, preselect) {
+  host.innerHTML = `<details class="rv-reject"${preselect ? ' open' : ''}><summary>Send it back to her…</summary>
+    <div class="rv-reasons coded" data-reasons><div class="skel"></div></div>
+    <label class="field"><span>Note for staff (she does not see this)</span><textarea data-note maxlength="500" placeholder="Optional"></textarea></label>
+    <div class="row"><button class="btn btn-reject" type="button" data-reject-go>Send back</button><span class="field-err" data-reject-err hidden>Choose a reason.</span></div></details>`;
+  reasonsFor(type).then(list => {
+    host.querySelector('[data-reasons]').innerHTML = list.map(r => `<label class="rv-check"><input type="radio" name="rejectCode" value="${escValue(r.code)}"${r.code === preselect ? ' checked' : ''}>
+      <span>${esc(r.message)}${r.remembersNumber ? ' <span class="badge b-red">Remembers this number</span>' : ''}</span></label>`).join('');
+  }).catch(err => {
+    if (err.message !== 'unauthorized') host.querySelector('[data-reasons]').innerHTML = errorState(err.message);
+  });
   host.querySelector('[data-reject-go]').addEventListener('click', () => {
-    const reason = text.value.trim();
-    if (!reason) { host.querySelector('[data-reject-err]').hidden = false; return; }
-    onReject(reason);
+    const picked = host.querySelector('input[name="rejectCode"]:checked');
+    if (!picked) { host.querySelector('[data-reject-err]').hidden = false; return; }
+    onReject(picked.value, host.querySelector('[data-note]').value.trim() || null);
+  });
+}
+
+// ---- checks --------------------------------------------------------------------
+const CHECK_LABEL = { IDENTITY: 'Identity', SELFIE_MATCH: 'Selfie match', LICENCE: 'Licence', VEHICLE: 'Vehicle (RC)',
+  INSURANCE: 'Insurance', PAN: 'PAN', BACKGROUND: 'Background (police)' };
+const CHECK_STATUS = { PENDING: ['grey', 'Waiting for her'], PASSED: ['green', 'Passed automatically'],
+  NEEDS_REVIEW: ['amber', 'Needs a person'], FAILED_AUTO: ['red', 'Failed automatically'], APPROVED_BY_PERSON: ['green', 'Approved by a person'] };
+const OVERALL_TEXT = { READY_TO_APPROVE: ['green', 'Every required check is clear'], FAILED_CHECK: ['red', 'A check failed automatically'],
+  NEEDS_REVIEW: ['amber', 'Checks need a person'], WAITING_FOR_APPLICANT: ['grey', 'Waiting for her'] };
+const FINDING_TEXT = {
+  UNDER_18: 'Under 18 by the date of birth on her profile',
+  DATE_OF_BIRTH_MISSING: 'No date of birth on her profile. Read it off her ID',
+  DOCUMENT_EXPIRED: 'The expiry date she gave has passed',
+  NAME_MISMATCH: 'The name she typed is not the name on her profile',
+  NAME_DECLARED: 'She said the name is the same as her profile. Compare it with the document',
+  DUPLICATE_NUMBER: 'The same number is on another account',
+  PREVIOUSLY_REJECTED: 'This number was turned down before, for fraud or a confirmed mismatch',
+  PLATE_MISMATCH: 'The registration number is not the one on her profile',
+  PHOTO_QUALITY: 'Her phone said the photo may be unclear, and she sent it anyway',
+  NOT_COMMERCIAL: 'She said the policy is for private use',
+};
+/** The reason ready to send when a check failed in a way nobody may override. */
+const FINDING_REASON = { DOCUMENT_EXPIRED: 'DOCUMENT_EXPIRED', UNDER_18: 'UNDER_18' };
+const STEP_CHECKS = { identity: ['IDENTITY', 'SELFIE_MATCH'], DRIVING_LICENCE: ['LICENCE'], VEHICLE_RC: ['VEHICLE'],
+  VEHICLE_INSURANCE: ['INSURANCE'], police: ['BACKGROUND'] };
+const NAME_MATCH = { PROFILE: ['grey', 'Her profile'], SAME: ['green', 'Same'], VARIANT: ['amber', 'Spelt differently'],
+  DIFFERENT: ['red', 'Different: compare'], DECLARED: ['blue', 'Her word: same as profile'], FAMILY: ['grey', 'Family member'],
+  READ_FROM_PHOTO: ['grey', 'Read it off the photo'] };
+
+function stepChecks(v, key) {
+  const types = STEP_CHECKS[key] || [];
+  return ((v.checks && v.checks.checks) || []).filter(c => types.includes(c.type));
+}
+
+/** Every finding on these checks, once each. */
+function findingsOf(checks) {
+  const seen = new Map();
+  checks.forEach(c => (c.findings || []).forEach(f => { if (!seen.has(f.code)) seen.set(f.code, f); }));
+  return [...seen.values()];
+}
+
+function checkRow(c) {
+  const [tone, word] = CHECK_STATUS[c.status] || ['grey', c.status];
+  const who = c.decidedByRole === 'OPERATOR' ? 'a person' : c.decidedByRole === 'PROVIDER' ? (c.provider || 'a provider') : 'the software';
+  return `<div class="ck-row"><div class="ck-head"><b>${esc(CHECK_LABEL[c.type] || c.type)}</b>${c.required ? '' : ' <span class="subtle">optional</span>'}
+      <span class="badge b-${tone}">${esc(word)}</span></div>
+    ${c.reason ? `<div class="subtle">${esc(c.reason)}</div>` : ''}
+    ${(c.findings || []).length ? `<ul class="ck-findings">${c.findings.map(f => `<li>${esc(FINDING_TEXT[f.code] || f.code)}${f.detail ? ` <span class="subtle">(${esc(f.detail)})</span>` : ''}</li>`).join('')}</ul>` : ''}
+    <div class="subtle ck-who">${esc(time(c.decidedAt))} · by ${esc(who)}${c.overrideApprovedBy ? ' · accepted over a failure by two people' : ''}</div></div>`;
+}
+
+function checksPanel(checks, title) {
+  return checks.length ? `<div class="rv-checks"><div class="rv-checks-h">${esc(title || 'Automatic checks')}</div>${checks.map(checkRow).join('')}</div>` : '';
+}
+
+/** Her name everywhere it is written, against her profile; a difference is highlighted, never decided. */
+function namesPanel(v) {
+  if (!v.names || !v.names.length) return '';
+  return `<div class="rv-checks"><div class="rv-checks-h">Her name across her documents</div>
+    <table class="names-table"><tbody>${v.names.map(n => {
+      const [tone, word] = NAME_MATCH[n.match] || ['grey', n.match];
+      return `<tr><td class="subtle">${esc(n.source)}</td><td><b>${esc(n.name || '-')}</b></td><td><span class="badge b-${tone}">${esc(word)}</span></td></tr>`;
+    }).join('')}</tbody></table></div>`;
+}
+
+/** The tick items for what the automatic checks noticed: ticking one is the reviewer saying she looked. */
+function findingItems(findings) {
+  return findings.map(f => `<b>Noticed:</b> ${esc(FINDING_TEXT[f.code] || f.code)}${f.detail ? ` (${esc(f.detail)})` : ''}. I have looked at this.`);
+}
+
+/**
+ * A check that failed automatically. Where it may be overridden, the reviewer
+ * can ask, with a written note, for a second person to accept it on the
+ * Approvals page; where it may not (expired, under 18), it says so and the
+ * right reason is ready in the send-back box.
+ */
+function failedBlock(host, v, failed) {
+  if (!failed) { host.innerHTML = ''; return; }
+  if (!failed.overridable) {
+    host.innerHTML = `<div class="ck-failed"><b>${esc(CHECK_LABEL[failed.type])} failed automatically: ${esc(failed.reason || '')}</b>
+      <span>This cannot be approved or overridden. Send it back with the reason below, so she knows what to fix.</span></div>`;
+    return;
+  }
+  host.innerHTML = `<div class="ck-failed"><b>${esc(CHECK_LABEL[failed.type])} failed automatically: ${esc(failed.reason || '')}</b>
+    <span>If you are sure it should be accepted anyway, ask for an override. A second person reads your note and signs it off on the Approvals page; until then nothing changes.</span>
+    <label class="field"><span>Why it should be accepted (the second person reads this)</span><textarea data-override-note maxlength="1000"></textarea></label>
+    <div class="row"><button class="btn" type="button" data-override-go>Ask for an override</button><span class="field-err" data-override-err hidden>Write at least a sentence.</span></div></div>`;
+  host.querySelector('[data-override-go]').addEventListener('click', async () => {
+    const note = host.querySelector('[data-override-note]').value.trim();
+    if (note.length < 10) { host.querySelector('[data-override-err]').hidden = false; return; }
+    try {
+      await api(`/admin/verification/${v.accountId}/checks/${failed.type}/override`, { method: 'POST', body: JSON.stringify({ note }) });
+      toast('ok', 'Override asked for', 'It is waiting on the Approvals page for a second person.');
+      host.innerHTML = '<div class="banner banner-info">Override asked for. It is waiting for a second person on the Approvals page.</div>';
+    } catch (err) { if (err.message !== 'unauthorized') toast('bad', 'Could not ask for the override', err.message); }
   });
 }
 
@@ -5182,6 +5315,9 @@ function paintIdentityStep(body, v, step, after) {
       </div>
       <div class="rv-side">
         ${stepNote(step.state, 'her ID')}
+        ${checksPanel(stepChecks(v, 'identity'))}
+        ${namesPanel(v)}
+        <div id="rvFailed"></div>
         <div id="rvChecks"></div>
         <div class="row" id="rvActs" ${step.state === 'waiting' ? '' : 'hidden'}><button class="btn btn-approve" type="button" id="rvApprove" disabled>Approve identity</button><span class="subtle" id="rvWhy">Tick every check first.</span></div>
         <div id="rvReject"></div>
@@ -5195,21 +5331,30 @@ function paintIdentityStep(body, v, step, after) {
     ['#docBox', '#selfieBox'].forEach(sel => { const b = root.querySelector(sel); if (b) b.innerHTML = '<div class="fallback">Nothing on file to show.</div>'; });
   });
   if (step.state !== 'waiting') return;
-  const allTicked = checklist(body.querySelector('#rvChecks'), reviewChecks('identity', v));
+  const cks = stepChecks(v, 'identity');
+  const failed = cks.find(c => c.status === 'FAILED_AUTO');
+  const findings = findingsOf(cks);
+  failedBlock(body.querySelector('#rvFailed'), v, failed);
+  const allTicked = checklist(body.querySelector('#rvChecks'), reviewChecks('identity', v).concat(findingItems(findings)));
   const approve = body.querySelector('#rvApprove');
+  const why = () => (failed ? 'A check failed automatically: send it back' + (failed.overridable ? ', or ask for an override.' : '.')
+    : allTicked() ? '' : 'Tick every check first.');
   body.querySelector('#rvChecks').addEventListener('change', () => {
-    approve.disabled = !allTicked();
-    body.querySelector('#rvWhy').textContent = allTicked() ? '' : 'Tick every check first.';
+    approve.disabled = Boolean(failed) || !allTicked();
+    body.querySelector('#rvWhy').textContent = why();
   });
-  const decide = async (decision, reason) => {
+  body.querySelector('#rvWhy').textContent = why();
+  const decide = async (decision, rejectionCode, note) => {
     try {
-      await api(`/admin/verification/${v.accountId}/gender-review`, { method: 'POST', body: JSON.stringify({ decision, reason }) });
-      toast('ok', decision === 'VERIFIED' ? 'Identity approved' : 'Sent back to her', decision === 'VERIFIED' ? 'Next: her documents.' : 'She has been told why.');
+      await api(`/admin/verification/${v.accountId}/gender-review`, { method: 'POST', body: JSON.stringify({
+        decision, rejectionCode, note, acknowledged: findings.map(f => f.code) }) });
+      toast('ok', decision === 'VERIFIED' ? 'Identity approved' : 'Sent back to her', decision === 'VERIFIED' ? (v.role === 'CUSTOMER' ? 'She can book now.' : 'Next: her documents.') : 'She has been told why.');
       after('identity');
     } catch (err) { if (err.message !== 'unauthorized') toast('bad', 'Could not save that decision', err.message); }
   };
-  approve.addEventListener('click', () => decide('VERIFIED', null));
-  rejectBox(body.querySelector('#rvReject'), REJECT_REASONS.identity, reason => decide('REJECTED', reason));
+  approve.addEventListener('click', () => decide('VERIFIED', null, null));
+  const fix = failed && !failed.overridable ? (failed.findings || []).map(f => FINDING_REASON[f.code]).find(Boolean) : null;
+  rejectBox(body.querySelector('#rvReject'), null, (code, note) => decide('REJECTED', code, note), fix);
 }
 
 /**
@@ -5223,10 +5368,6 @@ function paintIdentityStep(body, v, step, after) {
 const GOV_LINKS = {
   DRIVING_LICENCE: { url: 'https://parivahan.gov.in/rcdlstatus/?pur_cd=101', label: 'Open licence status (Parivahan)', where: 'Sarathi licence record' },
   VEHICLE_RC: { url: 'https://vahan.parivahan.gov.in/nrservices/faces/user/citizen/citizenlogin.xhtml', label: 'Open vehicle details (Vahan)', where: 'Vahan vehicle record - or the mParivahan app, RC details' },
-};
-const GOV_NOT_FOUND = {
-  DRIVING_LICENCE: 'We could not find this licence in the government (Parivahan) record, or it shows different details. Check the licence number and send it again.',
-  VEHICLE_RC: 'We could not find this vehicle in the government (Vahan) record, or it shows different details. Check the vehicle number and send it again.',
 };
 const ddmmyyyy = iso => (iso ? iso.split('-').reverse().join('-') : '');
 
@@ -5285,6 +5426,8 @@ function paintDocStep(body, v, step, after) {
         : '<div class="fallback">No file on record.</div>'}</div>
       <div class="rv-side">
         ${note}
+        ${checksPanel(stepChecks(v, type))}
+        ${type === 'DRIVING_LICENCE' || type === 'VEHICLE_RC' ? namesPanel(v) : ''}
         ${doc ? `<dl class="kv">
           <dt>She typed</dt><dd class="num">${esc(doc.documentNumber || '-')}</dd>
           ${expires ? `<dt>Valid until</dt><dd>${expiryText(doc.validUntil, doc.status)}</dd>` : ''}
@@ -5301,6 +5444,7 @@ function paintDocStep(body, v, step, after) {
             ${['COMMERCIAL', 'PRIVATE', 'UNKNOWN'].map(u => `<option value="${u}"${(doc.insuranceUseType || 'UNKNOWN') === u ? ' selected' : ''}>${esc(INSURANCE_USE_TEXT[u])}</option>`).join('')}</select></label>` : ''}
         </div>
         ${govPanel(type, v, doc)}
+        <div id="rvFailed"></div>
         <div id="rvChecks"></div>
         <div class="row"><button class="btn btn-approve" type="button" id="rvApprove" disabled>Approve ${esc(STEP_LABEL[type] || docTypeText(type))}</button><span class="subtle" id="rvWhy"></span></div>
         <div id="rvReject"></div>` : ''}
@@ -5308,7 +5452,11 @@ function paintDocStep(body, v, step, after) {
   if (doc && doc.fileOnFile) openDocFile(body.querySelector('[data-doc-box]'), doc.id, docTypeText(type));
   if (!waiting) return;
   const f = k => body.querySelector(`[data-f="${k}"]`);
-  const allTicked = checklist(body.querySelector('#rvChecks'), reviewChecks(type, v, doc));
+  const cks = stepChecks(v, type);
+  const failed = cks.find(c => c.status === 'FAILED_AUTO');
+  const findings = findingsOf(cks);
+  failedBlock(body.querySelector('#rvFailed'), v, failed);
+  const allTicked = checklist(body.querySelector('#rvChecks'), reviewChecks(type, v, doc).concat(findingItems(findings)));
   const approve = body.querySelector('#rvApprove');
   const why = body.querySelector('#rvWhy');
   const check = () => {
@@ -5327,6 +5475,7 @@ function paintDocStep(body, v, step, after) {
       else if (r.value !== 'FOUND') missing.push('a record that matches - send it back instead');
     }
     if (!allTicked()) missing.push('every check ticked');
+    if (failed) missing.push('no check failed automatically (send it back' + (failed.overridable ? ', or ask for an override)' : ')'));
     approve.disabled = missing.length > 0;
     why.textContent = missing.length ? 'Needs ' + missing.join(', ') + '.' : '';
   };
@@ -5338,7 +5487,11 @@ function paintDocStep(body, v, step, after) {
     const r = body.querySelector('input[name="govResult"]:checked');
     if (r && r.value === 'NOT_FOUND') {
       const box = body.querySelector('.rv-reject');
-      if (box) { box.open = true; box.querySelector('[data-reason-text]').value = GOV_NOT_FOUND[type]; }
+      if (box) {
+        box.open = true;
+        const pick = box.querySelector('input[value="NOT_IN_GOVERNMENT_RECORD"]');
+        if (pick) pick.checked = true;
+      }
     }
   }));
   body.querySelectorAll('[data-copy]').forEach(b => b.addEventListener('click', async () => {
@@ -5354,7 +5507,7 @@ function paintDocStep(body, v, step, after) {
     } catch (err) { if (err.message !== 'unauthorized') toast('bad', 'Could not save that decision', err.message); }
   };
   approve.addEventListener('click', () => {
-    const payload = { decision: 'VERIFIED' };
+    const payload = { decision: 'VERIFIED', acknowledged: findings.map(x => x.code) };
     ['documentNumber', 'validUntil', 'insuranceUseType'].forEach(k => { const el = f(k); if (el && el.value) payload[k] = el.value.trim(); });
     if (GOV_LINKS[type]) {
       payload.governmentCheck = govSummary(body, type);
@@ -5363,9 +5516,8 @@ function paintDocStep(body, v, step, after) {
     }
     decide(payload);
   });
-  rejectBox(body.querySelector('#rvReject'),
-    [...(GOV_NOT_FOUND[type] ? [GOV_NOT_FOUND[type]] : []), ...(REJECT_REASONS[type] || []), ...REJECT_REASONS.common],
-    reason => decide({ decision: 'REJECTED', reason }));
+  const fix = failed && !failed.overridable ? (failed.findings || []).map(x => FINDING_REASON[x.code]).find(Boolean) : null;
+  rejectBox(body.querySelector('#rvReject'), type, (rejectionCode, note) => decide({ decision: 'REJECTED', rejectionCode, note }), fix);
 }
 
 function paintPoliceStep(body, v, step, after) {
@@ -5388,8 +5540,12 @@ const POLICE_AFTER = new Map();
 function paintSummaryStep(body, v, steps, go) {
   const rows = steps.filter(s => s.key !== 'summary').map(s => `<li><button type="button" class="link-btn" data-go-step="${s.key}">${esc(s.label)}</button>
       <span class="badge b-${STEP_TONE[s.state] || 'grey'}">${esc(STEP_WORD[s.state] || '')}</span></li>`).join('');
-  body.innerHTML = `${readinessBlock(v.readiness)}<h4 class="sub-h">Every step</h4><ul class="plain-list rv-summary">${rows}</ul>
-    <p class="subtle">She is told of every decision in the app. When every step is approved and in date she can go online.</p>`;
+  const allChecks = (v.checks && v.checks.checks) || [];
+  body.innerHTML = `${v.role === 'CUSTOMER' ? '' : readinessBlock(v.readiness)}<h4 class="sub-h">Every step</h4><ul class="plain-list rv-summary">${rows}</ul>
+    ${checksPanel(allChecks, 'Every check')}
+    ${namesPanel(v)}
+    <p class="subtle">She is told of every decision in the app, with how to fix anything sent back. ${v.role === 'CUSTOMER'
+      ? 'Once her identity is approved she can book.' : 'When every step is approved and in date she can go online.'}</p>`;
   body.querySelectorAll('[data-go-step]').forEach(b => b.addEventListener('click', () => go(steps.find(s => s.key === b.dataset.goStep))));
 }
 
@@ -7295,6 +7451,86 @@ function staffStatus(m) {
   return '<span class="badge b-green">Active</span>';
 }
 
+// ---- verification oversight -----------------------------------------------------
+/** The week the sample page shows; null is this week. */
+let SAMPLE_WEEK = null;
+
+/** Monday-based ISO week, as the server names it: 2026-W41. */
+function isoWeekShift(week, by) {
+  const m = /^(\d{4})-W(\d{2})$/.exec(week || '');
+  if (!m) return null;
+  const jan4 = new Date(Date.UTC(+m[1], 0, 4));
+  const monday = new Date(jan4.getTime() - ((jan4.getUTCDay() + 6) % 7) * 864e5 + (+m[2] - 1 + by) * 7 * 864e5);
+  const thursday = new Date(monday.getTime() + 3 * 864e5);
+  const year = thursday.getUTCFullYear();
+  const firstThursday = new Date(Date.UTC(year, 0, 4));
+  const week1Monday = new Date(firstThursday.getTime() - ((firstThursday.getUTCDay() + 6) % 7) * 864e5);
+  const n = Math.round((monday - week1Monday) / (7 * 864e5)) + 1;
+  return `${year}-W${String(n).padStart(2, '0')}`;
+}
+
+function paintSample(s) {
+  const names = s.staffNames || {};
+  const who = id => (id ? esc(names[id] || 'Former staff') : 'the software');
+  $('panel').innerHTML = `<div class="dx-card full">
+    <div class="sample-week">
+      <button class="btn" type="button" data-week="-1">← Earlier week</button>
+      <b>${esc(s.week)}</b>
+      <button class="btn" type="button" data-week="1" ${SAMPLE_WEEK ? '' : 'disabled'}>Later week →</button>
+      <span class="subtle">${s.cases.length} of ${s.poolSize} case${s.poolSize === 1 ? '' : 's'} decided this week</span>
+    </div>
+    ${s.cases.length ? `<div class="scroll"><table class="mini"><thead><tr><th>Case</th><th>What was decided</th><th>Second look</th><th></th></tr></thead><tbody>
+      ${s.cases.map((c, i) => `<tr>
+        <td>${roleBadge(c.role)}${c.autoPassed ? ' <span class="badge b-blue">Passed automatically</span>' : ''}<div class="subtle num">${esc(String(c.accountId).slice(0, 8))}</div></td>
+        <td>${c.decided.map(d => `<div><b>${esc(CHECK_LABEL[d.type] || d.type)}</b> <span class="badge b-${(CHECK_STATUS[d.status] || ['grey'])[0]}">${esc((CHECK_STATUS[d.status] || ['', d.status])[1])}</span>
+          <span class="subtle">by ${who(d.decidedBy)}${d.overrideApprovedBy ? ', overridden' : ''}</span></div>`).join('')}</td>
+        <td>${c.secondLook ? `<span class="badge b-${c.secondLook.outcome === 'AGREE' ? 'green' : 'red'}">${c.secondLook.outcome === 'AGREE' ? 'Agreed' : 'Concern'}</span>
+            <div class="subtle">${who(c.secondLook.reviewedBy)}${c.secondLook.note ? ': ' + esc(c.secondLook.note) : ''}</div>`
+          : '<span class="subtle">Not yet</span>'}</td>
+        <td class="row"><button class="btn" type="button" data-sample-open="${i}">Open</button>
+          ${c.secondLook ? '' : `<button class="btn btn-approve" type="button" data-sample-agree="${i}">I agree</button>
+          <button class="btn btn-reject" type="button" data-sample-concern="${i}">Raise a concern</button>`}</td>
+      </tr>`).join('')}</tbody></table></div>`
+      : '<p class="subtle">Nothing was decided this week.</p>'}
+  </div>`;
+  $('panel').querySelectorAll('[data-week]').forEach(b => b.addEventListener('click', () => {
+    SAMPLE_WEEK = isoWeekShift(s.week, +b.dataset.week) || SAMPLE_WEEK;
+    render({ quiet: true });
+  }));
+  const look = async (c, outcome, note) => {
+    try {
+      await api(`/admin/verification/sample/${c.accountId}/second-look`, { method: 'POST', body: JSON.stringify({ week: s.week, outcome, note }) });
+      toast('ok', 'Second look recorded', 'It is on her audit trail.');
+      render({ quiet: true });
+    } catch (err) { if (err.message !== 'unauthorized') toast('bad', 'Could not record it', err.message); }
+  };
+  $('panel').querySelectorAll('[data-sample-open]').forEach(b => b.addEventListener('click', () => openReview(s.cases[+b.dataset.sampleOpen].accountId, 'summary')));
+  $('panel').querySelectorAll('[data-sample-agree]').forEach(b => b.addEventListener('click', () => look(s.cases[+b.dataset.sampleAgree], 'AGREE', null)));
+  $('panel').querySelectorAll('[data-sample-concern]').forEach(b => b.addEventListener('click', async () => {
+    const ok = await confirmAction({
+      title: 'Raise a concern about this case?',
+      message: 'Say what the first review missed. It goes on her audit trail, for whoever leads reviews.',
+      confirmLabel: 'Raise concern', tone: 'reject', withReason: true, reasonRequired: true, reasonLabel: 'What was missed', reasonMaxLength: 1000,
+    });
+    if (ok) look(s.cases[+b.dataset.sampleConcern], 'CONCERN', ok.reason);
+  }));
+}
+
+function paintRates(rows) {
+  const pct = r => `${(r.overrideRate * 100).toFixed(1)}%`;
+  const rates = rows.filter(r => r.approvals + r.sentBack > 0).map(r => r.overrideRate).sort((a, b) => a - b);
+  const median = rates.length ? rates[Math.floor(rates.length / 2)] : 0;
+  $('panel').innerHTML = `<div class="dx-card full">
+    ${rows.length ? `<div class="scroll"><table class="mini"><thead><tr><th>Reviewer</th><th>Approved</th><th>Sent back</th><th>Overrides asked</th><th>Overrides signed off</th><th>Override rate</th></tr></thead><tbody>
+      ${rows.map(r => `<tr><td><b>${esc(r.reviewer)}</b></td><td class="num">${r.approvals}</td><td class="num">${r.sentBack}</td>
+        <td class="num">${r.overridesAsked}</td><td class="num">${r.overridesSigned}</td>
+        <td><span class="badge b-${r.overrideRate > Math.max(0.1, median * 2) ? 'red' : r.overrideRate > 0 ? 'amber' : 'green'}">${pct(r)}</span></td></tr>`).join('')}
+    </tbody></table></div>
+    <p class="subtle">Override rate is overrides asked for per decision made. Red is more than twice the middle reviewer's rate, and over 10%.</p>`
+      : '<p class="subtle">No verification decisions in the last 30 days.</p>'}
+  </div>`;
+}
+
 function paintStaff(data) {
   const grantable = data.rolesYouCanGrant || [];
   const roleOptions = grantable.map(r => `<option value="${escValue(r.role)}" data-expiry="${r.requiresAccessExpiry}">${esc(r.label)}</option>`).join('');
@@ -7493,7 +7729,7 @@ async function staffSessionsDialog(member) {
 const APPROVAL_STATUS = { PENDING: ['amber', 'Waiting'], APPROVED: ['green', 'Approved'], EXECUTED: ['green', 'Done'],
   FAILED: ['red', 'Approved, not done'], REJECTED: ['grey', 'Rejected'], CANCELLED: ['grey', 'Withdrawn'], EXPIRED: ['grey', 'Expired'] };
 const KIND_TEXT = { PAYOUT_MARK_PAID: 'Payout', REFUND: 'Refund', STAFF_PRIVILEGED: 'Manager or owner', SECOND_FACTOR_RESET: 'Sign-in reset',
-  INSURANCE_POLICY: 'Insurance policy', EXPORT: 'Download' };
+  INSURANCE_POLICY: 'Insurance policy', EXPORT: 'Download', VERIFICATION_CHECK_OVERRIDE: 'Verification override' };
 
 async function refreshApprovalCount() {
   if (!me || me.legacy) return;
@@ -8851,6 +9087,8 @@ const TAB_ACCESS = {
   docexpired: anyOf('verification.review'),
   policedue: anyOf('verification.review'),
   changes: anyOf('verification.review'),
+  vsample: anyOf('verification.all'),
+  vrates: anyOf('verification.all'),
   shiftchecks: anyOf('verification.review'),
   bookings: anyOf('trips.view'),
   feedback: anyOf('trips.view'),
