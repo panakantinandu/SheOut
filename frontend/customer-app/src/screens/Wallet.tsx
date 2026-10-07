@@ -6,6 +6,7 @@ import { ApiError, bookingApi, usersApi, walletApi } from '../api/client';
 import type { PaymentHold, RiderWallet, RiderWalletEntry } from '../api/types';
 import { openRazorpayCheckout } from '../lib/razorpayCheckout';
 import { apiErrorText } from '../lib/apiErrors';
+import { useAppDrawer } from '../components/AppDrawer';
 import { useTranslation } from '@sheout/design-system';
 import { PromotionsCard } from '../components/PromotionsCard';
 
@@ -35,6 +36,7 @@ interface WalletRouteState {
 export function Wallet() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const drawer = useAppDrawer();
   const location = useLocation();
   const routeState = (location.state as WalletRouteState | null) ?? {};
 
@@ -170,7 +172,7 @@ export function Wallet() {
       {routeState.returnTo ? (
         <TopHeader variant="back" title={t('wallet.title')} onBack={() => navigate(routeState.returnTo!)} />
       ) : (
-        <TopHeader variant="plain" title={t('wallet.title')} />
+        <TopHeader variant="plain" title={t('wallet.title')} onMenuClick={drawer.open} />
       )}
 
       {loadError && !wallet && (

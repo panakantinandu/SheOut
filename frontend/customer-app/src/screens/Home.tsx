@@ -8,6 +8,7 @@ import { useServiceStatus } from '../lib/useServiceStatus';
 import { UnpaidTripBanner } from '../components/UnpaidTripBanner';
 import { LiveTripBanner } from '../components/LiveTripBanner';
 import { Reveal } from '../components/Reveal';
+import { useAppDrawer } from '../components/AppDrawer';
 import { RideHero } from '../components/home/RideHero';
 import { CommunityCard } from '../components/home/CommunityCard';
 import { CategoryMarquee } from '../components/home/CategoryMarquee';
@@ -92,6 +93,7 @@ export function Home() {
   const dayLines = [t(`home.day.${dayPart}.line1`), t(`home.day.${dayPart}.line2`), t('home.subtitle')];
   // Straight after sign-in this is the first screen she sees, so this is
   // where the one notification-permission prompt appears.
+  const drawer = useAppDrawer();
   const push = usePushNotifications(pushApi, PUSH_TOKEN_KEY, true);
   const unreadCount = useUnreadNotifications(notificationsApi.unreadCount, true);
 
@@ -109,6 +111,8 @@ export function Home() {
         titleHighlight={firstName}
         titleIcon={<SkyIcon part={dayPart} size={26} />}
         subtitle={<RotatingText lines={dayLines} />}
+        // The menu holds the app-wide places that are not tabs - see AppDrawer.
+        onMenuClick={drawer.open}
         // Real notification history - see the Notifications screen.
         onBellClick={() => navigate('/notifications')}
         unreadCount={unreadCount}

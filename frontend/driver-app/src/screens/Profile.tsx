@@ -1,7 +1,8 @@
-import { Camera, Car, Gift, LifeBuoy, Settings as SettingsIcon, ShieldCheck } from 'lucide-react';
+import { Camera, Car, ShieldCheck } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ASSISTANT_NAME, Avatar, Button, Card, IconCircle, ListRow, StatusBadge, TopHeader, phoneDisplay, vehicleLabel, ProfileCompletionForm, shrinkPhoto, ServiceArt } from '@sheout/design-system';
+import { Avatar, Button, Card, IconCircle, ListRow, StatusBadge, TopHeader, phoneDisplay, vehicleLabel, ProfileCompletionForm, shrinkPhoto, ServiceArt } from '@sheout/design-system';
+import { useAppDrawer } from '../components/AppDrawer';
 import { ApiError, usersApi } from '../api/client';
 import type { DriverProfileSummary, VehicleType } from '../api/types';
 import { VehicleFields } from '../components/VehicleFields';
@@ -10,11 +11,10 @@ import { YourCoverCard } from '../components/YourCoverCard';
 import { useTranslation } from '@sheout/design-system';
 
 /**
- * Who she is on SheOut and her work: her photo and details, her vehicle,
- * her verification and referral, then help and Settings. Each destination is
- * here once: payouts live in Earnings, the assistant inside Help. How the
- * app behaves - language, appearance, her data, logging out - is under
- * Settings.
+ * Who she is on SheOut and her work: her photo and details, her vehicle and
+ * her verification. Each destination is in one place in the app: payouts
+ * live in Earnings; Refer a Friend, Help and Settings are in the menu (see
+ * AppDrawer).
  * <p>
  * Her photo is changed by tapping it, the way every app does it. A big
  * "Your photo" card used to sit first on this screen even when she had a
@@ -24,6 +24,7 @@ import { useTranslation } from '@sheout/design-system';
 export function Profile() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const drawer = useAppDrawer();
   const [profile, setProfile] = useState<DriverProfileSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
@@ -65,7 +66,7 @@ export function Profile() {
 
   return (
     <div className="space-y-6 pb-6">
-      <TopHeader variant="plain" title={t('profile.title')} />
+      <TopHeader variant="plain" title={t('profile.title')} onMenuClick={drawer.open} />
 
       <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoSelected} />
       <Card className="flex items-center gap-4">
@@ -201,14 +202,8 @@ export function Profile() {
             <h2 className="mb-3 font-heading text-section text-text-primary">{t('profile.sectionWork')}</h2>
             <Card className="divide-y divide-border p-0">
               <ListRow icon={icon(<ShieldCheck />)} label={t('verification.title')} sublabel={t('profile.verificationSub')} onClick={() => navigate('/verification')} />
-              <ListRow icon={icon(<Gift />)} label={t('refer.title')} onClick={() => navigate('/refer')} />
             </Card>
           </section>
-
-          <Card className="divide-y divide-border p-0">
-            <ListRow icon={icon(<LifeBuoy />)} label={t('profile.help')} sublabel={t('profile.helpSub', { name: ASSISTANT_NAME })} onClick={() => navigate('/help')} />
-            <ListRow icon={icon(<SettingsIcon />)} label={t('settings.title')} sublabel={t('settings.sub')} onClick={() => navigate('/settings')} />
-          </Card>
         </>
       )}
     </div>

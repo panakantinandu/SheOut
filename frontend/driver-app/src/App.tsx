@@ -21,6 +21,7 @@ import { Settings } from './screens/Settings'
 import { Splash } from './screens/Splash'
 import { About } from './screens/About'
 import { AccountLanguageSync } from './components/AccountLanguageSync'
+import { AppDrawerProvider } from './components/AppDrawer'
 import { Trip } from './screens/Trip'
 import { Chat } from './screens/Chat'
 import { CompleteProfile } from './screens/CompleteProfile'
@@ -57,6 +58,7 @@ function publicPage(element: JSX.Element) {
 function App() {
   return (
     <AccountLanguageSync>
+    <AppDrawerProvider>
     <ScrollToTop />
     <Routes>
       <Route path="/" element={<Splash />} />
@@ -90,6 +92,7 @@ function App() {
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </AppDrawerProvider>
     </AccountLanguageSync>
   )
 }

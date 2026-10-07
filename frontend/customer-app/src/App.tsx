@@ -37,6 +37,7 @@ import { SellerShop } from './screens/SellerShop'
 import { SellerProductEditor } from './screens/SellerProductEditor'
 import { Refer } from './screens/Refer'
 import { AccountLanguageSync } from './components/AccountLanguageSync'
+import { AppDrawerProvider } from './components/AppDrawer'
 import { DiscreetSosGuard } from './components/DiscreetSosGuard'
 import { SafetyCenter } from './screens/SafetyCenter'
 import { HelpAssistant } from './screens/HelpAssistant'
@@ -77,6 +78,7 @@ function publicPage(element: JSX.Element) {
 function App() {
   return (
     <AccountLanguageSync>
+    <AppDrawerProvider>
     <DiscreetSosGuard>
     <ScrollToTop />
     <Routes>
@@ -130,6 +132,7 @@ function App() {
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
     </DiscreetSosGuard>
+    </AppDrawerProvider>
     </AccountLanguageSync>
   )
 }

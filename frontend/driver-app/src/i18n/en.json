@@ -157,6 +157,7 @@
     "googleMaps": "Google Maps"
   },
   "drawer": {
+    "partner": "SheOut partner",
     "language": "Language",
     "version": "SheOut Partner version {{version}}",
     "languageSaved": "Language changed",
@@ -340,6 +341,7 @@
     "recentTrips": "Recent trips",
     "askCardTitle": "Ask SheOut",
     "askCardBody": "Questions about rides, payments or verification? Ask {{name}}.",
+    "menu": "Menu",
     "hero": {
       "offline": {
         "title": "You're offline",

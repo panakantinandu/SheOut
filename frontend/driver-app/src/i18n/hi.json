@@ -157,6 +157,7 @@
     "googleMaps": "Google Maps"
   },
   "drawer": {
+    "partner": "SheOut पार्टनर",
     "language": "भाषा",
     "version": "SheOut पार्टनर वर्शन {{version}}",
     "languageSaved": "भाषा बदल दी गई",
@@ -340,6 +341,7 @@
     "recentTrips": "हाल की ट्रिप",
     "askCardTitle": "SheOut से पूछें",
     "askCardBody": "राइड, भुगतान या सत्यापन के बारे में सवाल? {{name}} से पूछें।",
+    "menu": "मेनू",
     "hero": {
       "offline": {
         "title": "आप ऑफ़लाइन हैं",

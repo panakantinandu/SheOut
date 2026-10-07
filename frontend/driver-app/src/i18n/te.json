@@ -157,6 +157,7 @@
     "googleMaps": "Google Maps"
   },
   "drawer": {
+    "partner": "SheOut పార్ట్‌నర్",
     "language": "భాష",
     "version": "SheOut పార్ట్‌నర్ వెర్షన్ {{version}}",
     "languageSaved": "భాష మార్చబడింది",
@@ -340,6 +341,7 @@
     "recentTrips": "ఇటీవలి ట్రిప్‌లు",
     "askCardTitle": "SheOut‌ను అడగండి",
     "askCardBody": "రైడ్‌లు, చెల్లింపులు లేదా ధృవీకరణ గురించి ప్రశ్నలా? {{name}}‌ను అడగండి.",
+    "menu": "మెనూ",
     "hero": {
       "offline": {
         "title": "మీరు ఆఫ్‌లైన్‌లో ఉన్నారు",

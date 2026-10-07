@@ -1,8 +1,7 @@
-import { BadgeCheck, Camera, ChevronRight, Gift, LifeBuoy, MapPin, Settings as SettingsIcon, ShieldAlert, ShieldCheck, Store } from 'lucide-react';
+import { BadgeCheck, Camera, ChevronRight, MapPin, ShieldAlert, Store } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  ASSISTANT_NAME,
   Avatar,
   Card,
   IconCircle,
@@ -12,17 +11,17 @@ import {
   phoneDisplay,
   useTranslation,
 } from '@sheout/design-system';
+import { useAppDrawer } from '../components/AppDrawer';
 import { ApiError, usersApi } from '../api/client';
 import type { CustomerProfileSummary } from '../api/types';
 import { useMyShop } from '../lib/useMyShop';
 
 /**
- * Who she is on SheOut, and the things that are hers: her safety set-up,
- * her places, her referral and her shop, then help and Settings. Each
- * destination is here once. Her details open from the card at the top;
- * payment history lives in Wallet; products are inside My shop; the
- * assistant is inside Help. How the app behaves - language, appearance, her
- * data, logging out - is under Settings, not mixed in here.
+ * Who she is on SheOut, and the things that are hers: her ID check and
+ * emergency contacts, her places and her shop. Each destination is in one
+ * place in the app: her details open from the card at the top; payment
+ * history lives in Wallet; products are inside My shop; Safety Center,
+ * Refer a Friend, Help and Settings are in the menu (see AppDrawer).
  * <p>
  * The card at the top is her: tap it (or the camera on her photo) to change
  * her name, photo or email.
@@ -30,6 +29,7 @@ import { useMyShop } from '../lib/useMyShop';
 export function Profile() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const drawer = useAppDrawer();
   const [profile, setProfile] = useState<CustomerProfileSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   // A seller sees her shop and products here; anyone else, the way to start one.
@@ -46,7 +46,7 @@ export function Profile() {
 
   return (
     <div className="space-y-6 pb-6">
-      <TopHeader variant="plain" title={t('profile.title')} />
+      <TopHeader variant="plain" title={t('profile.title')} onMenuClick={drawer.open} />
 
       <Card className="p-0">
         <button
@@ -89,7 +89,6 @@ export function Profile() {
             onClick={() => navigate('/verification')}
           />
           <ListRow icon={icon(<ShieldAlert />, 'red')} label={t('profile.emergencyContacts')} sublabel={t('profile.emergencyContactsSub')} onClick={() => navigate('/profile/emergency-contacts')} />
-          <ListRow icon={icon(<ShieldCheck />)} label={t('drawer.safety')} onClick={() => navigate('/safety')} />
         </Card>
       </section>
 
@@ -97,7 +96,6 @@ export function Profile() {
         <h2 className="mb-3 font-heading text-section text-text-primary">{t('profile.sectionAccount')}</h2>
         <Card className="divide-y divide-border p-0">
           <ListRow icon={icon(<MapPin />)} label={t('addresses.title')} sublabel={t('profile.addressesSub')} onClick={() => navigate('/profile/addresses')} />
-          <ListRow icon={icon(<Gift />)} label={t('drawer.refer')} onClick={() => navigate('/refer')} />
           {/* One way into selling: My shop holds her products, with Manage all. */}
           <ListRow
             icon={icon(<Store />)}
@@ -108,10 +106,6 @@ export function Profile() {
         </Card>
       </section>
 
-      <Card className="divide-y divide-border p-0">
-        <ListRow icon={icon(<LifeBuoy />)} label={t('profile.help')} sublabel={t('profile.helpSub', { name: ASSISTANT_NAME })} onClick={() => navigate('/help')} />
-        <ListRow icon={icon(<SettingsIcon />)} label={t('settings.title')} sublabel={t('settings.sub')} onClick={() => navigate('/settings')} />
-      </Card>
     </div>
   );
 }
