@@ -11,6 +11,7 @@ import { Reveal } from '../components/Reveal';
 import { useAppDrawer } from '../components/AppDrawer';
 import { RideHero } from '../components/home/RideHero';
 import { CommunityCard } from '../components/home/CommunityCard';
+import { QuickAccess } from '../components/home/QuickAccess';
 import { CategoryMarquee } from '../components/home/CategoryMarquee';
 import { AllServicesSheet } from '../components/home/AllServicesSheet';
 
@@ -250,6 +251,24 @@ export function Home() {
         artAlt={t('home.threeWomen')}
       />
 
+
+      <Reveal>
+        {/* Four tiles, four destinations. Live Track and History used to
+            both open /bookings, which is where the Bookings tab goes too -
+            so three of the app's entry points showed one identical list and
+            two of them earned their place on the screen by doing nothing.
+            They now open the same screen scoped to genuinely different
+            questions: what is happening now, and what already happened. */}
+        <QuickAccess
+          title={t('home.quickAccess')}
+          items={[
+            { key: 'sos', label: t('home.sos'), sub: t('home.quick.sos'), onOpen: () => navigate('/sos') },
+            { key: 'live', label: t('home.liveTrack'), sub: t('home.quick.live'), onOpen: () => navigate('/bookings?view=live') },
+            { key: 'wallet', label: t('home.wallet'), sub: t('home.quick.wallet'), onOpen: () => navigate('/wallet') },
+            { key: 'history', label: t('home.history'), sub: t('home.quick.history'), onOpen: () => navigate('/bookings?view=history') },
+          ]}
+        />
+      </Reveal>
 
       {/* Room at the foot, so the assistant in the corner never sits on the last card. */}
       <div className="h-14" aria-hidden="true" />

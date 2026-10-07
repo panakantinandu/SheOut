@@ -75,6 +75,7 @@
     "registrationNo": "Registration No.",
     "notSet": "Not set",
     "editDetails": "Edit Details",
+    "payouts": "Payouts & bank details",
     "deletedNotice": "Your account has been deleted. Your personal details have been removed.",
     "change": {
       "pendingTitle": "Waiting for SheOut to check",
@@ -93,9 +94,9 @@
     "editProfile": "Edit your profile and photo",
     "sectionWork": "Work",
     "verificationSub": "ID, documents and police check",
+    "payoutsSub": "Where your earnings are paid",
     "editDetailsSub": "Name, email, date of birth and vehicle",
-    "help": "Help & support",
-    "helpSub": "Ask {{name}}, raise an issue or call us"
+    "help": "Help & support"
   },
   "vehicle": {
     "type": "Vehicle Type",
@@ -159,7 +160,6 @@
   "drawer": {
     "partner": "SheOut partner",
     "language": "Language",
-    "payouts": "Wallet & payouts",
     "helpAndInfo": "Help & info",
     "version": "SheOut Partner version {{version}}",
     "languageSaved": "Language changed",

@@ -75,6 +75,7 @@
     "registrationNo": "रजिस्ट्रेशन नं.",
     "notSet": "सेट नहीं है",
     "editDetails": "जानकारी बदलें",
+    "payouts": "पेआउट और बैंक विवरण",
     "deletedNotice": "आपका खाता हटा दिया गया है। आपकी निजी जानकारी मिटा दी गई है।",
     "change": {
       "pendingTitle": "SheOut की जाँच बाकी है",
@@ -93,9 +94,9 @@
     "editProfile": "अपनी प्रोफ़ाइल और फ़ोटो बदलें",
     "sectionWork": "काम",
     "verificationSub": "आईडी, दस्तावेज़ और पुलिस जाँच",
+    "payoutsSub": "आपकी कमाई कहाँ भेजी जाती है",
     "editDetailsSub": "नाम, ईमेल, जन्म तिथि और वाहन",
-    "help": "मदद और सहायता",
-    "helpSub": "{{name}} से पूछें, समस्या बताएं या हमें कॉल करें"
+    "help": "मदद और सहायता"
   },
   "vehicle": {
     "type": "वाहन का प्रकार",
@@ -159,7 +160,6 @@
   "drawer": {
     "partner": "SheOut पार्टनर",
     "language": "भाषा",
-    "payouts": "वॉलेट और पेआउट",
     "helpAndInfo": "सहायता और जानकारी",
     "version": "SheOut पार्टनर वर्शन {{version}}",
     "languageSaved": "भाषा बदल दी गई",

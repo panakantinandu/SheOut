@@ -1,4 +1,4 @@
-import { Camera, Car, ShieldCheck } from 'lucide-react';
+import { Camera, Car, Landmark, ShieldCheck } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Avatar, Button, Card, IconCircle, ListRow, StatusBadge, TopHeader, phoneDisplay, vehicleLabel, ProfileCompletionForm, shrinkPhoto, ServiceArt } from '@sheout/design-system';
@@ -11,10 +11,9 @@ import { YourCoverCard } from '../components/YourCoverCard';
 import { useTranslation } from '@sheout/design-system';
 
 /**
- * Who she is on SheOut and her work: her photo and details, her vehicle and
- * her verification. Each destination is in one place in the app: payouts
- * live in Earnings; Refer a Friend, Help and Settings are in the menu (see
- * AppDrawer).
+ * Who she is on SheOut and her work: her photo and details, her vehicle,
+ * verification and payouts. Refer a Friend, Help and Settings are in the
+ * menu (see AppDrawer), so nothing is in both.
  * <p>
  * Her photo is changed by tapping it, the way every app does it. A big
  * "Your photo" card used to sit first on this screen even when she had a
@@ -202,6 +201,7 @@ export function Profile() {
             <h2 className="mb-3 font-heading text-section text-text-primary">{t('profile.sectionWork')}</h2>
             <Card className="divide-y divide-border p-0">
               <ListRow icon={icon(<ShieldCheck />)} label={t('verification.title')} sublabel={t('profile.verificationSub')} onClick={() => navigate('/verification')} />
+              <ListRow icon={icon(<Landmark />)} label={t('profile.payouts')} sublabel={t('profile.payoutsSub')} onClick={() => navigate('/payouts')} />
             </Card>
           </section>
         </>

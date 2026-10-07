@@ -33,7 +33,11 @@
     "services": "Services",
     "communityTitle": "Women Supporting Women",
     "communitySubtitle": "Safe · Together · Empowered",
+    "quickAccess": "Quick Access",
     "sos": "SOS",
+    "liveTrack": "Live Track",
+    "wallet": "Wallet",
+    "history": "History",
     "serviceSeller": "Marketplace",
     "serviceRideBody": "Ride with a woman partner",
     "serviceParcelBody": "Send it across the city",
@@ -47,6 +51,12 @@
       "sell": "Sell your products"
     },
     "allServices": "All services",
+    "quick": {
+      "sos": "Alert your contacts",
+      "live": "Your trip, right now",
+      "wallet": "Balance and top-up",
+      "history": "Your past trips"
+    },
     "agent": {
       "hello": "Hi {{name}}! I am here if you need me",
       "line1": "Where would you like to go today?",
@@ -133,9 +143,9 @@
     "verified": "Verified",
     "notVerified": "Not verified yet",
     "verifyToRide": "Needed before your first ride",
+    "personalDetailsSub": "Name, photo, date of birth, email",
     "addressesSub": "Home, work and other places",
-    "help": "Help & support",
-    "helpSub": "Ask {{name}}, raise an issue or call us"
+    "help": "Help & support"
   },
   "help": {
     "toPlace": "to {{place}}",
@@ -828,11 +838,8 @@
       "removed": "Pickup point removed"
     },
     "myShop": "My shop",
-    "myShopSub": "Plan, shop details and pickup point",
     "myProducts": {
       "title": "My products",
-      "rowSub_one": "{{count}} product - find by code, update stock",
-      "rowSub_other": "{{count}} products - find by code, update stock",
       "findLabel": "Find by product code or name",
       "found": "Found {{code}}",
       "filter": {

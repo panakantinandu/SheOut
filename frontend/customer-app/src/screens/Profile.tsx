@@ -1,4 +1,4 @@
-import { BadgeCheck, Camera, ChevronRight, MapPin, ShieldAlert } from 'lucide-react';
+import { BadgeCheck, Camera, ChevronRight, MapPin, Receipt, ShieldAlert, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -16,11 +16,10 @@ import { ApiError, usersApi } from '../api/client';
 import type { CustomerProfileSummary } from '../api/types';
 
 /**
- * Who she is on SheOut: her details (the card at the top), her ID check and
- * emergency contacts, and her saved addresses. Only what is about her -
- * what she does is in the menu (Safety Center, Refer, the Marketplace with
- * her shop and products, Help, Settings; see AppDrawer) and her money is the
- * Wallet tab, so every destination has one home.
+ * Who she is on SheOut: her details, places and payments, her ID check and
+ * her emergency contacts. Only what is about her - what she does (Safety
+ * Center, Refer, the Marketplace with her shop and products, Help,
+ * Settings) is in the menu (see AppDrawer), so nothing is in both.
  * <p>
  * The card at the top is her: tap it (or the camera on her photo) to change
  * her name, photo or email.
@@ -77,6 +76,15 @@ export function Profile() {
       </Card>
 
       <section>
+        <h2 className="mb-3 font-heading text-section text-text-primary">{t('profile.sectionAccount')}</h2>
+        <Card className="divide-y divide-border p-0">
+          <ListRow icon={icon(<User />)} label={t('profile.personalDetails')} sublabel={t('profile.personalDetailsSub')} onClick={() => navigate('/profile/details')} />
+          <ListRow icon={icon(<MapPin />)} label={t('addresses.title')} sublabel={t('profile.addressesSub')} onClick={() => navigate('/profile/addresses')} />
+          <ListRow icon={icon(<Receipt />)} label={t('payments.history')} onClick={() => navigate('/profile/payments')} />
+        </Card>
+      </section>
+
+      <section>
         <h2 className="mb-3 font-heading text-section text-text-primary">{t('profile.sectionSafety')}</h2>
         <Card className="divide-y divide-border p-0">
           <ListRow
@@ -86,13 +94,6 @@ export function Profile() {
             onClick={() => navigate('/verification')}
           />
           <ListRow icon={icon(<ShieldAlert />, 'red')} label={t('profile.emergencyContacts')} sublabel={t('profile.emergencyContactsSub')} onClick={() => navigate('/profile/emergency-contacts')} />
-        </Card>
-      </section>
-
-      <section>
-        <h2 className="mb-3 font-heading text-section text-text-primary">{t('profile.sectionAccount')}</h2>
-        <Card className="divide-y divide-border p-0">
-          <ListRow icon={icon(<MapPin />)} label={t('addresses.title')} sublabel={t('profile.addressesSub')} onClick={() => navigate('/profile/addresses')} />
         </Card>
       </section>
 
