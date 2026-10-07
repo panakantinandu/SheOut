@@ -25,6 +25,9 @@ interface ShiftCheckRepository extends JpaRepository<ShiftCheckEntity, UUID> {
 
     List<ShiftCheckEntity> findByAccountId(UUID accountId);
 
+    /** Checks held for a person in a window, for the weekly count. */
+    List<ShiftCheckEntity> findByHeldAtBetween(Instant from, Instant to);
+
     List<ShiftCheckEntity> findByStatusInOrderBySubmittedAtAsc(Collection<ShiftCheckEntity.Status> statuses);
 
     /** Passed on the photo alone, not yet looked at - the audit list. */

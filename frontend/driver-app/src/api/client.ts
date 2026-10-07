@@ -510,6 +510,10 @@ export interface ShiftCheckStatus {
   lastResult: string | null;
   /** Tries left before a mismatch is sent to an operator. */
   missesBeforeReview: number;
+  /** While held: how soon a person aims to look, and the hours people review in ("09:00", "21:00"). */
+  reviewTargetMinutes: number;
+  reviewHoursFrom: string | null;
+  reviewHoursTo: string | null;
 }
 
 export interface ShiftCheckChallenge extends SelfieChallenge {

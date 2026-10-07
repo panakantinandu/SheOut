@@ -90,6 +90,9 @@ record DeliveryPolicy(boolean push, boolean emailFallback, boolean smsFallback, 
             // Her own progress, after a wait on a person: push and email both,
             // like the verified and rejected answers it sits between.
             case VERIFICATION_PROGRESS -> PUSH_AND_EMAIL;
+            // She cannot work until somebody looks: she is told, and so is
+            // whoever is on duty, by push and email both.
+            case SHIFT_CHECK_HELD, SHIFT_CHECK_HELD_STAFF -> PUSH_AND_EMAIL;
             case SUPPORT_REPLY -> PUSH_THEN_EMAIL_THEN_SMS;
             case PAYMENT_RECEIPT -> EMAIL;
             // SOS contact texts are sent by SosService itself - to other

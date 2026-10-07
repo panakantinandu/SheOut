@@ -96,6 +96,11 @@ public class ReviewOversightService {
         return String.format("%d-W%02d", day.get(IsoFields.WEEK_BASED_YEAR), day.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR));
     }
 
+    /** Monday of that week; null for a week written any other way. For the console's other weekly counts. */
+    public static LocalDate mondayOfWeek(String week) {
+        return mondayOf(week);
+    }
+
     /** Monday of that week; null for a week written any other way. */
     static LocalDate mondayOf(String week) {
         if (week == null || !week.matches("\\d{4}-W\\d{2}")) {

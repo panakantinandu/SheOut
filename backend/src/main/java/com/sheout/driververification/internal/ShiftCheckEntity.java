@@ -104,6 +104,18 @@ class ShiftCheckEntity extends BaseEntity {
         this.submittedAt = now;
     }
 
+    /** When this check was held for a person - kept after it is decided, for the weekly count. */
+    @Column(name = "held_at")
+    private Instant heldAt;
+
+    public Instant getHeldAt() {
+        return heldAt;
+    }
+
+    void markHeld(Instant at) {
+        this.heldAt = at;
+    }
+
     void recordReview(Status decision, UUID adminId, String note, Instant now) {
         this.status = decision;
         this.reviewedBy = adminId;

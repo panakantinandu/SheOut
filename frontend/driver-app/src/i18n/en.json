@@ -761,7 +761,8 @@
       "hold": "Helmet on - look at the camera",
       "previewAlt": "You wearing your helmet",
       "use": "Use this photo"
-    }
+    },
+    "reviewWho": "Someone from SheOut's verification team will compare it with your verified selfie, usually within {{minutes}} minutes, between {{from}} and {{to}}. We will tell you the moment they do."
   },
   "serviceHours": {
     "noNewTrips": "No new trips right now",

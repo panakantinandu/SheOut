@@ -177,6 +177,9 @@ public class NotificationCopy {
                     Map.entry("verifiedPartner.body", "You can go online and accept trips."),
                     Map.entry("verifiedRider.title", "Your account is verified"),
                     Map.entry("verifiedRider.body", "You can now book rides and deliveries."),
+                    // Her start-of-shift check is held for a person: who looks, and when.
+                    Map.entry("shiftCheckHeld.title", "A person will check your selfie"),
+                    Map.entry("shiftCheckHeld.body", "Your selfie did not match three times, so someone from SheOut's verification team will compare it with your verified selfie, usually within {minutes} minutes, between {from} and {to}. You can go online as soon as they clear it."),
                     // Verification: each stage, and why something was sent back (RejectionReason).
                     Map.entry("stageIdReceivedRider.title", "We have your ID and selfie"),
                     Map.entry("stageIdReceivedRider.body", "A person checks them during working hours. You can keep using SheOut meanwhile, and we will tell you as soon as it is done."),
@@ -357,6 +360,9 @@ public class NotificationCopy {
                     Map.entry("verifiedPartner.body", "अब आप ऑनलाइन जाकर ट्रिप स्वीकार कर सकती हैं।"),
                     Map.entry("verifiedRider.title", "आपका अकाउंट सत्यापित हो गया है"),
                     Map.entry("verifiedRider.body", "अब आप राइड और डिलीवरी बुक कर सकती हैं।"),
+                    // Her start-of-shift check is held for a person: who looks, and when.
+                    Map.entry("shiftCheckHeld.title", "एक व्यक्ति आपकी सेल्फ़ी जाँचेगा"),
+                    Map.entry("shiftCheckHeld.body", "आपकी सेल्फ़ी तीन बार मेल नहीं खाई, इसलिए SheOut की सत्यापन टीम का कोई व्यक्ति इसे आपकी सत्यापित सेल्फ़ी से मिलाएगा, आमतौर पर {minutes} मिनट के भीतर, {from} से {to} के बीच। उनके मंज़ूरी देते ही आप ऑनलाइन जा सकती हैं।"),
                     // Verification: each stage, and why something was sent back (RejectionReason).
                     Map.entry("stageIdReceivedRider.title", "हमें आपकी ID और सेल्फ़ी मिल गई है"),
                     Map.entry("stageIdReceivedRider.body", "कामकाजी समय में एक व्यक्ति इन्हें जाँचेगा। तब तक आप SheOut इस्तेमाल करती रह सकती हैं, और जाँच पूरी होते ही हम आपको बताएँगे।"),
@@ -537,6 +543,9 @@ public class NotificationCopy {
                     Map.entry("verifiedPartner.body", "మీరు ఇప్పుడు ఆన్‌లైన్‌కి వెళ్లి ట్రిప్‌లు అంగీకరించవచ్చు."),
                     Map.entry("verifiedRider.title", "మీ ఖాతా ధృవీకరించబడింది"),
                     Map.entry("verifiedRider.body", "మీరు ఇప్పుడు రైడ్‌లు మరియు డెలివరీలు బుక్ చేయవచ్చు."),
+                    // Her start-of-shift check is held for a person: who looks, and when.
+                    Map.entry("shiftCheckHeld.title", "ఒక వ్యక్తి మీ సెల్ఫీని పరిశీలిస్తారు"),
+                    Map.entry("shiftCheckHeld.body", "మీ సెల్ఫీ మూడుసార్లు సరిపోలలేదు, అందుకే SheOut ధృవీకరణ బృందంలో ఒకరు దాన్ని మీ ధృవీకరించిన సెల్ఫీతో పోల్చి చూస్తారు, సాధారణంగా {minutes} నిమిషాల్లో, {from} నుండి {to} మధ్య. వారు ఆమోదించగానే మీరు ఆన్‌లైన్‌కి వెళ్లవచ్చు."),
                     // Verification: each stage, and why something was sent back (RejectionReason).
                     Map.entry("stageIdReceivedRider.title", "మీ ID, సెల్ఫీ మాకు అందాయి"),
                     Map.entry("stageIdReceivedRider.body", "పని వేళల్లో ఒక వ్యక్తి వీటిని పరిశీలిస్తారు. ఈలోగా మీరు SheOut వాడుతూ ఉండవచ్చు, పూర్తవగానే మీకు తెలియజేస్తాం."),

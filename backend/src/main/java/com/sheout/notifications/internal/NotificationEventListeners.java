@@ -283,6 +283,28 @@ class NotificationEventListeners {
     }
 
     /**
+     * Her start-of-shift check is held: she is told who looks and when, and
+     * every operator is alerted at once - by push and email, and the open
+     * consoles' Selfie Checks badge (admin's LiveOpsAlertListener). Names and
+     * photos stay behind the console login.
+     */
+    @Async(NotificationDeliveryConfig.EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void onShiftCheckNeedsReview(com.sheout.driververification.ShiftCheckNeedsReview event) {
+        String minutes = String.valueOf(event.reviewTargetMinutes() > 0 ? event.reviewTargetMinutes() : 30);
+        String from = event.reviewHoursFrom() == null ? "09:00" : event.reviewHoursFrom();
+        String to = event.reviewHoursTo() == null ? "21:00" : event.reviewHoursTo();
+        dispatcher.deliver(event.accountId(), NotificationType.SHIFT_CHECK_HELD, localized(event.accountId(),
+                "shiftCheckHeld", language -> Map.of("minutes", minutes, "from", from, "to", to), "/shift-check"));
+        dispatcher.deliverToRole(AccountRole.ADMIN, NotificationType.SHIFT_CHECK_HELD_STAFF, new OutboundMessage(
+                "A partner's shift selfie is held",
+                "Her selfie did not match three times and she cannot go online until somebody compares the photos. Open Selfie Checks in the console.",
+                "/admin/index.html#shiftchecks",
+                "shift-held-" + event.accountId(),
+                OutboundMessage.Urgency.ALERT));
+    }
+
+    /**
      * Each stage she reaches, in plain words, by push and email - see
      * VerificationStageReached. Being ready is AccountVerified's message.
      */

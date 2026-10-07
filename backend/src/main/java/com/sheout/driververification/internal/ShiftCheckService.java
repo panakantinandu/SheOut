@@ -81,6 +81,10 @@ public class ShiftCheckService implements ShiftCheckApi {
     /** Null when built by hand in a unit test - the phone's result stands. */
     private final ServerFaceCheck serverFaceCheck;
     private final double serverMinSimilarity;
+    /** How soon a person aims to look at a held check, and the hours people review in - what she is told. */
+    private final int reviewTargetMinutes;
+    private final String reviewHoursFrom;
+    private final String reviewHoursTo;
 
     @org.springframework.beans.factory.annotation.Autowired
     public ShiftCheckService(ShiftCheckRepository checks,
@@ -94,7 +98,15 @@ public class ShiftCheckService implements ShiftCheckApi {
                              ServerFaceCheck serverFaceCheck,
                              // Rekognition's 0-100 similarity. 90 is its own recommended
                              // line for identity checks; below it is not the same woman.
-                             @Value("${sheout.face-check.min-similarity:90}") double serverMinSimilarity) {
+                             @Value("${sheout.face-check.min-similarity:90}") double serverMinSimilarity,
+                             // A held partner cannot work: she is told a person aims to look
+                             // within this many minutes, during review hours.
+                             @Value("${sheout.shift-check.review-target-minutes:30}") int reviewTargetMinutes,
+                             @Value("${sheout.verification.review-hours:09:00-21:00}") String reviewHours) {
+        this.reviewTargetMinutes = reviewTargetMinutes;
+        String[] hours = reviewHours.split("-", 2);
+        this.reviewHoursFrom = java.time.LocalTime.parse(hours[0].trim()).toString();
+        this.reviewHoursTo = java.time.LocalTime.parse(hours[1].trim()).toString();
         this.checks = checks;
         this.records = records;
         this.documentStorage = documentStorage;
@@ -131,6 +143,9 @@ public class ShiftCheckService implements ShiftCheckApi {
         this.reviewAfterMisses = reviewAfterMisses;
         this.serverFaceCheck = null;
         this.serverMinSimilarity = 90;
+        this.reviewTargetMinutes = 30;
+        this.reviewHoursFrom = "09:00";
+        this.reviewHoursTo = "21:00";
     }
 
     public boolean enabled() {
@@ -144,7 +159,42 @@ public class ShiftCheckService implements ShiftCheckApi {
     /** What her own screen is told: the state, and what happened to her last try. */
     public record Status(boolean required, boolean valid, boolean underReview, Instant checkedAt,
                          Instant validUntil, boolean faceMatched, boolean helmetPhotoOnFile,
-                         String lastResult, int missesBeforeReview) {
+                         String lastResult, int missesBeforeReview,
+                         /** While held: how soon a person aims to look, and the hours people review in. */
+                         int reviewTargetMinutes, String reviewHoursFrom, String reviewHoursTo) {
+    }
+
+    /**
+     * One week of holds: how many checks were held, and what became of them.
+     * stillHeld is still waiting; medianMinutesToDecision is how long the
+     * decided ones waited for a person (null when none were decided).
+     */
+    public record WeeklyHolds(String week, int held, int itWasHer, int notHer, int stillHeld, Integer medianMinutesToDecision) {
+    }
+
+    /** Holds in an India week (Monday to Sunday), from held_at - see V77. */
+    @Transactional(readOnly = true)
+    public WeeklyHolds weeklyHolds(java.time.LocalDate monday, String week) {
+        java.time.ZoneId india = java.time.ZoneId.of("Asia/Kolkata");
+        List<ShiftCheckEntity> held = checks.findByHeldAtBetween(monday.atStartOfDay(india).toInstant(),
+                monday.plusWeeks(1).atStartOfDay(india).toInstant());
+        int her = 0;
+        int notHer = 0;
+        int waiting = 0;
+        List<Long> minutes = new ArrayList<>();
+        for (ShiftCheckEntity c : held) {
+            switch (c.getStatus()) {
+                case CLEARED -> her++;
+                case REJECTED -> notHer++;
+                default -> waiting++;
+            }
+            if (c.getReviewedAt() != null) {
+                minutes.add(Duration.between(c.getHeldAt(), c.getReviewedAt()).toMinutes());
+            }
+        }
+        Collections.sort(minutes);
+        Integer median = minutes.isEmpty() ? null : minutes.get(minutes.size() / 2).intValue();
+        return new WeeklyHolds(week, held.size(), her, notHer, waiting, median);
     }
 
     /** What the operator sees for one check. */
@@ -259,11 +309,14 @@ public class ShiftCheckService implements ShiftCheckApi {
         }
         check.recordAnswer(outcome, face, distance, selfieKey, framesKey, helmetKey, now);
         check.recordServerSimilarity(serverSimilarity);
+        if (outcome == ShiftCheckEntity.Status.NEEDS_REVIEW) {
+            check.markHeld(now);
+        }
         checks.save(check);
 
         if (outcome == ShiftCheckEntity.Status.NEEDS_REVIEW) {
             log.warn("Shift check for {} did not match {} times running - held for review", accountId, reviewAfterMisses);
-            eventPublisher.publish(new ShiftCheckNeedsReview(accountId));
+            eventPublisher.publish(new ShiftCheckNeedsReview(accountId, reviewTargetMinutes, reviewHoursFrom, reviewHoursTo));
         }
         if (outcome == ShiftCheckEntity.Status.PASSED) {
             housekeeping(accountId, now);
@@ -279,7 +332,8 @@ public class ShiftCheckService implements ShiftCheckApi {
         ShiftCheckState state = stateFor(accountId);
         int misses = consecutiveMisses(accountId);
         return new Status(enabled, state.valid(), state.underReview(), state.checkedAt(), state.validUntil(),
-                state.faceMatched(), state.helmetPhotoOnFile(), lastResult, Math.max(0, reviewAfterMisses - misses));
+                state.faceMatched(), state.helmetPhotoOnFile(), lastResult, Math.max(0, reviewAfterMisses - misses),
+                reviewTargetMinutes, reviewHoursFrom, reviewHoursTo);
     }
 
     @Override

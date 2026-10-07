@@ -14,7 +14,7 @@ import {
   TopHeader,
 } from '@sheout/design-system';
 import type { LiveSelfieResult } from '@sheout/design-system';
-import { useTranslation } from '@sheout/design-system';
+import { formatClockTime, useAppLanguage, useTranslation } from '@sheout/design-system';
 import { ApiError, supportApi, usersApi, verificationApi } from '../api/client';
 import type { ShiftCheckChallenge, ShiftCheckStatus } from '../api/client';
 import type { DriverProfileSummary } from '../api/types';
@@ -47,6 +47,7 @@ function timeOf(iso: string | null): string {
  */
 export function ShiftCheck() {
   const { t } = useTranslation();
+  const language = useAppLanguage();
   const navigate = useNavigate();
   const routeState = useLocation().state as { goOnline?: boolean } | null;
   const [status, setStatus] = useState<ShiftCheckStatus | null>(null);
@@ -226,6 +227,15 @@ export function ShiftCheck() {
             <div className="min-w-0 flex-1">
               <p className="font-heading text-card-title text-text-primary">{t('shiftCheck.reviewTitle')}</p>
               <p className="mt-1 text-sm text-text-secondary">{t('shiftCheck.reviewBody')}</p>
+              {status?.reviewHoursFrom && status.reviewHoursTo && (
+                <p className="mt-2 text-sm font-medium text-text-primary" data-testid="shift-check-review-when">
+                  {t('shiftCheck.reviewWho', {
+                    minutes: status.reviewTargetMinutes,
+                    from: formatClockTime(status.reviewHoursFrom, language),
+                    to: formatClockTime(status.reviewHoursTo, language),
+                  })}
+                </p>
+              )}
             </div>
           </div>
           <ContactSupportButton phoneNumber={supportPhone} />
