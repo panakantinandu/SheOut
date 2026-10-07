@@ -228,6 +228,9 @@ sheout:
     # Face-descriptor distance at or under which the two selfies are one person.
     match-threshold: ${SHIFT_CHECK_MATCH_THRESHOLD:0.55}
     review-after-misses: ${SHIFT_CHECK_REVIEW_AFTER_MISSES:3}
+    # What a held partner is told: a person aims to look within this many
+    # minutes, during VERIFICATION_REVIEW_HOURS.
+    review-target-minutes: ${SHIFT_CHECK_REVIEW_TARGET_MINUTES:30}
 
   # The shift selfie compared on the server too (AWS Rekognition, Mumbai) -
   # see ServerFaceCheck. Off until FACE_CHECK_ENABLED=true and AWS keys
