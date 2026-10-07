@@ -125,6 +125,13 @@ public interface VerificationApi {
      */
     Optional<String> openPartnerDocument(UUID documentId, UUID operatorAccountId);
 
+    /**
+     * Every check on her verification - identity, selfie match, licence,
+     * vehicle, insurance, PAN, background - each worked out again from what
+     * is on file now, and the overall state they leave her in.
+     */
+    VerificationChecks checksFor(UUID accountId);
+
     /** Who did what to her verification, newest first - including every time a document was opened. */
     List<VerificationAuditEntry> auditTrail(UUID accountId);
 

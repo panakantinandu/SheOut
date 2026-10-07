@@ -44,6 +44,10 @@ public class VerificationAudit {
     static final String CONSENT_ACCEPTED = "CONSENT_ACCEPTED";
     static final String BACKGROUND_CHECK_SUBMITTED = "BACKGROUND_CHECK_SUBMITTED";
     static final String PROVIDER_RESULT_RECEIVED = "PROVIDER_RESULT_RECEIVED";
+    /** The software or a provider moved a check: what it is now, and why. */
+    static final String CHECK_UPDATED = "CHECK_UPDATED";
+    static final String CHECK_OVERRIDE_REQUESTED = "CHECK_OVERRIDE_REQUESTED";
+    static final String CHECK_OVERRIDDEN = "CHECK_OVERRIDDEN";
 
     private final VerificationAuditRepository repository;
     private final StaffAudit staffAudit;

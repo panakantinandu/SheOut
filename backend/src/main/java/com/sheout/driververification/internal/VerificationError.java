@@ -134,5 +134,11 @@ public enum VerificationError {
     VEHICLE_OWNER_REQUIRED,
 
     /** A background check was requested from a provider while none is configured. */
-    PROVIDER_NOT_CONFIGURED
+    PROVIDER_NOT_CONFIGURED,
+
+    /** Approving over a check that failed automatically, and was not overridden by two people. */
+    CHECK_FAILED,
+
+    /** Approving past something the automatic checks noticed, without the reviewer acknowledging it. */
+    FINDINGS_NOT_ACKNOWLEDGED
 }

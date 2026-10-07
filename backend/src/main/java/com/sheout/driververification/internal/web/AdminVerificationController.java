@@ -86,7 +86,7 @@ public class AdminVerificationController {
         CurrentAccount admin = caller();
         mayOpen(accountId);
         Result<VerificationSummary, VerificationError> result = verificationService.reviewGenderVerification(
-                accountId, admin.accountId(), request.decision(), request.reason());
+                accountId, admin.accountId(), request.decision(), request.reason(), request.acknowledged());
         if (result.isFailure()) {
             throw VerificationController.toApiException(result.error());
         }
@@ -128,7 +128,7 @@ public class AdminVerificationController {
                 request.decision(), request.reason(),
                 new PartnerDocumentService.DocumentFacts(request.documentNumber(), request.issuedOn(),
                         request.validUntil(), request.insuranceUseType()),
-                request.governmentCheck(), request.pucValidUntil());
+                request.governmentCheck(), request.pucValidUntil(), request.acknowledged());
         if (result.isFailure()) {
             throw VerificationController.toApiException(result.error());
         }
@@ -213,6 +213,17 @@ public class AdminVerificationController {
      * An agent works only the partners she has taken from the queue; managers
      * and owners (verification.all) any. See staff.WorkAssignments.
      */
+    /**
+     * Every check on her, worked out again now - so a duplicate that arrived
+     * on another account since she was last opened shows up here.
+     */
+    @RequiresPermission(Permission.VERIFICATION_REVIEW)
+    @GetMapping("/api/v1/admin/verification/{accountId}/checks")
+    public ResponseEntity<com.sheout.driververification.VerificationChecks> checks(@PathVariable UUID accountId) {
+        mayOpen(accountId);
+        return ResponseEntity.ok(verificationService.checksFor(accountId));
+    }
+
     private void mayOpen(UUID accountId) {
         work.requireMayOpen(WorkAssignments.Kind.VERIFICATION, accountId, Permission.VERIFICATION_ALL);
     }
@@ -235,7 +246,9 @@ public class AdminVerificationController {
             /** What the government record (Parivahan) showed, in the operator's words; kept on the audit trail. */
             @Size(max = 300) String governmentCheck,
             /** With an RC: the PUC validity the Vahan record shows; files her PUC without an upload. */
-            LocalDate pucValidUntil) {
+            LocalDate pucValidUntil,
+            /** What the automatic checks noticed that the reviewer ticked as looked at. Approving needs all of them. */
+            java.util.Set<com.sheout.driververification.CheckFinding> acknowledged) {
     }
 
     /**
@@ -263,7 +276,8 @@ public class AdminVerificationController {
     }
 
     /** reason is stored in rejection_reason, varchar(1000); longer failed at the database as a 500. */
-    public record ReviewRequest(@NotNull VerificationStatus decision, @Size(max = 1000) String reason) {
+    public record ReviewRequest(@NotNull VerificationStatus decision, @Size(max = 1000) String reason,
+                                java.util.Set<com.sheout.driververification.CheckFinding> acknowledged) {
     }
 
     /**

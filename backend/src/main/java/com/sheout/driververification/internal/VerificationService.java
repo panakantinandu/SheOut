@@ -37,6 +37,10 @@ import org.springframework.data.domain.PageRequest;
 
 import java.time.Duration;
 import java.time.Instant;
+import com.sheout.driververification.CheckFinding;
+import com.sheout.driververification.CheckType;
+import com.sheout.driververification.VerificationChecks;
+
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -68,6 +72,7 @@ public class VerificationService implements VerificationApi {
     private final VerificationConsent consent;
     private final AuthApi authApi;
     private final DevMode devMode;
+    private final VerificationCheckService checks;
 
     public VerificationService(VerificationRecordRepository repository,
                                 VerificationFunnelRepository funnel,
@@ -83,7 +88,8 @@ public class VerificationService implements VerificationApi {
                                 VerificationConsent consent,
                                 AuthApi authApi,
                                 // Test accounts, read as verified - dev mode only.
-                                DevMode devMode) {
+                                DevMode devMode,
+                                VerificationCheckService checks) {
         this.repository = repository;
         this.funnel = funnel;
         this.documentStorage = documentStorage;
@@ -95,6 +101,7 @@ public class VerificationService implements VerificationApi {
         this.consent = consent;
         this.authApi = authApi;
         this.devMode = devMode;
+        this.checks = checks;
     }
 
     /**
@@ -333,6 +340,7 @@ public class VerificationService implements VerificationApi {
         deleteQuietly(replacedId);
         deleteQuietly(replacedSelfie);
         deleteQuietly(replacedFrames);
+        checks.refresh(accountId);
         // Operations hears about it now, not when somebody next opens the
         // console: how long she waits is mostly how long it takes anybody to
         // notice, and that was nobody's job until this.
@@ -410,6 +418,18 @@ public class VerificationService implements VerificationApi {
     @Transactional
     public Result<VerificationSummary, VerificationError> reviewGenderVerification(
             UUID accountId, UUID adminAccountId, VerificationStatus decision, String reason) {
+        return reviewGenderVerification(accountId, adminAccountId, decision, reason, null);
+    }
+
+    /**
+     * The decision on her ID and live selfie. Approving needs the identity
+     * and selfie checks clear: neither failed automatically, and everything
+     * the automatic checks noticed ticked by the reviewer (acknowledged).
+     */
+    @Transactional
+    public Result<VerificationSummary, VerificationError> reviewGenderVerification(
+            UUID accountId, UUID adminAccountId, VerificationStatus decision, String reason,
+            java.util.Set<CheckFinding> acknowledged) {
         if (decision != VerificationStatus.VERIFIED && decision != VerificationStatus.REJECTED) {
             return Result.failure(VerificationError.INVALID_DECISION);
         }
@@ -421,6 +441,13 @@ public class VerificationService implements VerificationApi {
         if (record.getGenderVerificationStatus() != VerificationStatus.UNDER_REVIEW) {
             return Result.failure(VerificationError.NOT_UNDER_REVIEW);
         }
+        if (decision == VerificationStatus.VERIFIED) {
+            Result<Void, VerificationError> clear = checks.mayApprove(accountId,
+                    List.of(CheckType.IDENTITY, CheckType.SELFIE_MATCH), acknowledged);
+            if (clear.isFailure()) {
+                return Result.failure(clear.error());
+            }
+        }
 
         record.setGenderVerificationStatus(decision);
         record.recordReview(adminAccountId.toString(), decision == VerificationStatus.REJECTED ? reason : null);
@@ -428,6 +455,7 @@ public class VerificationService implements VerificationApi {
         audit.record(accountId, adminAccountId, VerificationAudit.ACTOR_OPERATOR,
                 decision == VerificationStatus.VERIFIED ? VerificationAudit.ID_CHECK_VERIFIED : VerificationAudit.ID_CHECK_REJECTED,
                 null, null, decision == VerificationStatus.REJECTED ? reason : null);
+        checks.refresh(accountId);
         publishIfFullyVerified(record);
         if (decision == VerificationStatus.REJECTED) {
             // She is told, with the reason the operator gave. Without this
@@ -453,6 +481,7 @@ public class VerificationService implements VerificationApi {
         if (result.isFailure()) {
             return Result.failure(result.error());
         }
+        checks.refresh(accountId);
         publishIfFullyVerified(result.value());
         return Result.success(toSummary(result.value()));
     }
@@ -617,6 +646,12 @@ public class VerificationService implements VerificationApi {
     @Override
     public Optional<String> openPartnerDocument(UUID documentId, UUID operatorAccountId) {
         return partnerDocuments.open(documentId, operatorAccountId);
+    }
+
+    @Override
+    @Transactional
+    public VerificationChecks checksFor(UUID accountId) {
+        return checks.refresh(accountId);
     }
 
     @Override
