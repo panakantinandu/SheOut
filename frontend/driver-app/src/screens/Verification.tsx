@@ -25,6 +25,7 @@ import {
   Card,
   DocumentMasker,
   LiveSelfieCapture,
+  LoadFailed,
   SafetyText,
   PARTNER_VERIFICATION_CONSENT,
   SkeletonCard,
@@ -146,7 +147,8 @@ export function Verification() {
     verificationApi
       .getMyStatus()
       .then(setSummary)
-      .catch((err) => setError(err instanceof ApiError ? err.message : t('verification.loadError')));
+      // Her language, never the server's English: see LoadFailed.
+      .catch(() => setError(t('verification.loadError')));
     usersApi
       .getReadiness()
       .then((r) => {
@@ -174,7 +176,11 @@ export function Verification() {
     return (
       <div className="space-y-6">
         <TopHeader variant="back" title={t('verify.title')} onBack={goBack} />
-        {error ? <p className="text-sm text-danger">{error}</p> : <SkeletonCard lines={4} label={t('verification.loading')} />}
+        {error ? (
+          <LoadFailed title={error} onRetry={() => { setError(null); load(); }} testId="verify-load-failed" />
+        ) : (
+          <SkeletonCard lines={4} label={t('verification.loading')} />
+        )}
       </div>
     );
   }

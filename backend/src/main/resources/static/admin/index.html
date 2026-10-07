@@ -142,7 +142,10 @@
   html, body { height: 100%; }
   body {
     margin: 0; background: var(--bg); color: var(--text);
-    font: 14px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    /* Hindi and Telugu quoted on screen (Female, F or महिला / స్త్రీ) need fonts
+       that hold those scripts; without them the browser shaped Telugu wrongly. */
+    font: 14px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
+      "Nirmala UI", "Noto Sans Telugu", "Noto Sans Devanagari", "Kohinoor Telugu", "Kohinoor Devanagari", sans-serif;
     -webkit-font-smoothing: antialiased;
   }
   h1, h2, h3 { margin: 0; }
@@ -5200,7 +5203,13 @@ function rejectBox(host, type, onReject, preselect) {
     host.querySelector('[data-reasons]').innerHTML = list.map(r => `<label class="rv-check"><input type="radio" name="rejectCode" value="${escValue(r.code)}"${r.code === preselect ? ' checked' : ''}>
       <span>${esc(r.message)}${r.remembersNumber ? ' <span class="badge b-red">Remembers this number</span>' : ''}</span></label>`).join('');
   }).catch(err => {
-    if (err.message !== 'unauthorized') host.querySelector('[data-reasons]').innerHTML = errorState(err.message);
+    if (err.message === 'unauthorized') return;
+    // Nothing can be sent back without a reason from the list: say so, and
+    // offer the list again, rather than a Send back that can only refuse.
+    host.querySelector('[data-reasons]').innerHTML = `${errorState(err.message)}
+      <div class="row"><button class="btn" type="button" data-reasons-retry>Load the reasons again</button></div>`;
+    host.querySelectorAll('[data-note], [data-reject-go]').forEach(el => { el.closest('.field, .row').hidden = true; });
+    host.querySelector('[data-reasons-retry]').addEventListener('click', () => rejectBox(host, type, onReject, preselect));
   });
   host.querySelector('[data-reject-go]').addEventListener('click', () => {
     const picked = host.querySelector('input[name="rejectCode"]:checked');

@@ -8,6 +8,7 @@ import {
   DocumentMasker,
   LiveSelfieCapture,
   PhotoQualityNotice,
+  LoadFailed,
   checkPhoto,
   formatClockTime,
   useAppLanguage,
@@ -75,7 +76,11 @@ export function Verification() {
   const [checkingPhoto, setCheckingPhoto] = useState(false);
   const fileRef = useRef<HTMLInputElement | null>(null);
 
-  useEffect(() => {
+  /** Her first load failed: the card with Try again replaces the skeleton. */
+  const [loadFailed, setLoadFailed] = useState(false);
+
+  function loadStatus() {
+    setLoadFailed(false);
     verificationApi
       .getMyStatus()
       .then((summary) => {
@@ -84,9 +89,12 @@ export function Verification() {
         // back to look at "being reviewed" is not reaching the upload step.
         if (!summary.documentSubmitted) void verificationApi.recordProgress('UPLOAD_VIEWED');
       })
-      .catch((err) => setError(err instanceof ApiError ? err.message : t('verification.loadError')));
+      // Her language, never the server's English: see LoadFailed.
+      .catch(() => setLoadFailed(true));
     verificationApi.turnaround().then(setTurnaround).catch(() => undefined);
-  }, []);
+  }
+
+  useEffect(loadStatus, []);
 
   async function chooseFile(file: File) {
     setError(null);
@@ -172,7 +180,11 @@ export function Verification() {
       )}
 
       {!status ? (
-        <SkeletonCard lines={3} label={t('verification.loading')} />
+        loadFailed ? (
+          <LoadFailed title={t('verification.loadError')} onRetry={loadStatus} testId="verification-load-failed" />
+        ) : (
+          <SkeletonCard lines={3} label={t('verification.loading')} />
+        )
       ) : (
         <>
           <Card className="flex items-start gap-3">
