@@ -63,7 +63,12 @@ public class PartnerDocumentController {
             @RequestParam(value = "validUntil", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate validUntil,
             @RequestParam(value = "insuranceUseType", required = false) InsuranceUseType insuranceUseType,
             @RequestParam(value = "vehicleOwner", required = false) VehicleOwner vehicleOwner,
-            @RequestParam(value = "ownerName", required = false) String ownerName) {
+            @RequestParam(value = "ownerName", required = false) String ownerName,
+            // A licence: the name exactly as printed, which she types; or
+            // nameDeclared=true, her saying it is the same as her profile.
+            @RequestParam(value = "nameOnDocument", required = false) String nameOnDocument,
+            @RequestParam(value = "nameDeclared", required = false) Boolean nameDeclared,
+            @RequestParam(value = "photoWarnings", required = false) String photoWarnings) {
         CurrentAccount caller = VerificationController.requireAuthenticated();
         if (caller.role() != AccountRole.DRIVER) {
             throw VerificationController.toApiException(VerificationError.NOT_A_PARTNER);
@@ -73,13 +78,16 @@ public class PartnerDocumentController {
         if (documentNumber != null && documentNumber.length() > 64) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "DOCUMENT_NUMBER_TOO_LONG", "That number is too long. Check it against the document.");
         }
+        if (nameOnDocument != null && nameOnDocument.trim().length() > 100) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "NAME_TOO_LONG", "Keep the name under 100 characters.");
+        }
         if (ownerName != null && ownerName.trim().length() > 100) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "OWNER_NAME_TOO_LONG", "Keep the owner's name under 100 characters.");
         }
         Result<PartnerDocumentSummary, VerificationError> result = documents.submit(caller.accountId(), type,
                 file == null || file.isEmpty() ? null : toUpload(file),
                 new PartnerDocumentService.DocumentFacts(documentNumber, issuedOn, validUntil, insuranceUseType,
-                        vehicleOwner, ownerName),
+                        vehicleOwner, ownerName, nameOnDocument, Boolean.TRUE.equals(nameDeclared), photoWarnings),
                 PartnerDocumentSource.PARTNER_UPLOAD, caller.accountId(), false);
         if (result.isFailure()) {
             throw VerificationController.toApiException(result.error());

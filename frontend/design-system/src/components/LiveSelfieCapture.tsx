@@ -2,6 +2,8 @@ import { Camera, RotateCcw, ShieldCheck } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from './Button';
+import { PhotoQualityNotice } from './PhotoQualityNotice';
+import { checkPhoto, type FaceFinder, type PhotoWarning } from '../lib/photoQuality';
 
 /** What the server asked her to do, in its order - see SelfiePrompt on the backend. */
 export type SelfiePrompt = 'TURN_LEFT' | 'TURN_RIGHT' | 'LOOK_UP' | 'SMILE' | 'CLOSE_EYES';
@@ -17,6 +19,8 @@ export interface LiveSelfieResult {
   /** One image: the frame taken during each prompt, left to right, in the order asked. */
   livenessFrames: File;
   challengeId: string;
+  /** What the phone noticed about the selfie when she chose to use it anyway. Empty or absent when nothing. */
+  warnings?: PhotoWarning[];
 }
 
 export interface LiveSelfieCaptureProps {
@@ -32,6 +36,8 @@ export interface LiveSelfieCaptureProps {
   why?: string;
   /** The first button, in place of "Open camera". */
   startLabel?: string;
+  /** Finds a face for the quality check; without it the browser's own detector is tried, where there is one. */
+  findFace?: FaceFinder;
 }
 
 type Stage = 'intro' | 'starting' | 'blocked' | 'prompting' | 'noMotion' | 'review';
@@ -69,7 +75,7 @@ type Step = { key: SelfiePrompt | 'STRAIGHT' | 'STRAIGHT_AGAIN' };
  * The movement check only catches a feed that did not change at all and
  * asks her to try again; a person compares the selfie with the ID.
  */
-export function LiveSelfieCapture({ requestChallenge, onCaptured, onReset, captured = null, busy = false, why, startLabel }: LiveSelfieCaptureProps) {
+export function LiveSelfieCapture({ requestChallenge, onCaptured, onReset, captured = null, busy = false, why, startLabel, findFace }: LiveSelfieCaptureProps) {
   const { t } = useTranslation('ds');
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -79,6 +85,8 @@ export function LiveSelfieCapture({ requestChallenge, onCaptured, onReset, captu
   const [instruction, setInstruction] = useState<string>('');
   const [countdown, setCountdown] = useState<number>(0);
   const [result, setResult] = useState<LiveSelfieResult | null>(captured);
+  /** What the quick photo check noticed about this selfie - see checkPhoto. */
+  const [quality, setQuality] = useState<PhotoWarning[]>([]);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const stopCamera = useCallback(() => {
@@ -196,6 +204,7 @@ export function LiveSelfieCapture({ requestChallenge, onCaptured, onReset, captu
     cancelledRef.current = false;
     setBlockedReason(null);
     setResult(null);
+    setQuality([]);
     onReset?.();
     setStage('starting');
 
@@ -276,6 +285,9 @@ export function LiveSelfieCapture({ requestChallenge, onCaptured, onReset, captu
         livenessFrames: await toFile(strip(promptFrames), 'liveness.jpg'),
         challengeId: challenge.challengeId,
       };
+      // Dark, blurry or no face: said now, while she can simply take it
+      // again. Never a refusal - "Use anyway" sends it for a person to judge.
+      setQuality(await checkPhoto(captured.selfie, { expectFace: true, findFace }));
       setResult(captured);
       setStage('review');
     } catch {
@@ -355,6 +367,16 @@ export function LiveSelfieCapture({ requestChallenge, onCaptured, onReset, captu
             className="mx-auto aspect-[3/4] w-40 rounded-card object-cover"
             data-testid="selfie-preview"
           />
+          {result !== captured && quality.length > 0 ? (
+            <PhotoQualityNotice
+              warnings={quality}
+              disabled={busy}
+              onRetake={start}
+              onUseAnyway={() => onCaptured({ ...result, warnings: quality })}
+              testId="selfie-quality"
+            />
+          ) : (
+          <>
           <p className="text-center text-sm font-medium text-text-primary">{t('selfie.done')}</p>
           <div className="flex gap-3">
             <Button variant="secondary" fullWidth disabled={busy} icon={<RotateCcw className="h-4 w-4" />} onClick={start}>
@@ -366,6 +388,8 @@ export function LiveSelfieCapture({ requestChallenge, onCaptured, onReset, captu
               </Button>
             )}
           </div>
+          </>
+          )}
         </div>
       )}
     </div>

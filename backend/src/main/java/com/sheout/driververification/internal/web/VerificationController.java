@@ -64,7 +64,11 @@ public class VerificationController {
             // gets SELFIE_REQUIRED, saying what is missing, not a bare 400.
             @RequestParam(value = "selfie", required = false) MultipartFile selfie,
             @RequestParam(value = "livenessFrames", required = false) MultipartFile livenessFrames,
-            @RequestParam(value = "selfieChallengeId", required = false) String selfieChallengeId) {
+            @RequestParam(value = "selfieChallengeId", required = false) String selfieChallengeId,
+            // What her phone said about each photo when she chose "Use anyway":
+            // BLURRY, GLARE, DARK, NO_FACE. Asks the reviewer to look; refuses nothing.
+            @RequestParam(value = "idPhotoWarnings", required = false) String idPhotoWarnings,
+            @RequestParam(value = "selfieWarnings", required = false) String selfieWarnings) {
         CurrentAccount caller = requireAuthenticated();
         rateLimiter.tryConsume("verification-upload:" + caller.accountId(), UPLOADS_PER_DAY, Duration.ofDays(1))
                 .orThrow("You have uploaded documents several times today. Please try again tomorrow, or contact support.");
@@ -75,7 +79,7 @@ public class VerificationController {
                 livenessFrames == null || livenessFrames.isEmpty() ? null : toUpload(livenessFrames),
                 selfieChallengeId);
         Result<VerificationSummary, VerificationError> result =
-                verificationService.submitDocument(caller.accountId(), upload, rcUpload, live);
+                verificationService.submitDocument(caller.accountId(), upload, rcUpload, live, idPhotoWarnings, selfieWarnings);
         if (result.isFailure()) {
             throw toApiException(result.error());
         }
@@ -226,6 +230,8 @@ public class VerificationController {
                     "Say whose vehicle this is, and the owner's name as printed on the RC.");
             case PROVIDER_NOT_CONFIGURED -> new ApiException(HttpStatus.CONFLICT, "PROVIDER_NOT_CONFIGURED",
                     "No verification provider is set up. Record the result of a manual check instead.");
+            case NAME_ON_DOCUMENT_REQUIRED -> new ApiException(HttpStatus.BAD_REQUEST, "NAME_ON_DOCUMENT_REQUIRED",
+                    "Type your name exactly as it is printed on your licence, or tap \"Same as my profile\".");
             case CHECK_FAILED -> new ApiException(HttpStatus.CONFLICT, "CHECK_FAILED",
                     "A check on this failed automatically. Send it back to her with a reason, or, where the check"
                             + " allows it, ask for an override with a note and a second person's sign-off.");

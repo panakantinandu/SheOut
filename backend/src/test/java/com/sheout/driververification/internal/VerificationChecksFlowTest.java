@@ -86,7 +86,13 @@ class VerificationChecksFlowTest {
         assertThat(sent.find(CheckType.SELFIE_MATCH).orElseThrow().provider()).isEqualTo("manual");
         assertThat(sent.overall()).isEqualTo(VerificationChecks.Overall.NEEDS_REVIEW);
 
-        assertThat(verification.reviewGenderVerification(rider, operator, VerificationStatus.VERIFIED, null).isSuccess()).isTrue();
+        // ---- no date of birth on her profile: the reviewer must say she read it off the ID
+        assertThat(sent.find(CheckType.IDENTITY).orElseThrow().findings()).extracting(VerificationCheck.Finding::code)
+                .containsExactly(com.sheout.driververification.CheckFinding.DATE_OF_BIRTH_MISSING);
+        assertThat(verification.reviewGenderVerification(rider, operator, VerificationStatus.VERIFIED, null).error())
+                .isEqualTo(VerificationError.FINDINGS_NOT_ACKNOWLEDGED);
+        assertThat(verification.reviewGenderVerification(rider, operator, VerificationStatus.VERIFIED, null,
+                java.util.Set.of(com.sheout.driververification.CheckFinding.DATE_OF_BIRTH_MISSING)).isSuccess()).isTrue();
         VerificationChecks approved = api.checksFor(rider);
         assertThat(approved.checks()).allSatisfy(c -> {
             assertThat(c.status()).isEqualTo(CheckStatus.APPROVED_BY_PERSON);
@@ -128,7 +134,9 @@ class VerificationChecksFlowTest {
         // ---- she sends it again; a person approves it
         PartnerDocumentSummary again = upload(partner, PartnerDocumentType.DRIVING_LICENCE, "TS0920150001234");
         assertThat(api.checksFor(partner).find(CheckType.LICENCE).orElseThrow().status()).isEqualTo(CheckStatus.NEEDS_REVIEW);
-        assertThat(documents.review(again.id(), operator, PartnerDocumentStatus.VERIFIED, null, null).isSuccess()).isTrue();
+        // Ticking what the automatic checks noticed (other test runs may hold the same number).
+        assertThat(documents.review(again.id(), operator, PartnerDocumentStatus.VERIFIED, null, null, null, null,
+                java.util.EnumSet.allOf(com.sheout.driververification.CheckFinding.class)).isSuccess()).isTrue();
         VerificationChecks after = api.checksFor(partner);
         assertThat(after.find(CheckType.LICENCE).orElseThrow().status()).isEqualTo(CheckStatus.APPROVED_BY_PERSON);
         assertThat(after.overall()).as("her ID and other papers are still to come")
@@ -171,7 +179,8 @@ class VerificationChecksFlowTest {
     private PartnerDocumentSummary upload(UUID partner, PartnerDocumentType type, String number) {
         Result<PartnerDocumentSummary, VerificationError> result = documents.submit(partner, type, pdf(),
                 new DocumentFacts(number, null, today.plusYears(3), type == PartnerDocumentType.VEHICLE_INSURANCE
-                        ? InsuranceUseType.COMMERCIAL : null, type == PartnerDocumentType.VEHICLE_RC ? VehicleOwner.SELF : null, null),
+                        ? InsuranceUseType.COMMERCIAL : null, type == PartnerDocumentType.VEHICLE_RC ? VehicleOwner.SELF : null, null,
+                        type == PartnerDocumentType.DRIVING_LICENCE ? "Lakshmi Devi" : null, false, null),
                 PartnerDocumentSource.PARTNER_UPLOAD, partner, false);
         assertThat(result.isSuccess()).as(String.valueOf(result.isFailure() ? result.error() : "")).isTrue();
         return result.value();

@@ -34,7 +34,7 @@ import {
   showToast,
   useTranslation,
 } from '@sheout/design-system';
-import type { LiveSelfieResult } from '@sheout/design-system';
+import { photoWarningsParam, type LiveSelfieResult, type PhotoWarning } from '@sheout/design-system';
 import { ApiError, usersApi, verificationApi } from '../api/client';
 import type {
   ConsentStatus,
@@ -45,7 +45,8 @@ import type {
   ReadinessBlocker,
   VerificationSummary,
 } from '../api/types';
-import { DocumentForm } from '../components/DocumentStep';
+import { ApplicantFacts, DocumentForm } from '../components/DocumentStep';
+import { findFaceIn } from '../lib/faceMatch';
 import { PhotoPicker } from '../components/verification/PhotoPicker';
 import { blockerText } from '../lib/readinessText';
 import { daysUntil, formatDay } from '../lib/documentDates';
@@ -212,6 +213,7 @@ export function Verification() {
   ];
 
   return (
+    <ApplicantFacts.Provider value={{ name: profile?.name, dateOfBirth: profile?.dateOfBirth }}>
     <div className="space-y-6 pb-6">
       <TopHeader variant="back" title={t('verify.title')} onBack={goBack} />
       {error && <p className="text-sm text-danger">{error}</p>}
@@ -343,6 +345,7 @@ export function Verification() {
         </Card>
       </section>
     </div>
+    </ApplicantFacts.Provider>
   );
 }
 
@@ -667,6 +670,8 @@ function ConsentBody({ consent, onAgreed }: { consent: ConsentStatus | null; onA
 function IdBody({ onSent }: { onSent: () => void }) {
   const { t } = useTranslation();
   const [idFile, setIdFile] = useState<File | null>(null);
+  /** What the photo check noticed about her ID and she sent anyway. */
+  const [idWarnings, setIdWarnings] = useState<PhotoWarning[]>([]);
   /** An ID photo she is covering her number on, before it is kept. */
   const [masking, setMasking] = useState<File | null>(null);
   const [selfie, setSelfie] = useState<LiveSelfieResult | null>(null);
@@ -678,7 +683,7 @@ function IdBody({ onSent }: { onSent: () => void }) {
     setUploading(true);
     setError(null);
     try {
-      await verificationApi.uploadDocuments(idFile, selfie);
+      await verificationApi.uploadDocuments(idFile, selfie, photoWarningsParam(idWarnings));
       onSent();
     } catch (err) {
       if (err instanceof ApiError && err.body?.error === 'SELFIE_CHALLENGE_EXPIRED') setSelfie(null);
@@ -711,7 +716,12 @@ function IdBody({ onSent }: { onSent: () => void }) {
               file={idFile}
               disabled={uploading}
               testId="id-photo"
-              onPick={(file) => (file.type.startsWith('image/') ? setMasking(file) : setIdFile(file))}
+              expectFace
+              onPick={(file, warnings) => {
+                setIdWarnings(warnings);
+                if (file.type.startsWith('image/')) setMasking(file);
+                else setIdFile(file);
+              }}
             />
             <p className="text-caption text-text-secondary" data-testid="mask-invite">{t('verify.id.maskTip')}</p>
           </>
@@ -730,6 +740,7 @@ function IdBody({ onSent }: { onSent: () => void }) {
           onReset={() => setSelfie(null)}
           captured={selfie}
           busy={uploading}
+          findFace={findFaceIn}
         />
       </div>
 

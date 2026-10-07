@@ -415,12 +415,15 @@ export const verificationApi = {
    * travel with them; it is its own step on the checklist now (see
    * uploadPartnerDocument), and the server no longer asks for it here.
    */
-  uploadDocuments(file: File, live: LiveSelfieResult): Promise<VerificationSummary> {
+  uploadDocuments(file: File, live: LiveSelfieResult, idPhotoWarnings?: string): Promise<VerificationSummary> {
     const form = new FormData();
     form.append('file', file);
     form.append('selfie', live.selfie);
     form.append('livenessFrames', live.livenessFrames);
     form.append('selfieChallengeId', live.challengeId);
+    // What her phone noticed about each photo, when she chose "Use anyway".
+    if (idPhotoWarnings) form.append('idPhotoWarnings', idPhotoWarnings);
+    if (live.warnings?.length) form.append('selfieWarnings', live.warnings.join(','));
     return request('/api/v1/driver-verification/documents', { method: 'POST', body: form });
   },
 
@@ -450,12 +453,18 @@ export const verificationApi = {
       /** An RC: whose vehicle it is, and the owner's name when it is not hers. */
       vehicleOwner?: VehicleOwner;
       ownerName?: string;
+      /** A licence: the name exactly as printed, typed by her. */
+      nameOnDocument?: string;
+      /** A licence: she said the name is the same as her profile, instead of typing it. */
+      nameDeclared?: boolean;
+      /** What her phone noticed about the photo when she chose "Use anyway": BLURRY,GLARE. */
+      photoWarnings?: string;
     }
   ): Promise<unknown> {
     const form = new FormData();
     form.append('file', file);
     for (const [key, value] of Object.entries(facts)) {
-      if (value) form.append(key, value);
+      if (value) form.append(key, String(value));
     }
     return request(`/api/v1/driver-verification/partner-documents/${type}`, { method: 'POST', body: form });
   },

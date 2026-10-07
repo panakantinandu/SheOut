@@ -16,6 +16,9 @@ public interface ApplicantProfiles {
 
     Optional<ApplicantProfile> find(UUID accountId);
 
+    /** Other partners whose profile has this plate, for the duplicate vehicle check. Never her own account. */
+    java.util.List<UUID> otherPartnersWithPlate(UUID accountId, String plate);
+
     /** vehicleType is users' VehicleType by name (BIKE, AUTO, CAB), or null. */
     record ApplicantProfile(String name, LocalDate dateOfBirth, String vehicleType, String vehicleRegistrationNumber,
                             boolean panGiven) {
