@@ -174,6 +174,12 @@ sheout:
     # exist - see VerificationService.turnaroundFor. Four hours is what
     # operations can stand behind today; lower it when that changes.
     target-turnaround-minutes: ${VERIFICATION_TARGET_TURNAROUND_MINUTES:240}
+    # When reviewers work, in India time, as HH:mm-HH:mm. The app's wait line
+    # says it ("usually within about 2 hours, between 9 am and 9 pm").
+    review-hours: ${VERIFICATION_REVIEW_HOURS:09:00-21:00}
+    # Which provider answers which check, as TYPE=name pairs; everything not
+    # named is "manual" (a person looks). See CheckProviders.
+    check-providers: ${VERIFICATION_CHECK_PROVIDERS:}
     # Background-verification vendor - see VerificationProvider. Only
     # "manual" exists: operators record results, nothing is sent anywhere,
     # and the provider webhook answers 404. A real vendor is a new

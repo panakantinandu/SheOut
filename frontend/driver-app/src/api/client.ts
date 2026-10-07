@@ -45,6 +45,7 @@ import type {
   PayoutOverview,
   PayoutRequestView,
   SavePayoutAccount,
+  VerificationTurnaround,
 } from './types';
 
 // VITE_API_BASE_URL lets each deployment point at its own backend (Vercel
@@ -397,6 +398,11 @@ export const pushApi: PushApi = {
 export const verificationApi = {
   getMyStatus(): Promise<VerificationSummary> {
     return request('/api/v1/driver-verification/me');
+  },
+
+  /** How long a review usually takes, and the hours people review in. */
+  turnaround(): Promise<VerificationTurnaround> {
+    return request('/api/v1/driver-verification/turnaround');
   },
 
   /**

@@ -26,5 +26,16 @@
   },
   "riderCheck": {
     "womenOnly": "SheOut is for women only. If the person here is a man, or not the rider shown, do not start the trip."
+  },
+  "verifyStage": {
+    "policeWhy": "Your safety check is a police certificate. It keeps every rider safe, and it is checked by a person."
+  },
+  "reject": {
+    "DOCUMENT_ALTERED": "We could not accept this {{document}}. If you think this is a mistake, contact support.",
+    "ID_ALTERED": "We could not accept this ID. If you think this is a mistake, contact support.",
+    "NOT_HERS": "The government record shows this {{document}} belongs to someone else. Send your own, or contact support.",
+    "SELFIE_MISMATCH": "Your live selfie does not match the photo on your ID. Take the selfie again in good light, facing the camera.",
+    "UNDER_18": "You must be 18 or older to use SheOut. If your date of birth is wrong, correct it in Profile and send your ID again.",
+    "WOMAN_NOT_CONFIRMED": "We could not confirm from this ID that you are a woman. If you think this is a mistake, contact support."
   }
 }

@@ -1100,6 +1100,55 @@
       "fromRecord": "Nothing to upload · we read it from your RC's government record",
       "fromRecordWhy": "We check your PUC on the government's vehicle record when we check your RC, so there is nothing to upload.",
       "needed": "Your vehicle's record shows no valid PUC. Get one at any PUC centre and upload it."
+    },
+    "stage": {
+      "label": "Your progress",
+      "you": "Identity",
+      "vehicle": "Licence and vehicle",
+      "police": "Safety check",
+      "ready": "Ready",
+      "readyBody": "When your identity, licence and vehicle, and safety check are all approved, you can go online.",
+      "state": {
+        "done": "Done",
+        "waiting": "Being checked",
+        "fix": "Needs a fix",
+        "todo": "To do"
+      }
+    },
+    "savedNote": "Everything you send is saved. You can stop and come back at any time.",
+    "waitUsually": "Usually checked within {{time}}.",
+    "waitTarget": "We aim to check within {{time}}.",
+    "waitHoursLine": "People check between {{from}} and {{to}}, every day.",
+    "waitHours_one": "about {{count}} hour",
+    "waitHours_other": "about {{count}} hours",
+    "waitMinutes": "about {{count}} minutes",
+    "howToFix": "How to fix it"
+  },
+  "reject": {
+    "DATE_MISMATCH": "The date you typed is not the date on the {{document}}. Send it again with the date printed on it.",
+    "DOCUMENT_EXPIRED": "This {{document}} has expired. Upload your renewed {{document}}.",
+    "ID_NAME_MISMATCH": "The name on your ID is not the name on your profile. Correct your name in Profile, or send an ID with your name on it.",
+    "ID_UNREADABLE": "Your ID is not readable. Take the photo again flat, in good light, with all four corners showing.",
+    "LEARNER_LICENCE": "This is a learner's licence. Send your permanent driving licence.",
+    "LICENCE_NAME_MISMATCH": "The name on the licence is not the name on your ID. Send your own licence, or contact support if your name has changed.",
+    "LICENCE_NOT_TWO_WHEELER": "This licence is not for two-wheelers. It needs MCWG or MCWOG under class of vehicle.",
+    "NOT_A_GOVERNMENT_ID": "This is not a government photo ID. Send your Aadhaar, passport, voter ID or driving licence.",
+    "NOT_COMMERCIAL": "This is a private policy. Carrying paying passengers needs a commercial policy. Ask your insurer for one.",
+    "NOT_IN_GOVERNMENT_RECORD": "We could not find this {{document}} in the government record. Check the number and send it again.",
+    "NUMBER_MISMATCH": "The number you typed is not the number on the {{document}}. Send it again and type the number exactly as printed.",
+    "OTHER_VEHICLE": "This {{document}} is for a different vehicle. Send the one for your vehicle.",
+    "OWNER_MISMATCH": "The owner's name on the RC is not what you told us. Send it again and choose whose vehicle it is.",
+    "PHOTO_UNREADABLE": "The photo is blurry or cut off. Take it again flat, in good light, with all four corners showing.",
+    "PLATE_MISMATCH": "The vehicle number on the RC is not the number on your profile. Correct it in Profile, or send the RC for your vehicle.",
+    "RC_NOT_TWO_WHEELER": "This RC is not for a two-wheeler. SheOut takes scooters and motorcycles only.",
+    "doc": {
+      "DRIVING_LICENCE": "driving licence",
+      "VEHICLE_RC": "vehicle RC",
+      "VEHICLE_INSURANCE": "vehicle insurance",
+      "PUC": "PUC certificate",
+      "FITNESS_CERTIFICATE": "fitness certificate",
+      "POLICE_CERTIFICATE": "police certificate",
+      "BACKGROUND_CHECK_REPORT": "background check report"
     }
   }
 }

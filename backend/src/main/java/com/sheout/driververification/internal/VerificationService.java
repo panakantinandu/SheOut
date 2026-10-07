@@ -66,6 +66,8 @@ public class VerificationService implements VerificationApi {
     private final DocumentStorage documentStorage;
     private final DomainEventPublisher eventPublisher;
     private final int targetMinutes;
+    private final String reviewHoursFrom;
+    private final String reviewHoursTo;
     private final PartnerDocumentService partnerDocuments;
     private final VerificationAudit audit;
     private final PoliceVerificationService police;
@@ -82,6 +84,9 @@ public class VerificationService implements VerificationApi {
                                 // nothing measured yet. Said as a target, not
                                 // as a fact - see turnaroundFor.
                                 @Value("${sheout.verification.target-turnaround-minutes:240}") int targetMinutes,
+                                // When people review, in India: the app says "between 9 am
+                                // and 9 pm", so a wait overnight is not a surprise.
+                                @Value("${sheout.verification.review-hours:09:00-21:00}") String reviewHours,
                                 PartnerDocumentService partnerDocuments,
                                 VerificationAudit audit,
                                 PoliceVerificationService police,
@@ -95,6 +100,9 @@ public class VerificationService implements VerificationApi {
         this.documentStorage = documentStorage;
         this.eventPublisher = eventPublisher;
         this.targetMinutes = targetMinutes;
+        String[] hours = reviewHours.split("-", 2);
+        this.reviewHoursFrom = java.time.LocalTime.parse(hours[0].trim()).toString();
+        this.reviewHoursTo = java.time.LocalTime.parse(hours[1].trim()).toString();
         this.partnerDocuments = partnerDocuments;
         this.audit = audit;
         this.police = police;
@@ -130,6 +138,9 @@ public class VerificationService implements VerificationApi {
     @Transactional
     public void onAccountRegistered(AccountRegistered event) {
         repository.save(new VerificationRecordEntity(event.accountId(), event.role()));
+        // Her checks exist from the start, all waiting, so the first thing she
+        // sends is noticed as a step forward - see VerificationCheckService.stages.
+        checks.refresh(event.accountId());
     }
 
     /** How long a challenge may be answered: time to follow the prompts and fill in the rest, and no more. */
@@ -410,7 +421,7 @@ public class VerificationService implements VerificationApi {
     public VerificationTurnaround turnaroundFor(AccountRole role) {
         List<ReviewWindow> reviews = repository.recentReviews(role, PageRequest.of(0, TURNAROUND_SAMPLE));
         if (reviews.size() < MIN_REVIEWS_FOR_MEASURED) {
-            return new VerificationTurnaround(targetMinutes, false, reviews.size());
+            return new VerificationTurnaround(targetMinutes, false, reviews.size(), reviewHoursFrom, reviewHoursTo);
         }
         List<Long> sorted = reviews.stream().map(ReviewWindow::seconds).sorted().toList();
         double median = sorted.size() % 2 == 1
@@ -418,7 +429,7 @@ public class VerificationService implements VerificationApi {
                 : (sorted.get(sorted.size() / 2 - 1) + sorted.get(sorted.size() / 2)) / 2.0;
         int minutes = (int) Math.ceil(median / 60.0);
         int rounded = Math.max(15, (int) (Math.ceil(minutes / 30.0) * 30));
-        return new VerificationTurnaround(rounded, true, sorted.size());
+        return new VerificationTurnaround(rounded, true, sorted.size(), reviewHoursFrom, reviewHoursTo);
     }
 
     /** The operator's own words, or something honest when they left it blank. */
@@ -500,7 +511,7 @@ public class VerificationService implements VerificationApi {
             // the app kept saying "being reviewed" forever and the reason
             // stayed in the database.
             eventPublisher.publish(new VerificationRejected(
-                    record.getAccountId(), record.getRole(), rejectionReasonFor(reason)));
+                    record.getAccountId(), record.getRole(), rejectionReasonFor(reason), code));
         }
         return Result.success(toSummary(record));
     }

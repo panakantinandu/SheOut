@@ -371,7 +371,8 @@ public class PartnerDocumentService {
                 checks.rememberNumber(document, rejectionCode, operatorId);
             }
             restoreEarlierIfStillValid(document, operatorId, now, today);
-            events.publish(new PartnerDocumentRejected(document.getAccountId(), document.getType(), shown));
+            events.publish(new PartnerDocumentRejected(document.getAccountId(), document.getType(), shown,
+                    rejectionCode == null ? null : rejectionCode.name()));
             return Result.success(toSummary(document));
         }
 

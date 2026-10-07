@@ -28,7 +28,7 @@ public enum CheckFinding {
     PREVIOUSLY_REJECTED(true, true, "This number was turned down before, for fraud or a confirmed mismatch."),
     PLATE_MISMATCH(false, false, "The registration number is not the one on her profile."),
     PHOTO_QUALITY(false, false, "Her phone said the photo may be unclear, and she chose to send it anyway."),
-    NOT_COMMERCIAL(false, false, "She said the policy is for private use. Riders need a commercial policy.");
+    NOT_COMMERCIAL(false, false, "She said the policy is for private use. Paying passengers need a commercial policy.");
 
     private final boolean fails;
     private final boolean overridable;

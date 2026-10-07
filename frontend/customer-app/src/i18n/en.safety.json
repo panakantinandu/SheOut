@@ -139,5 +139,11 @@
   },
   "partnerCheck": {
     "dontGetOn": "You don't have to share your code. Stay where there are people around. Cancelling is free, and SheOut's safety team will look into this partner. If you feel unsafe, press SOS at the top of the map."
+  },
+  "reject": {
+    "ID_ALTERED": "We could not accept this ID. If you think this is a mistake, contact support.",
+    "SELFIE_MISMATCH": "Your live selfie does not match the photo on your ID. Take the selfie again in good light, facing the camera.",
+    "UNDER_18": "You must be 18 or older to use SheOut. If your date of birth is wrong, correct it in Profile and send your ID again.",
+    "WOMAN_NOT_CONFIRMED": "We could not confirm from this ID that you are a woman. If you think this is a mistake, contact support."
   }
 }

@@ -9,6 +9,7 @@ export * from './lib/push';
 export * from './lib/profile';
 export * from './lib/photo';
 export * from './lib/photoQuality';
+export * from './lib/clockTime';
 export * from './lib/errorReporting';
 export * from './lib/motion';
 export * from './lib/dayPart';

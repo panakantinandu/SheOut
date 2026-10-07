@@ -276,10 +276,42 @@ class NotificationEventListeners {
     @Async(NotificationDeliveryConfig.EXECUTOR)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onVerificationRejected(VerificationRejected event) {
-        // The reason is what the operator typed, in the operator's words.
+        // The reason from the list, in her language; an older typed reason as it was written.
         dispatcher.deliver(event.accountId(), NotificationType.ACCOUNT_VERIFICATION_REJECTED, localized(event.accountId(),
-                "verificationRejected", language -> Map.of("reason", event.reason() == null ? "" : event.reason()),
+                "verificationRejected", language -> Map.of("reason", rejectionText(language, event.code(), null, event.reason())),
                 "/verification"));
+    }
+
+    /**
+     * Each stage she reaches, in plain words, by push and email - see
+     * VerificationStageReached. Being ready is AccountVerified's message.
+     */
+    @Async(NotificationDeliveryConfig.EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void onVerificationStageReached(com.sheout.driververification.VerificationStageReached event) {
+        String key = switch (event.stage()) {
+            case ID_RECEIVED -> event.role() == AccountRole.DRIVER ? "stageIdReceivedPartner" : "stageIdReceivedRider";
+            case IDENTITY_APPROVED -> "stageIdentityApproved";
+            case VEHICLE_PAPERS_RECEIVED -> "stageVehicleReceived";
+            case VEHICLE_APPROVED -> "stageVehicleApproved";
+            case SAFETY_CHECK_RECEIVED -> "stageSafetyReceived";
+        };
+        dispatcher.deliver(event.accountId(), NotificationType.VERIFICATION_PROGRESS,
+                localized(event.accountId(), key, none(), "/verification"));
+    }
+
+    /** Why it was sent back, in her language, from its code; the stored text when there is no code. */
+    private String rejectionText(com.sheout.users.AppLanguage language, String code,
+                                 com.sheout.driververification.PartnerDocumentType type, String fallback) {
+        if (code == null) {
+            return fallback == null ? "" : fallback;
+        }
+        String text = copy.one(language, "rejection." + code);
+        if (text.equals("rejection." + code)) {
+            return fallback == null ? "" : fallback;
+        }
+        String document = type == null ? "" : copy.one(language, "document." + type.name());
+        return text.replace("{document}", document);
     }
 
     /**
@@ -322,7 +354,7 @@ class NotificationEventListeners {
         dispatcher.deliver(event.accountId(), NotificationType.PARTNER_DOCUMENT_REJECTED, localized(event.accountId(),
                 "documentRejected", language -> Map.of(
                         "document", copy.one(language, "document." + event.type().name()),
-                        "reason", event.reason() == null ? "" : event.reason()),
+                        "reason", rejectionText(language, event.code(), event.type(), event.reason())),
                 "/verification"));
     }
 
