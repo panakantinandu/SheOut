@@ -84,7 +84,9 @@ class PartnerDocumentFlowTest {
     @Test
     void whatSheTypesMustBeShapedLikeTheRealDocumentAndAFamilyVehicleIsWelcome() {
         java.util.function.Function<DocumentFacts, VerificationError> send = facts -> documents.submit(partner,
-                PartnerDocumentType.DRIVING_LICENCE, pdf(), facts, PartnerDocumentSource.PARTNER_UPLOAD, partner, false).error();
+                PartnerDocumentType.DRIVING_LICENCE, pdf(), new DocumentFacts(facts.documentNumber(), facts.issuedOn(),
+                        facts.validUntil(), facts.insuranceUseType(), null, null, "Lakshmi Devi", false, null),
+                PartnerDocumentSource.PARTNER_UPLOAD, partner, false).error();
         assertThat(send.apply(new DocumentFacts("1234567", null, today.plusYears(3), null)))
                 .isEqualTo(VerificationError.LICENCE_NUMBER_INVALID);
         assertThat(send.apply(new DocumentFacts("TS0920150001234", null, today.plusYears(40), null)))
@@ -123,7 +125,8 @@ class PartnerDocumentFlowTest {
                 "Vahan: found", today.plusYears(2)).error()).isEqualTo(VerificationError.VALID_UNTIL_TOO_FAR);
 
         assertThat(documents.review(rc.id(), operator, PartnerDocumentStatus.VERIFIED, null, null,
-                "Vahan: found, owner R**** K****, PUC valid", today.plusMonths(8)).isSuccess()).isTrue();
+                "Vahan: found, owner R**** K****, PUC valid", today.plusMonths(8),
+                java.util.EnumSet.allOf(com.sheout.driververification.CheckFinding.class)).isSuccess()).isTrue();
 
         PartnerReadiness.DocumentState puc = verification.partnerReadiness(partner, "BIKE").documents().stream()
                 .filter(d -> d.type() == PartnerDocumentType.PUC).findFirst().orElseThrow();
@@ -279,14 +282,17 @@ class PartnerDocumentFlowTest {
     private PartnerDocumentSummary upload(PartnerDocumentType type, String number, LocalDate validUntil, InsuranceUseType use) {
         Result<PartnerDocumentSummary, VerificationError> result = documents.submit(partner, type, pdf(),
                 new DocumentFacts(number, null, validUntil, use,
-                        type == PartnerDocumentType.VEHICLE_RC ? com.sheout.driververification.VehicleOwner.SELF : null, null),
+                        type == PartnerDocumentType.VEHICLE_RC ? com.sheout.driververification.VehicleOwner.SELF : null, null,
+                        type == PartnerDocumentType.DRIVING_LICENCE ? "Lakshmi Devi" : null, false, null),
                 PartnerDocumentSource.PARTNER_UPLOAD, partner, false);
         assertThat(result.isSuccess()).as(String.valueOf(result.isFailure() ? result.error() : "")).isTrue();
         return result.value();
     }
 
+    /** As a reviewer who looked at everything the automatic checks noticed: this test is not about them. */
     private void approve(UUID documentId) {
-        var result = documents.review(documentId, operator, PartnerDocumentStatus.VERIFIED, null, null);
+        var result = documents.review(documentId, operator, PartnerDocumentStatus.VERIFIED, null, null, null, null,
+                java.util.EnumSet.allOf(com.sheout.driververification.CheckFinding.class));
         assertThat(result.isSuccess()).as(String.valueOf(result.isFailure() ? result.error() : "")).isTrue();
     }
 

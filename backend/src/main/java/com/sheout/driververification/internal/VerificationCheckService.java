@@ -141,7 +141,7 @@ public class VerificationCheckService {
             if (row == null) {
                 row = new VerificationCheckEntity(accountId, plan.type(), now);
             }
-            if (apply(row, plan, profile, now)) {
+            if (apply(row, plan, profile, record, now)) {
                 checks.save(row);
             }
             current.add(row);
@@ -272,7 +272,8 @@ public class VerificationCheckService {
     }
 
     /** Brings one row in line with its plan. True when anything changed. */
-    private boolean apply(VerificationCheckEntity row, Plan plan, ApplicantProfile profile, Instant now) {
+    private boolean apply(VerificationCheckEntity row, Plan plan, ApplicantProfile profile, VerificationRecordEntity record,
+                          Instant now) {
         boolean changed = row.getId() == null;
         if (row.isRequired() != plan.required()) {
             row.setRequired(plan.required());
@@ -284,7 +285,7 @@ public class VerificationCheckService {
         }
 
         List<Finding> findings = plan.subjectVersion() == null ? List.of()
-                : rules.findings(new CheckRules.Subject(row.getAccountId(), plan.type(), plan.document(), profile));
+                : rules.findings(new CheckRules.Subject(row.getAccountId(), plan.type(), plan.document(), profile, record));
         String findingsJson = findings.isEmpty() ? null : write(findings);
         if (!Objects.equals(row.getFindingsJson(), findingsJson)) {
             row.setFindingsJson(findingsJson);

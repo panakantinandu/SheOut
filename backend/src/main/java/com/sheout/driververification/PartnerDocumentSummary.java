@@ -30,8 +30,24 @@ public record PartnerDocumentSummary(
         /** An RC's owner, as she said (null for other documents, or an RC sent before she was asked). */
         VehicleOwner vehicleOwner,
         /** The owner's name as printed on the RC, when it is not hers. */
-        String ownerName
+        String ownerName,
+        /** A licence: the name she typed as printed on it, or null. */
+        String nameOnDocument,
+        /** A licence: she said the name is the same as her profile, instead of typing it. */
+        boolean nameDeclared,
+        /** What her phone said about the photo when she sent it anyway (BLURRY, GLARE, DARK, NO_FACE), or null. */
+        String photoWarnings
 ) {
+
+    public PartnerDocumentSummary(UUID id, UUID accountId, PartnerDocumentType type, PartnerDocumentStatus status,
+                                  String documentNumber, LocalDate issuedOn, LocalDate validUntil, String rejectionReason,
+                                  InsuranceUseType insuranceUseType, PartnerDocumentSource source, String providerReference,
+                                  boolean fileOnFile, Instant submittedAt, Instant reviewedAt, UUID reviewedBy,
+                                  Instant supersededAt, UUID replacesDocumentId, VehicleOwner vehicleOwner, String ownerName) {
+        this(id, accountId, type, status, documentNumber, issuedOn, validUntil, rejectionReason, insuranceUseType, source,
+                providerReference, fileOnFile, submittedAt, reviewedAt, reviewedBy, supersededAt, replacesDocumentId,
+                vehicleOwner, ownerName, null, false, null);
+    }
 
     public PartnerDocumentSummary(UUID id, UUID accountId, PartnerDocumentType type, PartnerDocumentStatus status,
                                   String documentNumber, LocalDate issuedOn, LocalDate validUntil, String rejectionReason,

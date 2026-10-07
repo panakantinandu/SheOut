@@ -52,6 +52,46 @@ function load(): Promise<FaceApi> {
   return loading;
 }
 
+let detectorLoading: Promise<FaceApi> | null = null;
+
+/** Only the small face finder (about 190 KB), for the photo check - not the 7 MB comparison models. */
+function loadDetector(): Promise<FaceApi> {
+  detectorLoading ??= (async () => {
+    const faceapi = await import('@vladmandic/face-api');
+    await (faceapi.tf as unknown as { ready?: () => Promise<void> }).ready?.();
+    if (!faceapi.nets.tinyFaceDetector.isLoaded) await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+    return faceapi;
+  })().catch((err) => {
+    detectorLoading = null;
+    throw err;
+  });
+  return detectorLoading;
+}
+
+/**
+ * Whether a face is in this picture, for the photo check before an upload
+ * (a selfie, or the photo on an ID card). Null when it cannot tell - the
+ * model would not load, or took too long - and the check then says nothing.
+ */
+export async function findFaceIn(image: HTMLCanvasElement): Promise<boolean | null> {
+  try {
+    return await Promise.race([
+      (async () => {
+        const faceapi = await loadDetector();
+        // An ID card's photo is small in the frame; try a finer scale too.
+        for (const inputSize of [416, 608]) {
+          const found = await faceapi.detectSingleFace(image, new faceapi.TinyFaceDetectorOptions({ inputSize, scoreThreshold: 0.35 }));
+          if (found) return true;
+        }
+        return false;
+      })(),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 8000)),
+    ]);
+  } catch {
+    return null;
+  }
+}
+
 /** Starts the download early, while she is still reading the first screen. */
 export function preloadFaceModels(): void {
   load().catch(() => undefined);

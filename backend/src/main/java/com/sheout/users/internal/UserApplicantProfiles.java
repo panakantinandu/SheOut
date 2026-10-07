@@ -34,4 +34,13 @@ class UserApplicantProfiles implements ApplicantProfiles {
                 .or(() -> customers.findByAccountId(accountId)
                         .map(c -> new ApplicantProfile(c.getName(), c.getDateOfBirth(), null, null, false)));
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public java.util.List<UUID> otherPartnersWithPlate(UUID accountId, String plate) {
+        if (plate == null || plate.isBlank()) {
+            return java.util.List.of();
+        }
+        return drivers.findAccountIdsWithPlate(com.sheout.sharedkernel.india.VehicleRegistrationNumber.normalize(plate), accountId);
+    }
 }

@@ -4,6 +4,7 @@ export * from './BrandStrip';
 export * from './ConfirmDialog';
 export * from './DocumentMasker';
 export * from './LiveSelfieCapture';
+export * from './PhotoQualityNotice';
 export * from './CancelReasonDialog';
 export * from './Overlay';
 export * from './ThemePicker';

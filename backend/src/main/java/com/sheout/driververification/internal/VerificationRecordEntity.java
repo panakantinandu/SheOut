@@ -77,6 +77,12 @@ public class VerificationRecordEntity extends BaseEntity {
     private String selfieChallengePrompts;
     private Instant selfieChallengeExpiresAt;
 
+    /** What her phone said about the ID photo and the selfie when she sent them anyway - see PhotoWarnings. */
+    @Column(length = 100)
+    private String idPhotoWarnings;
+    @Column(length = 100)
+    private String selfieWarnings;
+
     @Column(length = 100)
     private String reviewedBy;
     private Instant reviewedAt;
@@ -214,6 +220,20 @@ public class VerificationRecordEntity extends BaseEntity {
 
     public String getSelfiePrompts() {
         return selfiePrompts;
+    }
+
+    public String getIdPhotoWarnings() {
+        return idPhotoWarnings;
+    }
+
+    public String getSelfieWarnings() {
+        return selfieWarnings;
+    }
+
+    /** Replaced with each submission: they are about the photos sent with it. */
+    void recordPhotoWarnings(String idPhoto, String selfie) {
+        this.idPhotoWarnings = idPhoto;
+        this.selfieWarnings = selfie;
     }
 
     public Instant getSelfieCapturedAt() {

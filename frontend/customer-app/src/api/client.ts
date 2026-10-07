@@ -579,12 +579,15 @@ export const verificationApi = {
   },
 
   /** The ID and the live selfie, together: one submission, one review. */
-  async submitDocument(file: File, live: LiveSelfieResult): Promise<VerificationSummary> {
+  async submitDocument(file: File, live: LiveSelfieResult, idPhotoWarnings?: string): Promise<VerificationSummary> {
     const form = new FormData();
     form.append('file', file);
     form.append('selfie', live.selfie);
     form.append('livenessFrames', live.livenessFrames);
     form.append('selfieChallengeId', live.challengeId);
+    // What her phone noticed about each photo, when she chose "Use anyway".
+    if (idPhotoWarnings) form.append('idPhotoWarnings', idPhotoWarnings);
+    if (live.warnings?.length) form.append('selfieWarnings', live.warnings.join(','));
     const token = getStoredToken();
     const response = await fetch(`${API_BASE}/api/v1/driver-verification/documents`, {
       method: 'POST',

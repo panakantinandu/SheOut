@@ -250,6 +250,18 @@ public class VerificationService implements VerificationApi {
     @Transactional
     public Result<VerificationSummary, VerificationError> submitDocument(
             UUID accountId, DocumentUpload upload, DocumentUpload rcUpload, LiveSelfieUpload live) {
+        return submitDocument(accountId, upload, rcUpload, live, null, null);
+    }
+
+    /**
+     * The same, with what her phone said about the ID photo and the selfie
+     * when she chose to send them anyway (see PhotoWarnings). They do not
+     * stop anything: they ask the reviewer to look closer.
+     */
+    @Transactional
+    public Result<VerificationSummary, VerificationError> submitDocument(
+            UUID accountId, DocumentUpload upload, DocumentUpload rcUpload, LiveSelfieUpload live,
+            String idPhotoWarnings, String selfieWarnings) {
         Optional<VerificationRecordEntity> found = repository.findByAccountId(accountId);
         if (found.isEmpty()) {
             return Result.failure(VerificationError.RECORD_NOT_FOUND);
@@ -311,6 +323,7 @@ public class VerificationService implements VerificationApi {
         String replacedSelfie = record.getSelfieDocumentKey();
         String replacedFrames = record.getLivenessFramesKey();
         record.recordLiveSelfie(selfieKey, framesKey, prompts.get(), Instant.now());
+        record.recordPhotoWarnings(PhotoWarnings.clean(idPhotoWarnings), PhotoWarnings.clean(selfieWarnings));
 
         // A re-submission replaces the earlier file. It used to stay stored
         // forever, unreferenced, so each retry kept another copy of her ID -

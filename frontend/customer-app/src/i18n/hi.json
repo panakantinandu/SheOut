@@ -241,7 +241,8 @@
     "changeId": "बदलें",
     "needBoth": "आगे बढ़ने के लिए अपनी ID जोड़ें और सेल्फ़ी लें",
     "needId": "आगे बढ़ने के लिए अपनी ID जोड़ें",
-    "submitForReview": "समीक्षा के लिए भेजें"
+    "submitForReview": "समीक्षा के लिए भेजें",
+    "checkingPhoto": "फ़ोटो जाँची जा रही है..."
   },
   "payments": {
     "history": "भुगतान इतिहास",

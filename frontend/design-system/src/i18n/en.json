@@ -508,5 +508,15 @@
     "googlePrivacy": "Google Privacy Policy",
     "osm": "Some address search results and map data © OpenStreetMap contributors, available under the Open Database Licence.",
     "osmLink": "OpenStreetMap copyright"
+  },
+  "photoCheck": {
+    "title": "This photo may be hard to read",
+    "BLURRY": "It looks blurry. Hold the phone still and tap the screen to focus.",
+    "GLARE": "There is a shiny patch on it. Tilt the card a little, or move away from the light.",
+    "DARK": "It is too dark. Move somewhere brighter.",
+    "NO_FACE": "We could not see a face clearly. Make sure the face is fully in the picture.",
+    "retake": "Retake",
+    "useAnyway": "Use anyway",
+    "useAnywayHint": "If you send it as it is, a reviewer will look at it closely and may ask you for a clearer one."
   }
 }

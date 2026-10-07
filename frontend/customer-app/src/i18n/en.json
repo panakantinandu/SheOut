@@ -241,7 +241,8 @@
     "changeId": "Change",
     "needBoth": "Add your ID and take a selfie to continue",
     "needId": "Add your ID to continue",
-    "submitForReview": "Submit for review"
+    "submitForReview": "Submit for review",
+    "checkingPhoto": "Checking the photo..."
   },
   "payments": {
     "history": "Payment History",

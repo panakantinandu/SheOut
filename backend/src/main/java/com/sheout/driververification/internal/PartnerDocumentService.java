@@ -78,7 +78,18 @@ public class PartnerDocumentService {
      * an RC: whose vehicle it is, and the name printed as its owner.
      */
     public record DocumentFacts(String documentNumber, LocalDate issuedOn, LocalDate validUntil,
-                                InsuranceUseType insuranceUseType, VehicleOwner vehicleOwner, String ownerName) {
+                                InsuranceUseType insuranceUseType, VehicleOwner vehicleOwner, String ownerName,
+                                /** A licence: the name as printed, typed by her. Never filled in for her. */
+                                String nameOnDocument,
+                                /** A licence: she said the name is the same as her profile. Recorded as her word, never compared. */
+                                boolean nameDeclared,
+                                /** What her phone said about the photo when she sent it anyway - see PhotoWarnings. */
+                                String photoWarnings) {
+
+        public DocumentFacts(String documentNumber, LocalDate issuedOn, LocalDate validUntil,
+                             InsuranceUseType insuranceUseType, VehicleOwner vehicleOwner, String ownerName) {
+            this(documentNumber, issuedOn, validUntil, insuranceUseType, vehicleOwner, ownerName, null, false, null);
+        }
 
         public DocumentFacts(String documentNumber, LocalDate issuedOn, LocalDate validUntil, InsuranceUseType insuranceUseType) {
             this(documentNumber, issuedOn, validUntil, insuranceUseType, null, null);
@@ -183,12 +194,21 @@ public class PartnerDocumentService {
             if (type == PartnerDocumentType.POLICE_CERTIFICATE && given.issuedOn() == null) {
                 return Result.failure(VerificationError.ISSUE_DATE_REQUIRED);
             }
+            if (type == PartnerDocumentType.DRIVING_LICENCE && blank(given.nameOnDocument()) && !given.nameDeclared()) {
+                return Result.failure(VerificationError.NAME_ON_DOCUMENT_REQUIRED);
+            }
             if (type == PartnerDocumentType.VEHICLE_RC && (given.vehicleOwner() == null
                     || (given.vehicleOwner() != VehicleOwner.SELF && blank(given.ownerName())))) {
                 return Result.failure(VerificationError.VEHICLE_OWNER_REQUIRED);
             }
         }
         VerificationError badDates = dateProblem(given, today);
+        if (badDates == VerificationError.DOCUMENT_ALREADY_EXPIRED && acceptedWhenExpired(type, given)) {
+            // Filed, and its check fails automatically (DOCUMENT_EXPIRED):
+            // a person sends it back with "upload your renewed licence".
+            // Software does not turn her away; it says so before she sends.
+            badDates = null;
+        }
         if (badDates != null) {
             return Result.failure(badDates);
         }
@@ -329,14 +349,6 @@ public class PartnerDocumentService {
             return Result.success(toSummary(document));
         }
 
-        CheckType checkType = VerificationCheckService.checkFor(document.getType());
-        if (checks != null && checkType != null && checkType != CheckType.BACKGROUND) {
-            Result<Void, VerificationError> clear = checks.mayApprove(document.getAccountId(), List.of(checkType), acknowledged);
-            if (clear.isFailure()) {
-                return Result.failure(clear.error());
-            }
-        }
-
         // Nothing is approved in a shape no RTO, insurer or police force
         // issues: an operator corrects it to what the photo shows first.
         // Checked before anything on the document changes, so a refusal
@@ -375,6 +387,16 @@ public class PartnerDocumentService {
             VerificationError tooFar = DocumentNumberRules.validUntilProblem(PartnerDocumentType.PUC, pucValidUntil, today);
             if (tooFar != null) {
                 return Result.failure(tooFar);
+            }
+        }
+        // Last, after her answers and any correction are checked: those are
+        // the refusals a reviewer can act on, and a corrected date is what
+        // the automatic checks should judge.
+        CheckType checkType = VerificationCheckService.checkFor(type);
+        if (checks != null && checkType != null && checkType != CheckType.BACKGROUND) {
+            Result<Void, VerificationError> clear = checks.mayApprove(document.getAccountId(), List.of(checkType), acknowledged);
+            if (clear.isFailure()) {
+                return Result.failure(clear.error());
             }
         }
         document.markVerified(operatorId, now);
@@ -777,6 +799,17 @@ public class PartnerDocumentService {
         };
     }
 
+    /**
+     * A licence, RC or policy whose date has passed, and only that: the
+     * three a check covers, and not a date before its own issue date, which
+     * is a typing mistake rather than an expired document.
+     */
+    private static boolean acceptedWhenExpired(PartnerDocumentType type, DocumentFacts facts) {
+        return VerificationCheckService.checkFor(type) != null && type != PartnerDocumentType.POLICE_CERTIFICATE
+                && type != PartnerDocumentType.BACKGROUND_CHECK_REPORT
+                && (facts.issuedOn() == null || !facts.validUntil().isBefore(facts.issuedOn()));
+    }
+
     private static VerificationError dateProblem(DocumentFacts facts, LocalDate today) {
         if (facts.issuedOn() != null && facts.issuedOn().isAfter(today)) {
             return VerificationError.ISSUE_DATE_IN_FUTURE;
@@ -815,6 +848,24 @@ public class PartnerDocumentService {
         if (facts.insuranceUseType() != null && document.getType() == PartnerDocumentType.VEHICLE_INSURANCE) {
             Map<String, Object> meta = metadata(document);
             meta.put(META_INSURANCE_USE, facts.insuranceUseType().name());
+            document.setMetadataJson(write(meta));
+        }
+        if (document.getType() == PartnerDocumentType.DRIVING_LICENCE && (facts.nameDeclared() || !blank(facts.nameOnDocument()))) {
+            Map<String, Object> meta = metadata(document);
+            if (facts.nameDeclared()) {
+                meta.put(CheckRules.META_NAME_DECLARED, true);
+                meta.remove(CheckRules.META_NAME_ON_DOCUMENT);
+            } else {
+                String name = facts.nameOnDocument().trim().replaceAll("\\s+", " ");
+                meta.put(CheckRules.META_NAME_ON_DOCUMENT, name.length() > 100 ? name.substring(0, 100) : name);
+                meta.remove(CheckRules.META_NAME_DECLARED);
+            }
+            document.setMetadataJson(write(meta));
+        }
+        String warnings = PhotoWarnings.clean(facts.photoWarnings());
+        if (warnings != null) {
+            Map<String, Object> meta = metadata(document);
+            meta.put(CheckRules.META_PHOTO_WARNINGS, warnings);
             document.setMetadataJson(write(meta));
         }
         if (facts.vehicleOwner() != null && document.getType() == PartnerDocumentType.VEHICLE_RC) {
@@ -911,7 +962,15 @@ public class PartnerDocumentService {
                 d.getSource(), d.getProviderReference(), d.getDocumentKey() != null, d.getSubmittedAt(),
                 d.getReviewedAt(), d.getReviewedBy(), d.getSupersededAt(), d.getReplacesDocumentId(),
                 d.getType() == PartnerDocumentType.VEHICLE_RC ? vehicleOwnerOf(d) : null,
-                d.getType() == PartnerDocumentType.VEHICLE_RC ? ownerNameOf(d) : null);
+                d.getType() == PartnerDocumentType.VEHICLE_RC ? ownerNameOf(d) : null,
+                metaText(d, CheckRules.META_NAME_ON_DOCUMENT),
+                Boolean.TRUE.equals(metadata(d).get(CheckRules.META_NAME_DECLARED)),
+                metaText(d, CheckRules.META_PHOTO_WARNINGS));
+    }
+
+    private String metaText(PartnerDocumentEntity d, String key) {
+        Object value = metadata(d).get(key);
+        return value == null ? null : value.toString();
     }
 
     private static String actorRoleFor(PartnerDocumentSource source) {

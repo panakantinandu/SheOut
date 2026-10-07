@@ -21,6 +21,9 @@ interface PartnerDocumentRepository extends JpaRepository<PartnerDocumentEntity,
 
     Optional<PartnerDocumentEntity> findByAccountIdAndTypeAndSupersededAtIsNull(UUID accountId, PartnerDocumentType type);
 
+    /** Current documents of this type with this number, on any account - the duplicate check. */
+    List<PartnerDocumentEntity> findBySupersededAtIsNullAndTypeAndDocumentNumber(PartnerDocumentType type, String documentNumber);
+
     Optional<PartnerDocumentEntity> findFirstByProviderReferenceOrderByCreatedAtDesc(String providerReference);
 
     /** Locked, so an upload and a review of the same type cannot interleave. */

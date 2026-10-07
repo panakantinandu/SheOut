@@ -136,6 +136,9 @@ public enum VerificationError {
     /** A background check was requested from a provider while none is configured. */
     PROVIDER_NOT_CONFIGURED,
 
+    /** A licence sent without the name printed on it, typed by her, or her saying it matches her profile. */
+    NAME_ON_DOCUMENT_REQUIRED,
+
     /** Approving over a check that failed automatically, and was not overridden by two people. */
     CHECK_FAILED,
 

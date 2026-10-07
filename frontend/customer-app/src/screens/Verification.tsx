@@ -7,6 +7,9 @@ import {
   Card,
   DocumentMasker,
   LiveSelfieCapture,
+  PhotoQualityNotice,
+  checkPhoto,
+  photoWarningsParam,
   IconCircle,
   SkeletonCard,
   StatusBadge,
@@ -14,7 +17,7 @@ import {
   verificationStatusLabel,
 } from '@sheout/design-system';
 import { ApiError, verificationApi } from '../api/client';
-import type { LiveSelfieResult } from '@sheout/design-system';
+import type { LiveSelfieResult, PhotoWarning } from '@sheout/design-system';
 import type { VerificationSummary, VerificationTurnaround } from '../api/types';
 import { useTranslation } from '@sheout/design-system';
 
@@ -62,6 +65,11 @@ export function Verification() {
   const [idFile, setIdFile] = useState<File | null>(null);
   /** The live selfie, required alongside it. */
   const [selfie, setSelfie] = useState<LiveSelfieResult | null>(null);
+  /** A photo the quick check had something to say about, waiting for her choice. */
+  const [doubtful, setDoubtful] = useState<{ file: File; warnings: PhotoWarning[] } | null>(null);
+  /** What the check noticed about the ID she is sending, when she chose to use it anyway. */
+  const [idWarnings, setIdWarnings] = useState<PhotoWarning[]>([]);
+  const [checkingPhoto, setCheckingPhoto] = useState(false);
   const fileRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -77,13 +85,29 @@ export function Verification() {
     verificationApi.turnaround().then(setTurnaround).catch(() => undefined);
   }, []);
 
-  function chooseFile(file: File) {
+  async function chooseFile(file: File) {
     setError(null);
     setNotice(null);
+    setDoubtful(null);
     if (file.size > MAX_BYTES) {
       setError(t('verification.tooLarge'));
       return;
     }
+    // Blurry, glare, too dark, no face: said now, while she can retake it.
+    // A nudge, never a refusal - "Use anyway" carries on.
+    setCheckingPhoto(true);
+    const warnings = await checkPhoto(file, { expectFace: true });
+    setCheckingPhoto(false);
+    if (warnings.length) {
+      setDoubtful({ file, warnings });
+      return;
+    }
+    acceptFile(file, []);
+  }
+
+  function acceptFile(file: File, warnings: PhotoWarning[]) {
+    setDoubtful(null);
+    setIdWarnings(warnings);
     void verificationApi.recordProgress('DOCUMENT_CHOSEN');
     // A PDF cannot be drawn on here, so it goes as it is; a photo gets the
     // chance to have its number covered first.
@@ -100,7 +124,7 @@ export function Verification() {
     setError(null);
     setUploading(true);
     try {
-      const updated = await verificationApi.submitDocument(idFile, selfie);
+      const updated = await verificationApi.submitDocument(idFile, selfie, photoWarningsParam(idWarnings));
       setStatus(updated);
       setIdFile(null);
       setSelfie(null);
@@ -224,7 +248,7 @@ export function Verification() {
                 data-testid="verification-file"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
-                  if (file) chooseFile(file);
+                  if (file) void chooseFile(file);
                 }}
               />
               {idFile ? (
@@ -247,6 +271,17 @@ export function Verification() {
                 >
                   {status.documentSubmitted ? t('verification.uploadDifferent') : t('verification.choose')}
                 </Button>
+              )}
+
+              {checkingPhoto && <p className="text-caption text-text-secondary" role="status">{t('verification.checkingPhoto')}</p>}
+              {doubtful && (
+                <PhotoQualityNotice
+                  warnings={doubtful.warnings}
+                  disabled={uploading}
+                  onRetake={() => fileRef.current?.click()}
+                  onUseAnyway={() => acceptFile(doubtful.file, doubtful.warnings)}
+                  testId="id-quality"
+                />
               )}
 
               <p className="flex items-start gap-2 text-xs leading-relaxed text-text-secondary">

@@ -16,6 +16,11 @@ interface DriverProfileRepository extends JpaRepository<DriverProfileEntity, UUI
     List<DriverProfileEntity> findByFlaggedAtIsNotNullOrderByFlaggedAtAsc();
 
     List<DriverProfileEntity> findByOnlineStatus(com.sheout.users.OnlineStatus status);
+
+    /** Other partners with this plate on their profile - driver-verification's duplicate vehicle check. */
+    @Query("select p.accountId from DriverProfileEntity p where p.vehicleRegistrationNumber = :plate and p.accountId <> :accountId")
+    List<UUID> findAccountIdsWithPlate(@org.springframework.data.repository.query.Param("plate") String plate,
+                                       @org.springframework.data.repository.query.Param("accountId") UUID accountId);
     /** Addresses only, for an announcement - see DriverProfileApi.findEmailAddresses. */
     @Query("select p.email from DriverProfileEntity p where p.email is not null and p.email <> '' order by p.accountId")
     List<String> findEmailAddresses(Pageable pageable);

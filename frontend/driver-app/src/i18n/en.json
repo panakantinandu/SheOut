@@ -1064,7 +1064,21 @@
         "PUC": "A PUC number has 6 to 25 letters and digits. Type it exactly as printed.",
         "FITNESS_CERTIFICATE": "Type the certificate number exactly as printed, with its digits.",
         "POLICE_CERTIFICATE": "Type the certificate number exactly as printed, with its digits."
-      }
+      },
+      "checkingPhoto": "Checking the photo...",
+      "needNameOnLicence": "Type your name as printed on the licence",
+      "nameOnLicence": "Name on licence",
+      "nameOnLicenceHint": "Type it exactly as printed, even if it is spelt differently from your profile.",
+      "nameSameAsProfile": "Same as my profile",
+      "nameDeclared": "Same as my profile: {{name}}",
+      "nameChange": "Type it instead",
+      "pastDateLicence": "This licence has expired. Upload your renewed licence.",
+      "confirmTitle": "Check before you send",
+      "confirmDob": "Your date of birth: {{date}}",
+      "confirmValidUntil": "Valid until: {{date}}",
+      "confirmHint": "These should match what is printed. If the valid-until date is wrong, change it now. Your date of birth is changed in Profile.",
+      "confirmSend": "Yes, send",
+      "confirmChange": "Change"
     },
     "police": {
       "haveIt": "Already have your certificate? Add it below.",
