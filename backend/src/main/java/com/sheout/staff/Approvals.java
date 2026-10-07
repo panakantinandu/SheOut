@@ -34,7 +34,9 @@ public interface Approvals {
         /** Creating, changing, switching on or off an insurance policy. */
         INSURANCE_POLICY,
         /** A bulk export: approved once, downloaded once, by whoever asked. */
-        EXPORT
+        EXPORT,
+        /** Accepting a verification check that failed automatically: one reviewer asks with a note, another signs off. */
+        VERIFICATION_CHECK_OVERRIDE
     }
 
     /**

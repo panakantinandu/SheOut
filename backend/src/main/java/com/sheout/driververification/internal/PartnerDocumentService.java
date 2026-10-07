@@ -16,6 +16,7 @@ import com.sheout.driververification.PartnerReadiness;
 import com.sheout.driververification.PartnerReadiness.Blocker;
 import com.sheout.driververification.PartnerReadiness.BlockerCode;
 import com.sheout.driververification.PartnerReadiness.DocumentState;
+import com.sheout.driververification.RejectionReason;
 import com.sheout.driververification.VehicleOwner;
 import com.sheout.driververification.VerificationLapsed;
 import com.sheout.sharedkernel.Result;
@@ -306,8 +307,22 @@ public class PartnerDocumentService {
     public Result<PartnerDocumentSummary, VerificationError> review(
             UUID documentId, UUID operatorId, PartnerDocumentStatus decision, String reason, DocumentFacts corrections,
             String governmentCheck, LocalDate pucValidUntil, java.util.Set<CheckFinding> acknowledged) {
+        return review(documentId, operatorId, decision, reason, corrections, governmentCheck, pucValidUntil, acknowledged,
+                null, null);
+    }
+
+    /**
+     * With the reason from the list (RejectionReason) when sending it back.
+     * She is shown its message; note stays on the audit trail for staff. A
+     * reason for fraud or a confirmed mismatch also remembers the number.
+     */
+    @Transactional
+    public Result<PartnerDocumentSummary, VerificationError> review(
+            UUID documentId, UUID operatorId, PartnerDocumentStatus decision, String reason, DocumentFacts corrections,
+            String governmentCheck, LocalDate pucValidUntil, java.util.Set<CheckFinding> acknowledged,
+            RejectionReason rejectionCode, String note) {
         Result<PartnerDocumentSummary, VerificationError> result = decide(documentId, operatorId, decision, reason,
-                corrections, governmentCheck, pucValidUntil, acknowledged);
+                corrections, governmentCheck, pucValidUntil, acknowledged, rejectionCode, note);
         if (result.isSuccess()) {
             refreshChecks(result.value().accountId());
         }
@@ -316,7 +331,8 @@ public class PartnerDocumentService {
 
     private Result<PartnerDocumentSummary, VerificationError> decide(
             UUID documentId, UUID operatorId, PartnerDocumentStatus decision, String reason, DocumentFacts corrections,
-            String governmentCheck, LocalDate pucValidUntil, java.util.Set<CheckFinding> acknowledged) {
+            String governmentCheck, LocalDate pucValidUntil, java.util.Set<CheckFinding> acknowledged,
+            RejectionReason rejectionCode, String note) {
         if (decision != PartnerDocumentStatus.VERIFIED && decision != PartnerDocumentStatus.REJECTED) {
             return Result.failure(VerificationError.INVALID_DECISION);
         }
@@ -338,14 +354,24 @@ public class PartnerDocumentService {
         Instant now = clock.instant();
 
         if (decision == PartnerDocumentStatus.REJECTED) {
-            if (blank(reason)) {
+            if (rejectionCode != null && !rejectionCode.appliesTo(document.getType())) {
+                return Result.failure(VerificationError.INVALID_REJECTION_REASON);
+            }
+            String shown = rejectionCode != null ? rejectionCode.message(document.getType()) : blank(reason) ? null : reason.trim();
+            if (shown == null) {
                 return Result.failure(VerificationError.REASON_REQUIRED);
             }
-            document.markRejected(operatorId, now, reason.trim());
+            String staffDetail = rejectionCode == null ? shown
+                    : rejectionCode.name() + ": " + shown + (blank(note) ? "" : " Note: " + note.trim());
+            document.markRejected(operatorId, now, shown, rejectionCode == null ? null : rejectionCode.name());
             audit.record(document.getAccountId(), operatorId, VerificationAudit.ACTOR_OPERATOR,
-                    VerificationAudit.DOCUMENT_REJECTED, document.getId(), document.getType(), reason.trim());
+                    VerificationAudit.DOCUMENT_REJECTED, document.getId(), document.getType(),
+                    staffDetail.length() > 1000 ? staffDetail.substring(0, 1000) : staffDetail);
+            if (checks != null) {
+                checks.rememberNumber(document, rejectionCode, operatorId);
+            }
             restoreEarlierIfStillValid(document, operatorId, now, today);
-            events.publish(new PartnerDocumentRejected(document.getAccountId(), document.getType(), reason.trim()));
+            events.publish(new PartnerDocumentRejected(document.getAccountId(), document.getType(), shown));
             return Result.success(toSummary(document));
         }
 
@@ -938,7 +964,8 @@ public class PartnerDocumentService {
         return new DocumentState(type, required, doc.getStatus(), doc.getDocumentNumber(), doc.getIssuedOn(),
                 doc.getValidUntil(), doc.getStatus() == PartnerDocumentStatus.REJECTED ? doc.getRejectionReason() : null,
                 type == PartnerDocumentType.VEHICLE_INSURANCE ? insuranceUseOf(doc) : null,
-                doc.getSubmittedAt(), renewalWaiting);
+                doc.getSubmittedAt(), renewalWaiting,
+                doc.getStatus() == PartnerDocumentStatus.REJECTED ? doc.getRejectionCode() : null);
     }
 
     private String describe(PartnerDocumentEntity doc) {
@@ -965,7 +992,8 @@ public class PartnerDocumentService {
                 d.getType() == PartnerDocumentType.VEHICLE_RC ? ownerNameOf(d) : null,
                 metaText(d, CheckRules.META_NAME_ON_DOCUMENT),
                 Boolean.TRUE.equals(metadata(d).get(CheckRules.META_NAME_DECLARED)),
-                metaText(d, CheckRules.META_PHOTO_WARNINGS));
+                metaText(d, CheckRules.META_PHOTO_WARNINGS),
+                d.getRejectionCode());
     }
 
     private String metaText(PartnerDocumentEntity d, String key) {

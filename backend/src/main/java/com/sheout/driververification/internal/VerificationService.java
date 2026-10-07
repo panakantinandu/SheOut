@@ -443,6 +443,18 @@ public class VerificationService implements VerificationApi {
     public Result<VerificationSummary, VerificationError> reviewGenderVerification(
             UUID accountId, UUID adminAccountId, VerificationStatus decision, String reason,
             java.util.Set<CheckFinding> acknowledged) {
+        return reviewGenderVerification(accountId, adminAccountId, decision, reason, acknowledged, null, null);
+    }
+
+    /**
+     * With the reason from the list (RejectionReason) when sending it back:
+     * she is shown its message, in her language, and note stays on the audit
+     * trail for staff only.
+     */
+    @Transactional
+    public Result<VerificationSummary, VerificationError> reviewGenderVerification(
+            UUID accountId, UUID adminAccountId, VerificationStatus decision, String reason,
+            java.util.Set<CheckFinding> acknowledged, com.sheout.driververification.RejectionReason rejectionCode, String note) {
         if (decision != VerificationStatus.VERIFIED && decision != VerificationStatus.REJECTED) {
             return Result.failure(VerificationError.INVALID_DECISION);
         }
@@ -454,6 +466,19 @@ public class VerificationService implements VerificationApi {
         if (record.getGenderVerificationStatus() != VerificationStatus.UNDER_REVIEW) {
             return Result.failure(VerificationError.NOT_UNDER_REVIEW);
         }
+        String code = null;
+        String staffDetail = reason;
+        if (decision == VerificationStatus.REJECTED && rejectionCode != null) {
+            if (!rejectionCode.forIdentity()) {
+                return Result.failure(VerificationError.INVALID_REJECTION_REASON);
+            }
+            reason = rejectionCode.message(null);
+            code = rejectionCode.name();
+            staffDetail = code + ": " + reason + (note == null || note.isBlank() ? "" : " Note: " + note.trim());
+            if (staffDetail.length() > 1000) {
+                staffDetail = staffDetail.substring(0, 1000);
+            }
+        }
         if (decision == VerificationStatus.VERIFIED) {
             Result<Void, VerificationError> clear = checks.mayApprove(accountId,
                     List.of(CheckType.IDENTITY, CheckType.SELFIE_MATCH), acknowledged);
@@ -463,11 +488,11 @@ public class VerificationService implements VerificationApi {
         }
 
         record.setGenderVerificationStatus(decision);
-        record.recordReview(adminAccountId.toString(), decision == VerificationStatus.REJECTED ? reason : null);
+        record.recordReview(adminAccountId.toString(), decision == VerificationStatus.REJECTED ? reason : null, code);
         repository.save(record);
         audit.record(accountId, adminAccountId, VerificationAudit.ACTOR_OPERATOR,
                 decision == VerificationStatus.VERIFIED ? VerificationAudit.ID_CHECK_VERIFIED : VerificationAudit.ID_CHECK_REJECTED,
-                null, null, decision == VerificationStatus.REJECTED ? reason : null);
+                null, null, decision == VerificationStatus.REJECTED ? staffDetail : null);
         checks.refresh(accountId);
         publishIfFullyVerified(record);
         if (decision == VerificationStatus.REJECTED) {
@@ -668,6 +693,11 @@ public class VerificationService implements VerificationApi {
     }
 
     @Override
+    public List<com.sheout.driververification.NameOnFile> namesOnFile(UUID accountId) {
+        return checks.namesOnFile(accountId);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public List<VerificationAuditEntry> auditTrail(UUID accountId) {
         return audit.historyFor(accountId);
@@ -688,7 +718,8 @@ public class VerificationService implements VerificationApi {
                 record.getAadhaarDocumentKey() != null,
                 record.getGenderVerificationStatus() == VerificationStatus.REJECTED ? record.getRejectionReason() : null,
                 record.getUpdatedAt(),
-                record.getDocumentSubmittedAt()
+                record.getDocumentSubmittedAt(),
+                record.getGenderVerificationStatus() == VerificationStatus.REJECTED ? record.getRejectionCode() : null
         );
     }
 }

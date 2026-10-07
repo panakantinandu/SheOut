@@ -237,6 +237,24 @@ public class VerificationController {
                             + " allows it, ask for an override with a note and a second person's sign-off.");
             case FINDINGS_NOT_ACKNOWLEDGED -> new ApiException(HttpStatus.CONFLICT, "FINDINGS_NOT_ACKNOWLEDGED",
                     "Tick each thing the automatic checks noticed, to say you looked at it, before approving.");
+            case REASON_CODE_REQUIRED -> new ApiException(HttpStatus.BAD_REQUEST, "REASON_CODE_REQUIRED",
+                    "Choose a reason from the list. She is shown how to fix it, in her own language.");
+            case INVALID_REJECTION_REASON -> new ApiException(HttpStatus.BAD_REQUEST, "INVALID_REJECTION_REASON",
+                    "That reason does not fit this document. Choose one from its own list.");
+            case NOT_OVERRIDABLE -> new ApiException(HttpStatus.CONFLICT, "NOT_OVERRIDABLE",
+                    "This check cannot be overridden. Send it back to her with the reason, so she can fix it.");
+            case OVERRIDE_NOTE_REQUIRED -> new ApiException(HttpStatus.BAD_REQUEST, "OVERRIDE_NOTE_REQUIRED",
+                    "Write why this should be accepted anyway. The second person reads it before signing off.");
+            case CHECK_CHANGED -> new ApiException(HttpStatus.CONFLICT, "CHECK_CHANGED",
+                    "She has sent something new since this was asked. Look at the new one instead.");
+            case OVERRIDE_ALREADY_ASKED -> new ApiException(HttpStatus.CONFLICT, "OVERRIDE_ALREADY_ASKED",
+                    "An override for this check is already waiting for a second person.");
+            case NEEDS_SECOND_PERSON -> new ApiException(HttpStatus.CONFLICT, "NEEDS_SECOND_PERSON",
+                    "This needs a second person: somebody other than whoever asked, or made the decision.");
+            case INVALID_WEEK -> new ApiException(HttpStatus.BAD_REQUEST, "INVALID_WEEK", "Write the week like 2026-W41.");
+            case NOT_IN_SAMPLE -> new ApiException(HttpStatus.CONFLICT, "NOT_IN_SAMPLE", "That account is not in this week's sample.");
+            case ALREADY_LOOKED -> new ApiException(HttpStatus.CONFLICT, "ALREADY_LOOKED",
+                    "Somebody has already given this case its second look this week.");
         };
     }
 

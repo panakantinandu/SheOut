@@ -88,6 +88,9 @@ public class VerificationRecordEntity extends BaseEntity {
     private Instant reviewedAt;
     @Column(length = 1000)
     private String rejectionReason;
+    /** Why, as one of RejectionReason; null before the list, and when not rejected. */
+    @Column(length = 40)
+    private String rejectionCode;
 
     /**
      * The verification consent she last agreed to, and when - see
@@ -276,9 +279,18 @@ public class VerificationRecordEntity extends BaseEntity {
     }
 
     public void recordReview(String reviewedByAccountId, String rejectionReason) {
+        recordReview(reviewedByAccountId, rejectionReason, null);
+    }
+
+    public void recordReview(String reviewedByAccountId, String rejectionReason, String rejectionCode) {
         this.reviewedBy = reviewedByAccountId;
         this.reviewedAt = Instant.now();
         this.rejectionReason = rejectionReason;
+        this.rejectionCode = rejectionCode;
+    }
+
+    public String getRejectionCode() {
+        return rejectionCode;
     }
 
     /**

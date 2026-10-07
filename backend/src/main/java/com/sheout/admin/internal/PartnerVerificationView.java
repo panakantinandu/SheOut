@@ -42,7 +42,16 @@ public record PartnerVerificationView(
          * for with the licence number. The reviewer reads it off the licence
          * she opens anyway; it is here so the check needs no retyping.
          */
-        LocalDate dateOfBirth
+        LocalDate dateOfBirth,
+        /** DRIVER or CUSTOMER: a rider is reviewed on the same screen, for her ID and selfie only. */
+        com.sheout.auth.AccountRole role,
+        /** Why her ID was sent back, when it was, and the reason's code. */
+        String idRejectionReason,
+        String idRejectionCode,
+        /** Every check, worked out now, with what the automatic checks noticed. */
+        com.sheout.driververification.VerificationChecks checks,
+        /** Her name everywhere it is written, against her profile. */
+        List<com.sheout.driververification.NameOnFile> names
 ) {
 
     /** One audit line, with the operator who acted named by their phone. */

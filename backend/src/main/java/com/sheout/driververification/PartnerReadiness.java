@@ -65,8 +65,17 @@ public record PartnerReadiness(
             InsuranceUseType insuranceUseType,
             Instant submittedAt,
             /** A newer upload is waiting for review while this one still counts. */
-            boolean renewalUnderReview
+            boolean renewalUnderReview,
+            /** Why a person sent it back, from RejectionReason - the app says it in her language. */
+            String rejectionCode
     ) {
+
+        public DocumentState(PartnerDocumentType type, boolean required, PartnerDocumentStatus status, String documentNumber,
+                             LocalDate issuedOn, LocalDate validUntil, String rejectionReason, InsuranceUseType insuranceUseType,
+                             Instant submittedAt, boolean renewalUnderReview) {
+            this(type, required, status, documentNumber, issuedOn, validUntil, rejectionReason, insuranceUseType, submittedAt,
+                    renewalUnderReview, null);
+        }
     }
 
     /** The first reason she cannot work, or null when she can. */

@@ -36,7 +36,9 @@ public record PartnerDocumentSummary(
         /** A licence: she said the name is the same as her profile, instead of typing it. */
         boolean nameDeclared,
         /** What her phone said about the photo when she sent it anyway (BLURRY, GLARE, DARK, NO_FACE), or null. */
-        String photoWarnings
+        String photoWarnings,
+        /** Why a person sent it back, from RejectionReason. Null otherwise, and on rows from before the list. */
+        String rejectionCode
 ) {
 
     public PartnerDocumentSummary(UUID id, UUID accountId, PartnerDocumentType type, PartnerDocumentStatus status,
@@ -46,7 +48,7 @@ public record PartnerDocumentSummary(
                                   Instant supersededAt, UUID replacesDocumentId, VehicleOwner vehicleOwner, String ownerName) {
         this(id, accountId, type, status, documentNumber, issuedOn, validUntil, rejectionReason, insuranceUseType, source,
                 providerReference, fileOnFile, submittedAt, reviewedAt, reviewedBy, supersededAt, replacesDocumentId,
-                vehicleOwner, ownerName, null, false, null);
+                vehicleOwner, ownerName, null, false, null, null);
     }
 
     public PartnerDocumentSummary(UUID id, UUID accountId, PartnerDocumentType type, PartnerDocumentStatus status,

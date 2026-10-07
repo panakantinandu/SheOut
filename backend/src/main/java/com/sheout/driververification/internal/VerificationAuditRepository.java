@@ -8,4 +8,7 @@ import java.util.UUID;
 interface VerificationAuditRepository extends JpaRepository<VerificationAuditEntity, UUID> {
 
     List<VerificationAuditEntity> findByAccountIdOrderByAtDesc(UUID accountId);
+
+    /** Reviewer override rates - see ReviewOversightService.reviewerStats. */
+    List<VerificationAuditEntity> findByActorRoleAndAtAfter(String actorRole, java.time.Instant since);
 }

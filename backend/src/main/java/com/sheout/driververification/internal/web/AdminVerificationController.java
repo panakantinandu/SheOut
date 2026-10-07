@@ -1,5 +1,6 @@
 package com.sheout.driververification.internal.web;
 
+import com.sheout.staff.Approvals;
 import com.sheout.staff.RequiresStepUp;
 import com.sheout.staff.AuditedRead;
 import com.sheout.staff.Permission;
@@ -22,6 +23,8 @@ import com.sheout.driververification.internal.PoliceVerificationService;
 import com.sheout.driververification.internal.provider.BackgroundCheckService;
 import com.sheout.driververification.internal.VerificationError;
 import com.sheout.driververification.internal.VerificationService;
+import com.sheout.driververification.internal.VerificationCheckService;
+import com.sheout.driververification.internal.ReviewOversightService;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -57,10 +60,17 @@ public class AdminVerificationController {
     private final PartnerDocumentService partnerDocuments;
     private final BackgroundCheckService backgroundChecks;
     private final WorkAssignments work;
+    private final VerificationCheckService checks;
+    private final ReviewOversightService oversight;
+    private final Approvals approvals;
 
     public AdminVerificationController(VerificationService verificationService, AuthApi authApi,
                                        PartnerDocumentService partnerDocuments, BackgroundCheckService backgroundChecks,
-                                       WorkAssignments work) {
+                                       WorkAssignments work, VerificationCheckService checks, ReviewOversightService oversight,
+                                       Approvals approvals) {
+        this.checks = checks;
+        this.oversight = oversight;
+        this.approvals = approvals;
         this.work = work;
         this.verificationService = verificationService;
         this.authApi = authApi;
@@ -85,8 +95,10 @@ public class AdminVerificationController {
                                                               @Valid @RequestBody ReviewRequest request) {
         CurrentAccount admin = caller();
         mayOpen(accountId);
+        requireCodeWhenRejecting(request.decision() == VerificationStatus.REJECTED, request.rejectionCode());
         Result<VerificationSummary, VerificationError> result = verificationService.reviewGenderVerification(
-                accountId, admin.accountId(), request.decision(), request.reason(), request.acknowledged());
+                accountId, admin.accountId(), request.decision(), request.reason(), request.acknowledged(),
+                request.rejectionCode(), request.note());
         if (result.isFailure()) {
             throw VerificationController.toApiException(result.error());
         }
@@ -124,11 +136,13 @@ public class AdminVerificationController {
                                                                  @Valid @RequestBody DocumentReviewRequest request) {
         CurrentAccount admin = caller();
         mayOpenDocument(documentId);
+        requireCodeWhenRejecting(request.decision() == PartnerDocumentStatus.REJECTED, request.rejectionCode());
         Result<PartnerDocumentSummary, VerificationError> result = partnerDocuments.review(documentId, admin.accountId(),
                 request.decision(), request.reason(),
                 new PartnerDocumentService.DocumentFacts(request.documentNumber(), request.issuedOn(),
                         request.validUntil(), request.insuranceUseType()),
-                request.governmentCheck(), request.pucValidUntil(), request.acknowledged());
+                request.governmentCheck(), request.pucValidUntil(), request.acknowledged(), request.rejectionCode(),
+                request.note());
         if (result.isFailure()) {
             throw VerificationController.toApiException(result.error());
         }
@@ -248,7 +262,11 @@ public class AdminVerificationController {
             /** With an RC: the PUC validity the Vahan record shows; files her PUC without an upload. */
             LocalDate pucValidUntil,
             /** What the automatic checks noticed that the reviewer ticked as looked at. Approving needs all of them. */
-            java.util.Set<com.sheout.driververification.CheckFinding> acknowledged) {
+            java.util.Set<com.sheout.driververification.CheckFinding> acknowledged,
+            /** Sending it back: the reason from the list. She is shown its message. */
+            com.sheout.driververification.RejectionReason rejectionCode,
+            /** For staff only, on the audit trail; never shown to her. */
+            @Size(max = 500) String note) {
     }
 
     /**
@@ -277,7 +295,127 @@ public class AdminVerificationController {
 
     /** reason is stored in rejection_reason, varchar(1000); longer failed at the database as a 500. */
     public record ReviewRequest(@NotNull VerificationStatus decision, @Size(max = 1000) String reason,
-                                java.util.Set<com.sheout.driververification.CheckFinding> acknowledged) {
+                                java.util.Set<com.sheout.driververification.CheckFinding> acknowledged,
+                                com.sheout.driververification.RejectionReason rejectionCode,
+                                @Size(max = 500) String note) {
+    }
+
+    /**
+     * Sending something back takes a reason from the list, so she is told
+     * how to fix it in her own language. Enforced here, at the console's
+     * door; the services still take a typed reason for their own callers.
+     */
+    private static void requireCodeWhenRejecting(boolean rejecting, com.sheout.driververification.RejectionReason code) {
+        if (rejecting && code == null) {
+            throw VerificationController.toApiException(VerificationError.REASON_CODE_REQUIRED);
+        }
+    }
+
+    // ------------------------------------------------------------- reasons list
+
+    /** The reasons that may be given for her ID (no documentType) or for one document, with what she is shown. */
+    @RequiresPermission(Permission.VERIFICATION_REVIEW)
+    @GetMapping("/api/v1/admin/verification/rejection-reasons")
+    public ResponseEntity<List<ReasonOption>> rejectionReasons(
+            @RequestParam(name = "documentType", required = false) com.sheout.driververification.PartnerDocumentType documentType) {
+        return ResponseEntity.ok(com.sheout.driververification.RejectionReason.forTarget(documentType).stream()
+                .map(r -> new ReasonOption(r.name(), r.message(documentType), r.remembersNumber())).toList());
+    }
+
+    public record ReasonOption(String code, String message, boolean remembersNumber) {
+    }
+
+    // ---------------------------------------------------------------- overrides
+
+    /**
+     * Asks for a failed check to be accepted anyway. Nothing changes until a
+     * second person, holding verification.all, signs it off on the Approvals
+     * page; the note is what they read before they do.
+     */
+    @RequiresPermission(Permission.VERIFICATION_REVIEW)
+    @PostMapping("/api/v1/admin/verification/{accountId}/checks/{type}/override")
+    public ResponseEntity<Approvals.Submitted> askOverride(@PathVariable UUID accountId,
+                                                           @PathVariable com.sheout.driververification.CheckType type,
+                                                           @Valid @RequestBody OverrideAsk request) {
+        CurrentAccount admin = caller();
+        mayOpen(accountId);
+        String target = accountId + ":" + type;
+        if (approvals.pending(Approvals.Kind.VERIFICATION_CHECK_OVERRIDE, target)) {
+            throw VerificationController.toApiException(VerificationError.OVERRIDE_ALREADY_ASKED);
+        }
+        Result<VerificationCheckService.OverrideRequest, VerificationError> prepared =
+                checks.prepareOverride(accountId, type, request.note(), admin.accountId());
+        if (prepared.isFailure()) {
+            throw VerificationController.toApiException(prepared.error());
+        }
+        String who = authApi.findAccount(accountId).map(a -> a.phoneNumber()).orElse(accountId.toString());
+        return ResponseEntity.accepted().body(approvals.submit(new Approvals.Request(Approvals.Kind.VERIFICATION_CHECK_OVERRIDE,
+                "Accept the failed " + type.name().toLowerCase(java.util.Locale.ROOT).replace('_', ' ') + " check for " + who,
+                Approvals.payload(prepared.value()), null, Permission.VERIFICATION_ALL, "VERIFICATION_CHECK", target,
+                prepared.value().note())));
+    }
+
+    public record OverrideAsk(@NotNull @Size(min = 10, max = 1000) String note) {
+    }
+
+    /** Carries out an override, as the second person who signed it off. */
+    @org.springframework.context.annotation.Bean
+    static com.sheout.staff.ApprovalExecutor verificationCheckOverrides(VerificationCheckService checks) {
+        return new com.sheout.staff.ApprovalExecutor() {
+            @Override
+            public Approvals.Kind kind() {
+                return Approvals.Kind.VERIFICATION_CHECK_OVERRIDE;
+            }
+
+            @Override
+            public Outcome execute(String payload) {
+                VerificationCheckService.OverrideRequest request = Approvals.read(payload, VerificationCheckService.OverrideRequest.class);
+                Result<com.sheout.driververification.VerificationCheck, VerificationError> result =
+                        checks.applyOverride(request, StaffContext.requireSignedIn().accountId());
+                if (result.isFailure()) {
+                    return Outcome.failed(VerificationController.toApiException(result.error()).getMessage());
+                }
+                return Outcome.done("The " + request.type().name().toLowerCase(java.util.Locale.ROOT).replace('_', ' ')
+                        + " check is accepted. A reviewer can now approve the document.");
+            }
+        };
+    }
+
+    // ------------------------------------------------------------- oversight
+
+    /** This week's (or the given week's) 10% sample of decided cases, for a second look. */
+    @RequiresPermission(Permission.VERIFICATION_ALL)
+    @GetMapping("/api/v1/admin/verification/sample")
+    public ResponseEntity<ReviewOversightService.Sample> sample(@RequestParam(name = "week", required = false) String week) {
+        Result<ReviewOversightService.Sample, VerificationError> result =
+                oversight.weeklySample(week == null || week.isBlank() ? ReviewOversightService.currentWeek() : week.trim());
+        if (result.isFailure()) {
+            throw VerificationController.toApiException(result.error());
+        }
+        return ResponseEntity.ok(result.value());
+    }
+
+    @RequiresPermission(Permission.VERIFICATION_ALL)
+    @PostMapping("/api/v1/admin/verification/sample/{accountId}/second-look")
+    public ResponseEntity<ReviewOversightService.SecondLook> secondLook(@PathVariable UUID accountId,
+                                                                        @Valid @RequestBody SecondLookRequest request) {
+        Result<ReviewOversightService.SecondLook, VerificationError> result = oversight.recordSecondLook(accountId,
+                request.week(), caller().accountId(), request.outcome(), request.note());
+        if (result.isFailure()) {
+            throw VerificationController.toApiException(result.error());
+        }
+        return ResponseEntity.ok(result.value());
+    }
+
+    public record SecondLookRequest(@NotNull String week, @NotNull String outcome, @Size(max = 1000) String note) {
+    }
+
+    /** Each reviewer's decisions and override rate over the last days (30 by default). */
+    @RequiresPermission(Permission.VERIFICATION_ALL)
+    @GetMapping("/api/v1/admin/verification/reviewer-stats")
+    public ResponseEntity<List<ReviewOversightService.ReviewerStats>> reviewerStats(
+            @RequestParam(name = "days", defaultValue = "30") int days) {
+        return ResponseEntity.ok(oversight.reviewerStats(days));
     }
 
     /**
