@@ -218,6 +218,16 @@ public class PaymentService implements PaymentApi {
     }
 
     @Override
+    public BigDecimal partnerShareOf(BigDecimal fare) {
+        return platformCommission.payoutFrom(fare);
+    }
+
+    @Override
+    public BigDecimal commissionPercent() {
+        return platformCommission.percent();
+    }
+
+    @Override
     public Result<PaymentSummary, PaymentError> getPaymentStatus(UUID bookingId) {
         return ensurePayment(bookingId)
                 .map(payment -> Result.<PaymentSummary, PaymentError>success(toSummary(payment)))

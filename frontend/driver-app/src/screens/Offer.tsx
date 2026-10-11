@@ -1,7 +1,7 @@
 import { Navigation } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { AmountText, Button, Card, CountdownRing, LiveMap, SkeletonCard, TopHeader, useRouteLine } from '@sheout/design-system';
+import { AmountText, Button, Card, CountdownRing, LiveMap, SkeletonCard, TopHeader, formatRupees, useRouteLine } from '@sheout/design-system';
 import type { MapMarker } from '@sheout/design-system';
 import { ApiError, bookingApi, dispatchApi, routesApi } from '../api/client';
 import { apiErrorText } from '../lib/apiErrors';
@@ -21,7 +21,7 @@ function toRad(deg: number): number {
   return (deg * Math.PI) / 180;
 }
 
-/** Straight-line (haversine) distance, not a routed distance - no routing/directions API is configured anywhere in this project. */
+/** Straight-line (haversine) distance: the fallback when the road route cannot be had (see routedKm). */
 function distanceKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
   const dLat = toRad(b.lat - a.lat);
   const dLng = toRad(b.lng - a.lng);
@@ -152,7 +152,24 @@ export function Offer() {
     }
   }
 
-  const distance = offer?.pickup && offer?.drop ? distanceKm(offer.pickup, offer.drop) : null;
+  // The road distance, the same one the customer was quoted from; straight
+  // line only if routing is down (it reads shorter - 5.9 km against a 7.9 km
+  // quote - so it is never preferred).
+  const [routedKm, setRoutedKm] = useState<number | null>(null);
+  useEffect(() => {
+    if (!offer?.pickup || !offer?.drop) return;
+    let cancelled = false;
+    routesApi
+      .preview(offer.pickup, offer.drop)
+      .then((r) => {
+        if (!cancelled) setRoutedKm(r.distanceKm);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [offer?.pickup?.lat, offer?.pickup?.lng, offer?.drop?.lat, offer?.drop?.lng]);
+  const distance = routedKm ?? (offer?.pickup && offer?.drop ? distanceKm(offer.pickup, offer.drop) : null);
 
   // Where the job actually is. A fare and two place names are not enough to
   // judge an offer in fifteen seconds - every real driver app shows the
@@ -187,8 +204,22 @@ export function Offer() {
                 {secondsLeft > 0 ? t('offer.secondsToRespond') : t('offer.timeUp')}
               </span>
             </div>
-            {offer.fareEstimate != null && <AmountText amount={offer.fareEstimate} size="lg" />}
+            {/* Her earnings first, as she will be paid them; the fare and
+                SheOut's share under it. An older server sends only the fare. */}
+            {offer.partnerEarnings != null ? (
+              <div className="text-right" data-testid="offer-earnings">
+                <p className="text-xs font-medium text-text-secondary">{t('offer.youEarn')}</p>
+                <AmountText amount={offer.partnerEarnings} exact size="lg" />
+              </div>
+            ) : (
+              offer.fareEstimate != null && <AmountText amount={offer.fareEstimate} size="lg" />
+            )}
           </Card>
+          {offer.partnerEarnings != null && offer.fareEstimate != null && (
+            <p className="-mt-2 px-1 text-right text-xs text-text-secondary" data-testid="offer-fare-line">
+              {t('offer.fareAndFee', { fare: formatRupees(offer.fareEstimate, true), percent: offer.commissionPercent ?? '-' })}
+            </p>
+          )}
 
           <Card className="space-y-3">
             {offer.pickup && (

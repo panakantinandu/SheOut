@@ -21,6 +21,16 @@ public interface PaymentApi {
 
     Result<PaymentSummary, PaymentError> getPaymentStatus(UUID bookingId);
 
+    /**
+     * What a partner receives from this fare at today's commission - the same
+     * PlatformCommission arithmetic her payout is worked out with, so the
+     * earnings an offer shows are the earnings she is paid.
+     */
+    java.math.BigDecimal partnerShareOf(java.math.BigDecimal fare);
+
+    /** Today's platform commission as a percentage, e.g. 18.00. */
+    java.math.BigDecimal commissionPercent();
+
     /** A rider's SheOut wallet balance; zero when she has never topped up. For the console. */
     java.math.BigDecimal riderWalletBalance(UUID customerAccountId);
 
