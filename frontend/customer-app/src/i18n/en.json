@@ -1242,7 +1242,7 @@
     "comingToCollect": "Coming to collect you",
     "onYourWayBody": "Your trip has started. The map now follows you to your drop.",
     "mapFinished": "Where this trip would have started and ended.",
-    "mapUpdated": "Partner's position updated {{seconds}}s ago. It refreshes every {{every}}s.",
+    "mapUpdated": "Partner's position updated {{ago}}. It refreshes every {{every}}s.",
     "mapWaiting": "Waiting for the partner to report a position...",
     "mapPreview": "Showing your pickup and drop. Your partner appears once one is assigned.",
     "openInMaps": "Open her position in Google Maps",
@@ -1278,7 +1278,7 @@
       "pickupLabel": "Pickup",
       "dropLabel": "Drop",
       "eta": "{{minutes}} min · {{km}} km",
-      "updated": "Updated {{seconds}}s ago",
+      "updated": "Updated {{ago}}",
       "reconnecting": "Reconnecting...",
       "faceVerified": "Face verified today",
       "helmetChecked": "Helmet checked",
@@ -1308,7 +1308,14 @@
       "title": "Payment successful",
       "body": "Paid to {{name}}. Thank you for riding with SheOut!"
     },
-    "reportAccident": "Report an accident or make a claim"
+    "reportAccident": "Report an accident or make a claim",
+    "ago": {
+      "justNow": "just now",
+      "seconds": "{{count}}s ago",
+      "minutes": "{{count}} min ago",
+      "long": "over an hour ago"
+    },
+    "cancelMessage": "Cancelling is free. Your reason helps us understand what went wrong, and is not shown to your partner."
   },
   "nav": {
     "home": "Home",

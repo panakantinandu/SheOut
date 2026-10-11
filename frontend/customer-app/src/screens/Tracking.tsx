@@ -658,7 +658,7 @@ export function Tracking() {
           </div>
           {driverLocation && (
             <p className="absolute bottom-2 left-3 z-10 rounded-full bg-surface/90 px-2.5 py-1 text-[11px] text-text-secondary shadow-float">
-              {t('tracking.live.updated', { seconds: secondsAgo(driverLocation.recordedAt) })}
+              {t('tracking.live.updated', { ago: agoText(t, driverLocation.recordedAt) })}
             </p>
           )}
         </div>
@@ -812,8 +812,8 @@ export function Tracking() {
           )}
         </Card>
 
-        {/* The two things worth one tap. SOS is on the map. */}
-        <div className="grid grid-cols-2 gap-3">
+        {/* The things worth one tap. SOS is on the map, chat on her card above. */}
+        <div className={`grid gap-3 ${supportPhoneNumber ? 'grid-cols-2' : 'grid-cols-1'}`}>
           <Button variant="secondary" size="md" icon={<Radio className="h-4 w-4" />} onClick={shareTrip} data-testid="share-trip">
             {t('tracking.shareTrip')}
           </Button>
@@ -821,15 +821,11 @@ export function Tracking() {
             <Button variant="secondary" size="md" icon={<Headphones className="h-4 w-4" />} onClick={() => { window.location.href = `tel:${supportPhoneNumber}`; }}>
               {t('tracking.support')}
             </Button>
-          ) : (
-            <Button variant="secondary" size="md" icon={<MessageCircle className="h-4 w-4" />} onClick={() => navigate(`/chat/${bookingId}`)}>
-              {t('chat.title')}
-            </Button>
-          )}
+          ) : null}
         </div>
         {shareNote && <p className="text-center text-xs text-text-secondary" data-testid="share-note">{shareNote}</p>}
 
-        <Card className="flex items-center justify-between py-3">
+        <Card className="flex items-center justify-between px-5 py-3">
           <span className="text-sm text-text-secondary">{t('tracking.live.fare')}</span>
           <AmountText amount={booking.amountDue ?? booking.finalFare ?? booking.fareEstimate} size="lg" />
         </Card>
@@ -876,6 +872,7 @@ export function Tracking() {
         />
         <CancelReasonDialog
           open={askingWhy}
+          message={t('tracking.cancelMessage')}
           options={CUSTOMER_CANCELLATION_REASONS}
           busy={cancelling}
           error={cancelError}
@@ -1035,9 +1032,6 @@ export function Tracking() {
             />
           </div>
 
-          <StatusBadge tone="warning" className="mt-3">
-            {bookingStatusLabel(booking.status)}
-          </StatusBadge>
         </Card>
       )}
 
@@ -1047,7 +1041,7 @@ export function Tracking() {
           {isFinished
             ? t('tracking.mapFinished')
             : driverLocation
-              ? t('tracking.mapUpdated', { seconds: secondsAgo(driverLocation.recordedAt), every: DRIVER_LOCATION_POLL_MS / 1000 })
+              ? t('tracking.mapUpdated', { ago: agoText(t, driverLocation.recordedAt), every: DRIVER_LOCATION_POLL_MS / 1000 })
               : hasDriver
                 ? t('tracking.mapWaiting')
                 : t('tracking.mapPreview')}
@@ -1098,7 +1092,7 @@ export function Tracking() {
       {booking && promoShown && (
         <Card className="space-y-2" data-testid="tracking-promo-fare">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-text-secondary">{t('fare.estimated')}</span>
+            <span className="text-sm text-text-secondary">{t('tracking.live.fare')}</span>
             <AmountText amount={booking.amountDue} size="lg" />
           </div>
           <PromoFareLines
@@ -1115,7 +1109,7 @@ export function Tracking() {
           {/* A cancelled trip was never charged. Showing a rupee figure
               with no qualifier reads as a bill. */}
           <span className="text-sm text-text-secondary">
-            {booking.status === 'CANCELLED' || searchFailed ? t('tracking.fareNotCharged') : t('fare.estimated')}
+            {booking.status === 'CANCELLED' || searchFailed ? t('tracking.fareNotCharged') : t('tracking.live.fare')}
           </span>
           <AmountText amount={booking.finalFare ?? booking.fareEstimate} size="lg" />
         </Card>
@@ -1155,7 +1149,7 @@ export function Tracking() {
             <IconCircle tone="soft" icon={<Headphones />} />
             {t('tracking.support')}
           </button>
-        ) : (
+        ) : hasDriver && (
           <button
             className="flex flex-col items-center gap-1 text-xs text-text-secondary"
             onClick={() => navigate(`/chat/${bookingId}`)}
@@ -1177,6 +1171,7 @@ export function Tracking() {
 
       <CancelReasonDialog
         open={askingWhy}
+        message={t('tracking.cancelMessage')}
         options={CUSTOMER_CANCELLATION_REASONS}
         busy={cancelling}
         error={cancelError}
@@ -1219,4 +1214,17 @@ export function Tracking() {
 /** Whole seconds since an ISO timestamp, floored at 0 for clock skew. */
 function secondsAgo(iso: string): number {
   return Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
+}
+
+/**
+ * How long ago the partner's position came in, the way a person says it:
+ * "just now", "40s ago", "5 min ago", "over an hour ago" - never
+ * "418530s ago" when her signal has been gone a while.
+ */
+function agoText(t: (key: string, options?: Record<string, unknown>) => string, iso: string): string {
+  const seconds = secondsAgo(iso);
+  if (seconds < 10) return t('tracking.ago.justNow');
+  if (seconds < 60) return t('tracking.ago.seconds', { count: seconds });
+  if (seconds < 3600) return t('tracking.ago.minutes', { count: Math.floor(seconds / 60) });
+  return t('tracking.ago.long');
 }
