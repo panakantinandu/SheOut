@@ -891,10 +891,10 @@
     "mapBoth": "Pickup and drop shown below.",
     "mapPickDrop": "Pick a destination to see it on the map.",
     "pickupLocation": "Pickup Location",
-    "tapToChoosePickup": "Tap to choose your pickup point",
+    "tapToChoosePickup": "Choose pickup point",
     "findingLocation": "Finding your location...",
     "dropLocation": "Drop Location",
-    "selectDestination": "Select Destination",
+    "selectDestination": "Choose drop point",
     "setPickup": "Set pickup location",
     "whereTo": "Where to?",
     "currentLocation": "Your Current Location",
@@ -919,7 +919,8 @@
     "fixedPrice": "Fixed price",
     "fixedPriceNote": "The price you see is the price you pay - it does not change with traffic or waiting. Times are estimates.",
     "tripKmMin": "{{km}} km · about {{minutes}} min ride",
-    "tripKmDropBy": "{{km}} km · Drop by {{time}}"
+    "tripKmDropBy": "{{km}} km · Drop by {{time}}",
+    "payAfterTrip": "You pay after the trip, in the app: SheOut wallet, UPI or card. No cash."
   },
   "apiError": {
     "UNPAID_TRIP": "Your last trip is still unpaid. Pay for it from your wallet or online, then book again.",
