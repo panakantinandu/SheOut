@@ -119,7 +119,12 @@
   },
   "completeProfile": {
     "title": "Complete your profile",
-    "subtitle": "A few details before your first ride."
+    "subtitle": "A few details before your first ride.",
+    "differentNumber": "Use a different number",
+    "leaveTitle": "Use a different number?",
+    "leaveBody": "You'll be signed out. This number keeps its account, so you can sign in with it any time to finish setting it up.",
+    "leaveConfirm": "Sign out",
+    "stay": "Stay"
   },
   "profile": {
     "loadError": "Could not load your profile",

@@ -4,6 +4,7 @@ export * from './lib/labels';
 export * from './lib/cancellation';
 export * from './lib/support';
 export * from './lib/requestErrors';
+export * from './lib/useBackGuard';
 export * from './lib/usePagedList';
 export * from './lib/useContentSection';
 export * from './lib/push';

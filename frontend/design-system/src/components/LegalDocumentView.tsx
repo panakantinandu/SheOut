@@ -1,5 +1,8 @@
+import { useEffect } from 'react';
+import { X } from 'lucide-react';
 import { Card } from './Card';
 import { TopHeader } from './TopHeader';
+import { SheOutWordmark } from './SheOutLogo';
 import { TODO_LAWYER, TODO_LEGAL, type LegalDocument } from '../legal/content';
 import { useAppLanguage } from '../i18n';
 import { useTranslation } from 'react-i18next';
@@ -7,6 +10,33 @@ import { useTranslation } from 'react-i18next';
 export interface LegalDocumentViewProps {
   document: LegalDocument;
   onBack: () => void;
+  /**
+   * Shown as a document in its own browser tab (see openLegalDocument), not
+   * as a screen of the app: the SheOut name and the title instead of a back
+   * arrow that would walk into the app.
+   */
+  standalone?: boolean;
+  /** The tab was opened by the app, so it may close itself. */
+  canClose?: boolean;
+}
+
+/** Marks a legal page opened from the app in a tab of its own. */
+const TAB_PARAM = 'view=tab';
+
+/**
+ * Opens the Terms or the Privacy Policy in a new browser tab, at its own
+ * address. In place, it unmounted whatever she was in the middle of - the
+ * number and code on sign-in, her name and date of birth on Complete
+ * profile - and back brought her to an empty form. A tab leaves all of that
+ * where it was, and the document is a page she can share, print or keep.
+ */
+export function openLegalDocument(path: '/terms' | '/privacy') {
+  window.open(`${path}?${TAB_PARAM}`, '_blank', 'noopener');
+}
+
+/** True on a legal page that was opened by openLegalDocument. */
+export function openedAsLegalTab(search: string): boolean {
+  return new URLSearchParams(search).get('view') === 'tab';
 }
 
 /**
@@ -19,12 +49,41 @@ export interface LegalDocumentViewProps {
  * avoiding: anyone reading this should be able to see at a glance that the
  * company details are still outstanding.
  */
-export function LegalDocumentView({ document, onBack }: LegalDocumentViewProps) {
+export function LegalDocumentView({ document, onBack, standalone = false, canClose = false }: LegalDocumentViewProps) {
   const { t } = useTranslation('ds');
   const lng = useAppLanguage();
+  // The browser tab says which document it is.
+  useEffect(() => {
+    if (!standalone) return;
+    const before = globalThis.document.title;
+    globalThis.document.title = `${document.title} · SheOut`;
+    return () => {
+      globalThis.document.title = before;
+    };
+  }, [standalone, document.title]);
   return (
     <div className="space-y-6">
-      <TopHeader variant="back" title={document.title} onBack={onBack} />
+      {standalone ? (
+        <header className="space-y-4" data-testid="legal-standalone-header">
+          <div className="flex items-center justify-between gap-3">
+            <SheOutWordmark className="w-28" />
+            {canClose && (
+              <button
+                type="button"
+                onClick={() => window.close()}
+                className="flex min-h-[44px] items-center gap-1.5 rounded-full border border-border bg-surface px-4 text-sm font-semibold text-text-primary"
+                data-testid="legal-close"
+              >
+                <X className="h-4 w-4" aria-hidden="true" />
+                {t('common.close')}
+              </button>
+            )}
+          </div>
+          <h1 className="font-heading text-title text-text-primary">{document.title}</h1>
+        </header>
+      ) : (
+        <TopHeader variant="back" title={document.title} onBack={onBack} />
+      )}
 
       {/* Legal text is not machine-translated: a wrong word in a contract is
           a legal problem, not a typo. Said plainly rather than left to be

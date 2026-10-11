@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { AuthModeSwitch, BrandHeader, Button, PhoneEntry, LANGUAGES, LanguagePicker, LegalConsentNotice, PhoneField, TextField, isCompletePhone, setAppLanguage, toE164, useAppLanguage, ResendCode, useOtpSender, i18next, AuthBackdrop, Card, OtpCodeField, OTP_CODE_LENGTH } from '@sheout/design-system';
+import { AuthModeSwitch, BrandHeader, Button, PhoneEntry, LANGUAGES, LanguagePicker, LegalConsentNotice, PhoneField, TextField, isCompletePhone, setAppLanguage, toE164, useAppLanguage, ResendCode, useOtpSender, i18next, AuthBackdrop, Card, OtpCodeField, OTP_CODE_LENGTH, openLegalDocument, phoneDisplay } from '@sheout/design-system';
 import { ArrowRight, Languages, ShieldCheck, Wallet, Headset } from 'lucide-react';
 import { ApiError, authApi, takeSessionEndedReason, usersApi } from '../api/client';
 import type { AuthSession } from '../api/types';
@@ -48,8 +48,8 @@ export function Login() {
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [mode, setMode] = useState<AuthMode>('login');
   /**
-   * Set when the Login tab's code was right but the number has no partner
-   * account: she is asked, rather than given one - a partner account starts
+   * Set when the code was right but the number has no partner account yet,
+   * on either tab: she is asked, rather than given one - a partner account starts
    * a whole verification journey. Told only after the code is verified.
    */
   const [noAccountCode, setNoAccountCode] = useState<string | null>(null);
@@ -165,8 +165,11 @@ export function Login() {
     setError(null);
     setSubmitting(true);
     try {
-      // The Login tab never creates an account on its own - see noAccountCode.
-      const session = await authApi.verifyOtp(phoneNumber, entered, mode === 'register');
+      // Neither tab creates an account on its own. A number with no account
+      // is answered NO_ACCOUNT and she is asked, with her number in front of
+      // her, before one exists - on Sign Up too: the tab used to create it
+      // silently and land her on the profile form with no way back.
+      const session = await authApi.verifyOtp(phoneNumber, entered, false);
       await afterSignIn(session);
     } catch (err) {
       if (err instanceof ApiError && err.body?.error === 'NO_ACCOUNT') {
@@ -268,8 +271,8 @@ export function Login() {
                     rather than after it - see LegalConsentNotice. */}
                 <LegalConsentNotice
                   actionLabel={t('login.sendOtp')}
-                  onOpenTerms={() => navigate('/terms')}
-                  onOpenPrivacy={() => navigate('/privacy')}
+                  onOpenTerms={() => openLegalDocument('/terms')}
+                  onOpenPrivacy={() => openLegalDocument('/privacy')}
                 />
                 <Button
                   type="submit"
@@ -301,7 +304,7 @@ export function Login() {
             <div className="space-y-4 motion-safe:animate-fade-slide-in" role="alertdialog" aria-labelledby="no-account-title" data-testid="no-account">
               <div className="rounded-input bg-primary-light px-4 py-3">
                 <p id="no-account-title" className="font-heading text-card-title text-text-primary">{t('login.noAccount.title')}</p>
-                <p className="mt-1 text-sm text-text-secondary">{t('login.noAccount.body', { phone: phoneNumber })}</p>
+                <p className="mt-1 text-sm text-text-secondary">{t('login.noAccount.body', { phone: phoneDisplay(phoneNumber) })}</p>
               </div>
               {error && <p className="text-sm text-danger" role="alert">{error}</p>}
               <Button fullWidth disabled={submitting} onClick={() => void createAccount()} data-testid="no-account-create">
