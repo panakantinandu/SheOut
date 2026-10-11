@@ -1,6 +1,6 @@
 import { FileText, Info, Languages, Lock, LogOut } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Card,
   ConfirmDialog,
@@ -19,8 +19,8 @@ import {
 import { preferencesApi, privacyApi, supportApi } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { useGoBack } from '../lib/useGoBack';
+import { APP_VERSION } from '../lib/appVersion';
 
-const APP_VERSION = '0.1.0';
 
 /**
  * Everything about how the app behaves rather than who she is: language,
@@ -35,6 +35,7 @@ export function Settings() {
   const { t } = useTranslation();
   const { t: ds } = useTranslation('ds');
   const navigate = useNavigate();
+  const [params] = useSearchParams();
   const goBack = useGoBack('/profile');
   const { isAuthenticated, logout } = useAuth();
   const lng = useAppLanguage();
@@ -69,6 +70,7 @@ export function Settings() {
       </section>
 
       <PrivacyDataSection
+        startWithDelete={params.get('delete') === '1'}
         audience="driver"
         grievanceOfficerEmail={grievanceEmail}
         onDownload={() => privacyApi.downloadMyData()}

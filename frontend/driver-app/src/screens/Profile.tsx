@@ -1,4 +1,4 @@
-import { Camera, Car, Landmark, ShieldCheck } from 'lucide-react';
+import { Camera, Car, Landmark, ShieldCheck, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Avatar, Button, Card, IconCircle, ListRow, StatusBadge, TopHeader, phoneDisplay, vehicleLabel, ProfileCompletionForm, shrinkPhoto, ServiceArt } from '@sheout/design-system';
@@ -6,6 +6,7 @@ import { useAppDrawer } from '../components/AppDrawer';
 import { ApiError, usersApi } from '../api/client';
 import type { DriverProfileSummary, VehicleType } from '../api/types';
 import { VehicleFields } from '../components/VehicleFields';
+import { APP_VERSION } from '../lib/appVersion';
 import { PendingChangeCard } from '../components/PendingChangeCard';
 import { YourCoverCard } from '../components/YourCoverCard';
 import { useTranslation } from '@sheout/design-system';
@@ -22,6 +23,7 @@ import { useTranslation } from '@sheout/design-system';
  */
 export function Profile() {
   const { t } = useTranslation();
+  const { t: ds } = useTranslation('ds');
   const navigate = useNavigate();
   const drawer = useAppDrawer();
   const [profile, setProfile] = useState<DriverProfileSummary | null>(null);
@@ -203,6 +205,18 @@ export function Profile() {
               <ListRow icon={icon(<ShieldCheck />)} label={t('verification.title')} sublabel={t('profile.verificationSub')} onClick={() => navigate('/verification')} />
               <ListRow icon={icon(<Landmark />)} label={t('profile.payouts')} sublabel={t('profile.payoutsSub')} onClick={() => navigate('/payouts')} />
             </Card>
+          </section>
+
+          <section>
+            <Card className="p-0">
+              <ListRow
+                icon={<IconCircle tone="soft" size="sm" color="red" icon={<Trash2 />} />}
+                label={ds('privacy.delete')}
+                sublabel={ds('privacy.deleteSub')}
+                onClick={() => navigate('/settings?delete=1')}
+              />
+            </Card>
+            <p className="mt-4 text-center text-caption text-text-secondary">{t('drawer.version', { version: APP_VERSION })}</p>
           </section>
         </>
       )}

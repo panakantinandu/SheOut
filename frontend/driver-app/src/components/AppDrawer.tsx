@@ -5,8 +5,8 @@ import { Avatar, Drawer, useTranslation, vehicleLabel } from '@sheout/design-sys
 import { usersApi } from '../api/client';
 import type { DriverProfileSummary } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
+import { APP_VERSION } from '../lib/appVersion';
 
-const APP_VERSION = '0.1.0';
 
 interface DrawerControls {
   open: () => void;
