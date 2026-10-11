@@ -522,5 +522,9 @@
   "loadFailed": {
     "body": "Check that you are connected to the internet, then try again. Nothing you sent is lost.",
     "retry": "Try again"
+  },
+  "requestError": {
+    "network": "Couldn't reach SheOut. Check your internet and try again.",
+    "server": "Something went wrong on our side. Please try again in a moment."
   }
 }

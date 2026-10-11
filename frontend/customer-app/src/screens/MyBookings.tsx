@@ -1,7 +1,7 @@
 import { CalendarX, MapPinned, SearchX, Star, UtensilsCrossed } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { AmountText, Button, Card, DateRangeFields, IconCircle, ListEmptyState, ListFilterBar, PullToRefresh, SkeletonList, LoadMore, SelectField, StatusBadge, TopHeader, bookingCategoryLabel, bookingStatusLabel, isAwaitingPayment, tripStatusLabel, endOfDayIso, startOfDayIso, usePagedList, ServiceArt } from '@sheout/design-system';
+import { LoadFailed, AmountText, Button, Card, DateRangeFields, IconCircle, ListEmptyState, ListFilterBar, PullToRefresh, SkeletonList, LoadMore, SelectField, StatusBadge, TopHeader, bookingCategoryLabel, bookingStatusLabel, isAwaitingPayment, tripStatusLabel, endOfDayIso, startOfDayIso, usePagedList, ServiceArt } from '@sheout/design-system';
 import type { DateRangeValue, StatusTone } from '@sheout/design-system';
 import { bookingApi } from '../api/client';
 import type { BookingCategory, BookingStatus, BookingSummary } from '../api/types';
@@ -252,7 +252,7 @@ export function MyBookings() {
         <DateRangeFields value={dates} onChange={setDates} />
       </ListFilterBar>
 
-      {list.error && <p className="text-sm text-danger">{list.error}</p>}
+      {list.error && <LoadFailed onRetry={list.reload} testId="list-load-failed" />}
       {list.loading && <SkeletonList rows={4} label={t('bookings.loading')} />}
 
       {!list.loading && list.items.length === 0 && !list.error && (

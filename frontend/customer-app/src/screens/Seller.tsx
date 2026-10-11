@@ -2,7 +2,7 @@ import { Check, ImageOff, MapPin, Sparkles, Store, X } from 'lucide-react';
 import { AvailabilityBadge } from '../components/marketplace/ProductTermsView';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import {
+import {LoadFailed,
   ListEmptyState,
   ListFilterBar,
   LoadMore,
@@ -462,7 +462,7 @@ export function Seller() {
       )}
 
       {!aiMode && list.loading && <SkeletonList rows={4} label={t('seller.directory.loading')} />}
-      {!aiMode && !list.loading && list.error && <p className="text-sm text-danger">{list.error}</p>}
+      {!aiMode && !list.loading && list.error && <LoadFailed onRetry={list.reload} testId="list-load-failed" />}
       {!aiMode && !list.loading && !list.error && list.items.length === 0 && (
         categoryOnly ? (
           // Only a category was picked: that category has no shops yet, not "nothing matches".

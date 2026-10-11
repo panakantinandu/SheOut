@@ -1,7 +1,7 @@
 import { ReceiptText, SearchX } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { useGoBack } from '../lib/useGoBack';
-import {
+import {LoadFailed,
   AmountText,
   Card,
   DateRangeFields,
@@ -137,7 +137,7 @@ export function PaymentMethods() {
         </div>
       </ListFilterBar>
 
-      {list.error && <p className="text-sm text-danger">{list.error}</p>}
+      {list.error && <LoadFailed onRetry={list.reload} testId="list-load-failed" />}
       {list.loading && <SkeletonList rows={4} label={t('payments.loading')} />}
 
       {!list.loading && list.items.length === 0 && !list.error && (
