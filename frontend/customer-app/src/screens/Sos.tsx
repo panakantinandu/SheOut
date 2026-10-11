@@ -7,7 +7,7 @@ import { usersApi } from '../api/client';
 import type { EmergencyContact, SosResponse } from '../api/types';
 import { EMERGENCY, mapsLink, openSmsComposer, shareViaDevice } from '../lib/emergency';
 import { cacheContacts, cachePosition, cachedContacts, cachedPosition, pendingSos, sendSos, type TriggerSource } from '../lib/sosDelivery';
-import { useDiscreetSos } from '../components/DiscreetSosGuard';
+import { BUTTON_COUNTDOWN_SECONDS, useDiscreetSos } from '../components/DiscreetSosGuard';
 import { useTranslation } from '@sheout/design-system';
 
 const SAFETY_FEATURES = ['liveLocation', 'support', 'verifiedPartners', 'emergencyContacts'] as const;
@@ -300,7 +300,10 @@ export function Sos() {
       <div className="flex flex-col items-center gap-3 text-center">
         <button
           type="button"
-          onClick={() => void handleSendSos('BUTTON')}
+          // Not sent on the tap: the 5-second countdown first, with a large
+          // Cancel and Send SOS now - see BUTTON_COUNTDOWN_SECONDS. When it
+          // ends, or on Send now, it comes back here as autoSend.
+          onClick={() => discreet.startCountdown('BUTTON', BUTTON_COUNTDOWN_SECONDS)}
           disabled={sending}
           aria-label={sending ? t('sos.sendingAria') : t('sos.sendAria')}
           className="relative flex h-44 w-44 items-center justify-center rounded-full transition-transform active:scale-95 disabled:opacity-70"

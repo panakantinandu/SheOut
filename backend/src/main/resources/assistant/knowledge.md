@@ -61,6 +61,8 @@ setting the pickup and drop themselves.
 ## SOS - step by step
 
 1. Open SOS (the red button in the bottom bar) and press the SOS circle.
+   A 5-second countdown appears with a large Cancel button: the alert goes
+   when it ends, or at once with "Send SOS now". Cancel alerts nobody.
 2. The app takes your location and sends the alert to SheOut. SheOut texts
    every emergency contact you have saved an SMS with your location, and
    SheOut's operations team is alerted on their devices at the same moment.
