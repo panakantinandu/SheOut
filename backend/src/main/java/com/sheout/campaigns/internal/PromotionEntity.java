@@ -44,19 +44,41 @@ public class PromotionEntity extends BudgetedCampaign {
     }
 
     /**
-     * What this promotion would take off a fare, before the budget. A signup
-     * credit's is whatever the rider has left of it.
+     * What this promotion would take off a fare, before the budget, in WHOLE
+     * RUPEES: the fare is whole (see DistanceBasedFareCalculator), so what she
+     * pays stays whole too, and never below zero.
+     * <ul>
+     *   <li>A percentage is rounded half up (10% of 107 = 10.70 -> 11), then
+     *       held to the per-trip cap - the cap itself rounded down, so the
+     *       promised maximum is never exceeded.</li>
+     *   <li>A flat amount, or a credit balance, is rounded down: never more
+     *       than was granted. A balance left with paise (from fares before
+     *       they were whole) keeps them for a later trip.</li>
+     * </ul>
      */
     BigDecimal discountOn(BigDecimal fare, BigDecimal creditLeft) {
         BigDecimal wanted = switch (type) {
-            case SIGNUP_CREDIT, REFERRAL_REWARD, REFERRAL_WELCOME -> creditLeft == null ? BigDecimal.ZERO : creditLeft;
-            case FLAT_DISCOUNT -> value;
+            case SIGNUP_CREDIT, REFERRAL_REWARD, REFERRAL_WELCOME -> creditLeft == null ? BigDecimal.ZERO : rupeesDown(creditLeft);
+            case FLAT_DISCOUNT -> rupeesDown(value);
             case PERCENTAGE_DISCOUNT -> {
-                BigDecimal pct = fare.multiply(value).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-                yield maxDiscountPerBooking == null ? pct : pct.min(maxDiscountPerBooking);
+                BigDecimal pct = fare.multiply(value).divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
+                yield maxDiscountPerBooking == null ? pct : pct.min(rupeesDown(maxDiscountPerBooking));
             }
         };
         return wanted.min(fare).max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * The discount this promotion can actually give: discountOn, held to what
+     * is left of its budget - and that, too, in whole rupees, rounded down so
+     * the budget is never overspent.
+     */
+    BigDecimal wholeDiscountOn(BigDecimal fare, BigDecimal creditLeft) {
+        return rupeesDown(affordable(discountOn(fare, creditLeft))).setScale(2, RoundingMode.UNNECESSARY);
+    }
+
+    private static BigDecimal rupeesDown(BigDecimal amount) {
+        return amount.setScale(0, RoundingMode.FLOOR);
     }
 
     String getCode() { return code; }

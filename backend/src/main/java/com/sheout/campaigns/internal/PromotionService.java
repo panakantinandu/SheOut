@@ -178,14 +178,14 @@ public class PromotionService implements CampaignsApi {
             promotions.findById(grant.getPromotionId())
                     .filter(p -> p.activeAt(now))
                     .ifPresent(p -> found.add(new Candidate(p, grant,
-                            p.affordable(p.discountOn(fare, grant.getCreditRemaining())))));
+                            p.wholeDiscountOn(fare, grant.getCreditRemaining()))));
         }
         // Promotions with no code that apply to every rider, up to their per-rider limit.
         for (PromotionEntity p : promotions.findByCodeIsNullAndTypeIn(PER_TRIP_TYPES)) {
             if (!p.activeAt(now)) continue;
             long used = redemptions.countByPromotionIdAndAccountIdAndStatusIn(p.getId(), customerId, HELD_OR_USED);
             if (used >= p.getMaxUsesPerAccount()) continue;
-            found.add(new Candidate(p, null, p.affordable(p.discountOn(fare, null))));
+            found.add(new Candidate(p, null, p.wholeDiscountOn(fare, null)));
         }
         found.removeIf(c -> c.discount().signum() <= 0);
         found.sort((a, b) -> b.discount().compareTo(a.discount()));
@@ -215,8 +215,8 @@ public class PromotionService implements CampaignsApi {
             PromotionGrantEntity grant = candidate.grant() == null ? null
                     : grants.findLockedById(candidate.grant().getId()).filter(g -> g.usableAt(now)).orElse(null);
             if (candidate.grant() != null && grant == null) continue;
-            BigDecimal discount = promotion.affordable(
-                    promotion.discountOn(fare, grant == null ? null : grant.getCreditRemaining()));
+            BigDecimal discount = promotion.wholeDiscountOn(
+                    fare, grant == null ? null : grant.getCreditRemaining());
             if (discount.signum() <= 0) continue;
 
             promotion.spend(discount, now);
