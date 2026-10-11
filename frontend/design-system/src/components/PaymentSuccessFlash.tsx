@@ -1,3 +1,4 @@
+import { formatRupees } from './AmountText';
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from './Button';
@@ -91,7 +92,7 @@ export function PaymentSuccessFlash({ open, amount, title, message, onDone, auto
           <h2 className="mt-5 font-heading text-title text-text-primary">{title}</h2>
           {amount != null && (
             <p className="mt-2 font-heading text-4xl font-bold text-accent-green-strong motion-safe:animate-fade-slide-in" data-testid="payment-success-amount">
-              ₹{Number.isInteger(amount) ? amount : amount.toFixed(2)}
+              {formatRupees(amount, true)}
             </p>
           )}
           <p className="mt-2 text-text-secondary">{message}</p>

@@ -1,7 +1,7 @@
 import { ArrowDownLeft, Receipt, ShieldCheck, Store } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { LoadFailed, AmountText, Button, Card, IconCircle, ListEmptyState, LoadMore, PullToRefresh, SkeletonCard, SkeletonList, TextField, TopHeader, usePagedList, ServiceArt } from '@sheout/design-system';
+import { LoadFailed, AmountText, Button, Card, IconCircle, ListEmptyState, LoadMore, PullToRefresh, SkeletonCard, SkeletonList, TextField, TopHeader, usePagedList, ServiceArt, formatAmount, formatRupees } from '@sheout/design-system';
 import { ApiError, bookingApi, usersApi, walletApi } from '../api/client';
 import type { PaymentHold, RiderWallet, RiderWalletEntry } from '../api/types';
 import { openRazorpayCheckout } from '../lib/razorpayCheckout';
@@ -149,7 +149,7 @@ export function Wallet() {
       list.reload();
       setAdding(false);
       setAmount('');
-      setMessage({ tone: 'success', text: t('wallet.added', { amount: parsed.toFixed(2) }) });
+      setMessage({ tone: 'success', text: t('wallet.added', { amount: formatAmount(parsed, true) }) });
       // She came here to cover a fare - take her back to it.
       if (routeState.returnTo) {
         navigate(routeState.returnTo, { replace: true });
@@ -229,7 +229,7 @@ export function Wallet() {
                     : 'rounded-full border border-border px-4 py-2 text-sm font-medium text-text-secondary'
                 }
               >
-                ₹{q}
+                {formatRupees(q)}
               </button>
             ))}
           </div>
@@ -256,7 +256,7 @@ export function Wallet() {
               {t('common.cancel')}
             </Button>
             <Button className="flex-1" disabled={!amountValid || busy} onClick={handleAddMoney} data-testid="wallet-pay">
-              {busy ? t('wallet.opening') : amountValid ? t('wallet.addAmount', { amount: parsed.toFixed(0) }) : t('wallet.add')}
+              {busy ? t('wallet.opening') : amountValid ? t('wallet.addAmount', { amount: formatAmount(parsed, true) }) : t('wallet.add')}
             </Button>
           </div>
           <p className="text-xs text-text-secondary">
@@ -292,7 +292,7 @@ export function Wallet() {
             )}
           </span>
           <span className="text-xs font-medium text-text-primary">
-            {hold ? t('wallet.payTripDue', { amount: hold.amount.toFixed(0) }) : t('wallet.payTrip')}
+            {hold ? t('wallet.payTripDue', { amount: formatAmount(hold.amount, true) }) : t('wallet.payTrip')}
           </span>
         </button>
         <button type="button" className="flex flex-col items-center gap-2" onClick={() => navigate('/profile/payments')}>
@@ -352,7 +352,7 @@ export function Wallet() {
                       hour: 'numeric',
                       minute: '2-digit',
                     })}{' '}
-                    · {t('wallet.balanceAfter', { amount: entry.balanceAfter.toFixed(2) })}
+                    · {t('wallet.balanceAfter', { amount: formatAmount(entry.balanceAfter, true) })}
                   </p>
                 </div>
                 <AmountText amount={Math.abs(entry.amount)} sign={entry.amount >= 0 ? 'positive' : 'negative'} exact />

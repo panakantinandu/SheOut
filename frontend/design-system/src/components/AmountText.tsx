@@ -65,9 +65,27 @@ const prefix: Record<AmountSign, string> = {
 const formatter = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 });
 const exactFormatter = new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+/**
+ * A rupee amount in Indian grouping, for text that already has its own ₹
+ * ("Balance ₹{{amount}}"): "1,250", or "1,537.58" when exact and there are
+ * paise. Never "1250.00", and never a due amount silently rounded down.
+ */
+export function formatAmount(amount: number, exact = false): string {
+  const paise = Math.round(Math.abs(amount) * 100) % 100 !== 0;
+  return (exact && paise ? exactFormatter : formatter).format(amount);
+}
+
+/** The same with its ₹: "₹1,250", "₹107", "₹1,537.58". */
+export function formatRupees(amount: number, exact = false): string {
+  return `${amount < 0 ? '−' : ''}₹${formatAmount(Math.abs(amount), exact)}`;
+}
+
 /** Formatted ₹ amount - e.g. "+ ₹1,250" (wallet credit) or "- ₹56" (debit). */
 export function AmountText({ amount, sign = 'neutral', size = 'md', tone = 'default', exact = false, animate = false, className }: AmountTextProps) {
   const shown = useCountUp(amount, animate);
+  // exact shows paise only when there are some: a fare is whole rupees
+  // ("₹107", not "₹107.00"), a wallet balance may not ("₹1,537.58").
+  const paise = Math.round(Math.abs(shown) * 100) % 100 !== 0;
   return (
     <span
       className={cn(
@@ -77,7 +95,7 @@ export function AmountText({ amount, sign = 'neutral', size = 'md', tone = 'defa
         className
       )}
     >
-      {prefix[sign]} ₹{(exact ? exactFormatter : formatter).format(Math.abs(shown))}
+      {prefix[sign]} ₹{(exact && paise ? exactFormatter : formatter).format(Math.abs(shown))}
     </span>
   );
 }

@@ -185,4 +185,43 @@ class DistanceBasedFareCalculatorTest {
         assertFalse(noNight.isNight(LocalTime.of(2, 0)));
         assertFalse(noNight.isNight(LocalTime.of(14, 0)));
     }
+
+    @Test
+    @DisplayName("the fare is whole rupees, rounded once, while the components stay exact")
+    void fareIsWholeRupees() {
+        // 5.3km at 10/km = 53.00, 11.7min at 1/min = 11.70, base 20 -> 84.70 -> 85.
+        FareQuote quote = calculatorAt("12:00", fixedRoute(5.3, 11.7), RATES)
+                .quote(BookingCategory.BIKE, FROM, TO);
+
+        assertEquals(new BigDecimal("85.00"), quote.amount());
+        assertEquals(new BigDecimal("53.00"), quote.distanceCharge());
+        assertEquals(new BigDecimal("11.70"), quote.timeCharge());
+    }
+
+    @Test
+    @DisplayName("fifty paise rounds up, forty-nine paise rounds down")
+    void roundsHalfUp() {
+        assertEquals(new BigDecimal("83.00"), calculatorAt("12:00", fixedRoute(5.0, 12.5), RATES)
+                .quote(BookingCategory.BIKE, FROM, TO).amount()); // 82.50
+        assertEquals(new BigDecimal("82.00"), calculatorAt("12:00", fixedRoute(5.0, 12.49), RATES)
+                .quote(BookingCategory.BIKE, FROM, TO).amount()); // 82.49
+    }
+
+    @Test
+    @DisplayName("rounding happens after the night multiplier, not before it")
+    void roundsAfterMultipliers() {
+        // 84.70 x 1.5 = 127.05 -> 127. Rounding first would give 85 x 1.5 = 127.50.
+        FareQuote quote = calculatorAt("23:00", fixedRoute(5.3, 11.7), RATES)
+                .quote(BookingCategory.BIKE, FROM, TO);
+
+        assertEquals(new BigDecimal("127.00"), quote.amount());
+    }
+
+    @Test
+    @DisplayName("whole rupees keep two decimal places, so they compare and store like every other amount")
+    void wholeRupeesKeepScaleTwo() {
+        assertEquals(new BigDecimal("107.00"), DistanceBasedFareCalculator.wholeRupees(new BigDecimal("107.44")));
+        assertEquals(new BigDecimal("108.00"), DistanceBasedFareCalculator.wholeRupees(new BigDecimal("107.50")));
+        assertEquals(2, DistanceBasedFareCalculator.wholeRupees(new BigDecimal("40")).scale());
+    }
 }

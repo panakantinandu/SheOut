@@ -1437,7 +1437,8 @@
     "taxIncluded": "Includes GST of ₹{{amount}}",
     "taxSplit": "CGST ₹{{cgst}} + SGST ₹{{sgst}} on a taxable value of ₹{{taxable}}",
     "downloadInvoice": "Download tax invoice {{number}}",
-    "downloadError": "Could not download the invoice. Please try again."
+    "downloadError": "Could not download the invoice. Please try again.",
+    "rounded": "Rounded to the nearest rupee."
   },
   "settings": {
     "title": "Settings",
