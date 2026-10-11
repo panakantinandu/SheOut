@@ -195,10 +195,38 @@ UPDATE content_blocks SET description = 'Customer app,' || substr(description, l
  WHERE description LIKE 'Rider app,%';
 ```
 
-**Before running it:** check prod with
-`SELECT content_key, value, updated_by FROM content_blocks WHERE value ILIKE '%rider%';`.
-A row with `updated_by` set was edited by staff and will not match, so it
-keeps its text and needs a console edit instead.
+**Before creating it:** run this read-only check on prod (tested against a
+copy of the local database: 25 rows, all 5 value rows would match). A
+`false` in the second result means staff edited that row: it keeps its text
+and needs a console edit instead.
+
+```sql
+-- Read-only. Run on prod before V79 is created.
+-- 1. Every row V79 would touch, and whether staff have edited it.
+SELECT content_key,
+       updated_by IS NOT NULL                 AS edited_by_staff,
+       updated_at,
+       value ILIKE '%rider%'                  AS value_says_rider,
+       description ILIKE 'Rider app,%'        AS description_says_rider_app,
+       left(value, 90)                        AS value_start
+FROM content_blocks
+WHERE value ILIKE '%rider%' OR description ILIKE 'Rider app,%'
+ORDER BY value_says_rider DESC, content_key;
+
+-- 2. For the five value rows: would V79's exact-match WHERE update it?
+--    false = staff edited it (or it changed): fix that one in the console instead.
+SELECT content_key,
+       CASE content_key
+         WHEN 'about.body'            THEN value = 'Rides and deliveries built around women''s safety - women riders, women drivers.'
+         WHEN 'faq.driver.2.answer'   THEN value = 'Riders see it when you are on your way. It is how a woman getting into a stranger''s vehicle at night checks she has the right one. It is never shown to anyone before you accept a trip.'
+         WHEN 'faq.driver.3.answer'   THEN value = 'You must be online, verified, and allowing location access - requests are offered to the nearest available partners first, then further out. Requests also pause for up to ten minutes after a trip while the rider pays.'
+         WHEN 'faq.driver.4.question' THEN value = 'How do I contact my rider?'
+         WHEN 'faq.driver.6.answer'   THEN value = 'Your earnings are your share of every trip your riders have paid for. Each paid fare is added to your SheOut wallet, and you can request a payout to your bank or UPI from Wallet & payouts.'
+       END AS v79_would_update
+FROM content_blocks
+WHERE content_key IN ('about.body', 'faq.driver.2.answer', 'faq.driver.3.answer', 'faq.driver.4.question', 'faq.driver.6.answer')
+ORDER BY content_key;
+```
 
 ## Results (2026-10-10)
 
