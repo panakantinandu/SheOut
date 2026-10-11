@@ -52,14 +52,14 @@ function statusTone(booking: BookingSummary): StatusTone {
 function categoryIcon(category: BookingCategory) {
   if (category === 'PARCEL') {
     return (
-      <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-[#F3C385]/25 ring-1 ring-[#D98338]/20">
+      <div className="flex h-tap w-tap items-center justify-center overflow-hidden rounded-full bg-[#F3C385]/25 ring-1 ring-[#D98338]/20">
         <ServiceArt kind="parcel" size="sm" label="Parcel Delivery" />
       </div>
     );
   }
   if (category === 'LUNCHBOX') return <IconCircle color="green" tone="soft" size="sm" icon={<UtensilsCrossed />} />;
   return (
-    <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-[#DCC7FF]/25 ring-1 ring-[#8A6AE6]/20">
+    <div className="flex h-tap w-tap items-center justify-center overflow-hidden rounded-full bg-[#DCC7FF]/25 ring-1 ring-[#8A6AE6]/20">
       <ServiceArt kind="ride" size="sm" label="Bike Taxi" />
     </div>
   );
@@ -126,8 +126,8 @@ export function Bookings() {
             onClick={() => setTab(tabItem.key)}
             className={
               tab === tabItem.key
-                ? 'shrink-0 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-text-inverse'
-                : 'shrink-0 rounded-full border border-border px-4 py-2 text-sm font-medium text-text-secondary'
+                ? 'min-h-tap shrink-0 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-text-inverse'
+                : 'min-h-tap shrink-0 rounded-full border border-border px-4 py-2 text-sm font-medium text-text-secondary'
             }
           >
             {t(tabItem.label)}

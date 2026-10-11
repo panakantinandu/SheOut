@@ -68,7 +68,7 @@ export function ReferAFriend({ summary }: { summary: ReferralSummary }) {
         <div className="flex items-center justify-between gap-3 rounded-input border border-dashed border-primary bg-primary-light px-4 py-3">
           <span className="font-heading text-title tracking-[0.2em] text-primary" data-testid="referral-code">{summary.code}</span>
           <button type="button" onClick={copyCode} aria-label={t('refer.copyCode')}
-            className="flex h-10 w-10 items-center justify-center rounded-full text-primary hover:bg-surface">
+            className="flex h-tap w-tap items-center justify-center rounded-full text-primary hover:bg-surface">
             <Copy className="h-5 w-5" />
           </button>
         </div>
@@ -77,7 +77,7 @@ export function ReferAFriend({ summary }: { summary: ReferralSummary }) {
           {t('refer.share')}
         </Button>
         <a
-          className="flex w-full items-center justify-center gap-2 rounded-full border border-border py-3 text-sm font-semibold text-text-primary"
+          className="flex min-h-tap w-full items-center justify-center gap-2 rounded-full border border-border py-3 text-sm font-semibold text-text-primary"
           href={`https://wa.me/?text=${encodeURIComponent(fullText)}`}
           target="_blank"
           rel="noopener noreferrer"

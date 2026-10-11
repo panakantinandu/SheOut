@@ -98,7 +98,7 @@ export function Drawer({ open, onClose, header, sections, footer }: DrawerProps)
             type="button"
             onClick={onClose}
             aria-label={t('common.close')}
-            className="absolute right-2 top-2 flex h-11 w-11 items-center justify-center rounded-full text-text-inverse/90 hover:bg-text-inverse/10"
+            className="absolute right-2 top-2 flex h-tap w-tap items-center justify-center rounded-full text-text-inverse/90 hover:bg-text-inverse/10"
           >
             <X className="h-5 w-5" />
           </button>

@@ -137,7 +137,7 @@ export function EmergencyContacts() {
                 type="button"
                 aria-label={t('contacts.removeAria', { name: contact.name })}
                 onClick={() => setRemoving(contact)}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-danger hover:bg-danger/10"
+                className="flex h-tap w-tap shrink-0 items-center justify-center rounded-full text-danger hover:bg-danger/10"
               >
                 <Trash2 className="h-4 w-4" />
               </button>

@@ -327,7 +327,7 @@ export function Verification() {
         <Card className="space-y-3 p-4" data-testid="keep-ready">
           <button
             type="button"
-            className="flex w-full items-center gap-3 text-left"
+            className="flex min-h-tap w-full items-center gap-3 text-left"
             aria-expanded={readyListOpen}
             onClick={() => setShowReady(!readyListOpen)}
           >
@@ -756,7 +756,7 @@ function ConsentBody({ consent, onAgreed }: { consent: ConsentStatus | null; onA
           </li>
         ))}
       </ul>
-      <button type="button" className="text-sm font-semibold text-primary" onClick={() => setFull(!full)} data-testid="consent-read">
+      <button type="button" className="tap-target text-sm font-semibold text-primary" onClick={() => setFull(!full)} data-testid="consent-read">
         {full ? t('verify.consent.hideFull') : t('verify.consent.readFull')}
       </button>
       {full && (

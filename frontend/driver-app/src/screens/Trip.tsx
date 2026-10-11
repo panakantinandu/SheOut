@@ -660,7 +660,7 @@ export function Trip() {
               type="button"
               onClick={goBack}
               aria-label={t('trip.back')}
-              className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full bg-surface text-text-primary shadow-float"
+              className="pointer-events-auto flex h-tap w-tap items-center justify-center rounded-full bg-surface text-text-primary shadow-float"
             >
               <ArrowLeft className="h-5 w-5" aria-hidden="true" />
             </button>
@@ -738,7 +738,7 @@ export function Trip() {
             <button
               type="button"
               aria-label={t('trip.messageRider')}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-background text-primary"
+              className="flex h-tap w-tap shrink-0 items-center justify-center rounded-full bg-background text-primary"
               onClick={() => navigate(`/chat/${bookingId}`)}
             >
               <MessageCircle className="h-5 w-5" aria-hidden="true" />
@@ -878,7 +878,7 @@ export function Trip() {
               type="button"
               disabled={busy}
               onClick={() => { setCancelError(null); setAskingWhy(true); }}
-              className="h-11 flex-1 rounded-full border border-border bg-surface text-sm font-semibold text-danger"
+              className="h-tap flex-1 rounded-full border border-border bg-surface text-sm font-semibold text-danger"
               data-testid="cancel-trip"
             >
               {t('trip.cancelTrip')}
@@ -1120,7 +1120,7 @@ export function Trip() {
             </div>
             <button
               aria-label={t('trip.messageRider')}
-              className="rounded-full p-3 text-primary hover:bg-background"
+              className="flex h-tap w-tap shrink-0 items-center justify-center rounded-full text-primary hover:bg-background"
               onClick={() => navigate(`/chat/${bookingId}`)}
             >
               <MessageCircle className="h-5 w-5" />

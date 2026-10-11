@@ -427,7 +427,7 @@ export function Sos() {
         <button
           type="button"
           onClick={() => navigate('/profile/emergency-contacts')}
-          className="mb-3 flex w-full items-center justify-between text-left"
+          className="mb-3 flex min-h-tap w-full items-center justify-between text-left"
         >
           <h2 className="font-heading text-section text-text-primary">{t('sos.safetyFeatures')}</h2>
           <ChevronRight className="h-5 w-5 text-text-secondary" aria-hidden="true" />

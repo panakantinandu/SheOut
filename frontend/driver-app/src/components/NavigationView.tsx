@@ -234,7 +234,7 @@ export function NavigationView({ phase, bookingId, destination, prepared, nav, p
             href={`https://www.google.com/maps/dir/?api=1&destination=${destination.lat},${destination.lng}&travelmode=driving`}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex shrink-0 items-center gap-1 text-xs font-semibold text-primary"
+            className="flex min-h-tap shrink-0 items-center gap-1 text-xs font-semibold text-primary"
             data-testid="nav-google-maps"
           >
             {t('nav.googleMaps')}

@@ -194,7 +194,7 @@ export function Wallet() {
             </div>
             <button
               type="button"
-              className="shrink-0 rounded-full bg-surface px-4 py-2 text-sm font-semibold text-primary"
+              className="min-h-tap shrink-0 rounded-full bg-surface px-4 py-2 text-sm font-semibold text-primary"
               onClick={() => setAdding(true)}
               data-testid="wallet-add-money"
             >

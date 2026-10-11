@@ -1097,7 +1097,7 @@ function StatusCard({ shop, onFix, justWentLive }: { shop: Shop; onFix: () => vo
         {justWentLive ? (
           <SuccessCheck size={44} label={t('seller.status.ACTIVE.title')} />
         ) : (
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary-light text-primary [&_svg]:h-5 [&_svg]:w-5">{icon}</span>
+          <span className="flex h-tap w-tap shrink-0 items-center justify-center rounded-full bg-primary-light text-primary [&_svg]:h-5 [&_svg]:w-5">{icon}</span>
         )}
         <div className="min-w-0 flex-1">
           <p className="font-heading text-card-title text-text-primary">{t(`seller.status.${shop.status}.title`)}</p>
@@ -1164,7 +1164,7 @@ function PickupCard({ shop, onShop }: { shop: Shop; onShop: (s: Shop) => void })
   return (
     <Card className="space-y-3" data-testid="pickup-card">
       <div className="flex items-start gap-3">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent-orange-tint text-accent-orange-strong">
+        <span className="flex h-tap w-tap shrink-0 items-center justify-center rounded-full bg-accent-orange-tint text-accent-orange-strong">
           <MapPin className="h-5 w-5" aria-hidden="true" />
         </span>
         <div className="min-w-0 flex-1">
@@ -1261,7 +1261,7 @@ function PlanCard({
   return (
     <Card className="space-y-3" data-testid="seller-plan" data-state={plan.state}>
       <div className="flex items-center gap-3">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary-light text-primary">
+        <span className="flex h-tap w-tap shrink-0 items-center justify-center rounded-full bg-primary-light text-primary">
           <CalendarClock className="h-5 w-5" aria-hidden="true" />
         </span>
         <div className="min-w-0 flex-1">

@@ -220,7 +220,7 @@ export function RatingDialog({
             type="button"
             disabled={busy}
             onClick={onSkip}
-            className="block w-full py-3 text-center text-sm font-semibold text-text-secondary disabled:opacity-50"
+            className="block min-h-tap w-full py-3 text-center text-sm font-semibold text-text-secondary disabled:opacity-50"
             data-testid="rating-skip"
           >
             {t('common.notNow')}

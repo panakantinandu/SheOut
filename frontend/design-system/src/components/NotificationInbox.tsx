@@ -275,7 +275,7 @@ export function NotificationInbox({ fetchPage, markRead, markAllRead, onOpen, re
                     type="button"
                     onClick={() => remove(item)}
                     aria-label={t('inbox.deleteOne', { title: item.title })}
-                    className="flex w-11 shrink-0 items-center justify-center text-text-secondary transition-colors hover:text-danger active:bg-background"
+                    className="flex w-tap shrink-0 items-center justify-center text-text-secondary transition-colors hover:text-danger active:bg-background"
                     data-testid="inbox-delete"
                   >
                     <Trash2 className="h-4 w-4" aria-hidden="true" />

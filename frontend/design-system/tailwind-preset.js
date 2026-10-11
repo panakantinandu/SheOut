@@ -84,6 +84,10 @@ export default {
       fontSize: typeScale,
       spacing: {
         screen: spacing.screen,
+        // A touch target: 44 CSS px at the least, whatever the root font
+        // (theme.css scales it down below 390 px wide, so 2.75rem alone fell
+        // to 41 px at 360). The same size as before from 390 px up.
+        tap: 'max(2.75rem, 44px)',
       },
 
       /*

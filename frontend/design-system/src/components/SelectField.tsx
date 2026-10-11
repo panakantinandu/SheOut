@@ -35,7 +35,7 @@ export const SelectField = forwardRef<HTMLSelectElement, SelectFieldProps>(
             ref={ref}
             id={selectId}
             className={cn(
-              'h-11 w-full appearance-none rounded-input border border-border bg-surface pl-3 pr-9',
+              'h-tap w-full appearance-none rounded-input border border-border bg-surface pl-3 pr-9',
               'text-sm text-text-primary outline-none transition-colors focus:border-primary',
               className
             )}

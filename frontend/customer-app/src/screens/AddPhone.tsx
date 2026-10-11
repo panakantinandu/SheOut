@@ -157,7 +157,7 @@ export function AddPhone() {
                 setError(null);
                 setInfo(null);
               }}
-              className="w-full text-center text-sm text-text-secondary underline"
+              className="min-h-tap w-full text-center text-sm text-text-secondary underline"
             >
               {t('login.changeNumber')}
             </button>
@@ -173,7 +173,7 @@ export function AddPhone() {
           logout();
           navigate('/login', { replace: true });
         }}
-        className="w-full text-center text-sm text-text-secondary underline"
+        className="min-h-tap w-full text-center text-sm text-text-secondary underline"
         data-testid="add-phone-sign-out"
       >
         {t('addPhone.signOut')}

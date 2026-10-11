@@ -193,3 +193,16 @@ html {
   --brand-wash: linear-gradient(135deg, #1A1330 0%, #1E1438 50%, #241A44 100%);
   color-scheme: dark;
 }
+
+/*
+ * A plain text link or text button ("Change number", "Report an accident"):
+ * a tap area 44 px tall, without the page moving - the negative margins
+ * give back what the extra height takes. Bigger controls use the tap
+ * spacing token (h-tap, min-h-tap) instead.
+ */
+.tap-target {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-block: calc((1lh - 44px) / 2);
+}

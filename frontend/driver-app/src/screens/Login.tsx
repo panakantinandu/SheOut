@@ -340,7 +340,7 @@ export function Login() {
               <button
                 type="button"
                 onClick={() => { setStep('phone'); setError(null); setNotice(null); }}
-                className="w-full text-center text-sm text-text-secondary underline"
+                className="min-h-tap w-full text-center text-sm text-text-secondary underline"
               >
                 {t('login.changeNumber')}
               </button>
