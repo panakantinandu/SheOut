@@ -54,7 +54,12 @@
   },
   "completeProfile": {
     "title": "Complete your profile",
-    "subtitle": "About you and your vehicle, before you can take trips."
+    "subtitle": "About you and your vehicle, before you can take trips.",
+    "differentNumber": "Use a different number",
+    "leaveTitle": "Use a different number?",
+    "leaveBody": "You'll be signed out. This number keeps its account, so you can sign in with it any time to finish setting it up.",
+    "leaveConfirm": "Sign out",
+    "stay": "Stay"
   },
   "profile": {
     "loadError": "Could not load your profile",

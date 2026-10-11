@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { BrandHeader, ProfileCompletionForm, ConsentCheckbox, ReferralCodeField, ReferralWelcome, clearPendingReferralCode, pendingReferralCode, type ReferralWelcomeDetails } from '@sheout/design-system';
+import { BrandHeader, ConfirmDialog, ProfileCompletionForm, useBackGuard, ConsentCheckbox, ReferralCodeField, ReferralWelcome, clearPendingReferralCode, pendingReferralCode, type ReferralWelcomeDetails, openLegalDocument } from '@sheout/design-system';
 import { apiErrorText } from '../lib/apiErrors';
 import { ApiError, authApi, referralsApi, usersApi } from '../api/client';
 import type { CustomerProfileSummary } from '../api/types';
@@ -20,7 +20,14 @@ export function CompleteProfile() {
   const { t: ds } = useTranslation('ds');
   const notice = (useLocation().state as { notice?: string } | null)?.notice ?? null;
   const navigate = useNavigate();
-  const { accountId } = useAuth();
+  const { accountId, logout } = useAuth();
+  /**
+   * The way out. This is the first screen after sign-in, which replaced
+   * itself, so the phone's back button used to close the app; and there was
+   * no other way back to the number. Back now asks this, and so does the
+   * link under the form.
+   */
+  const [leaving, setLeaving] = useState(false);
   const [profile, setProfile] = useState<CustomerProfileSummary | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   /**
@@ -49,6 +56,14 @@ export function CompleteProfile() {
       .then(setProfile)
       .catch((err) => setLoadError(err instanceof ApiError ? err.message : t('profile.loadError')));
   }, []);
+
+  useBackGuard(() => setLeaving(true), celebrate === null);
+
+  function switchNumber() {
+    setLeaving(false);
+    logout();
+    navigate('/login', { replace: true });
+  }
 
   return (
     <div className="space-y-6 py-4">
@@ -118,11 +133,28 @@ export function CompleteProfile() {
           <ConsentCheckbox
             checked={consent}
             onChange={setConsent}
-            onOpenTerms={() => navigate('/terms')}
-            onOpenPrivacy={() => navigate('/privacy')}
+            onOpenTerms={() => openLegalDocument('/terms')}
+            onOpenPrivacy={() => openLegalDocument('/privacy')}
           />
         </ProfileCompletionForm>
       )}
+      <button
+        type="button"
+        onClick={() => setLeaving(true)}
+        className="mx-auto flex min-h-[44px] items-center px-4 text-sm font-semibold text-primary"
+        data-testid="complete-profile-different-number"
+      >
+        {t('completeProfile.differentNumber')}
+      </button>
+      <ConfirmDialog
+        open={leaving}
+        title={t('completeProfile.leaveTitle')}
+        message={t('completeProfile.leaveBody')}
+        confirmLabel={t('completeProfile.leaveConfirm')}
+        cancelLabel={t('completeProfile.stay')}
+        onConfirm={switchNumber}
+        onCancel={() => setLeaving(false)}
+      />
       <ReferralWelcome details={celebrate} onContinue={() => navigate('/welcome', { replace: true })} />
     </div>
   );

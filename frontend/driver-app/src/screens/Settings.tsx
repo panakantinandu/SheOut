@@ -15,6 +15,7 @@ import {
   showToast,
   useAppLanguage,
   useTranslation,
+  openLegalDocument,
 } from '@sheout/design-system';
 import { preferencesApi, privacyApi, supportApi } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
@@ -87,8 +88,8 @@ export function Settings() {
         <h2 className="mb-3 font-heading text-section text-text-primary">{t('settings.aboutLegal')}</h2>
         <Card className="divide-y divide-border p-0">
           <ListRow icon={row(<Info />)} label={t('about.title')} onClick={() => navigate('/about')} />
-          <ListRow icon={row(<Lock />)} label={t('legal.privacy')} onClick={() => navigate('/privacy')} />
-          <ListRow icon={row(<FileText />)} label={t('legal.terms')} onClick={() => navigate('/terms')} />
+          <ListRow icon={row(<Lock />)} label={t('legal.privacy')} onClick={() => openLegalDocument('/privacy')} />
+          <ListRow icon={row(<FileText />)} label={t('legal.terms')} onClick={() => openLegalDocument('/terms')} />
         </Card>
       </section>
 
