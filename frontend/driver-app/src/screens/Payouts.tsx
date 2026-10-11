@@ -70,6 +70,11 @@ function rupees(amount: number): string {
   return `₹${RUPEES.format(amount)}`;
 }
 
+/** "XXXXXXXX9012" -> "•••• 9012": the last four digits, the way banks print them. */
+function lastFour(masked: string): string {
+  return masked.replace(/^[X*•]+/i, '•••• ');
+}
+
 /**
  * Her wallet, where she is paid, and her payout requests.
  * <p>
@@ -80,6 +85,7 @@ function rupees(amount: number): string {
  * The account number is only ever shown masked. It is typed in full once,
  * and never sent back to the phone.
  */
+
 export function Payouts() {
   const { t } = useTranslation();
   const goBack = useGoBack('/profile');
@@ -259,7 +265,7 @@ export function Payouts() {
                 {account?.accountNumberMasked && (
                   <div className="space-y-2" role="radiogroup" aria-label={t('payouts.bankAccount')}>
                     <p className="text-sm font-medium text-text-primary">
-                      {t('payouts.onFile', { masked: account.accountNumberMasked, ifsc: account.ifsc })}
+                      {t('payouts.onFile', { masked: lastFour(account.accountNumberMasked), ifsc: account.ifsc })}
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {(
@@ -420,7 +426,7 @@ export function Payouts() {
         title={t('payouts.confirmTitle', { amount: amountValid ? rupees(parsedAmount) : '' })}
         message={t('payouts.confirmMessage', {
           destination: account?.accountNumberMasked
-            ? t('payouts.toBank', { masked: account.accountNumberMasked }) + (account.upiVpa ? ` / UPI ${account.upiVpa}` : '')
+            ? t('payouts.toBank', { masked: lastFour(account.accountNumberMasked) }) + (account.upiVpa ? ` / UPI ${account.upiVpa}` : '')
             : `UPI ${account?.upiVpa ?? ''}`,
         })}
         confirmLabel={requesting ? t('payouts.requesting') : t('payouts.request')}

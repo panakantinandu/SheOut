@@ -46,7 +46,7 @@
       "whereTo": "आपको कहाँ जाना है?"
     },
     "market": {
-      "title": "मार्केटप्लेस",
+      "title": "SheOut Seller",
       "body": "अपने पास की महिलाओं से खरीदें",
       "sell": "अपना सामान बेचें"
     },
@@ -353,7 +353,7 @@
     "version": "SheOut वर्शन {{version}}",
     "languageSaved": "भाषा बदल दी गई",
     "languageSavedLocally": "इस फ़ोन पर भाषा बदल दी गई। अगली बार आपके खाते में सेव हो जाएगी।",
-    "sell": "SheOut पर बेचें",
+    "sell": "SheOut Seller पर बेचें",
     "safety": "सुरक्षा केंद्र"
   },
   "seller": {

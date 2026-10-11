@@ -46,7 +46,7 @@
       "whereTo": "Where are you going?"
     },
     "market": {
-      "title": "Marketplace",
+      "title": "SheOut Seller",
       "body": "Shop from women near you",
       "sell": "Sell your products"
     },
@@ -270,7 +270,7 @@
     "terms": "Terms of Service"
   },
   "auth": {
-    "logout": "Log Out",
+    "logout": "Log out",
     "logoutTitle": "Log out?",
     "logoutMessage": "You will need your mobile number and an OTP to sign back in."
   },
@@ -344,16 +344,16 @@
   },
   "drawer": {
     "language": "Language",
-    "refer": "Refer a Friend",
+    "refer": "Refer a friend",
     "seller": "SheOut Seller",
     "comingSoon": "Coming soon",
-    "rate": "Rate the App",
+    "rate": "Rate the app",
     "rateSoon": "Rating opens once SheOut is in the app stores. Thank you for wanting to!",
     "helpAndInfo": "Help & info",
     "version": "SheOut version {{version}}",
     "languageSaved": "Language changed",
     "languageSavedLocally": "Language changed on this phone. It will be saved to your account next time.",
-    "sell": "Sell on SheOut",
+    "sell": "Sell on SheOut Seller",
     "safety": "Safety Center"
   },
   "seller": {

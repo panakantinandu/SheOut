@@ -110,7 +110,7 @@
   "nav": {
     "home": "Home",
     "earnings": "Earnings",
-    "bookings": "Bookings",
+    "bookings": "Trips",
     "profile": "Profile",
     "step": {
       "depart": "Head out",
@@ -170,7 +170,7 @@
     "terms": "Terms of Service"
   },
   "auth": {
-    "logout": "Log Out",
+    "logout": "Log out",
     "logoutTitle": "Log out?",
     "logoutMessage": "You will be taken offline and will need your mobile number and an OTP to sign back in."
   },
@@ -610,7 +610,7 @@
       "RIDES": "Rides",
       "PARCELS": "Parcels"
     },
-    "title": "My Bookings",
+    "title": "My trips",
     "searchPlaceholder": "Search pickup or drop",
     "status": "Status",
     "anyStatus": "Any status",

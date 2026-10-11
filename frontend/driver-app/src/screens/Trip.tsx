@@ -1075,10 +1075,13 @@ export function Trip() {
                 <span className="text-text-primary">{booking.drop.label}</span>
               </div>
             </div>
-            <div className="flex justify-between border-t border-border pt-3 text-sm">
-              <span className="text-text-secondary">{booking.status === 'CANCELLED' ? t('trip.fareNotCharged') : t('trip.fare')}</span>
-              <span className="font-heading text-card-title text-text-primary">{formatRupees(Number(booking.finalFare ?? booking.fareEstimate), true)}</span>
-            </div>
+            {/* A completed trip's fare is in the payment card above, with her share; not twice. */}
+            {booking.status !== 'COMPLETED' && (
+              <div className="flex justify-between border-t border-border pt-3 text-sm">
+                <span className="text-text-secondary">{booking.status === 'CANCELLED' ? t('trip.fareNotCharged') : t('trip.fare')}</span>
+                <span className="font-heading text-card-title text-text-primary">{formatRupees(Number(booking.finalFare ?? booking.fareEstimate), true)}</span>
+              </div>
+            )}
             {/* When it happened - the first thing anybody looks for in a
                 past trip, and what support will ask for. */}
             {finished && (
