@@ -41,6 +41,7 @@ import { AppDrawerProvider } from './components/AppDrawer'
 import { DiscreetSosGuard } from './components/DiscreetSosGuard'
 import { SafetyCenter } from './screens/SafetyCenter'
 import { HelpAssistant } from './screens/HelpAssistant'
+import { OfflineBanner } from '@sheout/design-system'
 import { ScrollToTop } from './components/ScrollToTop'
 
 // Screens with the bottom tab bar (Home/Bookings/Wallet/Profile/SOS) get
@@ -81,6 +82,7 @@ function App() {
     <AppDrawerProvider>
     <DiscreetSosGuard>
     <ScrollToTop />
+    <OfflineBanner />
     <Routes>
       <Route path="/" element={<Splash />} />
       <Route path="/login" element={<Login />} />

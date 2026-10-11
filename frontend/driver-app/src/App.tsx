@@ -27,6 +27,7 @@ import { Chat } from './screens/Chat'
 import { CompleteProfile } from './screens/CompleteProfile'
 import { Verification } from './screens/Verification'
 import { ShiftCheck } from './screens/ShiftCheck'
+import { OfflineBanner } from '@sheout/design-system'
 import { ScrollToTop } from './components/ScrollToTop'
 
 // Dashboard-level screens (Home/Earnings/Bookings/Profile) get the bottom
@@ -60,6 +61,7 @@ function App() {
     <AccountLanguageSync>
     <AppDrawerProvider>
     <ScrollToTop />
+    <OfflineBanner />
     <Routes>
       <Route path="/" element={<Splash />} />
       <Route path="/login" element={<Login />} />
