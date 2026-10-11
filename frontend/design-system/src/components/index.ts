@@ -7,6 +7,7 @@ export * from './LiveSelfieCapture';
 export * from './PhotoQualityNotice';
 export * from './LoadFailed';
 export * from './OfflineBanner';
+export * from './StickyActions';
 export * from './CancelReasonDialog';
 export * from './Overlay';
 export * from './ThemePicker';
