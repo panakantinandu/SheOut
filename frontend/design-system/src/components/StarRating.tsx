@@ -72,7 +72,7 @@ export function StarRating({
             aria-checked={value === star}
             aria-label={`${star} star${star === 1 ? '' : 's'}`}
             disabled={disabled}
-            className="rounded-full p-1 transition-transform hover:scale-110 disabled:opacity-50"
+            className="flex h-tap w-tap items-center justify-center rounded-full transition-transform hover:scale-110 disabled:opacity-50"
             onClick={() => onChange?.(star)}
           >
             <Star

@@ -153,7 +153,7 @@ export function Home() {
           <button
             type="button"
             onClick={() => setAllServices(true)}
-            className="flex shrink-0 items-center gap-1.5 rounded-full bg-primary-light py-1.5 pl-2.5 pr-3 text-caption font-semibold text-primary transition-transform duration-100 motion-safe:active:scale-95"
+            className="flex min-h-tap shrink-0 items-center gap-1.5 rounded-full bg-primary-light py-1.5 pl-2.5 pr-3 text-caption font-semibold text-primary transition-transform duration-100 motion-safe:active:scale-95"
             data-testid="home-all-services"
           >
             <LayoutGrid className="h-4 w-4" aria-hidden="true" />
@@ -233,7 +233,7 @@ export function Home() {
           <button
             type="button"
             onClick={() => navigate('/seller/manage')}
-            className="mt-2 flex items-center gap-1.5 py-1 text-caption font-semibold text-primary"
+            className="mt-1 flex min-h-tap items-center gap-1.5 text-caption font-semibold text-primary"
             data-testid="home-sell-link"
           >
             <Store className="h-4 w-4" aria-hidden="true" />

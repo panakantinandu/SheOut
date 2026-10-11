@@ -63,7 +63,7 @@ export function TopHeader(props: TopHeaderProps) {
             type="button"
             onClick={props.onBack}
             aria-label={t('header.back')}
-            className="-m-1 flex h-11 min-h-[44px] w-11 min-w-[44px] items-center justify-center rounded-full text-text-primary hover:bg-background"
+            className="-m-1 flex h-tap w-tap items-center justify-center rounded-full text-text-primary hover:bg-background"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
@@ -72,7 +72,7 @@ export function TopHeader(props: TopHeaderProps) {
             type="button"
             onClick={props.onMenuClick}
             aria-label={t('header.menu')}
-            className="-m-1 flex h-11 min-h-[44px] w-11 min-w-[44px] items-center justify-center rounded-full text-text-primary hover:bg-background"
+            className="-m-1 flex h-tap w-tap items-center justify-center rounded-full text-text-primary hover:bg-background"
             data-testid="menu-button"
           >
             <Menu className="h-5 w-5" />
@@ -80,7 +80,7 @@ export function TopHeader(props: TopHeaderProps) {
         ) : (
           props.centerTitle && (
             // Holds the arrow's width so the title stays optically centred.
-            <span className="-m-1 h-11 w-11" aria-hidden="true" />
+            <span className="-m-1 h-tap w-tap" aria-hidden="true" />
           )
         )}
         <h1
@@ -99,7 +99,7 @@ export function TopHeader(props: TopHeaderProps) {
         ) : (
           // Keeps a centred title optically centred by balancing the back
           // button's width on the right.
-          props.centerTitle && <span className="-m-1 h-11 w-11" aria-hidden="true" />
+          props.centerTitle && <span className="-m-1 h-tap w-tap" aria-hidden="true" />
         )}
       </header>
     );
@@ -111,7 +111,7 @@ export function TopHeader(props: TopHeaderProps) {
       type="button"
       onClick={props.onMenuClick}
       aria-label={t('header.menu')}
-      className="-m-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-text-primary hover:bg-background"
+      className="-m-1 flex h-tap w-tap shrink-0 items-center justify-center rounded-full text-text-primary hover:bg-background"
       data-testid="menu-button"
     >
       <Menu className="h-5 w-5" />
@@ -122,7 +122,7 @@ export function TopHeader(props: TopHeaderProps) {
       type="button"
       onClick={props.onBellClick}
       aria-label={props.unreadCount ? t('header.notificationsUnread', { count: props.unreadCount }) : t('header.notifications')}
-      className="relative -m-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-text-primary hover:bg-background"
+      className="relative -m-1 flex h-tap w-tap shrink-0 items-center justify-center rounded-full text-text-primary hover:bg-background"
     >
       <Bell className="h-5 w-5" />
       {props.unreadCount ? <BellBadge count={props.unreadCount} /> : null}

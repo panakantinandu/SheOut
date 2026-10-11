@@ -30,7 +30,7 @@ export function TripInsuranceActions({ bookingId, status }: { bookingId: string;
       {cover ? <InsuredTripChip cover={cover} onOpen={() => setShowingCover(true)} /> : <span />}
       <button
         type="button"
-        className="text-xs font-semibold text-danger underline-offset-2 hover:underline"
+        className="tap-target text-xs font-semibold text-danger underline-offset-2 hover:underline"
         onClick={() => setReporting(true)}
         data-testid="report-accident"
       >

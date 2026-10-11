@@ -287,7 +287,7 @@ export function Seller() {
               role="radio"
               aria-checked={mode === m}
               onClick={() => mode !== m && switchMode(m)}
-              className={`flex items-center justify-center gap-1.5 rounded-full px-3 py-2 text-caption font-semibold transition-colors ${
+              className={`flex min-h-tap items-center justify-center gap-1.5 rounded-full px-3 py-2 text-caption font-semibold transition-colors ${
                 mode === m ? 'bg-surface text-primary shadow-card' : 'text-text-secondary'
               }`}
               data-testid={`search-mode-${m}`}

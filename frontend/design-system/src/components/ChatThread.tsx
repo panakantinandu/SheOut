@@ -151,7 +151,7 @@ export function ChatThread({
           <button
             type="button"
             aria-label={t('chat.send')}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-text-inverse transition-colors hover:bg-primary-dark disabled:opacity-50"
+            className="flex h-tap w-tap shrink-0 items-center justify-center rounded-full bg-primary text-text-inverse transition-colors hover:bg-primary-dark disabled:opacity-50"
             disabled={sending || draft.trim().length === 0}
             onClick={() => void submit()}
           >

@@ -150,7 +150,7 @@ export function PrivacyDataSection({
               autoFocus
               autoCapitalize="characters"
               autoComplete="off"
-              className="mt-4 h-11 w-full rounded-input border border-border bg-surface px-3 text-sm tracking-widest text-text-primary outline-none focus:border-danger"
+              className="mt-4 h-tap w-full rounded-input border border-border bg-surface px-3 text-sm tracking-widest text-text-primary outline-none focus:border-danger"
               value={typed}
               disabled={deleting}
               onChange={(e) => setTyped(e.target.value)}

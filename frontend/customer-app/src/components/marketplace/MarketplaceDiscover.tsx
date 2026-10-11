@@ -243,7 +243,7 @@ export function HowItWorks() {
         <span aria-hidden="true" className="absolute bottom-5 left-[1.375rem] top-5 w-0.5 origin-top rounded-full bg-gradient-to-b from-accent-green via-accent-blue to-accent-orange opacity-50 motion-safe:animate-fill-y" />
         {steps.map((step, i) => (
           <li key={step.title} className="relative flex items-start gap-3 motion-safe:animate-fade-slide-in" style={{ animationDelay: `${250 + i * 180}ms` }}>
-            <span className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${step.tone} text-white shadow-lift [&>svg]:h-5 [&>svg]:w-5`} aria-hidden="true">
+            <span className={`relative flex h-tap w-tap shrink-0 items-center justify-center rounded-full ${step.tone} text-white shadow-lift [&>svg]:h-5 [&>svg]:w-5`} aria-hidden="true">
               {step.icon}
               <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-surface text-[0.6875rem] font-bold text-text-primary shadow-lift">
                 {i + 1}

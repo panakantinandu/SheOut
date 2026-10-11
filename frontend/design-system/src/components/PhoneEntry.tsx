@@ -158,7 +158,7 @@ export function AuthModeSwitch<M extends string>({
           role="tab"
           aria-selected={value === m}
           onClick={() => onChange(m)}
-          className={cn('relative z-10 rounded-full px-4 py-2 text-sm font-semibold transition-colors duration-200', value === m ? 'text-primary' : 'text-text-secondary')}
+          className={cn('relative z-10 min-h-tap rounded-full px-4 py-2 text-sm font-semibold transition-colors duration-200', value === m ? 'text-primary' : 'text-text-secondary')}
           data-testid={`auth-mode-${m}`}
         >
           {labelFor(m)}

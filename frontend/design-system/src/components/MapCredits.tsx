@@ -15,7 +15,7 @@ import { IconCircle } from './IconCircle';
 export function MapCredits() {
   const { t } = useTranslation('ds');
   const link = (href: string, label: string) => (
-    <a href={href} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-medium text-primary">
+    <a href={href} target="_blank" rel="noopener noreferrer" className="tap-target gap-1 font-medium text-primary">
       {label} <ExternalLink className="h-3 w-3" aria-hidden="true" />
     </a>
   );

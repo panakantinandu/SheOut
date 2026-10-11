@@ -152,7 +152,7 @@ export function SellerProduct() {
 
           <Card className="space-y-3">
             <div className="flex items-center gap-3">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary-light text-primary">
+              <span className="flex h-tap w-tap shrink-0 items-center justify-center rounded-full bg-primary-light text-primary">
                 <Store className="h-5 w-5" aria-hidden="true" />
               </span>
               <div className="min-w-0">

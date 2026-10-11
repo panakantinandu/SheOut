@@ -28,7 +28,7 @@ const variantClasses: Record<ButtonVariant, string> = {
 // A minimum height, not a fixed one: a label that needs a second line - a
 // long one in Telugu, say - grows the pill instead of spilling out of it.
 const sizeClasses: Record<ButtonSize, string> = {
-  md: 'min-h-11 px-5 py-2 text-sm gap-2',
+  md: 'min-h-tap px-5 py-2 text-sm gap-2',
   lg: 'min-h-14 px-6 py-3 text-base gap-3',
 };
 

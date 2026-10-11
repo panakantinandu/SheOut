@@ -62,8 +62,8 @@ export function QuickAccess({ title, items }: { title: string; items: QuickItem[
               className={`group relative isolate flex min-w-0 items-center gap-2.5 overflow-hidden rounded-[1.25rem] ${look.tile} p-3 text-left shadow-lift transition-transform duration-100 motion-safe:animate-pop-in motion-safe:active:scale-[0.97]`}
               data-testid={`quick-${item.key}`}
             >
-              <span className="relative isolate flex h-11 w-11 shrink-0 items-center justify-center" aria-hidden="true">
-                <span className={`relative flex h-11 w-11 items-center justify-center rounded-full shadow-lift [&>svg]:h-5 [&>svg]:w-5 ${look.icon}`}>{look.glyph}</span>
+              <span className="relative isolate flex h-tap w-tap shrink-0 items-center justify-center" aria-hidden="true">
+                <span className={`relative flex h-tap w-tap items-center justify-center rounded-full shadow-lift [&>svg]:h-5 [&>svg]:w-5 ${look.icon}`}>{look.glyph}</span>
                 {look.live}
               </span>
               <span className="min-w-0 flex-1">

@@ -405,7 +405,7 @@ export function BookingMapLayout({
                 type="button"
                 onClick={pin.onCancel}
                 aria-label={t('booking.back')}
-                className="pointer-events-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-surface text-text-primary shadow-float"
+                className="pointer-events-auto flex h-tap w-tap shrink-0 items-center justify-center rounded-full bg-surface text-text-primary shadow-float"
                 data-testid="pin-back"
               >
                 <ArrowLeft className="h-5 w-5" aria-hidden="true" />
@@ -421,7 +421,7 @@ export function BookingMapLayout({
               disabled={locating}
               aria-label={t('picker.locateMe')}
               title={t('picker.locateMe')}
-              className="absolute bottom-8 right-3 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-surface text-primary shadow-float disabled:opacity-60"
+              className="absolute bottom-8 right-3 z-10 flex h-tap w-tap items-center justify-center rounded-full bg-surface text-primary shadow-float disabled:opacity-60"
               data-testid="pin-locate"
             >
               <LocateFixed className={`h-5 w-5 ${locating ? 'motion-safe:animate-pulse' : ''}`} aria-hidden="true" />
@@ -434,7 +434,7 @@ export function BookingMapLayout({
             type="button"
             onClick={onBack}
             aria-label={t('booking.back')}
-            className="pointer-events-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-surface text-text-primary shadow-float"
+            className="pointer-events-auto flex h-tap w-tap shrink-0 items-center justify-center rounded-full bg-surface text-text-primary shadow-float"
           >
             <ArrowLeft className="h-5 w-5" aria-hidden="true" />
           </button>
@@ -577,7 +577,7 @@ function LocationChip({
       data-testid={testId}
       data-active={active}
     >
-      <button type="button" onClick={onEdit} className="flex min-w-0 flex-1 items-center gap-3 py-2 text-left">
+      <button type="button" onClick={onEdit} className="-my-1 flex min-h-tap min-w-0 flex-1 items-center gap-3 py-2 text-left">
         <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${colours.dot}`} aria-hidden="true" />
         <span className="min-w-0 flex-1">
           <span className="sr-only">{label}: </span>
@@ -603,7 +603,7 @@ function LocationChip({
         type="button"
         onClick={onMap}
         aria-label={t('booking.pinOnMap', { place: label })}
-        className="-my-1 flex h-9 min-h-[44px] w-9 min-w-[44px] shrink-0 items-center justify-center rounded-full text-primary"
+        className="-my-1 flex h-tap w-tap shrink-0 items-center justify-center rounded-full text-primary"
       >
         <MapPinned className="h-4 w-4" aria-hidden="true" />
       </button>

@@ -108,7 +108,7 @@ export function Onboarding() {
         <button
           type="button"
           onClick={finish}
-          className="rounded-full px-3 py-2 text-sm font-semibold text-text-secondary"
+          className="min-h-tap rounded-full px-3 py-2 text-sm font-semibold text-text-secondary"
           data-testid="onboarding-skip"
         >
           {t('onboarding.skip')}
@@ -164,12 +164,13 @@ export function Onboarding() {
               onClick={() => goTo(i)}
               aria-label={t('onboarding.goTo', { number: i + 1 })}
               aria-current={i === index}
-              className={
-                i === index
-                  ? 'h-2 w-6 rounded-full bg-primary transition-all'
-                  : 'h-2 w-2 rounded-full bg-primary/25 transition-all'
-              }
-            />
+              className="flex h-tap w-tap items-center justify-center"
+            >
+              <span
+                aria-hidden="true"
+                className={i === index ? 'h-2 w-6 rounded-full bg-primary transition-all' : 'h-2 w-2 rounded-full bg-primary/25 transition-all'}
+              />
+            </button>
           ))}
         </div>
         <Button fullWidth onClick={() => (last ? finish() : goTo(index + 1))} data-testid="onboarding-next">

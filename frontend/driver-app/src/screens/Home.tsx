@@ -408,7 +408,7 @@ export function Home() {
           type="button"
           onClick={drawer.open}
           aria-label={t('home.menu')}
-          className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-text-primary hover:bg-background"
+          className="-ml-2 flex h-tap w-tap shrink-0 items-center justify-center rounded-full text-text-primary hover:bg-background"
         >
           <Menu className="h-6 w-6" aria-hidden="true" />
         </button>
@@ -419,7 +419,7 @@ export function Home() {
           type="button"
           aria-label={unreadCount ? t('home.notificationsUnread', { count: unreadCount }) : t('notifications.title')}
           onClick={() => navigate('/notifications')}
-          className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-text-primary hover:bg-background"
+          className="relative flex h-tap w-tap shrink-0 items-center justify-center rounded-full text-text-primary hover:bg-background"
         >
           <Bell className="h-5 w-5" />
           {unreadCount ? <BellBadge count={unreadCount} /> : null}

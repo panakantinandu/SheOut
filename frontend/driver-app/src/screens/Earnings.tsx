@@ -208,7 +208,7 @@ export function Earnings() {
                 type="button"
                 onClick={() => setPickingPeriod((v) => !v)}
                 aria-expanded={pickingPeriod}
-                className="flex shrink-0 items-center gap-2 rounded-full bg-text-inverse/15 px-3 py-2 text-xs font-semibold text-text-inverse"
+                className="flex min-h-tap shrink-0 items-center gap-2 rounded-full bg-text-inverse/15 px-3 py-2 text-xs font-semibold text-text-inverse"
               >
                 {periodLabel}
                 <ChevronDown className="h-3.5 w-3.5" />
@@ -227,8 +227,8 @@ export function Earnings() {
                     }}
                     className={
                       p === period
-                        ? 'flex-1 rounded-full bg-text-inverse px-3 py-2 text-xs font-semibold text-primary'
-                        : 'flex-1 rounded-full border border-text-inverse/40 px-3 py-2 text-xs font-medium text-text-inverse'
+                        ? 'min-h-tap flex-1 rounded-full bg-text-inverse px-3 py-2 text-xs font-semibold text-primary'
+                        : 'min-h-tap flex-1 rounded-full border border-text-inverse/40 px-3 py-2 text-xs font-medium text-text-inverse'
                     }
                   >
                     {t(`earnings.period.${p}`)}
