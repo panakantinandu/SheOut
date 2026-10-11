@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { usePrefersReducedMotion } from '../lib/motion';
 import { AssistantAvatar } from './AssistantAvatar';
@@ -7,8 +7,56 @@ import { AssistantAvatar } from './AssistantAvatar';
 const TYPING_MS = 1400;
 const SHOW_MS = 4200;
 const GAP_MS = 900;
-/** After going through its lines, the bubble rests this long before starting again. */
-const REST_MS = 24000;
+/** Set once the greeting has been given: once per app session, never on a loop. */
+const GREETED_KEY = 'sheout.agentGreeted';
+
+function alreadyGreeted(): boolean {
+  try {
+    return sessionStorage.getItem(GREETED_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+/** The bubble's place, above the button: wide and tall enough for a two-line greeting. */
+const BUBBLE_W = 176;
+const BUBBLE_H = 64;
+
+/**
+ * Is the bubble's place over empty page, with nothing under it to read or
+ * tap? Sampled across the area; at each point the top element must be the
+ * page itself (a container as wide as the screen and most of its height)
+ * or an empty element, never a card, a line of text, a picture or a button.
+ */
+function placeIsClear(anchor: HTMLElement | null): boolean {
+  if (!anchor) return false;
+  const a = anchor.getBoundingClientRect();
+  const right = a.right - 8;
+  const bottom = a.top - 8;
+  for (const fx of [0.05, 0.5, 0.95]) {
+    for (const fy of [0.1, 0.5, 0.9]) {
+      const x = right - BUBBLE_W * (1 - fx);
+      const y = bottom - BUBBLE_H * (1 - fy);
+      const under = document.elementsFromPoint(x, y).find((el) => !el.closest('[data-agent]'));
+      if (!under) continue;
+      const r = under.getBoundingClientRect();
+      const isPage = r.width >= window.innerWidth * 0.9 && r.height >= window.innerHeight * 0.6;
+      // Or an element with nothing in it - a spacer, the room Home leaves.
+      const isEmpty = !under.textContent?.trim() && !under.querySelector('img, svg, video, canvas, button, input, textarea, select')
+        && !['IMG', 'SVG', 'VIDEO', 'CANVAS', 'BUTTON', 'INPUT', 'TEXTAREA', 'SELECT'].includes(under.tagName.toUpperCase());
+      if (!isPage && !isEmpty) return false;
+    }
+  }
+  return true;
+}
+
+function markGreeted() {
+  try {
+    sessionStorage.setItem(GREETED_KEY, '1');
+  } catch {
+    // Storage blocked: the greeting simply may come again next visit.
+  }
+}
 
 type Phase = 'hidden' | 'typing' | 'message';
 
@@ -17,11 +65,16 @@ type Phase = 'hidden' | 'typing' | 'message';
  * in both apps, above the tab bar - not a card in the list.
  * <p>
  * Its animated face sits in a slowly turning ring with a green "online"
- * dot. Beside it a chat bubble does what a live agent does: shows it
- * typing, then says a line, then the next - and after the last one it
- * goes quiet for a while, so it never nags. A tap anywhere on it opens the
- * assistant. Under reduced motion there is no bubble and nothing turns;
- * the face is its still picture.
+ * dot. Above it a chat bubble greets her: typing, a line, the next - ONCE
+ * per app session, and ONLY OVER EMPTY PAGE (placeIsClear). It floats, so
+ * it must never stand between her and what she came for: it went round
+ * every 24 seconds right across the service cards, and a tap meant for a
+ * card opened the assistant. Home is full at first view, so the greeting
+ * waits; scrolled to the end, Home leaves room above the button (its
+ * agent-clearance spacer), and it greets there. It goes the moment she
+ * scrolls again or touches anything else. A tap on it opens the assistant. Under reduced
+ * motion there is no bubble and nothing turns; the face is its still
+ * picture.
  * <p>
  * Rendered into document.body: a page's arrival leaves a transform on its
  * wrapper (see Overlay), which would otherwise make `fixed` scroll away
@@ -32,13 +85,26 @@ export function AssistantFab({ lines, label, onOpen }: { lines: string[]; label:
   const [phase, setPhase] = useState<Phase>('hidden');
   const [line, setLine] = useState(0);
 
+  const agent = useRef<HTMLButtonElement>(null);
+
   useEffect(() => {
-    if (reduced || lines.length === 0) {
+    if (reduced || lines.length === 0 || alreadyGreeted()) {
       setPhase('hidden');
       return;
     }
     let timer = 0;
+    let settle = 0;
     let index = 0;
+    let started = false;
+    let done = false;
+    const stop = () => {
+      if (done) return;
+      done = true;
+      window.clearTimeout(timer);
+      window.clearTimeout(settle);
+      setPhase('hidden');
+      markGreeted();
+    };
     const step = (next: Phase, wait: number) => {
       timer = window.setTimeout(() => {
         setPhase(next);
@@ -46,20 +112,44 @@ export function AssistantFab({ lines, label, onOpen }: { lines: string[]; label:
         else if (next === 'message') step('hidden', SHOW_MS);
         else {
           index += 1;
-          if (index >= lines.length) {
-            index = 0;
-            setLine(0);
-            step('typing', REST_MS);
-          } else {
+          if (index >= lines.length) stop();
+          else {
             setLine(index);
             step('typing', GAP_MS);
           }
         }
       }, wait);
     };
-    setLine(0);
-    step('typing', 1600);
-    return () => window.clearTimeout(timer);
+    // Starts only when its place is clear; until then it waits, and looks
+    // again each time the page comes to rest after a scroll.
+    const tryStart = () => {
+      if (started || done || !placeIsClear(agent.current)) return;
+      started = true;
+      setLine(0);
+      step('typing', 0);
+    };
+    // A scroll (the page's own scroller included - hence capture): while it
+    // speaks, it goes; before, it looks again once the page is still.
+    const onScroll = () => {
+      if (started) stop();
+      else {
+        window.clearTimeout(settle);
+        settle = window.setTimeout(tryStart, 600);
+      }
+    };
+    // A touch anywhere but the agent: she is busy.
+    const onPointer = (e: PointerEvent) => {
+      if (started && !(e.target as Element | null)?.closest?.('[data-agent]')) stop();
+    };
+    document.addEventListener('scroll', onScroll, { capture: true, passive: true });
+    document.addEventListener('pointerdown', onPointer, { capture: true });
+    settle = window.setTimeout(tryStart, 1600);
+    return () => {
+      window.clearTimeout(timer);
+      window.clearTimeout(settle);
+      document.removeEventListener('scroll', onScroll, { capture: true });
+      document.removeEventListener('pointerdown', onPointer, { capture: true });
+    };
   }, [reduced, lines.length]);
 
   if (typeof document === 'undefined') return null;
@@ -69,7 +159,8 @@ export function AssistantFab({ lines, label, onOpen }: { lines: string[]; label:
       className="pointer-events-none fixed inset-x-0 z-40 mx-auto flex max-w-md justify-end px-screen"
       style={{ bottom: 'calc(5.5rem + env(safe-area-inset-bottom))' }}
     >
-      <div className="flex items-end gap-2">
+      {/* Above the button, at the edge - not across the page beside it. */}
+      <div className="flex flex-col items-end gap-2" data-agent>
         {phase !== 'hidden' && (
           <button
             type="button"
@@ -78,7 +169,7 @@ export function AssistantFab({ lines, label, onOpen }: { lines: string[]; label:
             aria-hidden="true"
             // Keyed so each new line pops in afresh.
             key={`${phase}-${line}`}
-            className="pointer-events-auto mb-2 max-w-[13.5rem] origin-bottom-right rounded-2xl rounded-br-md bg-surface px-3 py-2 text-left text-caption font-medium leading-snug text-text-primary shadow-float ring-1 ring-border motion-safe:animate-pop-in"
+            className="pointer-events-auto mr-2 max-w-[11rem] origin-bottom-right rounded-2xl rounded-br-md bg-surface px-3 py-2 text-left text-caption font-medium leading-snug text-text-primary shadow-float ring-1 ring-border motion-safe:animate-pop-in"
             data-testid="agent-bubble"
           >
             {phase === 'typing' ? (
@@ -94,6 +185,7 @@ export function AssistantFab({ lines, label, onOpen }: { lines: string[]; label:
         )}
 
         <button
+          ref={agent}
           type="button"
           onClick={onOpen}
           aria-label={label}
