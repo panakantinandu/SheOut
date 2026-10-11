@@ -1,7 +1,7 @@
 import { Navigation } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { AmountText, Button, Card, CountdownRing, LiveMap, SkeletonCard, TopHeader, formatRupees, useRouteLine } from '@sheout/design-system';
+import { AmountText, Button, Card, CountdownRing, LiveMap, SkeletonCard, StickyActions, TopHeader, formatRupees, useRouteLine } from '@sheout/design-system';
 import type { MapMarker } from '@sheout/design-system';
 import { ApiError, bookingApi, dispatchApi, routesApi } from '../api/client';
 import { apiErrorText } from '../lib/apiErrors';
@@ -189,7 +189,9 @@ export function Offer() {
 
       {offer && !unavailable && (
         <>
-          {markers.length > 0 && <LiveMap markers={markers} route={route} className="h-52" />}
+          {/* Sized to the screen: on a short phone the trip details (distance
+              included) stay above the Accept bar. */}
+          {markers.length > 0 && <LiveMap markers={markers} route={route} className="h-[22vh] max-h-52 min-h-32" />}
 
           {/* The clock, as a ring that empties. This is the tensest moment
               in the whole app - a fare, two place names, fifteen seconds -
@@ -248,14 +250,19 @@ export function Offer() {
             )}
           </Card>
 
-          <div className="flex gap-3">
-            <Button variant="secondary" fullWidth disabled={responding} onClick={handleDecline}>
-              {t('offer.decline')}
-            </Button>
-            <Button variant="success" fullWidth disabled={responding} onClick={handleAccept}>
-              {responding ? t('offer.accepting') : t('offer.accept')}
-            </Button>
-          </div>
+          {/* Always in view: she has fifteen seconds, and on a 640 px phone
+              these sat under the map and the trip card - she had to scroll
+              to reach Accept before the request ran out. */}
+          <StickyActions testId="offer-actions">
+            <div className="flex gap-3">
+              <Button variant="secondary" fullWidth disabled={responding} onClick={handleDecline}>
+                {t('offer.decline')}
+              </Button>
+              <Button variant="success" fullWidth disabled={responding} onClick={handleAccept} data-testid="offer-accept">
+                {responding ? t('offer.accepting') : t('offer.accept')}
+              </Button>
+            </div>
+          </StickyActions>
         </>
       )}
 
