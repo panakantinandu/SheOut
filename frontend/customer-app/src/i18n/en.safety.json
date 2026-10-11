@@ -67,7 +67,7 @@
     "intro": "Plain answers about what SheOut checks, what it shares, and exactly what happens when you ask for help.",
     "sos": {
       "title": "What SOS does, step by step",
-      "step1": "Open SOS - the red button in the bottom bar - and press the SOS circle.",
+      "step1": "Open SOS - the red button in the bottom bar - and press the SOS circle. A 5-second countdown appears with a large Cancel button; the SOS goes when it ends, or at once if you press Send SOS now.",
       "step2": "Your location goes to SheOut. SheOut texts every emergency contact you have saved, with your location, and SheOut's operations team is alerted at the same moment.",
       "step3": "You see how many of your contacts were reached. If a text could not reach someone, you can send it from your own phone in one tap.",
       "step4": "Call {{number}} from the same screen if you need police, an ambulance or fire services.",

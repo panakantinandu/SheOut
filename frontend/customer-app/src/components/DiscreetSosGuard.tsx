@@ -7,10 +7,17 @@ import { activeTripId, motionNeedsPermission, requestMotionPermission, useDiscre
 import { cacheContacts, cachePosition, flushSosQueue, pendingSos, type TriggerSource } from '../lib/sosDelivery';
 
 const COUNTDOWN_SECONDS = 3;
+/**
+ * The SOS button's countdown. Longer than a gesture's: a tap on a large red
+ * circle is the easiest thing in the app to do by mistake (in a bag, while
+ * handing over the phone), and five seconds is enough to see the Cancel
+ * button and press it. Send SOS now skips the wait for someone who means it.
+ */
+export const BUTTON_COUNTDOWN_SECONDS = 5;
 
 interface DiscreetSos {
-  /** Starts the "SOS in 3" countdown, as a gesture or the phone's shortcut does. */
-  startCountdown: (source: TriggerSource) => void;
+  /** Starts the SOS countdown: 3 seconds for a gesture or the phone's shortcut, 5 for the SOS button. */
+  startCountdown: (source: TriggerSource, seconds?: number) => void;
 }
 
 const DiscreetSosContext = createContext<DiscreetSos>({ startCountdown: () => undefined });
@@ -50,13 +57,13 @@ export function DiscreetSosGuard({ children }: { children: ReactNode }) {
   );
 
   const startCountdown = useCallback(
-    (source: TriggerSource) => {
+    (source: TriggerSource, seconds: number = COUNTDOWN_SECONDS) => {
       if (countdownRef.current) {
         // The same gesture again, mid-countdown: she means it.
         fire(countdownRef.current.source);
         return;
       }
-      setCountdown({ source, left: COUNTDOWN_SECONDS });
+      setCountdown({ source, left: seconds });
     },
     [fire]
   );

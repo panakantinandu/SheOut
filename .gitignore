@@ -59,3 +59,7 @@ dump.rdb
 # verification runs. None of it is project source and some of it is
 # credentials.
 scratchpad/
+
+# Playwright output
+test-results/
+playwright-report/
