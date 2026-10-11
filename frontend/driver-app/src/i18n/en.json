@@ -467,7 +467,8 @@
     "backHome": "Back to Home",
     "myTrips": "See my trips",
     "youEarn": "You earn",
-    "fareAndFee": "Fare {{fare}} · SheOut commission {{percent}}%"
+    "fareAndFee": "Fare {{fare}} · SheOut commission {{percent}}%",
+    "decline": "Decline"
   },
   "trip": {
     "pickup": "Pickup",

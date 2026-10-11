@@ -1,11 +1,11 @@
 import { Bell, CheckCircle2, ChevronRight, CloudOff, MapPin, MessageSquareText, Phone, Share2, ShieldCheck, Users } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useGoBack } from '../lib/useGoBack';
 import { Button, Card, IconCircle, ListRow, SafetyText, TopHeader, i18next, useSafetyString } from '@sheout/design-system';
 import { usersApi } from '../api/client';
 import type { EmergencyContact, SosResponse } from '../api/types';
-import { localEmergencyNumber, mapsLink, openSmsComposer, shareViaDevice } from '../lib/emergency';
+import { EMERGENCY, mapsLink, openSmsComposer, shareViaDevice } from '../lib/emergency';
 import { cacheContacts, cachePosition, cachedContacts, cachedPosition, pendingSos, sendSos, type TriggerSource } from '../lib/sosDelivery';
 import { useDiscreetSos } from '../components/DiscreetSosGuard';
 import { useTranslation } from '@sheout/design-system';
@@ -83,9 +83,8 @@ function alertMessage(name: string | undefined, position: Position, lng: string)
  * she can send it to whoever is relevant - a friend waiting for her, family,
  * a colleague - without raising an emergency.
  * <p>
- * "Call Emergency" dials the number for where the phone is, from its time
- * zone: 112 in India, 911 in the US, 999 in the UK. It had been 112
- * everywhere.
+ * "Call Emergency" dials 112, India's emergency number (see EMERGENCY): SheOut
+ * runs only in Telangana, so it is never guessed from the phone's settings.
  */
 export function Sos() {
   const { t } = useTranslation();
@@ -98,7 +97,7 @@ export function Sos() {
   const location = useLocation();
   const routeState = location.state as { bookingId?: string; autoSend?: { source: TriggerSource } } | null;
   const bookingId = routeState?.bookingId;
-  const emergency = useMemo(localEmergencyNumber, []);
+  const emergency = EMERGENCY;
   const discreet = useDiscreetSos();
   /** How the last press went out when the connection was bad - see lib/sosDelivery. */
   const [queued, setQueued] = useState(false);

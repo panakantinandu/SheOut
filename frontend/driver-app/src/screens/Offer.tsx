@@ -250,7 +250,7 @@ export function Offer() {
 
           <div className="flex gap-3">
             <Button variant="secondary" fullWidth disabled={responding} onClick={handleDecline}>
-              Decline
+              {t('offer.decline')}
             </Button>
             <Button variant="success" fullWidth disabled={responding} onClick={handleAccept}>
               {responding ? t('offer.accepting') : t('offer.accept')}

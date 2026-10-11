@@ -1,10 +1,9 @@
 import { Siren } from 'lucide-react';
-import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGoBack } from '../lib/useGoBack';
 import { Button, ASSISTANT_NAME, HelpAssistantChat, KeyboardAwareScreen, assistantTicketDescription, SafetyText, TopHeader, useAppLanguage, useTranslation } from '@sheout/design-system';
 import { assistantApi } from '../api/client';
-import { localEmergencyNumber } from '../lib/emergency';
+import { EMERGENCY } from '../lib/emergency';
 
 /**
  * SheOut Help for riders. Its SOS is the real SOS screen; its hand-off is
@@ -15,7 +14,7 @@ export function HelpAssistant() {
   const navigate = useNavigate();
   const goBack = useGoBack('/help');
   const language = useAppLanguage();
-  const emergency = useMemo(localEmergencyNumber, []);
+  const emergency = EMERGENCY;
 
   return (
     // A chat screen: it fits the area above the keyboard, so the header stays

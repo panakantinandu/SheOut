@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { usersApi } from '../api/client';
+import { dsT } from '@sheout/design-system';
 import { useAuth } from './AuthContext';
 
 /**
@@ -75,7 +76,7 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
     return <Navigate to="/complete-profile" replace />;
   }
   if (!exempt && complete === null) {
-    return <p className="p-6 text-center text-sm text-text-secondary">Loading...</p>;
+    return <p className="p-6 text-center text-sm text-text-secondary">{dsT('common.loading', 'Loading...')}</p>;
   }
   return <>{children}</>;
 }

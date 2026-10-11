@@ -68,8 +68,9 @@ setting the pickup and drop themselves.
 3. If SheOut's text could not reach someone, the app offers to send the same
    message from your own phone's SMS app in one tap, and to share your
    location another way.
-4. "Call 112" dials the emergency number for where your phone is (112 in
-   India).
+4. "Call 112" dials 112, India's emergency number for police, ambulance,
+   fire and the women's helpline. SheOut works only in Telangana, so it is
+   always 112.
 - Emergency contacts: add them in Profile > Emergency contacts. They are
   only ever messaged when you raise an SOS. Tell them you added them.
 - Partners have SOS too; theirs goes to SheOut's operations team.

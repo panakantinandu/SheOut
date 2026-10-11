@@ -10,34 +10,15 @@
  */
 
 /**
- * The number to dial where she is, worked out from the phone's time zone.
+ * The emergency number: 112, India's single number for police, fire,
+ * ambulance and the women's helpline (ERSS).
  * <p>
- * The time zone, not the language setting: a phone set to English (India)
- * that is in New York is in New York, and the zone follows the phone when it
- * travels. No network call - this has to work with no connection at all.
- * 112 is the fallback because GSM phones route it to the local emergency
- * service in most of the world.
+ * Fixed, not guessed. SheOut operates only in Telangana, so this is the
+ * number in every case. It used to be worked out from the phone's time zone,
+ * which showed 911 on a phone set to a US zone - a number that does nothing
+ * in Hyderabad. No network call either way: this has to work offline.
  */
-export function localEmergencyNumber(): { number: string; region: string } {
-  let zone = '';
-  try {
-    zone = Intl.DateTimeFormat().resolvedOptions().timeZone ?? '';
-  } catch {
-    // Very old browser - fall through to 112.
-  }
-  if (zone === 'Asia/Kolkata' || zone === 'Asia/Calcutta') return { number: '112', region: 'India' };
-  if (NORTH_AMERICA.test(zone)) return { number: '911', region: 'North America' };
-  if (zone === 'Europe/London' || zone === 'Europe/Belfast') return { number: '999', region: 'the UK' };
-  if (zone.startsWith('Australia/')) return { number: '000', region: 'Australia' };
-  if (zone === 'Asia/Dubai') return { number: '999', region: 'the UAE' };
-  if (zone === 'Asia/Singapore') return { number: '999', region: 'Singapore' };
-  if (zone.startsWith('Europe/')) return { number: '112', region: 'Europe' };
-  return { number: '112', region: '' };
-}
-
-/** US, Canada and Mexico zones - all 911. */
-const NORTH_AMERICA =
-  /^(America\/(New_York|Chicago|Denver|Los_Angeles|Phoenix|Anchorage|Adak|Juneau|Sitka|Nome|Metlakatla|Yakutat|Boise|Detroit|Menominee|Indiana\/.+|Kentucky\/.+|North_Dakota\/.+|Toronto|Vancouver|Edmonton|Winnipeg|Halifax|St_Johns|Regina|Moncton|Glace_Bay|Goose_Bay|Whitehorse|Dawson|Dawson_Creek|Fort_Nelson|Creston|Iqaluit|Rankin_Inlet|Resolute|Cambridge_Bay|Inuvik|Swift_Current|Mexico_City|Monterrey|Merida|Cancun|Chihuahua|Hermosillo|Mazatlan|Tijuana|Bahia_Banderas|Matamoros|Ojinaga|Puerto_Rico)|Pacific\/Honolulu|US\/.+|Canada\/.+)$/;
+export const EMERGENCY = { number: '112', region: 'India' } as const;
 
 export function mapsLink(lat: number, lng: number): string {
   return `https://maps.google.com/?q=${lat.toFixed(6)},${lng.toFixed(6)}`;

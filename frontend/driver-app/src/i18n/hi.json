@@ -467,7 +467,8 @@
     "backHome": "होम पर वापस जाएँ",
     "myTrips": "मेरी ट्रिप देखें",
     "youEarn": "आपकी कमाई",
-    "fareAndFee": "किराया {{fare}} · SheOut कमीशन {{percent}}%"
+    "fareAndFee": "किराया {{fare}} · SheOut कमीशन {{percent}}%",
+    "decline": "मना करें"
   },
   "trip": {
     "pickup": "पिकअप",

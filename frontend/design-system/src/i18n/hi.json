@@ -530,5 +530,8 @@
   "offline": {
     "title": "आप ऑफ़लाइन हैं",
     "back": "फिर से ऑनलाइन"
+  },
+  "pullToRefresh": {
+    "refreshing": "रीफ़्रेश हो रहा है"
   }
 }

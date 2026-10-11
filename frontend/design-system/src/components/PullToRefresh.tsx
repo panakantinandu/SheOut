@@ -1,5 +1,6 @@
 import { useRef, useState, type ReactNode, type TouchEvent } from 'react';
 import { RefreshCw } from 'lucide-react';
+import { dsT } from '../i18n';
 import { cn } from '../lib/cn';
 
 export interface PullToRefreshProps {
@@ -100,7 +101,7 @@ export function PullToRefresh({ onRefresh, children, disabled = false, className
       </div>
       {refreshing && (
         <span className="sr-only" role="status">
-          Refreshing
+          {dsT('pullToRefresh.refreshing', 'Refreshing')}
         </span>
       )}
       {children}
