@@ -63,7 +63,7 @@ export function TopHeader(props: TopHeaderProps) {
             type="button"
             onClick={props.onBack}
             aria-label={t('header.back')}
-            className="-m-1 flex h-11 w-11 items-center justify-center rounded-full text-text-primary hover:bg-background"
+            className="-m-1 flex h-11 min-h-[44px] w-11 min-w-[44px] items-center justify-center rounded-full text-text-primary hover:bg-background"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
@@ -72,7 +72,7 @@ export function TopHeader(props: TopHeaderProps) {
             type="button"
             onClick={props.onMenuClick}
             aria-label={t('header.menu')}
-            className="-m-1 flex h-11 w-11 items-center justify-center rounded-full text-text-primary hover:bg-background"
+            className="-m-1 flex h-11 min-h-[44px] w-11 min-w-[44px] items-center justify-center rounded-full text-text-primary hover:bg-background"
             data-testid="menu-button"
           >
             <Menu className="h-5 w-5" />

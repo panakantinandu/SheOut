@@ -603,7 +603,7 @@ function LocationChip({
         type="button"
         onClick={onMap}
         aria-label={t('booking.pinOnMap', { place: label })}
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-primary"
+        className="-my-1 flex h-9 min-h-[44px] w-9 min-w-[44px] shrink-0 items-center justify-center rounded-full text-primary"
       >
         <MapPinned className="h-4 w-4" aria-hidden="true" />
       </button>
