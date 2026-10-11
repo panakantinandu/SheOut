@@ -465,7 +465,9 @@
     "unavailableTitle": "यह अनुरोध अब उपलब्ध नहीं है",
     "unavailableBody": "समय ख़त्म हो गया या किसी दूसरी पार्टनर ने पहले स्वीकार कर लिया।",
     "backHome": "होम पर वापस जाएँ",
-    "myTrips": "मेरी ट्रिप देखें"
+    "myTrips": "मेरी ट्रिप देखें",
+    "youEarn": "आपकी कमाई",
+    "fareAndFee": "किराया {{fare}} · SheOut कमीशन {{percent}}%"
   },
   "trip": {
     "pickup": "पिकअप",

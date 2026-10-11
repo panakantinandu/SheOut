@@ -10,6 +10,7 @@ import com.sheout.booking.BookingParticipants;
 import com.sheout.booking.BookingStatus;
 import com.sheout.booking.BookingSummary;
 import com.sheout.booking.GeoAddress;
+import com.sheout.payments.PaymentApi;
 import com.sheout.dispatch.internal.DispatchError;
 import com.sheout.dispatch.internal.DispatchService;
 import com.sheout.ratings.AggregateRating;
@@ -80,11 +81,14 @@ public class DispatchController {
     private final RateLimiter rateLimiter;
     private final com.sheout.driververification.ShiftCheckApi shiftCheckApi;
 
+    private final PaymentApi paymentApi;
+
     public DispatchController(DispatchService dispatchService, BookingApi bookingApi,
                               DriverProfileApi driverProfileApi, RatingsApi ratingsApi,
                               CustomerProfileApi customerProfileApi, RateLimiter rateLimiter,
-                              com.sheout.driververification.ShiftCheckApi shiftCheckApi) {
+                              com.sheout.driververification.ShiftCheckApi shiftCheckApi, PaymentApi paymentApi) {
         this.shiftCheckApi = shiftCheckApi;
+        this.paymentApi = paymentApi;
         this.rateLimiter = rateLimiter;
         this.customerProfileApi = customerProfileApi;
         this.dispatchService = dispatchService;
@@ -175,8 +179,10 @@ public class DispatchController {
     private OfferResponse toOfferResponse(UUID bookingId) {
         Optional<BookingSummary> booking = bookingApi.findById(bookingId);
         return booking
-                .map(b -> new OfferResponse(bookingId, b.pickup(), b.drop(), b.fareEstimate(), b.category()))
-                .orElseGet(() -> new OfferResponse(bookingId, null, null, null, null));
+                .map(b -> new OfferResponse(bookingId, b.pickup(), b.drop(), b.fareEstimate(), b.category(),
+                        b.fareEstimate() == null ? null : paymentApi.partnerShareOf(b.fareEstimate()),
+                        paymentApi.commissionPercent()))
+                .orElseGet(() -> new OfferResponse(bookingId, null, null, null, null, null, null));
     }
 
     @PostMapping("/api/v1/dispatch/offers/{bookingId}/accept")
@@ -240,8 +246,14 @@ public class DispatchController {
     ) {
     }
 
-    /** pickup/drop/fareEstimate/category are null only if the booking has vanished between the offer being made and this being read - see toOfferResponse. */
-    public record OfferResponse(UUID bookingId, GeoAddress pickup, GeoAddress drop, BigDecimal fareEstimate, BookingCategory category) {
+    /**
+     * pickup/drop/fareEstimate/category are null only if the booking has vanished between the offer being made and this being read - see toOfferResponse.
+     * partnerEarnings is what she is paid for this trip if she takes it: the fare less the platform commission
+     * (commissionPercent), worked out by payments exactly as her payout is. Shown first on the offer; the fare
+     * and the commission below it. A promotion on the customer's side does not change it.
+     */
+    public record OfferResponse(UUID bookingId, GeoAddress pickup, GeoAddress drop, BigDecimal fareEstimate, BookingCategory category,
+                                BigDecimal partnerEarnings, BigDecimal commissionPercent) {
     }
 
     /**

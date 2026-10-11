@@ -465,7 +465,9 @@
     "unavailableTitle": "This request is no longer available",
     "unavailableBody": "It expired or another partner accepted it first.",
     "backHome": "Back to Home",
-    "myTrips": "See my trips"
+    "myTrips": "See my trips",
+    "youEarn": "You earn",
+    "fareAndFee": "Fare {{fare}} · SheOut commission {{percent}}%"
   },
   "trip": {
     "pickup": "Pickup",

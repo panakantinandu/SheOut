@@ -238,6 +238,10 @@ export interface OfferSummary {
   drop: GeoAddress | null;
   fareEstimate: number | null;
   category: BookingCategory | null;
+  /** What she is paid for this trip: the fare less SheOut's commission. Worked out by the server, as her payout is. */
+  partnerEarnings?: number | null;
+  /** The commission behind it, e.g. 18. */
+  commissionPercent?: number | null;
 }
 
 /** The shape GlobalExceptionHandler / ApiException always return on failure. */
