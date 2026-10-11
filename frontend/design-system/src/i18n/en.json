@@ -528,7 +528,7 @@
     "server": "Something went wrong on our side. Please try again in a moment."
   },
   "offline": {
-    "title": "You're offline. We'll reconnect as soon as you have signal.",
+    "title": "You're offline",
     "back": "Back online"
   }
 }
