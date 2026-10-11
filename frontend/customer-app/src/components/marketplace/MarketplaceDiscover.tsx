@@ -100,8 +100,6 @@ export function MarketplaceHero({ opening }: { opening: boolean }) {
  */
 export function CategoryGrid({ onPick }: { onPick: (value: SellerCategory) => void }) {
   const { t } = useTranslation();
-  const named = SELLER_CATEGORIES.filter((c) => c.value !== 'OTHER');
-  const other = SELLER_CATEGORIES.find((c) => c.value === 'OTHER');
   return (
     <section data-testid="market-categories">
       <div className="mb-3 flex items-end justify-between gap-3">
@@ -113,61 +111,26 @@ export function CategoryGrid({ onPick }: { onPick: (value: SellerCategory) => vo
           </p>
         </div>
       </div>
+      {/* Every category the same size, Other included: eight tiles, four even
+          rows. (Home Food used to stretch across a row of its own because it
+          was the seventh, and Other filled another.) */}
       <div className="grid grid-cols-2 gap-3">
-        {named.map((c, i) =>
-          // A last picture with no partner takes the whole row, laid out like Other below it.
-          named.length % 2 === 1 && i === named.length - 1 ? (
-            <button
-              key={c.value}
-              type="button"
-              onClick={() => onPick(c.value)}
-              style={{ animationDelay: `${140 + i * 70}ms` }}
-              className="group relative isolate col-span-2 flex min-w-0 overflow-hidden rounded-[1.5rem] bg-surface text-left shadow-lift ring-1 ring-border transition-transform duration-150 motion-safe:animate-pop-in motion-safe:active:scale-[0.98]"
-              data-testid={`market-category-${c.key}`}
-            >
-              <CategoryPhoto art={c.art} index={i} className="aspect-[4/3] w-[44%] shrink-0" />
-              <span className={`flex min-w-0 flex-1 flex-col justify-center gap-1 px-3 py-3 ${c.tint}`}>
-                <span className="font-heading text-card-title leading-tight text-text-primary">{t(`seller.categories.${c.key}`)}</span>
-                <span className="text-caption leading-snug text-text-secondary">{t(`seller.discover.hints.${c.key}`)}</span>
-              </span>
-            </button>
-          ) : (
-            <button
-              key={c.value}
-              type="button"
-              onClick={() => onPick(c.value)}
-              style={{ animationDelay: `${140 + i * 70}ms` }}
-              className="group relative isolate flex min-w-0 flex-col overflow-hidden rounded-[1.5rem] bg-surface text-left shadow-lift ring-1 ring-border transition-transform duration-150 motion-safe:animate-pop-in motion-safe:active:scale-95"
-              data-testid={`market-category-${c.key}`}
-            >
-              <CategoryPhoto art={c.art} index={i} className="aspect-[4/3] w-full" />
-              <span className={`block px-3 pb-3 pt-2 ${c.tint}`}>
-                <span className="block font-heading text-card-title leading-tight text-text-primary">{t(`seller.categories.${c.key}`)}</span>
-                <span className="mt-0.5 block truncate text-caption leading-snug text-text-secondary">{t(`seller.discover.hints.${c.key}`)}</span>
-              </span>
-            </button>
-          )
-        )}
-        {/* Anything else: the whole row, the photo on one side and, on the other, an invitation to say what. */}
-        {other && (
+        {SELLER_CATEGORIES.map((c, i) => (
           <button
+            key={c.value}
             type="button"
-            onClick={() => onPick(other.value)}
-            style={{ animationDelay: `${140 + named.length * 70}ms` }}
-            className="group relative isolate col-span-2 flex min-w-0 overflow-hidden rounded-[1.5rem] bg-surface text-left shadow-lift ring-1 ring-border transition-transform duration-150 motion-safe:animate-pop-in motion-safe:active:scale-[0.98]"
-            data-testid={`market-category-${other.key}`}
+            onClick={() => onPick(c.value)}
+            style={{ animationDelay: `${140 + i * 70}ms` }}
+            className="group relative isolate flex min-w-0 flex-col overflow-hidden rounded-[1.5rem] bg-surface text-left shadow-lift ring-1 ring-border transition-transform duration-150 motion-safe:animate-pop-in motion-safe:active:scale-95"
+            data-testid={`market-category-${c.key}`}
           >
-            <CategoryPhoto art={other.art} index={named.length} className="w-[44%] shrink-0" />
-            <span className={`flex min-w-0 flex-1 flex-col justify-center gap-1 px-3 py-3 ${other.tint}`}>
-              <span className="font-heading text-card-title leading-tight text-text-primary">{t(`seller.categories.${other.key}`)}</span>
-              <span className="text-caption leading-snug text-text-secondary">{t(`seller.discover.hints.${other.key}`)}</span>
-              <span className="mt-1 inline-flex items-center gap-1.5 self-start rounded-full bg-surface px-2.5 py-1 text-micro font-semibold text-primary shadow-lift">
-                <Pencil className="h-3 w-3 motion-safe:animate-tap-hint" aria-hidden="true" />
-                {t('seller.discover.otherPrompt.type')}
-              </span>
+            <CategoryPhoto art={c.art} index={i} className="aspect-[4/3] w-full" />
+            <span className={`block px-3 pb-3 pt-2 ${c.tint}`}>
+              <span className="block font-heading text-card-title leading-tight text-text-primary">{t(`seller.categories.${c.key}`)}</span>
+              <span className="mt-0.5 block truncate text-caption leading-snug text-text-secondary">{t(`seller.discover.hints.${c.key}`)}</span>
             </span>
           </button>
-        )}
+        ))}
       </div>
     </section>
   );

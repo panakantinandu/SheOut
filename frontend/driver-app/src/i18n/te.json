@@ -467,7 +467,8 @@
     "backHome": "హోమ్‌కు తిరిగి వెళ్లండి",
     "myTrips": "నా ట్రిప్‌లు చూడండి",
     "youEarn": "మీ సంపాదన",
-    "fareAndFee": "ఛార్జీ {{fare}} · SheOut కమిషన్ {{percent}}%"
+    "fareAndFee": "ఛార్జీ {{fare}} · SheOut కమిషన్ {{percent}}%",
+    "decline": "తిరస్కరించండి"
   },
   "trip": {
     "pickup": "పికప్",

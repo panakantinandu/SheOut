@@ -530,5 +530,8 @@
   "offline": {
     "title": "You're offline",
     "back": "Back online"
+  },
+  "pullToRefresh": {
+    "refreshing": "Refreshing"
   }
 }

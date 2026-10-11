@@ -4,7 +4,7 @@ import { useGoBack } from '../lib/useGoBack';
 import { Button, RaiseIssueForm, SafetyText, TopHeader, bookingCategoryLabel, showToast } from '@sheout/design-system';
 import type { RaiseIssueValues, SelectOption } from '@sheout/design-system';
 import { ApiError, bookingApi, supportApi } from '../api/client';
-import { localEmergencyNumber } from '../lib/emergency';
+import { EMERGENCY } from '../lib/emergency';
 import { useTranslation } from '@sheout/design-system';
 
 /**
@@ -79,7 +79,7 @@ export function RaiseIssue() {
               <SafetyText k="raiseIssue.dangerTitle" />
             </p>
             <p className="text-text-secondary">
-              <SafetyText k="raiseIssue.dangerBody" values={{ number: localEmergencyNumber().number }} />
+              <SafetyText k="raiseIssue.dangerBody" values={{ number: EMERGENCY.number }} />
             </p>
             <Button type="button" variant="danger" size="md" onClick={() => navigate('/sos')}>
               {t('help.openSos')}

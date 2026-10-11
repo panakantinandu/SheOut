@@ -87,7 +87,7 @@ export function ListFilterBar({
           }
         >
           <SlidersHorizontal className="h-4 w-4" />
-          Filters
+          {t('filters.title')}
           {activeCount > 0 && (
             <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-2 text-xs font-bold text-text-inverse">
               {activeCount}

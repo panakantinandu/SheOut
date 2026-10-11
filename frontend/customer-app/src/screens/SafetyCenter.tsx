@@ -1,11 +1,11 @@
 import { BadgeCheck, Copy, HelpCircle, MapPin, PhoneCall, Siren, Vibrate, WifiOff } from 'lucide-react';
-import { useMemo, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGoBack } from '../lib/useGoBack';
 import { Button, Card, IconCircle, SafetyText, TopHeader, showToast, useAppLanguage, useTranslation } from '@sheout/design-system';
 import { DiscreetSosToggle } from '../components/DiscreetSosToggle';
 import { InsuredTripsExplainer } from '../components/InsuredTripsExplainer';
-import { localEmergencyNumber } from '../lib/emergency';
+import { EMERGENCY } from '../lib/emergency';
 
 /** What an iPhone Back Tap or Android quick-tap shortcut opens: the SOS countdown. */
 const SHORTCUT_LINK = `${typeof window !== 'undefined' ? window.location.origin : 'https://app.sheoutride.com'}/sos?trigger=shortcut`;
@@ -28,7 +28,7 @@ export function SafetyCenter() {
   const navigate = useNavigate();
   const goBack = useGoBack('/home');
   const lng = useAppLanguage();
-  const emergency = useMemo(localEmergencyNumber, []);
+  const emergency = EMERGENCY;
   const number = { number: emergency.number };
 
   return (
