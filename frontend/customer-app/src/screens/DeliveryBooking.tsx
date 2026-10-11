@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useGoBack, handOffSheet } from '../lib/useGoBack';
-import { Button, TextField, ServiceArt, useRouteLine } from '@sheout/design-system';
+import { Button, TextField, useRouteLine } from '@sheout/design-system';
 import type { MapMarker } from '@sheout/design-system';
 import { UnpaidTripBanner } from '../components/UnpaidTripBanner';
 import { ApiError, bookingApi, routesApi } from '../api/client';
 import { BookingMapLayout } from '../components/BookingMapLayout';
-import { FareEstimateCard } from '../components/FareEstimateCard';
+import { TripSheetDetails } from '../components/TripSheetDetails';
 import { LocationPicker } from '../components/LocationPicker';
 import type { PickerMode } from '../components/LocationPicker';
 import { QuoteSummary } from '../components/QuoteSummary';
@@ -180,7 +180,9 @@ export function DeliveryBooking() {
         orderProductId,
         orderQuantity: orderProductId ? quantity : undefined,
       });
-      navigate(`/tracking/${booking.id}`);
+      // Replaces the form: the phone's back button from the live trip goes
+      // Home, never back into a booking form that was already sent.
+      navigate(`/tracking/${booking.id}`, { replace: true });
     } catch (err) {
       setError(apiErrorText(err, 'booking.createError'));
       // Not verified yet is not an error she can fix by reading it: the
@@ -302,14 +304,7 @@ export function DeliveryBooking() {
         }
         more={
           <>
-            {servableTrip && <FareEstimateCard state={fare} kind="parcel" />}
-            <p className="text-xs text-text-secondary">{t('booking.fixedPriceNote')}</p>
-            {nearby.length > 0 && (
-              <p className="flex items-center gap-2 text-xs font-medium text-primary" data-testid="nearby-count">
-                <ServiceArt kind="ride" size="xs" />
-                {t('booking.nearbyCount', { count: nearby.length })}
-              </p>
-            )}
+            <TripSheetDetails fare={servableTrip ? fare : { quote: null, loading: false, error: null }} nearbyCount={nearby.length} kind="parcel" />
 
             {/* Local-only, matching the mockup's layout - not sent to the backend, see file-level comment. */}
             {isLunchbox && (
