@@ -526,5 +526,9 @@
   "requestError": {
     "network": "Couldn't reach SheOut. Check your internet and try again.",
     "server": "Something went wrong on our side. Please try again in a moment."
+  },
+  "offline": {
+    "title": "You're offline. We'll reconnect as soon as you have signal.",
+    "back": "Back online"
   }
 }
