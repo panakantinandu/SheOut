@@ -77,6 +77,60 @@ class CampaignBudgetTest {
         assertThat(pct.discountOn(rupees("200"), null)).isEqualByComparingTo("15");  // 40, bounded at 15
     }
 
+    private static PromotionEntity percentage(String percent, String perTripCap, String budget) {
+        PromotionEntity p = new PromotionEntity(PromotionType.PERCENTAGE_DISCOUNT);
+        p.apply("Test", null, rupees(percent), perTripCap == null ? null : rupees(perTripCap), 1, null, NOW.minusSeconds(60), null, rupees(budget), NOW);
+        return p;
+    }
+
+    /** What she pays: the whole fare less the discount. */
+    private static BigDecimal payable(PromotionEntity p, String fare, String creditLeft) {
+        return rupees(fare).subtract(p.wholeDiscountOn(rupees(fare), creditLeft == null ? null : rupees(creditLeft)));
+    }
+
+    @Test
+    void aPercentageDiscountIsWholeRupeesRoundedHalfUp() {
+        assertThat(percentage("10", null, "1000").wholeDiscountOn(rupees("107"), null)).isEqualByComparingTo("11"); // 10.70
+        assertThat(percentage("10", null, "1000").wholeDiscountOn(rupees("104"), null)).isEqualByComparingTo("10"); // 10.40
+        assertThat(percentage("10", null, "1000").wholeDiscountOn(rupees("105"), null)).isEqualByComparingTo("11"); // 10.50
+        assertThat(payable(percentage("10", null, "1000"), "107", null)).isEqualByComparingTo("96");
+    }
+
+    @Test
+    void aPerTripCapWithPaiseIsNeverExceeded() {
+        // 50% of 107 = 53.50 -> 54, held to a cap of 25.50 -> 25 (down, never above the cap).
+        assertThat(percentage("50", "25.50", "1000").wholeDiscountOn(rupees("107"), null)).isEqualByComparingTo("25");
+    }
+
+    @Test
+    void flatAmountsAndCreditsWithPaiseRoundDownNeverOverGiving() {
+        assertThat(promotion(PromotionType.FLAT_DISCOUNT, "10.50", "1000").wholeDiscountOn(rupees("107"), null)).isEqualByComparingTo("10");
+        // A balance left with paise by older fares: 22.56 -> 22; the 0.56 stays in the balance.
+        assertThat(promotion(PromotionType.SIGNUP_CREDIT, "100", "1000").wholeDiscountOn(rupees("77"), rupees("22.56"))).isEqualByComparingTo("22");
+    }
+
+    @Test
+    void aBudgetRemainderWithPaiseRoundsDownSoTheBudgetIsNeverOverspent() {
+        PromotionEntity p = percentage("10", null, "1000");
+        p.spend(rupees("995.40"), NOW); // 4.60 left
+        assertThat(p.wholeDiscountOn(rupees("107"), null)).isEqualByComparingTo("4");
+    }
+
+    @Test
+    void whatShePaysIsAlwaysWholeAndNeverBelowZero() {
+        assertThat(payable(percentage("100", null, "1000"), "77", null)).isEqualByComparingTo("0");
+        assertThat(payable(percentage("150", null, "1000"), "77", null)).isEqualByComparingTo("0");
+        assertThat(payable(promotion(PromotionType.FLAT_DISCOUNT, "500", "1000"), "77", null)).isEqualByComparingTo("0");
+        assertThat(payable(promotion(PromotionType.SIGNUP_CREDIT, "100", "1000"), "77", "100")).isEqualByComparingTo("0");
+        for (String fare : new String[] {"40", "77", "107", "253", "1250"}) {
+            for (String pct : new String[] {"5", "12.5", "15", "33", "99"}) {
+                BigDecimal pays = payable(percentage(pct, null, "100000"), fare, null);
+                assertThat(pays.stripTrailingZeros().scale()).as("%s%% of %s", pct, fare).isLessThanOrEqualTo(0);
+                assertThat(pays.signum()).isGreaterThanOrEqualTo(0);
+            }
+        }
+    }
+
     @Test
     void aSignupCreditIsHeldReleasedAndMarkedSpentWhenItRunsOut() {
         PromotionGrantEntity g = PromotionGrantEntity.credit(null, null, rupees("100"), NOW, NOW.plusSeconds(86400));
