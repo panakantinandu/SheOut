@@ -1,4 +1,4 @@
-import { currentLanguage, i18next } from '@sheout/design-system';
+import { currentLanguage, i18next, networkErrorText, serverErrorText } from '@sheout/design-system';
 import { ApiError } from '../api/client';
 
 /** Server error codes the app has its own translated wording for. */
@@ -56,6 +56,10 @@ export function apiErrorText(err: unknown, fallbackKey: string): string {
   if (!(err instanceof ApiError)) return fallback;
   const code = err.body?.error;
   if (code && KNOWN_CODES.has(code)) return i18next.t(`apiError.${code}`);
+  // Already in her language: the phone could not reach SheOut, or the server failed without saying why.
+  if (err.message === networkErrorText() || err.message === serverErrorText()) return err.message;
+  // The server writes its other messages in English, for people. In Hindi or
+  // Telugu the screen's own line is shown instead of English in brackets.
   if (currentLanguage() === 'en') return err.message || fallback;
-  return err.message ? `${fallback} (${err.message})` : fallback;
+  return fallback;
 }

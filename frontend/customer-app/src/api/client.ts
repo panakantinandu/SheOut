@@ -1,6 +1,6 @@
 import type { AssistantReply, AssistantTurn } from '@sheout/design-system';
 import type { LiveSelfieResult, PushApi, SelfieChallenge } from '@sheout/design-system';
-import { installId, type ReferralSummary, type ReferralWelcomeDetails } from '@sheout/design-system';
+import { installId, networkErrorText, requestErrorMessage, serverErrorText, type ReferralSummary, type ReferralWelcomeDetails } from '@sheout/design-system';
 import type {
   ApiErrorResponse,
   ClaimResult,
@@ -166,6 +166,25 @@ export class ApiError extends Error {
   }
 }
 
+/** fetch, but a phone that cannot reach SheOut at all fails as an ApiError in her language - see requestErrors. */
+async function send(input: string, init?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(input, init);
+  } catch {
+    throw new ApiError(networkErrorText(), 0, null);
+  }
+}
+
+/** The body as JSON; undefined when there is none, or when it is not JSON (a proxy's HTML error page). */
+function parseJson(text: string): unknown {
+  if (!text) return undefined;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return undefined;
+  }
+}
+
 export function getStoredToken(): string | null {
   try {
     return localStorage.getItem(TOKEN_STORAGE_KEY);
@@ -206,7 +225,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     if (token) headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE}${path}`, {
+  const response = await send(`${API_BASE}${path}`, {
     method,
     headers,
     body: body === undefined ? undefined : isFormData ? (body as FormData) : JSON.stringify(body),
@@ -217,12 +236,13 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   }
 
   const text = await response.text();
-  const data = text ? JSON.parse(text) : undefined;
+  const data = parseJson(text) as unknown;
+  if (response.ok && text && data === undefined) throw new ApiError(serverErrorText(), response.status, null);
 
   if (!response.ok) {
     const errorBody = data as ApiErrorResponse | undefined;
     if (response.status === 401 && getStoredToken()) onSessionEnded(errorBody);
-    throw new ApiError(errorBody?.message ?? `Request failed (${response.status})`, response.status, errorBody ?? null);
+    throw new ApiError(requestErrorMessage(response.status, errorBody), response.status, errorBody ?? null);
   }
 
   return data as T;
@@ -589,17 +609,18 @@ export const verificationApi = {
     if (idPhotoWarnings) form.append('idPhotoWarnings', idPhotoWarnings);
     if (live.warnings?.length) form.append('selfieWarnings', live.warnings.join(','));
     const token = getStoredToken();
-    const response = await fetch(`${API_BASE}/api/v1/driver-verification/documents`, {
+    const response = await send(`${API_BASE}/api/v1/driver-verification/documents`, {
       method: 'POST',
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       body: form,
     });
     const text = await response.text();
-    const data = text ? JSON.parse(text) : undefined;
+    const data = parseJson(text) as unknown;
+    if (response.ok && text && data === undefined) throw new ApiError(serverErrorText(), response.status, null);
     if (!response.ok) {
       const errorBody = data as ApiErrorResponse | undefined;
       if (response.status === 401 && getStoredToken()) onSessionEnded(errorBody);
-      throw new ApiError(errorBody?.message ?? `Upload failed (${response.status})`, response.status, errorBody ?? null);
+      throw new ApiError(requestErrorMessage(response.status, errorBody), response.status, errorBody ?? null);
     }
     return data as VerificationSummary;
   },
@@ -822,12 +843,12 @@ export const chatApi = {
 export const privacyApi = {
   async downloadMyData(): Promise<void> {
     const token = getStoredToken();
-    const response = await fetch(`${API_BASE}/api/v1/privacy/export`, {
+    const response = await send(`${API_BASE}/api/v1/privacy/export`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
     if (!response.ok) {
       const body = (await response.json().catch(() => null)) as ApiErrorResponse | null;
-      throw new ApiError(body?.message ?? `Request failed (${response.status})`, response.status, body);
+      throw new ApiError(requestErrorMessage(response.status, body ?? undefined), response.status, body);
     }
     const disposition = response.headers.get('Content-Disposition') ?? '';
     const filename = /filename="([^"]+)"/.exec(disposition)?.[1] ?? 'sheout-my-data.json';
@@ -1148,10 +1169,10 @@ export async function getTaxInvoice(bookingId: string): Promise<TaxInvoice | nul
 /** The invoice PDF, fetched with her sign-in and handed to the browser to save. */
 export async function downloadTaxInvoice(bookingId: string, fileName: string): Promise<void> {
   const token = getStoredToken();
-  const res = await fetch(`${API_BASE}/api/v1/payments/bookings/${bookingId}/tax-invoice.pdf`, {
+  const res = await send(`${API_BASE}/api/v1/payments/bookings/${bookingId}/tax-invoice.pdf`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
-  if (!res.ok) throw new ApiError(`Download failed (${res.status})`, res.status, null);
+  if (!res.ok) throw new ApiError(requestErrorMessage(res.status, undefined), res.status, null);
   const url = URL.createObjectURL(await res.blob());
   const a = document.createElement('a');
   a.href = url;

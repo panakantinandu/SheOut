@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { ChevronRight, LifeBuoy, SearchX } from 'lucide-react';
 import { Card } from './Card';
+import { LoadFailed } from './LoadFailed';
 import { DateRangeFields, endOfDayIso, startOfDayIso, type DateRangeValue } from './DateRangeFields';
 import { ListEmptyState } from './ListEmptyState';
 import { ListFilterBar } from './ListFilterBar';
@@ -95,7 +96,7 @@ export function SupportTicketList({ audience, fetchPage, onOpen }: SupportTicket
         <DateRangeFields value={dates} onChange={setDates} label={t('tickets.raisedBetween')} />
       </ListFilterBar>
 
-      {list.error && <p className="text-sm text-danger">{list.error}</p>}
+      {list.error && <LoadFailed onRetry={list.reload} testId="list-load-failed" />}
       {list.loading && <SkeletonList rows={3} label={t('tickets.loading')} />}
 
       {!list.loading && !list.error && list.items.length === 0 && (

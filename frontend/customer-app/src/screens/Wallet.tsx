@@ -1,7 +1,7 @@
 import { ArrowDownLeft, Receipt, ShieldCheck, Store } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { AmountText, Button, Card, IconCircle, ListEmptyState, LoadMore, PullToRefresh, SkeletonCard, SkeletonList, TextField, TopHeader, usePagedList, ServiceArt } from '@sheout/design-system';
+import { LoadFailed, AmountText, Button, Card, IconCircle, ListEmptyState, LoadMore, PullToRefresh, SkeletonCard, SkeletonList, TextField, TopHeader, usePagedList, ServiceArt } from '@sheout/design-system';
 import { ApiError, bookingApi, usersApi, walletApi } from '../api/client';
 import type { PaymentHold, RiderWallet, RiderWalletEntry } from '../api/types';
 import { openRazorpayCheckout } from '../lib/razorpayCheckout';
@@ -310,7 +310,7 @@ export function Wallet() {
 
       <div className="space-y-3">
         <h2 className="font-heading text-section text-text-primary">{t('wallet.activity')}</h2>
-        {list.error && <p className="text-sm text-danger">{list.error}</p>}
+        {list.error && <LoadFailed onRetry={list.reload} testId="list-load-failed" />}
         {list.loading && <SkeletonList rows={3} label={t('wallet.activityLoading')} />}
         {!list.loading && !list.error && list.items.length === 0 && (
           <ListEmptyState
