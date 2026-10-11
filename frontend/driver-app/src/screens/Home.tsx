@@ -530,8 +530,10 @@ export function Home() {
           just finished. */}
       <RatingPrompt counterpartLabel={t('common.yourRider')} onRated={loadRating} />
 
-      {/* Room at the foot, so the assistant in the corner never sits on the last trip. */}
-      <div className="h-14" aria-hidden="true" />
+      {/* Room at the foot: scrolled to the end, the assistant in the corner and
+          its greeting sit over empty page, never on the last card - the
+          greeting only ever shows where it covers nothing (AssistantFab). */}
+      <div className="h-32" aria-hidden="true" data-testid="agent-clearance" />
 
       {/* The assistant, standing by in the corner, as in the rider app. */}
       <AssistantFab
