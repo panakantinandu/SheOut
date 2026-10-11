@@ -268,7 +268,7 @@ export const VERIFICATION_CONSENT_VERSION = '2026-10-03-draft';
 export const PARTNER_VERIFICATION_CONSENT: LegalDocument = {
   title: 'Consent to verification',
   effective: `Version ${VERIFICATION_CONSENT_VERSION}`,
-  intro: `I agree to SheOut verifying my identity, my documents and my police or criminal record, as described below, so that I can carry riders and deliveries on SheOut. ${TODO_LAWYER}`,
+  intro: `I agree to SheOut verifying my identity, my documents and my police or criminal record, as described below, so that I can carry customers and deliveries on SheOut. ${TODO_LAWYER}`,
   sections: [
     {
       heading: 'What SheOut checks',
@@ -280,7 +280,7 @@ export const PARTNER_VERIFICATION_CONSENT: LegalDocument = {
     {
       heading: 'Who sees my documents',
       paragraphs: [
-        `SheOut\'s verification team, through links that expire. Every time someone opens one of my documents, SheOut records who opened it and when. Riders never see my documents. ${TODO_LAWYER}`,
+        `SheOut\'s verification team, through links that expire. Every time someone opens one of my documents, SheOut records who opened it and when. Customers never see my documents. ${TODO_LAWYER}`,
         `If SheOut uses a background-verification company, it receives what it needs to run the check, and SheOut will name it in the Privacy Policy before it is used. If I am enrolled in a group insurance cover, the insurer receives the details it needs to cover me and to handle a claim. ${TODO_LAWYER}`,
       ],
     },
