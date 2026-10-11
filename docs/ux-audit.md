@@ -199,3 +199,86 @@ UPDATE content_blocks SET description = 'Customer app,' || substr(description, l
 `SELECT content_key, value, updated_by FROM content_blocks WHERE value ILIKE '%rider%';`.
 A row with `updated_by` set was edited by staff and will not match, so it
 keeps its text and needs a console edit instead.
+
+## Results (2026-10-10)
+
+Fixed on `fix/ux-polish-pass`. Nothing pushed or deployed. Composites are in
+`docs/ux-after/<screen>-<lang>-<width>.jpg`, before on the left and after on
+the right.
+
+### Automatic checks, all 618 captures (66 screens at 375/390/430 px in en/hi/te, plus location-off states)
+
+| Check | Before | After |
+|---|---|---|
+| Visible "rider" text | 353 | 0 |
+| Touch targets under 44 px | 1,245 | 905 |
+| Buttons with no accessible name | 8 | 1 (transient, during the menu animation; not reproducible) |
+| Overflow / raw keys / `undefined`/`NaN` / page errors | 0 | 0 |
+
+### Findings and fixes
+
+| Finding | Screen | Fix | File | Evidence |
+|---|---|---|---|---|
+| C1 ₹107 shown, ₹107.44 charged | Booking → Payment | Fare rounded once to whole rupees at the quote; one formatter for every ₹ | `DistanceBasedFareCalculator`, `AmountText` | 4 new unit tests; e2e: quote 77 = booking 77 = final 77 = paid 77.00 |
+| C2 Assistant offers auto/cab/lunch box | Help assistant | Knowledge base: bike taxi and parcel only; seller monthly plan | `assistant/knowledge.md` | grep: 0 lunch/auto/cab |
+| C3/P2 Technical error text | Any failing call | `send()`/`parseJson()` and `requestErrorMessage()`: friendly text in her language for network/5xx/non-JSON; no English in brackets | both `api/client.ts`, `apiErrors.ts`, `lib/requestErrors.ts` | `c-bookings-error-en-390.jpg` |
+| C4 My Bookings error has no retry | 6 lists | Shared `LoadFailed` card with Try again | `MyBookings`, `PaymentMethods`, `Wallet`, `Seller`, partner `Bookings`, `SupportTicketList` | `c-bookings-error-en-390.jpg` |
+| C5 Back returns to the sent form | Searching | `navigate(..., { replace: true })` | `RideBooking`, `DeliveryBooking` | sheet test: back → `/home`, Chromium and WebKit, 3 widths (old build: `/book/ride`) |
+| C6 Sheet drags only on a 24 px strip | Book ride / parcel | Whole-sheet drag; details scroll; pull-down at their top collapses; 44 px handle; Book never scrolls away | `BookingMapLayout` | Chromium 27/27 (20/20 each way × 3 widths); WebKit 20/20 each way; old build 0/20 |
+| C7 Expanded sheet repeats fare and km | Book ride / parcel | `TripSheetDetails`: promo breakdown, how she pays, what fixed price means, partners nearby | `TripSheetDetails.tsx` | `sheet-expanded-chromium-4183.png`; test "details repeat no fare/km" |
+| C8 No offline banner | Every screen | `OfflineBanner` pill, clear of the corner buttons | `OfflineBanner.tsx`, both `App.tsx` | `c-home-offline-en-390.jpg` |
+| C9/C10/P1/S1–S4 "rider" | Both apps, push, errors, assistant, console, Terms, Privacy | "customer" (कस्टमर / కస్టమర్) | locales, `NotificationCopy`, controllers, `knowledge.md`, `index.html`, `legal/content.ts` | 186 locale values → 0; 353 visible → 0 |
+| C11 Pickup prompt wraps | Book, location off | "Choose pickup point", one line with ellipsis; addresses keep 2 lines | `BookingMapLayout`, locales | `c-book-ride-nogeo-te-360.jpg` |
+| C12 "Updated 418530s ago" | Tracking | just now / Ns / N min / over an hour | `Tracking.tsx` | `c-assigned-en-390.jpg` |
+| C13 Fare row has no padding | Tracking | `px-5 py-3` | `Tracking.tsx` | `c-assigned-en-390.jpg` |
+| C14 Chat twice | Tracking | Chat on the partner card only | `Tracking.tsx` | `c-assigned-en-390.jpg` |
+| C15 "Finding a partner" ×3, "Estimated Fare", Chat with nobody | Searching | Badge removed, label "Fare", Chat waits for a partner | `Tracking.tsx` | `c-searching-en-390.jpg` |
+| C16/P5 ₹ without grouping | Wallet, payment, partner trip | `formatAmount`/`formatRupees` | 9 files | `c-wallet-en-390.jpg` |
+| C18 Three names for SheOut Seller | Home, menu | "SheOut Seller" | locales | `c-menu-en-390.jpg` |
+| C19 Dead "Rate the app" | Settings | Shown only with a store link | `Settings.tsx` | `c-settings-en-390.jpg` |
+| C20 Mixed capitalisation | Menu | Sentence case (English) | locales | `c-menu-en-390.jpg` |
+| C21 Cancel fee not stated | Cancel dialog | "Cancelling is free." (no fee exists in the backend) | `Tracking.tsx` | locales |
+| C22 Unnamed menu header | Menu | `aria-label` while loading | `AppDrawer.tsx` | unnamed 8 → 1 |
+| P3 Offer shows the fare, not her pay | New request | `partnerEarnings` + `commissionPercent` (payments' `PlatformCommission`) | `DispatchController`, `PaymentApi`, `Offer.tsx` | `OfferEarningsTest`; e2e ₹63.14 of ₹77; `d-offer-en-390.jpg` |
+| P4 5.9 km vs quoted 7.9 km | New request | Routed distance; straight line only as fallback | `Offer.tsx` | `d-offer-te-390.jpg` |
+| P6 Tabs | Partner nav | Home · Trips · Earnings · Profile | `AppShell.tsx`, locales | `d-trips-en-390.jpg` |
+| P7 Fare twice | Partner trip complete | Shown once, in the payment card | `Trip.tsx` | `d-trip-complete-en-390.jpg` |
+| P8 "XXXXXXXX9012" | Payouts | "•••• 9012" | `Payouts.tsx` | `d-payouts-en-390.jpg` |
+| Profile additions | Both Profiles | Delete my account (same two-step flow), app version | `Profile.tsx` ×2, `PrivacyDataSection` | `c-profile-en-390.jpg`, `d-profile-en-390.jpg` |
+| Touch targets | Header, chips, login | 44 px minimums in CSS px | `TopHeader`, `BookingMapLayout`, `Login` ×2 | 1,245 → 905 |
+
+### Verification
+
+- **Backend:** 546 tests, 0 failures, 0 errors (`mvn clean test`, a fresh
+  database, UTC, Redis 8 on 6380).
+- **Frontend:** both apps pass `tsc -b` and `vite build`. Neither app has a
+  test or lint script.
+- **End-to-end** (local backend, dev mode, a scratch copy of the local
+  database), 16/16 checks: book, offer with earnings, accept, pickup code,
+  start, drop, complete, wallet payment. Quote ₹77 = booking = final = due =
+  paid ₹77.00; the wallet fell by exactly ₹77.00.
+
+### Not fixed, and why
+
+- **Bottom nav has 5 items:** SOS stays raised, as you decided.
+- **SOS sends on one tap of the circle**, with no confirm and no hold.
+  Reported, not changed (your decision).
+- **Fare range (2.4):** dropped, as you decided.
+- **Percentage promotions** can still leave paise in what she pays
+  (10% of ₹107 = ₹10.70). Needs your decision.
+- **Partner verification consent** (`legal/content.ts`): still says "carry
+  riders" and "Riders never see my documents". It's legal text, so not
+  touched.
+- **`LEGAL_VERSION` not bumped** after the Terms/Privacy wording change, to
+  avoid a re-accept prompt.
+- **Seeded content rows:** V79 is proposed above, not created.
+- **905 small touch targets remain.** The root cause is `theme.css` scaling
+  the root font below 390 px, so every rem-sized target shrinks on small
+  phones. Fixing it globally changes every layout, so it's a separate pass.
+- **Not cleaned up:** hardcoded hex colours in illustration components
+  (MoodFace, ThreeWomen, the login art) and 7 one-off `text-[Npx]` sizes.
+  These are artwork and tiny chips, left as they are.
+- **The assistant's greeting bubble** briefly covers the SheOut Seller card
+  title on first view. Low priority.
+- **The pull-down-on-details gesture is untested on WebKit:** desktop WebKit
+  cannot synthesise touch events, so it needs a real iPhone check.
