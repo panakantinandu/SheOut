@@ -157,3 +157,45 @@ layout differs:
 2. **Medium:** C11–C18, P4–P6, S2–S4.
 3. **Low:** C19–C22, P7, P8.
 4. **Q items:** after your answers.
+
+## S8: seeded "rider" text in the database (proposed V79, NOT created, NOT run)
+
+The apps read `content_blocks` for About, Home and the Help FAQ, **in English
+only** (Hindi and Telugu use the locale files). When a row has a value, it
+overrides the locale string, so these rows are what English users see in prod
+unless staff have edited them. Column comments in V9, V12 and V14 also say
+"rider", but they are database documentation that nobody sees in the apps.
+
+| content_key | Seeded value (exact) | Set by | Proposed value |
+|---|---|---|---|
+| `about.body` | Rides and deliveries built around women's safety - women riders, women drivers. | V17 | Rides and deliveries built around women's safety: every customer and every partner is a woman. |
+| `faq.driver.2.answer` | Riders see it when you are on your way. It is how a woman getting into a stranger's vehicle at night checks she has the right one. It is never shown to anyone before you accept a trip. | V17 | Customers see it when… (rest unchanged) |
+| `faq.driver.3.answer` | …Requests also pause for up to ten minutes after a trip while the rider pays. | V25 | …while the customer pays. |
+| `faq.driver.4.question` | How do I contact my rider? | V17 | How do I contact my customer? |
+| `faq.driver.6.answer` | Your earnings are your share of every trip your riders have paid for. … | V25 | …every trip your customers have paid for. … |
+| `description` of 21 rows | "Rider app, Home: …", "Rider app, Help & Support: …" (staff see these in the console's content editor) | V17 | "Customer app, …" |
+
+Proposed `V79__customer_wording_in_content.sql`. V78 is taken by
+`next/drop-rc-document-key-v78`. Every value UPDATE matches the exact seeded
+text, so a row an operator has edited is left alone:
+
+```sql
+UPDATE content_blocks SET value = 'Rides and deliveries built around women''s safety: every customer and every partner is a woman.', updated_at = now()
+ WHERE content_key = 'about.body' AND value = 'Rides and deliveries built around women''s safety - women riders, women drivers.';
+UPDATE content_blocks SET value = 'Customers see it when you are on your way. It is how a woman getting into a stranger''s vehicle at night checks she has the right one. It is never shown to anyone before you accept a trip.', updated_at = now()
+ WHERE content_key = 'faq.driver.2.answer' AND value = 'Riders see it when you are on your way. It is how a woman getting into a stranger''s vehicle at night checks she has the right one. It is never shown to anyone before you accept a trip.';
+UPDATE content_blocks SET value = 'You must be online, verified, and allowing location access - requests are offered to the nearest available partners first, then further out. Requests also pause for up to ten minutes after a trip while the customer pays.', updated_at = now()
+ WHERE content_key = 'faq.driver.3.answer' AND value = 'You must be online, verified, and allowing location access - requests are offered to the nearest available partners first, then further out. Requests also pause for up to ten minutes after a trip while the rider pays.';
+UPDATE content_blocks SET value = 'How do I contact my customer?', updated_at = now()
+ WHERE content_key = 'faq.driver.4.question' AND value = 'How do I contact my rider?';
+UPDATE content_blocks SET value = 'Your earnings are your share of every trip your customers have paid for. Each paid fare is added to your SheOut wallet, and you can request a payout to your bank or UPI from Wallet & payouts.', updated_at = now()
+ WHERE content_key = 'faq.driver.6.answer' AND value = 'Your earnings are your share of every trip your riders have paid for. Each paid fare is added to your SheOut wallet, and you can request a payout to your bank or UPI from Wallet & payouts.';
+-- Staff-facing labels in the console's content editor; never shown in the apps.
+UPDATE content_blocks SET description = 'Customer app,' || substr(description, length('Rider app,') + 1)
+ WHERE description LIKE 'Rider app,%';
+```
+
+**Before running it:** check prod with
+`SELECT content_key, value, updated_by FROM content_blocks WHERE value ILIKE '%rider%';`.
+A row with `updated_by` set was edited by staff and will not match, so it
+keeps its text and needs a console edit instead.
