@@ -93,7 +93,7 @@ public class AdminRefundController {
         BigDecimal amount = body.amount().setScale(2, RoundingMode.HALF_UP);
         boolean rider = authApi.findAccount(body.customerAccountId()).map(a -> a.role() == AccountRole.CUSTOMER).orElse(false);
         if (!rider) {
-            throw ApiException.notFound("No such rider");
+            throw ApiException.notFound("No such customer");
         }
         if (body.bookingId() != null && !bookings.findById(body.bookingId())
                 .map(b -> body.customerAccountId().equals(b.customerId())).orElse(false)) {
@@ -134,7 +134,7 @@ public class AdminRefundController {
         boolean hers = support.ticket(body.ticketId(), me.accountId())
                 .map(t -> body.customerAccountId().equals(t.ticket().raisedByAccountId())).orElse(false);
         if (!holds || !hers) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "OUT_OF_REACH", "You can refund only the rider of a ticket you hold.");
+            throw new ApiException(HttpStatus.FORBIDDEN, "OUT_OF_REACH", "You can refund only the customer of a ticket you hold.");
         }
     }
 }

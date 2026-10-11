@@ -61,7 +61,7 @@ public class AssistantController {
         CurrentAccount caller = CurrentAccountContext.get()
                 .orElseThrow(() -> ApiException.unauthorized("Authentication required"));
         if (caller.role() != AccountRole.CUSTOMER && caller.role() != AccountRole.DRIVER) {
-            throw ApiException.forbidden("SheOut Help is for riders and partners");
+            throw ApiException.forbidden("SheOut Help is for customers and partners");
         }
         // Bursts, beside the daily cap: nobody types six questions in ten seconds.
         rateLimiter.tryConsume("assistant:" + caller.accountId(), 6, Duration.ofMinutes(1))

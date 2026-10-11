@@ -58,15 +58,15 @@ export const PRIVACY_POLICY: LegalDocument = {
         'We do not collect anything on this list "just in case". Each item exists because a specific part of the service stops working without it.',
       ],
       bullets: [
-        'Your mobile number. It is your login - we have no passwords at all, only a one-time code sent by SMS. It is also how a driver and a rider are reached about a trip in progress.',
+        'Your mobile number. It is your login - we have no passwords at all, only a one-time code sent by SMS. It is also how a driver and a customer are reached about a trip in progress.',
         'Your name. Shown to the person you are travelling with or handing a parcel to, so each of you knows who to expect.',
         'A government identity document. This is the sensitive one. SheOut is women-only, and that promise is worth nothing if it is self-declared, so a person on our operations team looks at your ID and decides. See "Who can see your ID" below.',
-        'Your precise location. A rider\'s location sets the pickup point. A driver\'s location is broadcast while they are online, so that riders nearby can be matched and so a rider can watch their driver approach. A driver who goes offline stops broadcasting immediately.',
+        'Your precise location. A customer\'s location sets the pickup point. A driver\'s location is broadcast while they are online, so that customers nearby can be matched and so a customer can watch their driver approach. A driver who goes offline stops broadcasting immediately.',
         'The addresses you search for. Typing a destination sends that text, and dropping a pin sends those coordinates, to OpenStreetMap\'s geocoding service. See "Who else receives your data".',
         'Your emergency contacts. Names, numbers and relationships you enter yourself. These are only used when you raise an SOS. Please read "About your emergency contacts" - you are giving us someone else\'s phone number.',
         'Your trips and payments. Pickup, drop, time, fare, and how it was paid. Needed to run the trip, settle with drivers, answer disputes and meet tax obligations.',
         'For drivers only: vehicle type and registration number, your online and offline periods, and the outcome of a police verification check.',
-        'For drivers only: selfies. A live selfie when you verify, which our team compares with your ID, and a selfie at the start of each shift, compared with that verified selfie to confirm it is really you before you can take trips. A change to your name, photo or vehicle after you are verified is checked by our team before riders see it.',
+        'For drivers only: selfies. A live selfie when you verify, which our team compares with your ID, and a selfie at the start of each shift, compared with that verified selfie to confirm it is really you before you can take trips. A change to your name, photo or vehicle after you are verified is checked by our team before customers see it.',
       ],
     },
     {
@@ -78,14 +78,14 @@ export const PRIVACY_POLICY: LegalDocument = {
         'No passwords, because there is no password to steal.',
         'No card numbers or UPI IDs. Trips are paid per ride, and nothing about a payment instrument is stored on your account.',
         'No contact list, photo library, microphone or camera roll access. We never ask for them.',
-        'No location at all while the app is closed. A driver broadcasts only while online in the app; a rider\'s location is read only when they ask for it to set a pickup.',
+        'No location at all while the app is closed. A driver broadcasts only while online in the app; a customer\'s location is read only when they ask for it to set a pickup.',
         'No advertising identifiers, and no sale of anything on this page to anybody. We do not run ads and we do not have data-broker relationships.',
       ],
     },
     {
       heading: 'Who can see your ID',
       paragraphs: [
-        'Your identity document is visible to trained members of the SheOut operations team who review verification submissions, and to nobody else. It is never shown to drivers, to riders, or to anyone you travel with. It is not published, indexed or shared.',
+        'Your identity document is visible to trained members of the SheOut operations team who review verification submissions, and to nobody else. It is never shown to drivers, to customers, or to anyone you travel with. It is not published, indexed or shared.',
         'Verification is a human decision. No automated system approves or rejects you, and none is planned, because getting this wrong excludes a woman from a service built for her.',
         'A rejected document can be replaced and reviewed again. We do not keep a rejected submission any longer than the review needs.',
       ],
@@ -164,14 +164,14 @@ export const TERMS_OF_SERVICE: LegalDocument = {
     {
       heading: 'What SheOut is, and what it is not',
       paragraphs: [
-        'SheOut connects riders with independent driver-partners for rides and deliveries. We are the platform that matches you, prices the trip and handles payment.',
+        'SheOut connects customers with independent driver-partners for rides and deliveries. We are the platform that matches you, prices the trip and handles payment.',
         'We are not the driver, and driver-partners are not our employees. That is a real limit on what we can promise about any individual trip, and it would be dishonest to imply otherwise. What we do take responsibility for is who we let onto the platform, and what we do when you tell us something went wrong.',
       ],
     },
     {
       heading: 'Women only, and why we check',
       paragraphs: [
-        'Both riders and driver-partners on SheOut are women. This is the point of the service, not a marketing line.',
+        'Both customers and driver-partners on SheOut are women. This is the point of the service, not a marketing line.',
         'It is why we ask for a government ID and why a person reviews it. Submitting someone else\'s document, or a document that is not yours, ends your access permanently - not because of paperwork, but because it puts other women in a car with someone who lied to get there.',
         'Driver-partners are additionally subject to a police verification check and cannot accept trips until both checks pass. We re-check both every time a trip is offered, so a partner whose verification is withdrawn stops receiving trips immediately rather than at some later sweep.',
       ],
@@ -186,7 +186,7 @@ export const TERMS_OF_SERVICE: LegalDocument = {
       heading: 'Your account',
       paragraphs: [
         'Your account is yours alone and is tied to your mobile number. Anyone holding your phone and able to read an SMS can sign in as you, so treat your number as the credential it is and tell us promptly if you lose control of it.',
-        'One number, one account, one role. A number registered as a rider cannot also be a driver-partner.',
+        'One number, one account, one role. A number registered as a customer cannot also be a driver-partner.',
       ],
     },
     {

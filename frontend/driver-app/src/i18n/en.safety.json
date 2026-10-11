@@ -6,7 +6,7 @@
   },
   "pickupCode": {
     "locked": "This trip needs support to sort out before it can start.",
-    "askForCode": "Ask your rider for her four-digit code and enter it here. The trip starts once it matches.",
+    "askForCode": "Ask your customer for her four-digit code and enter it here. The trip starts once it matches.",
     "fieldLabel": "Pickup code",
     "fieldPlaceholder": "4-digit code"
   },
@@ -25,10 +25,10 @@
     "privacyNote": "Never share OTPs, passwords or ID numbers here."
   },
   "riderCheck": {
-    "womenOnly": "SheOut is for women only. If the person here is a man, or not the rider shown, do not start the trip."
+    "womenOnly": "SheOut is for women only. If the person here is a man, or not the customer shown, do not start the trip."
   },
   "verifyStage": {
-    "policeWhy": "Your safety check is a police certificate. It keeps every rider safe, and it is checked by a person."
+    "policeWhy": "Your safety check is a police certificate. It keeps every customer safe, and it is checked by a person."
   },
   "reject": {
     "DOCUMENT_ALTERED": "We could not accept this {{document}}. If you think this is a mistake, contact support.",

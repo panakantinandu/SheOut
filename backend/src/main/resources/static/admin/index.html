@@ -68,7 +68,7 @@
     --block: #7F1D1D;
 
     /* The wordmark's own two colours, taken from the apps' theme.css so the
-       console's SHEOUT is the same SHEOUT the riders and partners see. The
+       console's SHEOUT is the same SHEOUT the customers and partners see. The
        orange is the wordmark's, deeper than --accent, which on white would
        be too pale to read at sidebar size. */
     --word-she: #4A1A9E;
@@ -362,7 +362,7 @@
   tr:last-child td { border-bottom: 0; }
   tbody tr.clickable { cursor: pointer; }
   /* Row accents: an edge in the colour of what the row is - red urgent,
-     amber waiting, green done, blue in flight, purple a rider - and, on the
+     amber waiting, green done, blue in flight, purple a customer - and, on the
      tables where the kind of row matters most, a leading icon in the same
      colour. Set per section by view.accent / view.rowIcon. */
   tbody tr[data-acc] td:first-child { box-shadow: inset 3px 0 0 var(--acc); }
@@ -379,7 +379,7 @@
   }
   .row-ico svg { width: 15px; height: 15px; }
   /* Rows about people lead with the person: her profile photo, or her
-     initials in her app's colour - riders purple, partners orange. */
+     initials in her app's colour - customers purple, partners orange. */
   .av {
     width: 30px; height: 30px; flex: none; border-radius: 50%; display: grid; place-items: center; overflow: hidden;
     font-size: 11px; font-weight: 700; letter-spacing: .02em; color: #fff; background: var(--av-bg);
@@ -672,7 +672,7 @@
   .msg .body { white-space: pre-wrap; word-break: break-word; font-size: 13px; }
   .msg.raiser { align-self: flex-start; background: var(--bg); }
   .msg.staff { align-self: flex-end; background: var(--brand-tint); border-color: var(--brand-line); }
-  /* Internal notes must never be mistaken for a reply the rider can read,
+  /* Internal notes must never be mistaken for a reply the customer can read,
      so they look nothing like one: amber, dashed, and labelled. */
   .msg.internal { align-self: stretch; max-width: none; background: var(--amber-bg); border: 1px dashed var(--amber-line); }
   .msg.internal .body { color: var(--text); }
@@ -1857,7 +1857,7 @@
       </button>
       <button data-tab="queue" aria-current="false">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M6.2 15a3 3 0 0 1 5.6 0"/><path d="M15 10h3M15 14h3"/></svg>
-        <span class="nl">Rider ID checks</span> <span class="count" id="cQueue"></span>
+        <span class="nl">Customer ID checks</span> <span class="count" id="cQueue"></span>
       </button>
       <button data-tab="docreview" aria-current="false">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="m9 15 2 2 4-4"/></svg>
@@ -2093,7 +2093,7 @@ const STATUS_TEXT = {
   REQUESTED: 'Requested', MATCHED: 'Driver matched', ACCEPTED: 'Accepted',
   IN_PROGRESS: 'In progress', COMPLETED: 'Completed', CANCELLED: 'Cancelled',
   // Not 'Cancelled'. Nobody cancelled this one - the search ran out and
-  // found nobody, which is a supply problem to act on, not a rider
+  // found nobody, which is a supply problem to act on, not a customer
   // changing her mind. Collapsing the two would hide exactly the number an
   // operator needs to see.
   NO_DRIVERS_AVAILABLE: 'No drivers found',
@@ -2922,8 +2922,8 @@ const VIEWS = {
   },
 
   queue: {
-    title: 'Rider ID checks',
-    desc: 'Riders who sent their ID and a live selfie and are waiting to be allowed to book. Partners are reviewed under Partner applications. The software only flags what to look at; every approval and every rejection here is a person\'s decision.',
+    title: 'Customer ID checks',
+    desc: 'Customers who sent their ID and a live selfie and are waiting to be allowed to book. Partners are reviewed under Partner applications. The software only flags what to look at; every approval and every rejection here is a person\'s decision.',
     cardTitle: 'Awaiting review',
     hint: 'Select a row to see the document and decide',
     empty: { icon: ICON_EMPTY_QUEUE, title: 'Nobody awaiting review', text: 'When a driver or customer submits a document they will appear here.' },
@@ -3092,7 +3092,7 @@ const VIEWS = {
     desc: 'SheOut Help answers from SheOut\'s own content only. "Handed to a person" became a pre-filled support ticket the user could send; "Sent to SOS" were messages that sounded like someone in danger - those never reach the model. Cost is an estimate from the configured prices.',
     cardTitle: 'Last 30 days',
     hint: '',
-    empty: { icon: ICON_EMPTY_LIST, title: 'Not used yet', text: 'Days appear here once riders or partners ask SheOut Help something.' },
+    empty: { icon: ICON_EMPTY_LIST, title: 'Not used yet', text: 'Days appear here once customers or partners ask SheOut Help something.' },
     columns: [
       { key: 'day', label: 'Day', sort: r => r.day },
       { key: 'accounts', label: 'People', sort: r => -r.accounts },
@@ -3123,10 +3123,10 @@ const VIEWS = {
 
   sos: {
     title: 'SOS Alerts',
-    desc: 'Live safety alerts raised by riders and partners. "Reached" counts the emergency contacts an SMS actually got through to — if it reads 0, nobody was told. A partner has no emergency contacts on file: her alert is yours to answer.',
+    desc: 'Live safety alerts raised by customers and partners. "Reached" counts the emergency contacts an SMS actually got through to — if it reads 0, nobody was told. A partner has no emergency contacts on file: her alert is yours to answer.',
     cardTitle: 'Active alerts',
     hint: 'Open the location link to see exactly where the alert came from',
-    empty: { icon: ICON_EMPTY_SOS, title: 'No active SOS alerts', text: 'Alerts raised from the rider and partner apps appear here until they are resolved.' },
+    empty: { icon: ICON_EMPTY_SOS, title: 'No active SOS alerts', text: 'Alerts raised from the customer and partner apps appear here until they are resolved.' },
     columns: [
       { key: 'customer', label: 'Raised by', sort: r => (r.customerName || '').toLowerCase() },
       { key: 'phone', label: 'Phone', sort: r => r.customerPhone || '' },
@@ -3143,7 +3143,7 @@ const VIEWS = {
       return rows;
     },
     cell: (r, key) => {
-      if (key === 'customer') return `<span class="strong">${esc(r.customerName || 'Unknown')}</span> ${r.raisedBy === 'PARTNER' ? '<span class="badge b-role-driver">Partner</span>' : '<span class="badge b-role-customer">Rider</span>'}${r.customerBlocked ? ' <span class="badge b-blocked">Blocked</span>' : ''}`;
+      if (key === 'customer') return `<span class="strong">${esc(r.customerName || 'Unknown')}</span> ${r.raisedBy === 'PARTNER' ? '<span class="badge b-role-driver">Partner</span>' : '<span class="badge b-role-customer">Customer</span>'}${r.customerBlocked ? ' <span class="badge b-blocked">Blocked</span>' : ''}`;
       if (key === 'phone') return telLink(r.customerPhone, { subject: 'ACCOUNT_PHONE', accountId: r.customerAccountId, bookingId: r.bookingId || undefined });
       if (key === 'location') return `<a href="https://maps.google.com/?q=${r.lat},${r.lng}" target="_blank" rel="noreferrer">Open map</a>
         <div class="subtle num">${r.lat.toFixed(4)}, ${r.lng.toFixed(4)}</div>
@@ -3165,7 +3165,7 @@ const VIEWS = {
   },
 
   /**
-   * Issues raised by riders and partners.
+   * Issues raised by customers and partners.
    *
    * Its own list, not merged into SOS Alerts. An SOS is someone who may be in
    * danger this minute; a ticket is something to be worked through, and
@@ -3179,7 +3179,7 @@ const VIEWS = {
    */
   support: {
     title: 'Support Tickets',
-    desc: 'Issues raised from the rider and partner apps. Unresolved tickets come first, and within them safety concerns and other high-priority tickets. Open a ticket to read the full thread, reply, leave an internal note, assign it or change its status.',
+    desc: 'Issues raised from the customer and partner apps. Unresolved tickets come first, and within them safety concerns and other high-priority tickets. Open a ticket to read the full thread, reply, leave an internal note, assign it or change its status.',
     cardTitle: 'Tickets',
     hint: 'Click a row to open the ticket',
     empty: { icon: ICON_EMPTY_TICKETS, title: 'No tickets yet', text: 'Issues raised from Help & Support in either app appear here.' },
@@ -3360,16 +3360,16 @@ const VIEWS = {
   },
 
   /**
-   * A verified partner's change to what riders identify her by. Nothing
-   * reaches riders until it is approved here: a new name has to match her
+   * A verified partner's change to what customers identify her by. Nothing
+   * reaches customers until it is approved here: a new name has to match her
    * ID, a new photo has to be her, and a new vehicle needs its RC.
    */
   changes: {
     title: 'Profile Changes',
-    desc: 'Verified partners asking to change what riders identify them by: name, date of birth, photo or vehicle. Riders keep seeing the checked details until you approve. Compare a new name or date of birth with her ID, a new photo with her ID photo and live selfie, and a new registration number with the RC she sent.',
+    desc: 'Verified partners asking to change what customers identify them by: name, date of birth, photo or vehicle. Customers keep seeing the checked details until you approve. Compare a new name or date of birth with her ID, a new photo with her ID photo and live selfie, and a new registration number with the RC she sent.',
     cardTitle: 'Waiting for a decision',
     hint: 'Oldest first · click a row to compare',
-    empty: { icon: ICON_EMPTY_QUEUE, title: 'Nothing waiting', text: 'When a verified partner changes her name, photo or vehicle, it appears here before riders see it.' },
+    empty: { icon: ICON_EMPTY_QUEUE, title: 'Nothing waiting', text: 'When a verified partner changes her name, photo or vehicle, it appears here before customers see it.' },
     columns: [
       { key: 'who', label: 'Partner', sort: r => (r.currentName || '').toLowerCase() },
       { key: 'what', label: 'Asks to change' },
@@ -3392,12 +3392,12 @@ const VIEWS = {
 
   /**
    * What is happening on the roads right now: partners online and where,
-   * riders waiting, trips under way - on a map and in two tables, every
+   * customers waiting, trips under way - on a map and in two tables, every
    * row and marker opening the full page for that person or trip.
    */
   live: {
     title: 'Live',
-    desc: 'Partners online and where they are, riders waiting for a partner, and every trip under way, refreshed every 10 seconds. Click any trip, partner or map marker for everything about it. Positions come from the partners\' own phones; one that has not reported for a couple of minutes is shown grey rather than hidden.',
+    desc: 'Partners online and where they are, customers waiting for a partner, and every trip under way, refreshed every 10 seconds. Click any trip, partner or map marker for everything about it. Positions come from the partners\' own phones; one that has not reported for a couple of minutes is shown grey rather than hidden.',
     cardTitle: 'Live',
     hint: 'Refreshes every 10 seconds',
     custom: true,
@@ -3410,7 +3410,7 @@ const VIEWS = {
   },
 
   /**
-   * When riders can book. Off-hours protect partners and riders alike - a
+   * When customers can book. Off-hours protect partners and customers alike - a
    * woman riding alone at 2 AM is the risk SheOut exists to avoid - and a
    * pause covers what a schedule cannot: rain, unrest, an incident.
    */
@@ -3428,7 +3428,7 @@ const VIEWS = {
 
   hours: {
     title: 'Service Hours',
-    desc: 'When riders can book. Set daily operating hours, or pause new bookings at once for an incident, heavy rain or unrest. Only new bookings stop: trips already under way always finish. Both apps show riders and partners the hours and when bookings reopen.',
+    desc: 'When customers can book. Set daily operating hours, or pause new bookings at once for an incident, heavy rain or unrest. Only new bookings stop: trips already under way always finish. Both apps show customers and partners the hours and when bookings reopen.',
     cardTitle: 'Service hours',
     hint: 'Changes take effect immediately',
     custom: true,
@@ -3494,7 +3494,7 @@ const VIEWS = {
 
   campaigns: {
     title: 'Campaigns',
-    desc: 'Temporary offers on top of the real fare: rider promotions, and partner incentives paid from SheOut\'s margin. The fare formula itself never changes. Every campaign has a budget cap and stops by itself when the cap is reached.',
+    desc: 'Temporary offers on top of the real fare: customer promotions, and partner incentives paid from SheOut\'s margin. The fare formula itself never changes. Every campaign has a budget cap and stops by itself when the cap is reached.',
     cardTitle: 'Campaigns',
     hint: 'Spend refreshes every 15 seconds while this page is open',
     custom: true,
@@ -3511,7 +3511,7 @@ const VIEWS = {
 
   content: {
     title: 'App Content',
-    desc: 'Text shown in the rider and partner apps. Edit a block and save it; the apps pick up the change within about five minutes. Plain text only - line breaks are kept, nothing else is formatted.',
+    desc: 'Text shown in the customer and partner apps. Edit a block and save it; the apps pick up the change within about five minutes. Plain text only - line breaks are kept, nothing else is formatted.',
     cardTitle: 'Editable text',
     hint: 'Changes are live in the apps within ~5 minutes',
     custom: true,
@@ -3601,7 +3601,7 @@ const VIEWS = {
     hint: 'Click anyone for their full profile · blocking takes effect immediately',
     onRowClick: r => openAccount(r.accountId),
     openLabel: 'View profile',
-    empty: { icon: ICON_EMPTY_PEOPLE, title: 'No accounts yet', text: 'Riders and partners appear here as they sign up.' },
+    empty: { icon: ICON_EMPTY_PEOPLE, title: 'No accounts yet', text: 'Customers and partners appear here as they sign up.' },
     emptyFiltered: {
       icon: ICON_EMPTY_SEARCH,
       title: 'No results match your filters',
@@ -3694,19 +3694,19 @@ const VIEWS = {
    * crosses a threshold; this is for reading.
    *
    * Who said what is not here and is not coming. A partner able to work out
-   * which rider tapped "unsafe driving" is the reason people stop saying
+   * which customer tapped "unsafe driving" is the reason people stop saying
    * anything at all.
    */
   feedback: {
     title: 'Feedback',
-    desc: 'The quick reasons riders and partners tap when they rate a trip, counted per account. Counts only — never who said it. Nothing here has been acted on: it is a place to notice patterns, and the same tag twelve times means more than one bad night does.',
+    desc: 'The quick reasons customers and partners tap when they rate a trip, counted per account. Counts only — never who said it. Nothing here has been acted on: it is a place to notice patterns, and the same tag twelve times means more than one bad night does.',
     cardTitle: 'Tagged feedback',
     hint: 'Most-tagged first',
     empty: { icon: ICON_EMPTY_LIST, title: 'Nothing tagged yet', text: 'When somebody taps a reason while rating a trip, it is counted here.' },
     emptyFiltered: { icon: ICON_EMPTY_SEARCH, title: 'Nothing tagged in this window', text: 'Widen the date range, or look at the other side of the trip.' },
     filters: [
-      { key: 'about', kind: 'select', label: 'About', any: 'Partners (rated by riders)', options: () => [
-        { value: 'CUSTOMER', label: 'Riders (rated by partners)' },
+      { key: 'about', kind: 'select', label: 'About', any: 'Partners (rated by customers)', options: () => [
+        { value: 'CUSTOMER', label: 'Customers (rated by partners)' },
       ] },
       { key: 'days', kind: 'select', label: 'Window', any: 'Last 30 days', options: () => [
         { value: '7', label: 'Last 7 days' },
@@ -3739,7 +3739,7 @@ const VIEWS = {
 
   routes: {
     title: 'Route Review',
-    desc: 'Trips driven measurably shorter than the route the fare was quoted on, measured from the partner\'s own location reports. Nothing has been done because a trip is listed here: the fare stands and neither account is affected. A shorter drive has innocent readings - the rider asked to get out early, a road the quote did not know - and less innocent ones. Read the distances and any reason she gave, decide, and record what you decided.',
+    desc: 'Trips driven measurably shorter than the route the fare was quoted on, measured from the partner\'s own location reports. Nothing has been done because a trip is listed here: the fare stands and neither account is affected. A shorter drive has innocent readings - the customer asked to get out early, a road the quote did not know - and less innocent ones. Read the distances and any reason she gave, decide, and record what you decided.',
     cardTitle: 'Flagged trips',
     hint: 'Nothing here is automatic - every outcome is your decision',
     onRowClick: r => openBooking(r.trip.bookingId),
@@ -3748,7 +3748,7 @@ const VIEWS = {
     columns: [
       { key: 'trip', label: 'Trip', sort: r => new Date(r.trip.completedAt || 0).getTime() },
       { key: 'partner', label: 'Partner', sort: r => (r.partnerName || '').toLowerCase() },
-      { key: 'rider', label: 'Rider', sort: r => (r.riderName || '').toLowerCase() },
+      { key: 'rider', label: 'Customer', sort: r => (r.riderName || '').toLowerCase() },
       { key: 'quoted', label: 'Quoted', sort: r => Number(r.trip.quotedDistanceKm || 0) },
       { key: 'driven', label: 'Driven', sort: r => routeShortfall(r.trip) },
       { key: 'ended', label: 'How it ended', sort: null },
@@ -3763,7 +3763,7 @@ const VIEWS = {
       if (key === 'partner') return `<span class="strong">${esc(r.partnerName || 'Name not set')}</span><div class="subtle num">${esc(r.partnerPhone || '')}</div>`;
       if (key === 'rider') return `<span class="strong">${esc(r.riderName || 'Name not set')}</span><div class="subtle num">${esc(r.riderPhone || '')}</div>`;
       if (key === 'quoted') return `<span class="num strong">${esc(String(t.quotedDistanceKm))} km</span>${t.quotedRouted ? '' : '<div class="subtle">estimate - the router was unavailable when quoted</div>'}${t.destinationChangedAt
-        ? `<div><span class="badge b-grey">Destination changed</span></div><div class="subtle">Rider asked and partner agreed at ${time(t.destinationChangedAt)}. This is the agreed route; first quoted ${esc(String(t.originalQuotedDistanceKm ?? '—'))} km.</div>`
+        ? `<div><span class="badge b-grey">Destination changed</span></div><div class="subtle">Customer asked and partner agreed at ${time(t.destinationChangedAt)}. This is the agreed route; first quoted ${esc(String(t.originalQuotedDistanceKm ?? '—'))} km.</div>`
         : ''}`;
       if (key === 'driven') return `<span class="num strong">${esc(String(t.actualDistanceKm))} km</span>
         <div><span class="badge b-amber">${routeShortfall(t)}% shorter</span></div>
@@ -3873,7 +3873,7 @@ const DROP_OFF_REASON_TEXT = {
 /** Who ended the trip, how far from the drop, and the reason she gave - the context for the distances. */
 function endedCell(t) {
   const who = t.endedBy === 'RIDER'
-    ? '<span class="badge b-role-customer">Rider ended it</span>'
+    ? '<span class="badge b-role-customer">Customer ended it</span>'
     : '<span class="badge b-role-driver">Partner ended it</span>';
   const where = t.endedMetresFromDrop == null
     ? '<div class="subtle">Partner position unknown at the end</div>'
@@ -3910,7 +3910,7 @@ function rateCell(stats) {
  * worst person on the platform on the strength of no evidence at all.
  *
  * The count is shown for the same reason the cancellation cell shows its
- * denominator: 2.0 from two riders on a bad night and 2.0 from forty are
+ * denominator: 2.0 from two customers on a bad night and 2.0 from forty are
  * different facts, and an operator deciding whether to remove somebody's
  * livelihood should not have to guess which one they are looking at.
  */
@@ -4470,7 +4470,7 @@ document.addEventListener('click', async e => {
     const b = t.booking;
     openModal(`<div class="modal-head"><h3>Trip in an alert ${badge(t.status)}</h3><p>Checked ${esc(time(t.at))}</p></div>
       <div class="modal-body"><dl class="kv">
-        <dt>Rider</dt><dd>${esc(t.riderName || 'Name not set')} ${revealButton({ subject: 'ACCOUNT_PHONE', accountId: t.riderId, bookingId })}</dd>
+        <dt>Customer</dt><dd>${esc(t.riderName || 'Name not set')} ${revealButton({ subject: 'ACCOUNT_PHONE', accountId: t.riderId, bookingId })}</dd>
         ${t.partnerId ? `<dt>Partner</dt><dd>${esc(t.partnerName || 'Name not set')} ${revealButton({ subject: 'ACCOUNT_PHONE', accountId: t.partnerId, bookingId })}</dd>` : ''}
         <dt>From</dt><dd>${esc(b.pickup.label)}</dd><dt>To</dt><dd>${esc(b.drop.label)}</dd>
         <dt>Partner now</dt><dd>${t.partnerNow ? `${esc(agoText(t.partnerNow.recordedAt))} ago &middot; ${mapsLink(t.partnerNow.lat, t.partnerNow.lng)}
@@ -5078,7 +5078,7 @@ const REVIEW_DOC_ORDER = ['DRIVING_LICENCE', 'VEHICLE_RC', 'VEHICLE_INSURANCE', 
 const STEP_TONE = { waiting: 'amber', done: 'green', rejected: 'red', missing: 'grey', expired: 'red', blocked: 'grey' };
 const STEP_WORD = { waiting: 'To review', done: 'Approved', rejected: 'Sent back', missing: 'Not sent', expired: 'Expired', blocked: 'After identity' };
 
-/** Her steps, in the order she does them, each with where it stands. A rider has only her identity. */
+/** Her steps, in the order she does them, each with where it stands. A customer has only her identity. */
 function reviewSteps(v) {
   const g = v.genderVerificationStatus;
   const steps = [{ key: 'identity', label: 'Identity', state: g === 'UNDER_REVIEW' ? 'waiting' : g === 'VERIFIED' ? 'done' : g === 'REJECTED' ? 'rejected' : 'missing' }];
@@ -5130,7 +5130,7 @@ async function openReview(accountId, startKey) {
     const modal = $('modalRoot').querySelector('.modal');
     modal.innerHTML = `
       <div class="modal-head rv-head">
-        <h3>${esc(v.name || 'Name not set')} <span class="subtle">${v.role === 'CUSTOMER' ? 'Rider' : esc(VEHICLE_TEXT[v.vehicleType] || '')}${v.vehicleRegistrationNumber ? ' · <span class="num">' + esc(v.vehicleRegistrationNumber) + '</span>' : ''}</span></h3>
+        <h3>${esc(v.name || 'Name not set')} <span class="subtle">${v.role === 'CUSTOMER' ? 'Customer' : esc(VEHICLE_TEXT[v.vehicleType] || '')}${v.vehicleRegistrationNumber ? ' · <span class="num">' + esc(v.vehicleRegistrationNumber) + '</span>' : ''}</span></h3>
         <p>${left ? `${left} step${left === 1 ? '' : 's'} waiting for you` : 'Nothing waiting for a decision'} · ${esc(v.phoneNumber || '')}
           ${v.checks && OVERALL_TEXT[v.checks.overall] ? ` · <span class="badge b-${OVERALL_TEXT[v.checks.overall][0]}">${esc(OVERALL_TEXT[v.checks.overall][1])}</span>` : ''}</p>
         <ol class="rv-steps" role="tablist">${steps.map((s, n) => `<li><button type="button" role="tab" aria-selected="${s === current}" data-step="${s.key}" class="rv-step s-${s.state}${s === current ? ' on' : ''}">
@@ -5662,9 +5662,9 @@ function policyForm(p) {
         <label class="field"><span>Claims web page</span><input name="claimsUrl" maxlength="500" value="${escValue(v.claimsUrl)}"></label>
         <label class="field"><span>Policy summary link</span><input name="policySummaryUrl" maxlength="500" value="${escValue(v.policySummaryUrl)}"></label>
       </div>
-      <label class="field"><span>What is covered, in the schedule's words (riders and partners read this)</span><textarea name="coverageSummary" maxlength="2000">${escValue(v.coverageSummary)}</textarea></label>
+      <label class="field"><span>What is covered, in the schedule's words (customers and partners read this)</span><textarea name="coverageSummary" maxlength="2000">${escValue(v.coverageSummary)}</textarea></label>
       <label class="field"><span>How to claim (shown with the claims phone)</span><textarea name="claimSteps" maxlength="2000">${escValue(v.claimSteps)}</textarea></label>
-      <p class="hours-note">Saved switched off. Switch it on once these match the insurer's schedule - from then on, every trip of this kind is covered under it and riders see "Insured trip".</p>
+      <p class="hours-note">Saved switched off. Switch it on once these match the insurer's schedule - from then on, every trip of this kind is covered under it and customers see "Insured trip".</p>
       <div class="foot"><button class="btn btn-primary" type="submit">${v.id ? 'Save changes' : 'Add policy'}</button>
         <button class="btn" type="button" data-policy-cancel>Cancel</button></div>
     </form>`;
@@ -5676,9 +5676,9 @@ function paintInsurance([status, policies, enrolments]) {
   $('cInsurance').hidden = status.passengerCoverActive;
   $('panel').innerHTML = `
     ${status.passengerCoverActive
-      ? '<div class="banner banner-ok" role="status"><strong>Trips are insured.</strong> A passenger policy is in force; every ride that starts now is covered under it, and riders see "Insured trip".</div>'
-      : '<div class="alert-banner" role="alert">Trips are NOT insured: no active passenger policy. Riders see nothing about insurance, and if rides are set to require cover, every ride request is refused until one is switched on below.</div>'}
-    ${status.failedReports ? `<div class="alert-banner" role="alert">${status.failedReports} covered trip${status.failedReports === 1 ? '' : 's'} could not be reported to the insurer. Those riders are no longer shown "Insured trip". Download that day's bordereau again once the reporter works.</div>` : ''}
+      ? '<div class="banner banner-ok" role="status"><strong>Trips are insured.</strong> A passenger policy is in force; every ride that starts now is covered under it, and customers see "Insured trip".</div>'
+      : '<div class="alert-banner" role="alert">Trips are NOT insured: no active passenger policy. Customers see nothing about insurance, and if rides are set to require cover, every ride request is refused until one is switched on below.</div>'}
+    ${status.failedReports ? `<div class="alert-banner" role="alert">${status.failedReports} covered trip${status.failedReports === 1 ? '' : 's'} could not be reported to the insurer. Those customers are no longer shown "Insured trip". Download that day's bordereau again once the reporter works.</div>` : ''}
     <div class="dx-money">
       <div><span>Trips covered today</span><b>${esc(status.tripsCoveredToday)}</b></div>
       <div><span>Not yet in a bordereau</span><b>${esc(status.notYetReported)}</b></div>
@@ -5768,7 +5768,7 @@ function bindInsurance(policies) {
     const ok = await confirmAction({
       title: `Switch on ${p.masterPolicyNumber}?`,
       message: p.kind === 'PASSENGER_TRIP'
-        ? `From now, every ride that starts is covered under it (${rupees(p.sumInsured)}), and riders see "Insured trip". Only if the policy is really in force with ${p.insurerName}.`
+        ? `From now, every ride that starts is covered under it (${rupees(p.sumInsured)}), and customers see "Insured trip". Only if the policy is really in force with ${p.insurerName}.`
         : `It becomes the ${(POLICY_KIND_TEXT[p.kind] || p.kind).toLowerCase()} cover. Only if the policy is really in force with ${p.insurerName}.`,
       confirmLabel: 'Switch on', tone: 'approve',
     });
@@ -5913,7 +5913,7 @@ async function openTicket(id, keep = {}) {
   }
   const t = d.ticket;
   const who = t.raisedByName || t.raisedByPhone || 'this person';
-  const raiserWord = t.role === 'DRIVER' ? 'partner' : 'rider';
+  const raiserWord = t.role === 'DRIVER' ? 'partner' : 'customer';
   const closed = t.status === 'CLOSED';
   const b = d.linkedBooking;
 
@@ -5930,7 +5930,7 @@ async function openTicket(id, keep = {}) {
         ${t.resolvedAt ? `<dt>Resolved</dt><dd>${time(t.resolvedAt)}${t.resolvedByPhone ? ` by <span class="num">${esc(t.resolvedByPhone)}</span>` : ''}</dd>` : ''}
         <dt>Linked trip</dt><dd>${b
           ? `${esc(serviceText(b.category))} · ${badge(b.status)}<div class="subtle">${esc(b.pickupLabel)} → ${esc(b.dropLabel)} · ${time(b.requestedAt)}</div>
-             <div class="subtle">Rider: ${esc(b.customerName || 'Name not set')} · Partner: ${esc(b.driverName || 'Not assigned')}</div>`
+             <div class="subtle">Customer: ${esc(b.customerName || 'Name not set')} · Partner: ${esc(b.driverName || 'Not assigned')}</div>`
           : t.linkedBookingId ? '<span class="subtle">Trip no longer found</span>' : '<span class="subtle">Not about a specific trip</span>'}</dd>
       </dl>
       ${d.sosAlerts.length ? `<div class="sos-link"><strong>SOS was raised on this trip ${d.sosAlerts.length === 1 ? 'once' : d.sosAlerts.length + ' times'}.</strong>
@@ -6091,7 +6091,7 @@ function compareContentKeys(a, b) {
  * Painted once when the section opens, not on every render: filtering or
  * paging the history re-renders, and must not wipe a message half-written.
  */
-const AUDIENCE_TEXT = { ALL_CUSTOMERS: 'All riders', ALL_DRIVERS: 'All partners', BOTH: 'Everyone', SELLER_WAITLIST: 'SheOut Seller waitlist ("Notify me")' };
+const AUDIENCE_TEXT = { ALL_CUSTOMERS: 'All customers', ALL_DRIVERS: 'All partners', BOTH: 'Everyone', SELLER_WAITLIST: 'SheOut Seller waitlist ("Notify me")' };
 
 function paintCompose(host) {
   host.innerHTML = `
@@ -6124,7 +6124,7 @@ function paintCompose(host) {
     }
     const audience = $('annAudience').value;
     const sendSms = $('annSms').checked;
-    let who = { ALL_CUSTOMERS: 'all riders', ALL_DRIVERS: 'all partners', BOTH: 'everyone' }[audience];
+    let who = { ALL_CUSTOMERS: 'all customers', ALL_DRIVERS: 'all partners', BOTH: 'everyone' }[audience];
     if (audience === 'SELLER_WAITLIST') {
       // Named with its size, so nobody sends to "the waitlist" thinking it is a handful.
       const counts = await api('/admin/waitlist').catch(() => []);
@@ -6165,11 +6165,11 @@ function paintCompose(host) {
 
 /**
  * Audience is who, not how it went, so it takes the role colours rather than
- * the status palette: riders in the customer hue, partners in the driver hue,
+ * the status palette: customers in the customer hue, partners in the driver hue,
  * everyone neutral. "Everyone" was green, which everywhere else means done.
  */
 function audienceBadge(audience) {
-  if (audience === 'ALL_CUSTOMERS') return '<span class="badge b-role-customer">All riders</span>';
+  if (audience === 'ALL_CUSTOMERS') return '<span class="badge b-role-customer">All customers</span>';
   if (audience === 'ALL_DRIVERS') return '<span class="badge b-role-driver">All partners</span>';
   if (audience === 'SELLER_WAITLIST') return '<span class="badge b-amber">Seller waitlist</span>';
   return '<span class="badge b-grey">Everyone</span>';
@@ -6204,7 +6204,7 @@ const PROMOTION_TYPES = {
   SIGNUP_CREDIT: 'Signup credit',
   PERCENTAGE_DISCOUNT: 'Percentage off',
   FLAT_DISCOUNT: 'Flat amount off',
-  REFERRAL_REWARD: 'Referral reward (to the rider who referred)',
+  REFERRAL_REWARD: 'Referral reward (to the customer who referred)',
   REFERRAL_WELCOME: 'Referral welcome (to the friend)',
 };
 const INCENTIVE_TYPES = {
@@ -6213,7 +6213,7 @@ const INCENTIVE_TYPES = {
   REFERRAL_REWARD: 'Referral reward (to the partner who referred)',
   REFERRAL_WELCOME: 'Referral welcome (to the friend)',
 };
-/** Rider promotions held as a rupee balance rather than taken off each trip. */
+/** Customer promotions held as a rupee balance rather than taken off each trip. */
 const CREDIT_TYPES = ['SIGNUP_CREDIT', 'REFERRAL_REWARD', 'REFERRAL_WELCOME'];
 const REFERRAL_TYPES = ['REFERRAL_REWARD', 'REFERRAL_WELCOME'];
 let campaignsData = null;
@@ -6224,18 +6224,18 @@ function campaignBadge(status) {
   return `<span class="badge ${cls}">${esc(text)}</span>`;
 }
 
-/** What the rider gets, in one line. Returns HTML: every value in it is escaped. */
+/** What the customer gets, in one line. Returns HTML: every value in it is escaped. */
 function promotionTerms(p) {
   const parts = [];
-  if (p.type === 'SIGNUP_CREDIT') parts.push(esc(`${rupees(p.value)} credit for every new rider${p.creditValidDays ? `, usable for ${p.creditValidDays} days` : ''}`));
-  if (p.type === 'REFERRAL_REWARD') parts.push(esc(`${rupees(p.value)} credit to a rider each time a friend she referred takes her first paid trip${p.creditValidDays ? `, usable for ${p.creditValidDays} days` : ''}`));
-  if (p.type === 'REFERRAL_WELCOME') parts.push(esc(`${rupees(p.value)} credit to a rider who joined with a friend's code, after her first paid trip${p.creditValidDays ? `, usable for ${p.creditValidDays} days` : ''}`));
+  if (p.type === 'SIGNUP_CREDIT') parts.push(esc(`${rupees(p.value)} credit for every new customer${p.creditValidDays ? `, usable for ${p.creditValidDays} days` : ''}`));
+  if (p.type === 'REFERRAL_REWARD') parts.push(esc(`${rupees(p.value)} credit to a customer each time a friend she referred takes her first paid trip${p.creditValidDays ? `, usable for ${p.creditValidDays} days` : ''}`));
+  if (p.type === 'REFERRAL_WELCOME') parts.push(esc(`${rupees(p.value)} credit to a customer who joined with a friend's code, after her first paid trip${p.creditValidDays ? `, usable for ${p.creditValidDays} days` : ''}`));
   if (p.type === 'PERCENTAGE_DISCOUNT') parts.push(esc(`${Number(p.value)}% off${p.maxDiscountPerBooking ? ` (up to ${rupees(p.maxDiscountPerBooking)})` : ''}`));
   if (p.type === 'FLAT_DISCOUNT') parts.push(esc(`${rupees(p.value)} off`));
-  if (!CREDIT_TYPES.includes(p.type)) parts.push(`${p.maxUsesPerAccount} trip${p.maxUsesPerAccount === 1 ? '' : 's'} per rider`);
+  if (!CREDIT_TYPES.includes(p.type)) parts.push(`${p.maxUsesPerAccount} trip${p.maxUsesPerAccount === 1 ? '' : 's'} per customer`);
   parts.push(p.code ? `code <span class="num strong">${esc(p.code)}</span>`
     : (p.type === 'SIGNUP_CREDIT' ? 'given automatically at signup'
-      : REFERRAL_TYPES.includes(p.type) ? 'given by the referral programme' : 'no code - every rider gets it'));
+      : REFERRAL_TYPES.includes(p.type) ? 'given by the referral programme' : 'no code - every customer gets it'));
   return parts.join(' · ');
 }
 
@@ -6269,7 +6269,7 @@ function budgetBlock(c) {
 
 function campaignCard(kind, c) {
   const stats = kind === 'promotion'
-    ? `<span><strong>${c.ridersGranted}</strong> rider${c.ridersGranted === 1 ? '' : 's'} given it</span><span><strong>${c.tripsDiscounted}</strong> finished trip${c.tripsDiscounted === 1 ? '' : 's'} discounted</span>`
+    ? `<span><strong>${c.ridersGranted}</strong> customer${c.ridersGranted === 1 ? '' : 's'} given it</span><span><strong>${c.tripsDiscounted}</strong> finished trip${c.tripsDiscounted === 1 ? '' : 's'} discounted</span>`
     : `<span><strong>${c.partnersAwarded}</strong> partner${c.partnersAwarded === 1 ? '' : 's'} paid</span><span><strong>${c.awards}</strong> trip bonus${c.awards === 1 ? '' : 'es'}</span>`;
   return `<div class="camp ${c.status !== 'ACTIVE' ? 'off' : ''}" data-camp="${kind}:${esc(c.id)}">
     <div class="top">
@@ -6294,11 +6294,11 @@ function retentionBlock(r) {
   const rate = r.cameBackRatePercent == null ? '—' : `${Number(r.cameBackRatePercent).toFixed(1)}%`;
   const avg = r.averageFullPriceTrips == null ? '—' : Number(r.averageFullPriceTrips).toFixed(2);
   return `<div class="retention" data-retention>
-    <h3>Does the signup credit bring riders back?</h3>
-    <p class="subtle">For each rider whose signup credit has ended - spent or lapsed - the trips she paid for in full in the 30 days after.
-      The rate counts only riders whose 30 days are over: a rider whose credit ended yesterday has not had the chance to come back yet.</p>
+    <h3>Does the signup credit bring customers back?</h3>
+    <p class="subtle">For each customer whose signup credit has ended - spent or lapsed - the trips she paid for in full in the 30 days after.
+      The rate counts only customers whose 30 days are over: a customer whose credit ended yesterday has not had the chance to come back yet.</p>
     <div class="kpis">
-      <div class="kpi"><b>${r.creditsGranted}</b><span>riders given the credit</span></div>
+      <div class="kpi"><b>${r.creditsGranted}</b><span>customers given the credit</span></div>
       <div class="kpi"><b>${r.stillActive}</b><span>credit not ended yet</span></div>
       <div class="kpi"><b>${r.ended}</b><span>credit ended (${r.endedByUse} spent, ${r.endedByExpiry} lapsed)</span></div>
       <div class="kpi"><b>${rate}</b><span>came back at full price (${r.cameBackAtFullPrice} of ${r.windowComplete} whose 30 days are over)</span></div>
@@ -6306,13 +6306,13 @@ function retentionBlock(r) {
       <div class="kpi"><b>${r.cameBackSoFar} of ${r.windowOpen}</b><span>still inside their 30 days: back so far</span></div>
     </div>
     ${r.riders.length ? `<div class="scroll"><table>
-      <thead><tr><th>Rider</th><th>Credit used</th><th>Credit ended</th><th>Full-price trips after</th></tr></thead>
+      <thead><tr><th>Customer</th><th>Credit used</th><th>Credit ended</th><th>Full-price trips after</th></tr></thead>
       <tbody>${r.riders.map(x => `<tr>
         <td class="num">${esc(x.phoneNumber || x.accountId)}</td>
         <td>${rupees(x.creditUsed)}</td>
         <td>${x.endedBy === 'EXHAUSTED' ? 'Spent' : 'Lapsed'} <span class="subtle nowrap">${time(x.endedAt)}</span></td>
         <td><strong>${x.fullPriceTrips}</strong> ${x.windowComplete ? '' : '<span class="badge b-grey">30 days not over</span>'}</td>
-      </tr>`).join('')}</tbody></table></div>` : '<p class="subtle">No rider\'s credit has ended yet, so there is nothing to measure.</p>'}
+      </tr>`).join('')}</tbody></table></div>` : '<p class="subtle">No customer\'s credit has ended yet, so there is nothing to measure.</p>'}
   </div>`;
 }
 
@@ -6321,9 +6321,9 @@ function paintCampaigns(data) {
   const { overview, retention } = data;
   $('cCampaigns').textContent = [...overview.promotions, ...overview.incentives].filter(c => c.status === 'ACTIVE').length;
   $('panel').innerHTML = `
-    <div class="camp-toolbar"><h3>Rider promotions</h3><button class="btn btn-primary" type="button" data-camp-new="promotion">New promotion</button></div>
+    <div class="camp-toolbar"><h3>Customer promotions</h3><button class="btn btn-primary" type="button" data-camp-new="promotion">New promotion</button></div>
     ${overview.promotions.length ? `<div class="camp-grid">${overview.promotions.map(p => campaignCard('promotion', p)).join('')}</div>`
-      : '<p class="subtle">No rider promotions yet.</p>'}
+      : '<p class="subtle">No customer promotions yet.</p>'}
     <p class="subtle">Used includes discounts on trips booked but not yet finished. A cancelled trip, or one no partner took, gives its discount back.</p>
     <div class="camp-toolbar"><h3>Partner incentives</h3><button class="btn btn-primary" type="button" data-camp-new="incentive">New incentive</button></div>
     ${overview.incentives.length ? `<div class="camp-grid">${overview.incentives.map(i => campaignCard('incentive', i)).join('')}</div>`
@@ -6364,7 +6364,7 @@ const fromLocalInput = v => (v ? new Date(v).toISOString() : null);
 const numOrNull = v => (String(v).trim() === '' ? null : Number(v));
 
 const CAMPAIGN_VALUE_LABEL = {
-  SIGNUP_CREDIT: 'Credit per rider (₹)',
+  SIGNUP_CREDIT: 'Credit per customer (₹)',
   PERCENTAGE_DISCOUNT: 'Percent off',
   FLAT_DISCOUNT: 'Amount off (₹)',
   PER_TRIP_BONUS: 'Bonus per trip (₹)',
@@ -6382,9 +6382,9 @@ function openCampaignForm(kind, c) {
   const types = editing ? allTypes : Object.fromEntries(Object.entries(allTypes).filter(([v]) => !REFERRAL_TYPES.includes(v)));
   const type = c ? c.type : Object.keys(types)[0];
   openModal(`
-    <div class="modal-head"><h3>${editing ? 'Edit' : 'New'} ${promo ? 'rider promotion' : 'partner incentive'}</h3>
+    <div class="modal-head"><h3>${editing ? 'Edit' : 'New'} ${promo ? 'customer promotion' : 'partner incentive'}</h3>
       <p>${promo
-        ? 'Taken off what the rider pays. The fare, and the partner\'s share of it, do not change - SheOut pays the difference.'
+        ? 'Taken off what the customer pays. The fare, and the partner\'s share of it, do not change - SheOut pays the difference.'
         : 'Paid into the partner\'s wallet on top of her share, from SheOut\'s margin.'}${editing ? ' Changes apply from now on; money already given stays given.' : ''}</p></div>
     <div class="modal-body">
       <div class="form-grid">
@@ -6394,10 +6394,10 @@ function openCampaignForm(kind, c) {
         <div><label for="cfValue" id="cfValueLabel">Value</label><input id="cfValue" type="number" min="0" step="0.01" value="${c ? Number(c.value) : ''}"></div>
         ${promo ? `
         <div data-show="PERCENTAGE_DISCOUNT"><label for="cfMaxPer">Most off one trip (₹, optional)</label><input id="cfMaxPer" type="number" min="0" step="0.01" value="${c && c.maxDiscountPerBooking != null ? Number(c.maxDiscountPerBooking) : ''}"></div>
-        <div data-hide-credit><label for="cfUses">Trips per rider</label><input id="cfUses" type="number" min="1" step="1" value="${c ? c.maxUsesPerAccount : 1}"></div>
+        <div data-hide-credit><label for="cfUses">Trips per customer</label><input id="cfUses" type="number" min="1" step="1" value="${c ? c.maxUsesPerAccount : 1}"></div>
         <div data-show-credit><label for="cfDays">Credit usable for (days, optional)</label><input id="cfDays" type="number" min="1" step="1" value="${c && c.creditValidDays != null ? c.creditValidDays : ''}"></div>
         <div data-hide-credit class="span2"><label for="cfCode">Code (optional)</label><input id="cfCode" maxlength="20" value="${esc(c && c.code ? c.code : '')}" class="upper">
-          <div class="help">4-20 letters and digits. Without a code, every rider gets it automatically.</div></div>`
+          <div class="help">4-20 letters and digits. Without a code, every customer gets it automatically.</div></div>`
         : `<div class="span2" data-hide-referral><label for="cfFirstN">Only a partner's first N completed trips (optional)</label><input id="cfFirstN" type="number" min="1" step="1" value="${c && c.firstNTrips != null ? c.firstNTrips : ''}">
           <div class="help">Empty means every completed trip.</div></div>`}
         <div><label for="cfFrom">Starts</label><input id="cfFrom" type="datetime-local" value="${toLocalInput(c ? c.validFrom : new Date().toISOString())}"></div>
@@ -6473,7 +6473,7 @@ $('panel').addEventListener('click', async e => {
   const ok = await confirmAction(pause ? {
     title: `Pause "${c.name}"?`,
     message: kind === 'promotion'
-      ? 'No new trips will get this discount. Trips already booked with it keep it, and riders keep any credit they hold for when it resumes.'
+      ? 'No new trips will get this discount. Trips already booked with it keep it, and customers keep any credit they hold for when it resumes.'
       : 'No new trips will earn this bonus. Bonuses already paid stay paid.',
     confirmLabel: 'Pause', tone: 'reject',
   } : {
@@ -6670,9 +6670,9 @@ const alertBadge = a => `<span class="badge b-amber" title="${esc(a.detail)}">${
 async function acknowledgeAlert(alertId, after) {
   const ok = await confirmAction({
     title: 'Mark this alert as checked?',
-    message: 'Say what you found or did - called the rider, spoke to the partner, all fine. The trip itself is not changed.',
+    message: 'Say what you found or did - called the customer, spoke to the partner, all fine. The trip itself is not changed.',
     confirmLabel: 'Mark checked', withReason: true, reasonRequired: true,
-    reasonLabel: 'What you found or did', reasonPlaceholder: 'e.g. Called the rider: traffic jam at Mehdipatnam, she is fine', reasonMaxLength: 500,
+    reasonLabel: 'What you found or did', reasonPlaceholder: 'e.g. Called the customer: traffic jam at Mehdipatnam, she is fine', reasonMaxLength: 500,
   });
   if (!ok) { if (after) after(); return; }
   try {
@@ -6712,7 +6712,7 @@ document.addEventListener('click', e => {
 });
 
 /**
- * The person and trip pages open from each other - a rider's trip, that
+ * The person and trip pages open from each other - a customer's trip, that
  * trip's partner - so they keep a short trail and offer Back, instead of
  * the operator losing the page she came from.
  */
@@ -6819,7 +6819,7 @@ async function loadAccount(accountId, startTab = 'overview') {
 
   const verification = `<div class="dx-card"><h4>Identity &amp; checks</h4><dl class="kv">
       <dt>ID &amp; gender</dt><dd>${badge(a.genderVerificationStatus)}${d.verificationRejectionReason ? `<div class="subtle">“${esc(d.verificationRejectionReason)}”</div>` : ''}</dd>
-      <dt>Police check</dt><dd>${a.role === 'CUSTOMER' ? '<span class="subtle">Not required for riders</span>' : policeBadge(a)}</dd>
+      <dt>Police check</dt><dd>${a.role === 'CUSTOMER' ? '<span class="subtle">Not required for customers</span>' : policeBadge(a)}</dd>
       <dt>Documents sent</dt><dd>${d.documentSubmitted ? esc(time(d.documentSubmittedAt)) : '<span class="subtle">Not yet</span>'}</dd>
       <dt>Date of birth</dt><dd>${d.dateOfBirth ? `${esc(d.dateOfBirth)} <span class="subtle">(${age} yrs)</span>` : '—'}</dd>
       <dt>Profile</dt><dd>${d.profileComplete ? 'Complete' : '<span class="subtle">Incomplete</span>'}</dd>
@@ -6881,7 +6881,7 @@ async function loadAccount(accountId, startTab = 'overview') {
 
   const trips = d.recentTrips || [];
   const tripsCard = `<div class="dx-card full"><h4>Recent trips <span class="right subtle">latest ${trips.length}</span></h4>
-      ${trips.length ? `<div class="scroll"><table class="mini"><thead><tr><th>Status</th><th>Service</th><th>${partner ? 'Rider' : 'Partner'}</th><th>Route</th><th>Fare</th><th>When</th></tr></thead><tbody>
+      ${trips.length ? `<div class="scroll"><table class="mini"><thead><tr><th>Status</th><th>Service</th><th>${partner ? 'Customer' : 'Partner'}</th><th>Route</th><th>Fare</th><th>When</th></tr></thead><tbody>
         ${trips.map(r => `<tr data-open-booking="${escValue(r.bookingId)}">
           <td>${badge(r.status)}</td>
           <td>${esc(serviceText(r.category))}</td>
@@ -7013,7 +7013,7 @@ async function loadBooking(bookingId) {
         <div><span>Quoted</span><b>${rupees(b.fareEstimate)}</b></div>
         <div><span>Final fare</span><b>${b.finalFare != null ? rupees(b.finalFare) : '—'}</b></div>
         <div><span>Promotion</span><b>${Number(b.promoDiscount) > 0 ? '−' + rupees(b.promoDiscount) : '—'}</b></div>
-        <div><span>Rider pays</span><b>${rupees(b.amountDue)}</b></div>
+        <div><span>Customer pays</span><b>${rupees(b.amountDue)}</b></div>
       </div>
       <dl class="kv">
         ${b.promotionName ? `<dt>Promotion</dt><dd>${esc(b.promotionName)}</dd>` : ''}
@@ -7035,7 +7035,7 @@ async function loadBooking(bookingId) {
 
   const rating = (r, who) => r ? `<dt>${who}</dt><dd>${stars(r.stars)} ${(r.tags || []).map(tg => `<span class="badge b-grey">${esc(humanize(tg.code || tg))}</span>`).join(' ')}${r.comment ? `<div class="subtle">“${esc(r.comment)}”</div>` : ''}</dd>` : '';
   const ratings = (d.riderRating || d.partnerRating) ? `<div class="dx-card"><h4>Ratings</h4><dl class="kv">
-      ${rating(d.riderRating, 'Rider rated partner')}${rating(d.partnerRating, 'Partner rated rider')}</dl></div>` : '';
+      ${rating(d.riderRating, 'Customer rated partner')}${rating(d.partnerRating, 'Partner rated customer')}</dl></div>` : '';
   const sos = (d.sosAlerts || []).length ? `<div class="dx-card"><h4>SOS on this trip</h4><ul class="contact-list">
       ${d.sosAlerts.map(s => `<li><span class="grow">${s.status === 'ACTIVE' ? '<span class="badge b-red">Active</span>' : '<span class="badge b-green">Resolved</span>'} ${esc(time(s.createdAt))}</span>${mapsLink(s.lat, s.lng, 'where')}</li>`).join('')}
     </ul></div>` : '';
@@ -7049,7 +7049,7 @@ async function loadBooking(bookingId) {
     COMPLETED: 'Trip ended', CANCELLED: 'Cancelled', CANCELLATION_REASON: 'Reason given', NO_DRIVERS_AVAILABLE: 'No partner found',
     PARTNER_LEFT: 'Partner dropped it; searching again' };
   const who = e => e.actorRole === 'SYSTEM' ? 'SheOut (automatic)'
-    : e.actorId && d.rider && e.actorId === d.rider.accountId ? 'Rider'
+    : e.actorId && d.rider && e.actorId === d.rider.accountId ? 'Customer'
     : e.actorId && d.partner && e.actorId === d.partner.accountId ? 'Partner'
     : humanize(e.actorRole);
   const audit = (d.events || []).length ? `<div class="dx-card full"><h4>Audit log <span class="right subtle">every change, who made it, from which device</span></h4>
@@ -7058,7 +7058,7 @@ async function loadBooking(bookingId) {
         <td>${esc(who(e))}</td><td class="subtle">${esc(e.detail)}</td>
         <td class="subtle"><span class="num">${esc(e.requestId ? e.requestId.slice(0, 8) : '')}</span>${e.device ? '<div class="clamp" title="' + esc(e.device) + '">' + esc(e.device) + '</div>' : ''}</td></tr>`).join('')}
       </tbody></table></div></div>` : '';
-  const root = detailShell(head, `<div class="dx-grid">${tripAlerts}${party(d.rider, 'Rider')}${party(d.partner, 'Partner')}${routeCard}${timeline}${money}${ratings}${sos}${audit}</div>`);
+  const root = detailShell(head, `<div class="dx-grid">${tripAlerts}${party(d.rider, 'Customer')}${party(d.partner, 'Partner')}${routeCard}${timeline}${money}${ratings}${sos}${audit}</div>`);
 
   const map = createTileMap(root.querySelector('#tripMap'), { center: b.pickup, zoom: 13 });
   const trail = d.trail || [];
@@ -7089,7 +7089,7 @@ function openProfileChange(r) {
   const vehicleChanged = r.requestedVehicleType || r.requestedVehicleRegistrationNumber;
   openModal(`
     <div class="modal-head"><h3>${esc(r.currentName || 'Name not set')} asks to change her details</h3>
-      <p>${esc(r.phoneNumber)} &middot; waiting ${esc(waited(r.requestedAt).text)}. Riders keep seeing the details on the left until you approve.</p></div>
+      <p>${esc(r.phoneNumber)} &middot; waiting ${esc(waited(r.requestedAt).text)}. Customers keep seeing the details on the left until you approve.</p></div>
     <div class="modal-body">
       <dl class="kv">
         ${row('Name', esc(r.currentName), r.requestedName ? esc(r.requestedName) : null)}
@@ -7132,7 +7132,7 @@ function openProfileChange(r) {
     }
   });
   root.querySelector('[data-ch-approve]').addEventListener('click', async () => {
-    const ok = await confirmAction({ title: 'Approve this change?', message: 'Riders will see the new details from her next trip.', confirmLabel: 'Approve', tone: 'approve' });
+    const ok = await confirmAction({ title: 'Approve this change?', message: 'Customers will see the new details from her next trip.', confirmLabel: 'Approve', tone: 'approve' });
     if (!ok) return;
     try {
       await api(`/admin/profile-changes/${r.changeId}/approve`, { method: 'POST' });
@@ -7202,12 +7202,12 @@ function paintLive(d) {
       <div class="ov-grid" id="liveKpis"></div>
       <section class="ov-card" aria-label="Live map">
         <div class="hd"><span class="hico">${OV_ICON.map}</span><h3>Live map</h3>
-          <span class="legend"><span><i class="free"></i>Partner free</span><span><i class="trip"></i>On a trip</span><span><i class="stale"></i>Not reporting</span><span><i class="search"></i>Rider waiting</span><span><i class="sos"></i>SOS</span></span></div>
+          <span class="legend"><span><i class="free"></i>Partner free</span><span><i class="trip"></i>On a trip</span><span><i class="stale"></i>Not reporting</span><span><i class="search"></i>Customer waiting</span><span><i class="sos"></i>SOS</span></span></div>
         <div class="live-map" id="liveMap"></div>
       </section>
       <section class="ov-card" aria-label="Trips under way">
         <div class="hd"><span class="hico">${OV_ICON.trip}</span><h3>Trips under way</h3><span class="tag badge b-grey" id="liveTripCount"></span></div>
-        <div class="scroll"><table class="mini"><thead><tr><th>Status</th><th>For</th><th>Service</th><th>Rider</th><th>Partner</th><th>Route</th><th>Fare</th></tr></thead><tbody id="liveTrips"></tbody></table></div>
+        <div class="scroll"><table class="mini"><thead><tr><th>Status</th><th>For</th><th>Service</th><th>Customer</th><th>Partner</th><th>Route</th><th>Fare</th></tr></thead><tbody id="liveTrips"></tbody></table></div>
       </section>
       <section class="ov-card" aria-label="Partners online">
         <div class="hd"><span class="hico">${OV_ICON.partner}</span><h3>Partners online</h3><span class="tag badge b-grey" id="livePartnerCount"></span></div>
@@ -7247,17 +7247,17 @@ function paintLive(d) {
   const kpi = (tone, icon, num, label, sub) => `<div class="kpi t-${tone}"><div class="top"><span class="ico">${icon}</span><span class="lbl">${esc(label)}</span></div><div class="num">${num}</div><div class="sub">${sub}</div></div>`;
   $('liveKpis').innerHTML =
     kpi('green', OV_ICON.partner, fresh.length, 'Partners online', `${free} free &middot; ${fresh.length - free} on a trip${partners.length > fresh.length ? ` &middot; ${partners.length - fresh.length} not reporting` : ''}`) +
-    kpi('amber', OV_ICON.user, searching, 'Riders waiting for a partner', searching ? 'Searching now' : 'Nobody waiting') +
+    kpi('amber', OV_ICON.user, searching, 'Customers waiting for a partner', searching ? 'Searching now' : 'Nobody waiting') +
     kpi('blue', OV_ICON.route, coming, 'Partner on the way', stuck ? `<b>${stuck} trip${stuck === 1 ? '' : 's'} look stuck</b> (no change for 3+ hours)` : 'Matched or heading to pickup') +
-    kpi(sos ? 'red' : 'brand', sos ? OV_ICON.siren : OV_ICON.trip, riding, 'On a trip now', sos ? `<b>${sos} with an active SOS</b>` : 'Rider on board');
+    kpi(sos ? 'red' : 'brand', sos ? OV_ICON.siren : OV_ICON.trip, riding, 'On a trip now', sos ? `<b>${sos} with an active SOS</b>` : 'Customer on board');
 
   const watched = trips.flatMap(t => (t.alerts || []).map(a => ({ a, t })));
   $('liveWatch').hidden = watched.length === 0;
   $('liveWatchCount').textContent = watched.length;
   $('liveWatchList').innerHTML = watched.map(({ a, t }) => `<li>
       ${alertBadge(a)}
-      <span class="grow"><b>${esc(t.riderName || 'Rider')}</b> with ${esc(t.partnerName || 'no partner')} &middot; ${esc(a.detail)}
-        <div class="subtle">raised ${esc(agoText(a.raisedAt))} ago &middot; rider ${telLink(t.riderPhone)}${t.partnerPhone ? ' &middot; partner ' + telLink(t.partnerPhone) : ''}</div></span>
+      <span class="grow"><b>${esc(t.riderName || 'Customer')}</b> with ${esc(t.partnerName || 'no partner')} &middot; ${esc(a.detail)}
+        <div class="subtle">raised ${esc(agoText(a.raisedAt))} ago &middot; customer ${telLink(t.riderPhone)}${t.partnerPhone ? ' &middot; partner ' + telLink(t.partnerPhone) : ''}</div></span>
       <span class="holder">${holderCell('trip-alert', a.id, { soft: true })}</span>
       <button class="btn" type="button" data-open-booking="${escValue(t.bookingId)}">Open trip</button>
       <button class="btn btn-primary" type="button" data-ack-alert="${escValue(a.id)}">Mark checked</button>
@@ -7290,10 +7290,10 @@ function paintLive(d) {
     title: `${p.name || 'Partner'} · ${p.tripId ? 'on a trip' : 'free'} · ${agoText(p.lastFixAt)} ago`, open: { kind: 'account', id: p.accountId } }));
   trips.forEach(t => {
     if (t.status === 'REQUESTED' && t.pickup) marks.push({ lat: t.pickup.lat, lng: t.pickup.lng, tone: 'search',
-      title: `${t.riderName || 'Rider'} waiting ${agoText(t.statusSince)} · ${t.pickup.label}`, open: { kind: 'booking', id: t.bookingId } });
+      title: `${t.riderName || 'Customer'} waiting ${agoText(t.statusSince)} · ${t.pickup.label}`, open: { kind: 'booking', id: t.bookingId } });
     // A trip whose partner is not reporting would vanish from the map; it is shown at its pickup instead.
     else if (!t.partnerNow && t.pickup) marks.push({ lat: t.pickup.lat, lng: t.pickup.lng, tone: 'stale',
-      title: `${humanize(t.status)} · ${t.riderName || 'Rider'} · partner not reporting${isStuck(t) ? ' · looks stuck' : ''}`, open: { kind: 'booking', id: t.bookingId } });
+      title: `${humanize(t.status)} · ${t.riderName || 'Customer'} · partner not reporting${isStuck(t) ? ' · looks stuck' : ''}`, open: { kind: 'booking', id: t.bookingId } });
     if (t.sosActive) {
       const at = t.partnerNow || t.pickup;
       if (at) marks.push({ lat: at.lat, lng: at.lng, tone: 'sos', label: '!', title: `SOS on ${t.riderName || 'a'} trip`, open: { kind: 'booking', id: t.bookingId } });
@@ -7326,24 +7326,24 @@ function paintHours(v) {
       <section class="ov-card"><div class="hd"><span class="hico">${OV_EXTRA.clock}</span><h3>Operating hours</h3></div>
         <form class="hours-form" id="hoursForm">
           <label class="radio"><input type="radio" name="mode" value="SCHEDULED" ${scheduled ? 'checked' : ''}>
-            <div><b>Daily hours</b><span>Riders can book only inside these times, every day (India time, IST).</span></div></label>
+            <div><b>Daily hours</b><span>Customers can book only inside these times, every day (India time, IST).</span></div></label>
           <label class="radio"><input type="radio" name="mode" value="ALWAYS_OPEN" ${scheduled ? '' : 'checked'}>
             <div><b>Always open</b><span>Bookings at any hour, day and night.</span></div></label>
           <div class="times">
             <div><label for="hOpens">Bookings open at</label><input type="time" id="hOpens" value="${escValue(opens)}" required></div>
             <div><label for="hCloses">Bookings close at</label><input type="time" id="hCloses" value="${escValue(closes)}" required></div>
           </div>
-          <p class="hours-note">Only <b>new</b> bookings stop at closing time. Trips already under way finish normally, and a search already running is allowed to end. Riders see the hours on their Home screen and on the booking screen; partners see that no new trips will come.<br>A window may cross midnight (e.g. 5:00 AM to 1:00 AM).</p>
+          <p class="hours-note">Only <b>new</b> bookings stop at closing time. Trips already under way finish normally, and a search already running is allowed to end. Customers see the hours on their Home screen and on the booking screen; partners see that no new trips will come.<br>A window may cross midnight (e.g. 5:00 AM to 1:00 AM).</p>
           <div class="foot"><button class="btn btn-primary" type="submit">Save hours</button></div>
         </form>
       </section>
       <section class="ov-card"><div class="hd"><span class="hico">${OV_ICON.siren}</span><h3>Pause bookings now</h3></div>
-        ${s.paused ? `<div class="hours-form"><p><b>Bookings are paused.</b> Riders are told: “${esc(s.pauseReason)}”.</p>
+        ${s.paused ? `<div class="hours-form"><p><b>Bookings are paused.</b> Customers are told: “${esc(s.pauseReason)}”.</p>
             <p class="subtle">${s.pausedUntil ? 'Resumes by itself ' + esc(istTime(s.pausedUntil, true)) + '.' : 'Stays paused until someone resumes it.'}</p>
             <div class="foot"><button class="btn btn-approve" type="button" id="hResume">Resume bookings now</button></div></div>`
           : `<form class="hours-form" id="pauseForm">
             <p class="hours-note">For an incident, heavy rain, a curfew or unrest: stops new bookings at once, whatever the hours say. Trips under way are not touched.</p>
-            <label for="pReason">Reason (riders see this)</label>
+            <label for="pReason">Reason (customers see this)</label>
             <textarea id="pReason" maxlength="300" placeholder="e.g. Heavy rain across the city. We'll be back as soon as the roads are safe." required></textarea>
             <label for="pUntil">Resume (your computer's clock for a chosen time)</label>
             <select id="pUntil">
@@ -7366,8 +7366,8 @@ function paintHours(v) {
     const opensAt = $('hOpens').value, closesAt = $('hCloses').value;
     const ok = await confirmAction({
       title: mode === 'ALWAYS_OPEN' ? 'Open bookings at all hours?' : `Take bookings only ${hhmm(opensAt)} – ${hhmm(closesAt)}?`,
-      message: mode === 'ALWAYS_OPEN' ? 'Riders will be able to book at any time of day or night.'
-        : 'Outside these times riders cannot book, and both apps say so. Trips already under way are not affected.',
+      message: mode === 'ALWAYS_OPEN' ? 'Customers will be able to book at any time of day or night.'
+        : 'Outside these times customers cannot book, and both apps say so. Trips already under way are not affected.',
       confirmLabel: 'Save hours',
     });
     if (!ok) return;
@@ -7398,7 +7398,7 @@ function paintHours(v) {
       }
       const ok = await confirmAction({
         title: 'Pause all new bookings now?',
-        message: `Riders cannot book until ${until ? istTime(until, true) : 'someone resumes bookings'}. They are shown: “${reason}”. Trips under way carry on.`,
+        message: `Customers cannot book until ${until ? istTime(until, true) : 'someone resumes bookings'}. They are shown: “${reason}”. Trips under way carry on.`,
         confirmLabel: 'Pause bookings', tone: 'reject',
       });
       if (!ok) return;
@@ -7415,7 +7415,7 @@ function paintHours(v) {
   }
   const resume = $('hResume');
   if (resume) resume.addEventListener('click', async () => {
-    const ok = await confirmAction({ title: 'Resume bookings now?', message: 'Riders can book again straight away (within the operating hours, if they are set).', confirmLabel: 'Resume', tone: 'approve' });
+    const ok = await confirmAction({ title: 'Resume bookings now?', message: 'Customers can book again straight away (within the operating hours, if they are set).', confirmLabel: 'Resume', tone: 'approve' });
     if (!ok) return;
     try {
       const out = await api('/admin/service-hours/resume', { method: 'POST' });
@@ -7430,7 +7430,7 @@ function paintHours(v) {
   refreshHoursBadge(status);
 }
 
-/** The sidebar says "Off" beside Service Hours whenever riders cannot book. */
+/** The sidebar says "Off" beside Service Hours whenever customers cannot book. */
 function refreshHoursBadge(status) {
   const el = $('cHours');
   if (!el || !status) return;
@@ -8095,7 +8095,7 @@ const OV_EXTRA = {
   shield: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l7 3v6c0 4.5-3 8-7 9-4-1-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg>',
 };
 
-/** Overview's one line about right now, opening Live; amber when riders cannot book. */
+/** Overview's one line about right now, opening Live; amber when customers cannot book. */
 function liveStrip(live) {
   if (!live) return '';
   const trips = live.trips || [], partners = live.partners || [];
@@ -8109,7 +8109,7 @@ function liveStrip(live) {
   return `<button type="button" class="ov-live" data-go="live">
       <span class="live-pulse">Live now</span>
       <span><span class="n">${trips.length}</span><span class="lbl">trips under way</span></span><span class="sep"></span>
-      <span><span class="n">${waiting}</span><span class="lbl">riders waiting</span></span><span class="sep"></span>
+      <span><span class="n">${waiting}</span><span class="lbl">customers waiting</span></span><span class="sep"></span>
       <span><span class="n">${online}</span><span class="lbl">partners online</span></span><span class="sep"></span>
       <span class="badge ${st.closed ? 'b-amber' : 'b-green'}">${esc(st.title)}</span>
       <span class="go">Open live map →</span>
@@ -8136,7 +8136,7 @@ function roleDashboard(d) {
         <dt>Trip fares</dt><dd><b>${rupees(f.fares)}</b> <span class="subtle">from ${n(f.trips)} trip${f.trips === 1 ? '' : 's'}</span></dd>
         <dt>SheOut's commission</dt><dd><b>${rupees(f.commission)}</b></dd>
         <dt>Listing fees</dt><dd>${rupees(f.listingFees)}</dd>
-        <dt>Refunds to riders</dt><dd>${rupees(f.refunds)} <span class="subtle">(${n(f.refundCount)})</span></dd>
+        <dt>Refunds to customers</dt><dd>${rupees(f.refunds)} <span class="subtle">(${n(f.refundCount)})</span></dd>
         <dt>Payouts waiting</dt><dd><button type="button" class="link-btn" data-go="payouts">${n(f.payoutsDue)} &middot; ${rupees(f.payoutsDueAmount)}</button></dd>
       </dl></div></section>`);
   }
@@ -8179,7 +8179,7 @@ function paintOverview(d) {
   const len = (a) => (Array.isArray(a) ? a.length : null);
   const total = (p) => (p && typeof p.totalItems === 'number' ? p.totalItems : null);
   const sosN = len(d.sos), routesN = len(d.routes), trustN = len(d.trust);
-  // Verification is two kinds of work: riders waiting on an ID check, and
+  // Verification is two kinds of work: customers waiting on an ID check, and
   // partners whose application (ID, documents) waits - counted per partner.
   const apps = d.queue || d.docsToReview ? partnerApplications(d.queue, d.docsToReview) : null;
   const appsN = apps ? apps.length : null;
@@ -8220,15 +8220,15 @@ function paintOverview(d) {
       <span class="miss" data-w="${((missedToday || 0) / bookedToday * 100).toFixed(1)}"></span></div>` : '';
 
   const attention = [];
-  if (sosN > 0) attention.push(['red', `${sosN} active SOS alert${sosN === 1 ? '' : 's'}: a rider or partner may need help now`, 'sos']);
+  if (sosN > 0) attention.push(['red', `${sosN} active SOS alert${sosN === 1 ? '' : 's'}: a customer or partner may need help now`, 'sos']);
   if (d.support && d.support.unresolvedHigh > 0) attention.push(['red', `${d.support.unresolvedHigh} high-priority support ticket${d.support.unresolvedHigh === 1 ? '' : 's'} unresolved`, 'support']);
   if (appsN > 0) attention.push(['amber', `${appsN} partner application${appsN === 1 ? '' : 's'} to review${docsWaitingN ? ` (${docsWaitingN} document${docsWaitingN === 1 ? '' : 's'})` : ''}: she cannot drive until each is decided`, 'applications']);
-  if (ridersN > 0) attention.push(['amber', `${ridersN} rider${ridersN === 1 ? '' : 's'} waiting for an ID check before she can book`, 'queue']);
+  if (ridersN > 0) attention.push(['amber', `${ridersN} customer${ridersN === 1 ? '' : 's'} waiting for an ID check before she can book`, 'queue']);
   if (oldest && oldest.mins >= 1440) attention.unshift(['red', `Verification waiting ${oldest.text}: the oldest is past a day`, appsN > 0 ? 'applications' : 'queue']);
   if (expiredN > 0) attention.push(['red', `${expiredN} partner document${expiredN === 1 ? '' : 's'} expired: she cannot take trips until a renewal is approved`, 'docexpired']);
   if (policeDueN > 0) attention.push(['amber', `${policeDueN} police check${policeDueN === 1 ? '' : 's'} due within 30 days`, 'policedue']);
   if (expiringN > 0) attention.push(['blue', `${expiringN} partner document${expiringN === 1 ? '' : 's'} expire within 30 days - a reminder call saves her a day off the road`, 'docexpiring']);
-  if (d.changes && d.changes.length) attention.push(['amber', `${d.changes.length} partner${d.changes.length === 1 ? '' : 's'} changed name, photo or vehicle: riders see the old details until you decide`, 'changes']);
+  if (d.changes && d.changes.length) attention.push(['amber', `${d.changes.length} partner${d.changes.length === 1 ? '' : 's'} changed name, photo or vehicle: customers see the old details until you decide`, 'changes']);
   if (inReview > 0) attention.push(['brand', `${inReview} marketplace shop${inReview === 1 ? '' : 's'} waiting for review`, 'sellers', 'SUBMITTED_FOR_REVIEW']);
   if (payoutItems.length) attention.push(['amber', `${payoutItems.length} payout${payoutItems.length === 1 ? '' : 's'} waiting to be paid, ${rupees(payoutSum)} in all`, 'payouts']);
   if (routesN > 0) attention.push(['blue', `${routesN} trip${routesN === 1 ? '' : 's'} flagged for route review`, 'routes']);
@@ -8256,7 +8256,7 @@ function paintOverview(d) {
     <div class="ov-greet"><h2>${greet}</h2><span>${esc(dateText)}</span></div>
     ${sosN > 0
       ? `<button type="button" class="ov-alert" data-go="sos"><span class="big">${OV_ICON.siren}</span>
-           <span><b>${sosN} active SOS alert${sosN === 1 ? '' : 's'}</b><span>A rider or partner may need help right now. Answer these before anything else.</span></span>
+           <span><b>${sosN} active SOS alert${sosN === 1 ? '' : 's'}</b><span>A customer or partner may need help right now. Answer these before anything else.</span></span>
            <span class="cta">Open SOS alerts →</span></button>`
       // "No alerts" only from someone allowed to see them: for any other
       // role it would be a claim this page cannot make.
@@ -8265,7 +8265,7 @@ function paintOverview(d) {
     ${liveStrip(d.live)}
     <div class="ov-grid" data-overview>
       ${kpi('bookings', 'brand', OV_ICON.bookings, n(bookedToday), "Today's bookings", `${n(doneToday)} completed · ${n(missedToday)} found no partner`, split)}
-      ${kpi(appsN > 0 || !ridersN ? 'applications' : 'queue', 'amber', OV_ICON.check, n(queueN), 'Waiting for verification', queueN ? `${n(appsN)} partner${appsN === 1 ? '' : 's'} · ${n(ridersN)} rider${ridersN === 1 ? '' : 's'}${oldest ? ' · oldest ' + esc(oldest.text) : ''}` : 'Nobody waiting')}
+      ${kpi(appsN > 0 || !ridersN ? 'applications' : 'queue', 'amber', OV_ICON.check, n(queueN), 'Waiting for verification', queueN ? `${n(appsN)} partner${appsN === 1 ? '' : 's'} · ${n(ridersN)} customer${ridersN === 1 ? '' : 's'}${oldest ? ' · oldest ' + esc(oldest.text) : ''}` : 'Nobody waiting')}
       ${kpi('support', 'blue', OV_ICON.chat, n(d.support ? d.support.unresolved : null), 'Open support tickets', d.support && d.support.unresolvedHigh ? d.support.unresolvedHigh + ' high priority' : 'None high priority', '', !!(d.support && d.support.unresolvedHigh))}
       ${kpi('payouts', 'green', OV_ICON.wallet, n(d.payouts ? total(d.payouts) : null), 'Payouts waiting', payoutItems.length ? rupees(payoutSum) + ' to pay' : 'Nothing to pay')}
     </div>
@@ -8433,7 +8433,7 @@ function paintRows(view, data, emptyState) {
 /**
  * The colour of a row, by what it is. Kept beside paintRows rather than in
  * each section's definition so the whole palette reads in one place:
- * red urgent, amber waiting, green done, blue in flight, purple a rider,
+ * red urgent, amber waiting, green done, blue in flight, purple a customer,
  * grey finished without incident.
  */
 const ROW_ACCENT = {
@@ -8457,7 +8457,7 @@ const ROW_ICON = {};
 
 /**
  * Rows about people start with the people: the account's own photo, and on
- * a booking the rider's and her partner's side by side (an empty circle
+ * a booking the customer's and her partner's side by side (an empty circle
  * until a partner has taken it). These replaced a bike or a person glyph,
  * which said only what kind of row it was - the badge beside it says that.
  */
@@ -8483,7 +8483,7 @@ function initialsOf(name) {
 /** Her photo if there is one the console can show, otherwise her initials. */
 function avatar(name, photoUrl, role) {
   const kind = role === 'DRIVER' ? 'partner' : 'rider';
-  const title = `${name || 'Name not set'} · ${kind === 'partner' ? 'Partner' : 'Rider'}`;
+  const title = `${name || 'Name not set'} · ${kind === 'partner' ? 'Partner' : 'Customer'}`;
   const initials = initialsOf(name);
   return photoUrl && /^(https:|\/)/.test(photoUrl)
     ? `<span class="av ${kind}" title="${escValue(title)}"><img src="${escValue(photoUrl)}" alt="" loading="lazy" data-initials="${escValue(initials)}"></span>`
@@ -8744,7 +8744,7 @@ $('rows').addEventListener('click', async e => {
       withReason: true,
       reasonRequired: true,
       reasonLabel: 'Why are you blocking this account? (required, kept for audit)',
-      reasonPlaceholder: 'e.g. Repeated no-shows reported by three riders on 11 Sep',
+      reasonPlaceholder: 'e.g. Repeated no-shows reported by three customers on 11 Sep',
     });
     if (!ok) return;
     try {
@@ -8771,7 +8771,7 @@ $('rows').addEventListener('click', async e => {
       withReason: true,
       reasonRequired: true,
       reasonLabel: 'What you found (kept with the trip)',
-      reasonPlaceholder: 'e.g. Rider confirmed she asked to be dropped at the metro station',
+      reasonPlaceholder: 'e.g. Customer confirmed she asked to be dropped at the metro station',
       reasonMaxLength: 1000,
     });
     if (!ok) return;
@@ -9239,7 +9239,7 @@ function paintOwnerBanner() {
  * Who is on each piece of work, per queue, from /admin/work/{queue}, and the
  * targets from /admin/work/sla. Verification is a hold (only its holder, or
  * a manager, opens it); SOS, trip alerts and shops are soft locks - they say
- * who is on it so two people do not phone the same rider, and anyone may
+ * who is on it so two people do not phone the same customer, and anyone may
  * take over when the first cannot answer.
  */
 const WORK = {};

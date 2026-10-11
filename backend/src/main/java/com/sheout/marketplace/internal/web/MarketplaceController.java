@@ -327,7 +327,7 @@ public class MarketplaceController {
         CurrentAccount caller = CurrentAccountContext.get()
                 .orElseThrow(() -> ApiException.unauthorized("Authentication required"));
         if (caller.role() != AccountRole.CUSTOMER) {
-            throw ApiException.forbidden("SheOut Seller is in the rider app");
+            throw ApiException.forbidden("SheOut Seller is in the customer app");
         }
         return caller;
     }
@@ -358,7 +358,7 @@ public class MarketplaceController {
             case NOTHING_TO_REVIEW -> new ApiException(HttpStatus.CONFLICT, error.name(),
                     "Add at least one product with a photo before sending your shop for review.");
             case NOT_VERIFIED -> new ApiException(HttpStatus.CONFLICT, error.name(),
-                    "Verify your ID first. Every SheOut Seller is a verified SheOut rider.");
+                    "Verify your ID first. Only verified SheOut customers can sell on SheOut Seller.");
             case PRODUCT_NOT_FOUND -> new ApiException(HttpStatus.NOT_FOUND, error.name(), "That product was not found.");
             case INVALID_PICKUP -> new ApiException(HttpStatus.BAD_REQUEST, error.name(), "Choose the pickup point on the map.");
             case IMAGE_NOT_FOUND -> new ApiException(HttpStatus.NOT_FOUND, error.name(), "That photo was not found.");

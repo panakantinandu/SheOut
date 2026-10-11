@@ -31,7 +31,7 @@ const REASON_LABELS: Record<CancellationReason, string> = {
   DRIVER_TAKING_TOO_LONG: 'The partner is taking too long',
   FOUND_ANOTHER_RIDE: 'I found another ride',
   WRONG_PICKUP_LOCATION: 'The pickup point is wrong',
-  CUSTOMER_NOT_AT_PICKUP: 'The rider was not at the pickup point',
+  CUSTOMER_NOT_AT_PICKUP: 'The customer was not at the pickup point',
   DRIVER_UNAVAILABLE: 'I cannot complete this trip',
   IDENTITY_MISMATCH: 'Not the person shown in the app',
   WRONG_VEHICLE: 'Not the vehicle shown in the app',

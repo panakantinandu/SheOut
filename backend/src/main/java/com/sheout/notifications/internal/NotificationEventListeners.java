@@ -261,7 +261,7 @@ class NotificationEventListeners {
     public void onVerificationSubmitted(VerificationSubmitted event) {
         boolean driver = event.role() == AccountRole.DRIVER;
         dispatcher.deliverToRole(AccountRole.ADMIN, NotificationType.VERIFICATION_SUBMITTED, new OutboundMessage(
-                driver ? "A partner is waiting for verification" : "A rider is waiting for verification",
+                driver ? "A partner is waiting for verification" : "A customer is waiting for verification",
                 "Somebody has submitted an ID and cannot use SheOut until it is reviewed. Open the console.",
                 "/admin/index.html",
                 "verification-" + event.accountId(),

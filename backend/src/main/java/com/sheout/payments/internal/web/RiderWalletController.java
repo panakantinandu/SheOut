@@ -86,7 +86,7 @@ public class RiderWalletController {
         CurrentAccount caller = CurrentAccountContext.get()
                 .orElseThrow(() -> ApiException.unauthorized("Authentication required"));
         if (caller.role() != AccountRole.CUSTOMER) {
-            throw ApiException.forbidden("Only a rider has a SheOut wallet");
+            throw ApiException.forbidden("Only a customer has a SheOut wallet");
         }
         return caller.accountId();
     }

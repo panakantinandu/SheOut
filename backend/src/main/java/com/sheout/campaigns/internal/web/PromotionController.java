@@ -62,7 +62,7 @@ public class PromotionController {
         CurrentAccount caller = CurrentAccountContext.get()
                 .orElseThrow(() -> ApiException.unauthorized("Authentication required"));
         if (caller.role() != AccountRole.CUSTOMER) {
-            throw ApiException.forbidden("Promotions are for riders");
+            throw ApiException.forbidden("Promotions are for customers");
         }
         return caller;
     }

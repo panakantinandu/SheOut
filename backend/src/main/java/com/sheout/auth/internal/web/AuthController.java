@@ -206,12 +206,12 @@ public class AuthController {
             case EMAIL_LINKED_TO_PHONE_ACCOUNT ->
                     new ApiException(HttpStatus.CONFLICT, "Conflict", "An account already exists with this email. Sign in with your phone number instead.");
             case GOOGLE_NOT_FOR_ROLE ->
-                    ApiException.forbidden("Google sign-in is only for the rider app. Partners sign in with their phone number.");
+                    ApiException.forbidden("Google sign-in is only for the customer app. Partners sign in with their phone number.");
             case PHONE_ALREADY_SET ->
                     new ApiException(HttpStatus.CONFLICT, "PHONE_ALREADY_SET", "This account already has a phone number");
             case PHONE_ALREADY_REGISTERED ->
                     new ApiException(HttpStatus.CONFLICT, "PHONE_ALREADY_REGISTERED",
-                            "This number already has a SheOut rider account. Sign out and sign in with this number instead.");
+                            "This number already has a SheOut customer account. Sign out and sign in with this number instead.");
             case NO_ACCOUNT ->
                     new ApiException(HttpStatus.NOT_FOUND, "NO_ACCOUNT", "There is no SheOut account on this number yet.");
         };

@@ -91,7 +91,7 @@ public class SosController {
         CurrentAccount caller = CurrentAccountContext.get()
                 .orElseThrow(() -> ApiException.unauthorized("Authentication required"));
         if (caller.role() != AccountRole.CUSTOMER && caller.role() != AccountRole.DRIVER) {
-            throw ApiException.forbidden("Rider or partner role required");
+            throw ApiException.forbidden("Customer or partner role required");
         }
         return caller;
     }

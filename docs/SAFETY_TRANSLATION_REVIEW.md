@@ -18,7 +18,7 @@ an SOS sends to contacts also carries both languages.
 ## How to sign a language off
 
 1. A native speaker reviews every row for that language, correcting the files:
-   - rider app: `frontend/customer-app/src/i18n/{te,hi}.safety.json`
+   - customer app: `frontend/customer-app/src/i18n/{te,hi}.safety.json`
    - partner app: `frontend/driver-app/src/i18n/{te,hi}.safety.json`
 2. Record who reviewed it and when at the bottom of this file.
 3. Set that language to `true` in `safetyReviewed` in both apps'
@@ -31,7 +31,7 @@ an SOS sends to contacts also carries both languages.
 - Legal documents (Privacy Policy, Terms) are **not translated** at all; the apps
   say so in Telugu and Hindi. They need a legal translation, not a machine one.
 
-## Rider app (37 strings)
+## Customer app (37 strings)
 
 | Key | English | Telugu | Hindi | Reviewed |
 |---|---|---|---|---|
@@ -81,7 +81,7 @@ an SOS sends to contacts also carries both languages.
 | `raiseIssue.dangerBody` | A ticket is read when support reaches it. If you need help this minute, stop somewhere safe and call {{number}}, or call driver support from the Help screen. | టికెట్‌ను సపోర్ట్ చేరుకున్నప్పుడు చదువుతారు. మీకు ఈ నిమిషంలోనే సహాయం అవసరమైతే, సురక్షితమైన చోట ఆగి {{number}}కి కాల్ చేయండి, లేదా సహాయం స్క్రీన్ నుండి డ్రైవర్ సపోర్ట్‌కు కాల్ చేయండి. | टिकट तब पढ़ा जाता है जब सपोर्ट उस तक पहुँचता है। अगर आपको इसी पल मदद चाहिए, तो किसी सुरक्षित जगह रुककर {{number}} पर कॉल करें, या सहायता स्क्रीन से ड्राइवर सपोर्ट को कॉल करें। | ☐ te ☐ hi |
 | `raiseIssue.call` | Call {{number}} | {{number}}కి కాల్ చేయండి | {{number}} पर कॉल करें | ☐ te ☐ hi |
 | `pickupCode.locked` | This trip needs support to sort out before it can start. | ఈ ట్రిప్ ప్రారంభమయ్యే ముందు సపోర్ట్ దీన్ని పరిష్కరించాలి. | इस ट्रिप के शुरू होने से पहले सपोर्ट को इसे सुलझाना होगा। | ☐ te ☐ hi |
-| `pickupCode.askForCode` | Ask your rider for her four-digit code and enter it here. The trip starts once it matches. | మీ రైడర్‌ను ఆమె నాలుగు అంకెల కోడ్ అడిగి ఇక్కడ నమోదు చేయండి. కోడ్ సరిపోలగానే ట్రిప్ ప్రారంభమవుతుంది. | अपनी राइडर से उनका चार अंकों का कोड पूछें और यहाँ डालें। कोड मिलते ही ट्रिप शुरू हो जाती है। | ☐ te ☐ hi |
+| `pickupCode.askForCode` | Ask your customer for her four-digit code and enter it here. The trip starts once it matches. | మీ కస్టమర్‌ను ఆమె నాలుగు అంకెల కోడ్ అడిగి ఇక్కడ నమోదు చేయండి. కోడ్ సరిపోలగానే ట్రిప్ ప్రారంభమవుతుంది. | अपनी कस्टमर से उनका चार अंकों का कोड पूछें और यहाँ डालें। कोड मिलते ही ट्रिप शुरू हो जाती है। | ☐ te ☐ hi |
 | `pickupCode.fieldLabel` | Pickup code | పికప్ కోడ్ | पिकअप कोड | ☐ te ☐ hi |
 | `pickupCode.fieldPlaceholder` | 4-digit code | 4 అంకెల కోడ్ | 4 अंकों का कोड | ☐ te ☐ hi |
 
@@ -143,7 +143,7 @@ Same rule as above: shown with the English beneath until signed off. The Safety 
 | `safetyCenter.vs112.sos` | Use SheOut SOS to alert your emergency contacts and SheOut's team with your location - for example when you cannot talk, or alongside a call. | మీ స్థానంతో మీ ఎమర్జెన్సీ కాంటాక్ట్‌లకు, SheOut టీమ్‌కు తెలియజేయడానికి SheOut SOS ఉపయోగించండి - ఉదాహరణకు మీరు మాట్లాడలేనప్పుడు, లేదా కాల్‌తో పాటు. | अपने इमरजेंसी संपर्कों और SheOut की टीम को अपनी लोकेशन के साथ सूचित करने के लिए SheOut SOS इस्तेमाल करें - जैसे जब आप बात न कर सकें, या कॉल के साथ-साथ। | ☐ te ☐ hi |
 | `safetyCenter.vs112.both` | You can do both: the SOS screen has a Call {{number}} button. | మీరు రెండూ చేయవచ్చు: SOS స్క్రీన్‌పై {{number}}కి కాల్ చేసే బటన్ ఉంది. | आप दोनों कर सकती हैं: SOS स्क्रीन पर {{number}} पर कॉल करने का बटन है। | ☐ te ☐ hi |
 | `safetyCenter.verification.title` | Who is verified, and how | ఎవరిని, ఎలా వెరిఫై చేస్తారు | किसकी जाँच होती है, और कैसे | ☐ te ☐ hi |
-| `safetyCenter.verification.riders` | Every rider sends an ID document (with the Aadhaar number masked) and takes a live selfie in the app, following on-screen prompts. She cannot book until she is approved. | ప్రతి రైడర్ ఒక ID పత్రం (ఆధార్ నంబర్ దాచి) పంపి, స్క్రీన్‌పై సూచనల ప్రకారం యాప్‌లో లైవ్ సెల్ఫీ తీసుకుంటుంది. ఆమోదం వచ్చేవరకు ఆమె బుక్ చేయలేదు. | हर राइडर एक ID दस्तावेज़ (आधार नंबर छिपाकर) भेजती है और स्क्रीन पर दिए निर्देशों के साथ ऐप में लाइव सेल्फ़ी लेती है। मंज़ूरी मिलने तक वह बुक नहीं कर सकती। | ☐ te ☐ hi |
+| `safetyCenter.verification.riders` | Every customer sends an ID document (with the Aadhaar number masked) and takes a live selfie in the app, following on-screen prompts. She cannot book until she is approved. | ప్రతి కస్టమర్ ఒక ID పత్రం (ఆధార్ నంబర్ దాచి) పంపి, స్క్రీన్‌పై సూచనల ప్రకారం యాప్‌లో లైవ్ సెల్ఫీ తీసుకుంటుంది. ఆమోదం వచ్చేవరకు ఆమె బుక్ చేయలేదు. | हर कस्टमर एक ID दस्तावेज़ (आधार नंबर छिपाकर) भेजती है और स्क्रीन पर दिए निर्देशों के साथ ऐप में लाइव सेल्फ़ी लेती है। मंज़ूरी मिलने तक वह बुक नहीं कर सकती। | ☐ te ☐ hi |
 | `safetyCenter.verification.partners` | Every partner does the same, and also sends her vehicle's registration certificate, which must match her profile. SheOut's team also records a police verification for every partner. She cannot receive trips until both checks pass. | ప్రతి పార్ట్‌నర్ కూడా ఇదే చేస్తుంది, తన వాహన రిజిస్ట్రేషన్ సర్టిఫికెట్ కూడా పంపుతుంది, అది ఆమె ప్రొఫైల్‌తో సరిపోలాలి. SheOut టీమ్ ప్రతి పార్ట్‌నర్‌కు పోలీస్ వెరిఫికేషన్ కూడా నమోదు చేస్తుంది. రెండు తనిఖీలు పూర్తయ్యే వరకు ఆమెకు ట్రిప్‌లు రావు. | हर पार्टनर भी यही करती है, और अपने वाहन का रजिस्ट्रेशन सर्टिफ़िकेट भी भेजती है, जो उसकी प्रोफ़ाइल से मेल खाना चाहिए। SheOut की टीम हर पार्टनर का पुलिस वेरिफ़िकेशन भी दर्ज करती है। दोनों जाँच पूरी होने तक उसे ट्रिप नहीं मिलतीं। | ☐ te ☐ hi |
 | `safetyCenter.verification.people` | Every check is made by a person on SheOut's team - no software approves anyone automatically, and nothing matches faces by itself. | ప్రతి తనిఖీని SheOut టీమ్‌లోని ఒక వ్యక్తి చేస్తారు - ఏ సాఫ్ట్‌వేర్ ఎవరినీ దానంతట అదే ఆమోదించదు, ముఖాలను ఏదీ దానంతట అదే సరిపోల్చదు. | हर जाँच SheOut की टीम का एक व्यक्ति करता है - कोई सॉफ़्टवेयर अपने आप किसी को मंज़ूरी नहीं देता, और चेहरे अपने आप नहीं मिलाए जाते। | ☐ te ☐ hi |
 | `safetyCenter.verification.pickupCode` | Before you get in, read your pickup code out to your partner. Only the partner assigned to your trip can start it with that code. | వాహనం ఎక్కే ముందు మీ పికప్ కోడ్‌ను మీ పార్ట్‌నర్‌కు చదివి చెప్పండి. మీ ట్రిప్‌కు కేటాయించిన పార్ట్‌నర్ మాత్రమే ఆ కోడ్‌తో ట్రిప్ ప్రారంభించగలరు. | बैठने से पहले अपना पिकअप कोड अपनी पार्टनर को पढ़कर बताएँ। सिर्फ़ आपकी ट्रिप के लिए तय पार्टनर ही उस कोड से ट्रिप शुरू कर सकती है। | ☐ te ☐ hi |
@@ -207,4 +207,4 @@ The surrounding buttons and titles (`tracking.live.*`, `trip.riderCheck.*`,
 | App | Key | English | Telugu | Hindi | Reviewed |
 |---|---|---|---|---|---|
 | Rider | `partnerCheck.dontGetOn` | You don't have to share your code. Stay where there are people around. Cancelling is free, and SheOut's safety team will look into this partner. If you feel unsafe, press SOS at the top of the map. | మీ కోడ్ చెప్పాల్సిన అవసరం లేదు. చుట్టూ మనుషులు ఉన్న చోట ఉండండి. రద్దు చేయడం ఉచితం, SheOut భద్రతా బృందం ఈ పార్ట్‌నర్‌ని పరిశీలిస్తుంది. అసురక్షితంగా అనిపిస్తే మ్యాప్ పైన ఉన్న SOS నొక్కండి. | आपको अपना कोड बताने की ज़रूरत नहीं है। लोगों के आस-पास रहें। रद्द करना मुफ़्त है, और SheOut की सुरक्षा टीम इस पार्टनर की जाँच करेगी। असुरक्षित लगे तो मैप के ऊपर SOS दबाएँ। | ☐ te ☐ hi |
-| Partner | `riderCheck.womenOnly` | SheOut is for women only. If the person here is a man, or not the rider shown, do not start the trip. | SheOut మహిళల కోసం మాత్రమే. ఇక్కడ ఉన్నది పురుషుడైతే, లేదా చూపిన రైడర్ కాకపోతే, ట్రిప్ మొదలుపెట్టకండి. | SheOut सिर्फ़ महिलाओं के लिए है। अगर यहाँ कोई पुरुष है, या दिखाई गई राइडर नहीं हैं, तो ट्रिप शुरू न करें। | ☐ te ☐ hi |
+| Partner | `riderCheck.womenOnly` | SheOut is for women only. If the person here is a man, or not the customer shown, do not start the trip. | SheOut మహిళల కోసం మాత్రమే. ఇక్కడ ఉన్నది పురుషుడైతే, లేదా చూపిన కస్టమర్ కాకపోతే, ట్రిప్ మొదలుపెట్టకండి. | SheOut सिर्फ़ महिलाओं के लिए है। अगर यहाँ कोई पुरुष है, या दिखाई गई कस्टमर नहीं हैं, तो ट्रिप शुरू न करें। | ☐ te ☐ hi |

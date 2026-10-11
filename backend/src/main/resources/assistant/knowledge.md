@@ -1,15 +1,15 @@
 # SheOut - how it works (the help assistant's only source)
 
 This is written from how the SheOut apps and backend actually behave. The
-rider app's Safety Center says the same things in the same words; if one
+customer app's Safety Center says the same things in the same words; if one
 changes, change the other (frontend/customer-app/src/i18n/en.safety.json,
 keys under `safetyCenter`).
 
 ## What SheOut is
 
 SheOut is a ride and delivery app in Hyderabad, India, by women for women:
-every rider and every partner (driver) is a woman whose ID has been checked
-by a person. Riders book bike taxi, auto, cab, parcel and lunch-box delivery.
+every customer and every partner (driver) is a woman whose ID has been checked
+by a person. Customers book a bike taxi or send a parcel.
 Partners drive and are paid into their SheOut wallet.
 
 ## Where SheOut works
@@ -25,11 +25,11 @@ setting the pickup and drop themselves.
 ## Verification - what is checked, and by whom
 
 - Every account signs in with a phone number and a one-time code.
-- A rider submits an identity document (with the Aadhaar number masked) and
+- A customer submits an identity document (with the Aadhaar number masked) and
   takes a live selfie in the app, following on-screen prompts. A person on
   SheOut's operations team compares the selfie with the ID photo and checks
   the document. Nothing is approved automatically - no face-matching software
-  decides. A rider cannot book until she is approved.
+  decides. A customer cannot book until she is approved.
 - A partner does the same, plus her vehicle's registration certificate (RC),
   which must match the registration number on her profile. SheOut's
   operations team also records a police verification for every partner.
@@ -45,7 +45,7 @@ setting the pickup and drop themselves.
 - You see your partner's name, photo, vehicle and registration number, and
   her position on the map while she comes to you and during the trip.
 - In-app chat with your partner. Phone numbers are never shared between
-  rider and partner.
+  customer and partner.
 - "Share trip" (on the trip screen) opens your phone's share sheet with a
   message: your partner's name and registration, where you are going, and a
   map link to where your partner is at that moment. It is a snapshot, not a
@@ -142,14 +142,14 @@ setting the pickup and drop themselves.
 
 ## Payments and wallet
 
-- Riders pay in the app after the trip: from the SheOut wallet or online
+- Customers pay in the app after the trip: from the SheOut wallet or online
   (UPI apps, card, netbanking) through Razorpay. Cash is not accepted, and a
-  rider should never pay to a partner's own account. A partner can show a
+  customer should never pay to a partner's own account. A partner can show a
   SheOut UPI QR for the exact fare at the end of the trip; paying that is the
   same as paying in the app.
-- A rider with an unpaid trip cannot book again until it is paid.
+- A customer with an unpaid trip cannot book again until it is paid.
 - Wallet: add money in Wallet; it is used for fares and can pay the SheOut
-  Seller listing fee.
+  Seller monthly plan.
 - Refunds, wrong charges and payment problems are handled by a person
   through a support ticket.
 
@@ -161,15 +161,15 @@ setting the pickup and drop themselves.
 
 ## Cancellations
 
-- Riders and partners can cancel with a reason. Repeated cancellations are
+- Customers and partners can cancel with a reason. Repeated cancellations are
   reviewed by a person; nothing is blocked automatically for them.
 
 ## Offers, referrals, SheOut Seller
 
-- New riders get signup ride credit while the offer runs. Refer a Friend:
+- New customers get signup ride credit while the offer runs. Refer a Friend:
   both get a reward after the friend's first paid trip.
 - SheOut Seller is a directory of women selling from home. SheOut charges
-  sellers a one-time listing fee and is not part of any sale - buyers
+  sellers a monthly plan fee, shown in the app before she pays, and is not part of any sale - buyers
   contact the seller on WhatsApp or by phone.
 
 ## Help and support

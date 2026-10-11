@@ -30,7 +30,7 @@ export function supportCategoryLabel(category: string, audience: 'customer' | 'd
     case 'PAYMENT_DISPUTE':
       return audience === 'driver' ? dsT('support.category.PAYMENT_DISPUTE_driver', 'Payment or earnings') : dsT('support.category.PAYMENT_DISPUTE', 'Payment problem');
     case 'DRIVER_OR_CUSTOMER_BEHAVIOR':
-      return audience === 'driver' ? dsT('support.category.BEHAVIOR_driver', "A rider's behaviour") : dsT('support.category.BEHAVIOR', "A partner's behaviour");
+      return audience === 'driver' ? dsT('support.category.BEHAVIOR_driver', "A customer's behaviour") : dsT('support.category.BEHAVIOR', "A partner's behaviour");
     case 'SAFETY_CONCERN':
       return dsT('support.category.SAFETY_CONCERN', 'Safety concern');
     case 'APP_ISSUE':

@@ -88,7 +88,7 @@ public class AdminFeedbackController {
             @RequestParam(required = false, defaultValue = "" + DEFAULT_DAYS) int days) {
         if (about != AccountRole.DRIVER && about != AccountRole.CUSTOMER) {
             throw new ApiException(org.springframework.http.HttpStatus.BAD_REQUEST, "Bad Request",
-                    "Ratings are about partners or riders.");
+                    "Ratings are about partners or customers.");
         }
         int window = Math.min(Math.max(days, 1), MAX_DAYS);
         Instant since = Instant.now().minus(Duration.ofDays(window));

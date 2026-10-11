@@ -214,7 +214,7 @@ public class DriverProfileController {
             case PROFILE_PHOTO_REQUIRED -> new ApiException(
                     HttpStatus.CONFLICT,
                     "PROFILE_PHOTO_REQUIRED",
-                    "Add a profile photo before going online. Riders use it to check they are getting into the right vehicle."
+                    "Add a profile photo before going online. Customers use it to check they are getting into the right vehicle."
             );
             // The message comes from the validator, which knows whether the
             // state code or the shape was wrong. A single "invalid
