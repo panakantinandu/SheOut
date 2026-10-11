@@ -1,7 +1,7 @@
 import { CheckCircle2, CreditCard, ShieldCheck, Wallet as WalletIcon } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AmountText, Button, Card, IconCircle, paymentMethodLabel } from '@sheout/design-system';
+import { AmountText, Button, Card, IconCircle, paymentMethodLabel, formatAmount } from '@sheout/design-system';
 import { ApiError, paymentsApi, usersApi, walletApi } from '../api/client';
 import type { BookingSummary, PaymentSummary, RiderWallet } from '../api/types';
 import { openRazorpayCheckout } from '../lib/razorpayCheckout';
@@ -194,7 +194,7 @@ export function TripPaymentCard({ booking, onPaid }: { booking: BookingSummary; 
           ? t('tripPay.paying')
           : balance === null
             ? t('tripPay.payFromWallet')
-            : t('tripPay.payFromWalletBalance', { amount: balance.toFixed(2) })}
+            : t('tripPay.payFromWalletBalance', { amount: formatAmount(balance, true) })}
       </Button>
       {balance !== null && !enough && (
         <button

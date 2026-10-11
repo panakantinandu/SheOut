@@ -1,6 +1,6 @@
 import { CheckCircle2, HelpCircle, Hourglass, QrCode, RefreshCw, ShieldCheck } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { AmountText, Button, Card, IconCircle, paymentMethodLabel } from '@sheout/design-system';
+import { AmountText, Button, Card, IconCircle, paymentMethodLabel, formatRupees } from '@sheout/design-system';
 import { paymentsApi, type UpiQr } from '../api/client';
 import { apiErrorText } from '../lib/apiErrors';
 import type { PaymentSummary } from '../api/types';
@@ -222,11 +222,11 @@ function FareBreakdown({ fare, fee, percent }: { fare: number; fee: number; perc
     <div className="space-y-2 rounded-card bg-background p-3 text-sm text-text-secondary" data-testid="fare-breakdown">
       <div className="flex justify-between gap-3">
         <span>{t('collect.tripFare')}</span>
-        <span className="tabular-nums" data-testid="breakdown-fare">₹{fare.toFixed(2)}</span>
+        <span className="tabular-nums" data-testid="breakdown-fare">{formatRupees(fare, true)}</span>
       </div>
       <div className="flex justify-between gap-3">
         <span>{rate == null ? t('collect.platformFee') : t('collect.platformFeeRate', { rate })}</span>
-        <span className="tabular-nums" data-testid="breakdown-fee">₹{fee.toFixed(2)}</span>
+        <span className="tabular-nums" data-testid="breakdown-fee">{formatRupees(fee, true)}</span>
       </div>
       <button
         type="button"

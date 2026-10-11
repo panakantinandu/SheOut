@@ -1,4 +1,4 @@
-import { AmountText } from '@sheout/design-system';
+import { AmountText, formatRupees } from '@sheout/design-system';
 import { useTranslation } from '@sheout/design-system';
 
 /**
@@ -23,7 +23,7 @@ export function PromoFareLines({ fare, discount, youPay, promotionName }: {
       </div>
       <div className="flex justify-between text-success">
         <span>{promotionName ?? t('promo.offer')}</span>
-        <span data-testid="promo-discount">−₹{discount.toFixed(2)}</span>
+        <span data-testid="promo-discount">−{formatRupees(discount, true)}</span>
       </div>
       <div className="flex justify-between font-semibold text-text-primary">
         <span>{youPay === 0 ? t('promo.youPayCovered') : t('promo.youPayApplied')}</span>

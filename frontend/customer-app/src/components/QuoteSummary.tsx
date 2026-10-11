@@ -1,5 +1,5 @@
 import { Clock, Route } from 'lucide-react';
-import { AmountText, ServiceArt, serviceArtFor, useTranslation, type ServiceArtKind } from '@sheout/design-system';
+import { AmountText, ServiceArt, serviceArtFor, useTranslation, type ServiceArtKind, formatRupees } from '@sheout/design-system';
 import type { GeoAddress } from '../api/types';
 import type { FareQuoteState } from '../lib/useFareQuote';
 
@@ -78,7 +78,7 @@ export function QuoteSummary({
       {quote && (
         <div className="shrink-0 text-right" data-testid="quote-price">
           {promo && (
-            <p className="text-xs text-text-secondary line-through">₹{Math.round(promo.fareEstimate)}</p>
+            <p className="text-xs text-text-secondary line-through">{formatRupees(promo.fareEstimate, true)}</p>
           )}
           <AmountText amount={promo ? promo.youPay : quote.fareEstimate} size="lg" />
           <p className="text-xs text-text-secondary">{t('booking.fixedPrice')}</p>

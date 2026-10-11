@@ -1437,7 +1437,8 @@
     "taxIncluded": "इसमें ₹{{amount}} GST शामिल है",
     "taxSplit": "₹{{taxable}} के कर-योग्य मूल्य पर CGST ₹{{cgst}} + SGST ₹{{sgst}}",
     "downloadInvoice": "टैक्स इनवॉइस {{number}} डाउनलोड करें",
-    "downloadError": "इनवॉइस डाउनलोड नहीं हो सका। फिर कोशिश करें।"
+    "downloadError": "इनवॉइस डाउनलोड नहीं हो सका। फिर कोशिश करें।",
+    "rounded": "नज़दीकी रुपये तक पूरा किया गया।"
   },
   "settings": {
     "title": "सेटिंग्स",

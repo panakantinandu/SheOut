@@ -23,8 +23,7 @@ import {
   StatusBadge,
   SuccessCheck,
   TopHeader,
-  bookingStatusLabel,
-} from '@sheout/design-system';
+  bookingStatusLabel, formatRupees } from '@sheout/design-system';
 import type { CancellationReason, DropOffReason, MapMarker } from '@sheout/design-system';
 import { ApiError, bookingApi, chatApi, dispatchApi, type AssignedRider } from '../api/client';
 import { TripInsuranceActions } from '../components/TripInsuranceActions';
@@ -854,7 +853,7 @@ export function Trip() {
                 {booking.type === 'RIDE' ? t('trip.ride') : t('trip.delivery')}
               </span>
               <span className="flex items-center gap-2">
-                <span className="font-heading text-card-title text-text-primary">₹{booking.finalFare ?? booking.fareEstimate}</span>
+                <span className="font-heading text-card-title text-text-primary">{formatRupees(Number(booking.finalFare ?? booking.fareEstimate), true)}</span>
                 <ChevronDown className="h-5 w-5 text-text-secondary transition-transform group-open:rotate-180" aria-hidden="true" />
               </span>
             </summary>
@@ -1078,7 +1077,7 @@ export function Trip() {
             </div>
             <div className="flex justify-between border-t border-border pt-3 text-sm">
               <span className="text-text-secondary">{booking.status === 'CANCELLED' ? t('trip.fareNotCharged') : t('trip.fare')}</span>
-              <span className="font-heading text-card-title text-text-primary">₹{booking.finalFare ?? booking.fareEstimate}</span>
+              <span className="font-heading text-card-title text-text-primary">{formatRupees(Number(booking.finalFare ?? booking.fareEstimate), true)}</span>
             </div>
             {/* When it happened - the first thing anybody looks for in a
                 past trip, and what support will ask for. */}

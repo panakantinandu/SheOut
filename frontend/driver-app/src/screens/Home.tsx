@@ -1,7 +1,7 @@
 import { Bell, CloudOff, Hourglass, Menu, RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ASSISTANT_NAME, AggregateRatingText, AssistantFab, BellBadge, FlowingTitle, Button, Card, IconCircle, PushPromptCard, RotatingText, SkeletonList, SkyIcon, bookingStatusLabel, useDayPart, usePushMessages, usePushNotifications, useUnreadNotifications, ServiceArt, serviceArtFor } from '@sheout/design-system';
+import { ASSISTANT_NAME, AggregateRatingText, AssistantFab, BellBadge, FlowingTitle, Button, Card, IconCircle, PushPromptCard, RotatingText, SkeletonList, SkyIcon, bookingStatusLabel, useDayPart, usePushMessages, usePushNotifications, useUnreadNotifications, ServiceArt, serviceArtFor, formatAmount } from '@sheout/design-system';
 import {
   ApiError,
   PUSH_TOKEN_KEY,
@@ -496,7 +496,7 @@ export function Home() {
           <IconCircle tone="soft" color="orange" icon={<Hourglass className="h-5 w-5" />} />
           <div className="flex-1">
             <p className="font-heading text-card-title text-text-primary">
-              {t('home.holdTitle', { amount: paymentHold.amount.toFixed(0) })}
+              {t('home.holdTitle', { amount: formatAmount(paymentHold.amount, true) })}
             </p>
             <p className="text-xs text-text-secondary">
               {paymentHold.holdUntil

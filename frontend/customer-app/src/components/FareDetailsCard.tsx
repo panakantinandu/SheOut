@@ -32,6 +32,11 @@ export function FareDetailsCard({ bookingId, children }: { bookingId: string; ch
   }, [bookingId]);
 
   if (!details) return null;
+  /** The parts, times the multipliers, came to paise; the fare is whole rupees (see the fare calculator). */
+  const roundedBy = (d: typeof details) => {
+    const parts = (Number(d.baseFare ?? 0) + Number(d.distanceCharge ?? 0) + Number(d.timeCharge ?? 0)) * Number(d.nightMultiplier ?? 1) * Number(d.surgeMultiplier ?? 1);
+    return Math.abs(parts - Number(d.fare)) >= 0.005;
+  };
   const night = multiplier(details.nightMultiplier);
   const surge = multiplier(details.surgeMultiplier);
   const row = (label: string, amount: number | null, testid?: string) =>
@@ -53,6 +58,7 @@ export function FareDetailsCard({ bookingId, children }: { bookingId: string; ch
           {night && <p className="text-xs text-text-secondary">{t('fareDetails.night', { multiplier: night })}</p>}
           {surge && <p className="text-xs text-text-secondary">{t('fareDetails.surge', { multiplier: surge })}</p>}
           {details.minimumFareApplied && <p className="text-xs text-text-secondary">{t('fareDetails.minimum')}</p>}
+          {!details.minimumFareApplied && roundedBy(details) && <p className="text-xs text-text-secondary">{t('fareDetails.rounded')}</p>}
         </>
       ) : (
         <p className="text-xs text-text-secondary">

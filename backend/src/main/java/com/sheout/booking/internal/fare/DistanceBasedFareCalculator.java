@@ -108,7 +108,7 @@ public class DistanceBasedFareCalculator implements FareCalculator {
                 .setScale(2, RoundingMode.HALF_UP);
 
         boolean floored = beforeFloor.compareTo(rate.minimumFare()) < 0;
-        BigDecimal amount = floored ? rate.minimumFare().setScale(2, RoundingMode.HALF_UP) : beforeFloor;
+        BigDecimal amount = wholeRupees(floored ? rate.minimumFare() : beforeFloor);
 
         return new FareQuote(
                 amount,
@@ -121,6 +121,17 @@ public class DistanceBasedFareCalculator implements FareCalculator {
                 surge,
                 nightMultiplier,
                 floored);
+    }
+
+    /**
+     * FARES ARE WHOLE RUPEES, rounded once, here, half up, after the floor.
+     * Every screen, the payment and the receipt use this one number, so the
+     * ₹107 she is shown before booking is the ₹107 she pays (it used to be
+     * ₹107.44 at payment while every earlier screen showed ₹107). The
+     * components stay exact, so the breakdown still explains the total.
+     */
+    static BigDecimal wholeRupees(BigDecimal amount) {
+        return amount.setScale(0, RoundingMode.HALF_UP).setScale(2, RoundingMode.UNNECESSARY);
     }
 
     /** One decimal place is as much precision as a routed estimate honestly carries. */
