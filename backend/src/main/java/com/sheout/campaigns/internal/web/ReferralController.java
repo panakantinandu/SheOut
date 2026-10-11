@@ -82,7 +82,7 @@ public class ReferralController {
         CurrentAccount caller = CurrentAccountContext.get()
                 .orElseThrow(() -> ApiException.unauthorized("Authentication required"));
         if (caller.role() != AccountRole.CUSTOMER && caller.role() != AccountRole.DRIVER) {
-            throw ApiException.forbidden("Referrals are for riders and partners");
+            throw ApiException.forbidden("Referrals are for customers and partners");
         }
         return caller;
     }

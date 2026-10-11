@@ -119,7 +119,7 @@ public class SupportTicketController {
         CurrentAccount caller = CurrentAccountContext.get()
                 .orElseThrow(() -> ApiException.unauthorized("Authentication required"));
         if (caller.role() != AccountRole.CUSTOMER && caller.role() != AccountRole.DRIVER) {
-            throw ApiException.forbidden("Support tickets are raised from the rider and partner apps");
+            throw ApiException.forbidden("Support tickets are raised from the customer and partner apps");
         }
         return caller;
     }

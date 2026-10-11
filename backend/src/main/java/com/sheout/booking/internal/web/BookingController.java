@@ -637,10 +637,10 @@ public class BookingController {
             // needs to know whether to retype or to ask again.
             case INVALID_PICKUP_CODE -> new ApiException(
                     HttpStatus.BAD_REQUEST, "INVALID_PICKUP_CODE",
-                    "That code doesn't match. Ask your rider to read it out again from her screen.");
+                    "That code doesn't match. Ask your customer to read it out again from her screen.");
             case PICKUP_CODE_REQUIRED -> new ApiException(
                     HttpStatus.BAD_REQUEST, "PICKUP_CODE_REQUIRED",
-                    "Enter the four-digit code your rider reads out to you.");
+                    "Enter the four-digit code your customer reads out to you.");
             case PICKUP_VERIFICATION_LOCKED -> new ApiException(
                     HttpStatus.CONFLICT, "PICKUP_VERIFICATION_LOCKED",
                     "Too many wrong codes for this trip. Call support and they will sort it out with you.");
@@ -704,7 +704,7 @@ public class BookingController {
      * service's question, not this one's.
      */
     public record StartTripRequest(
-            @NotBlank @Pattern(regexp = "\\d{4}", message = "must be the four-digit code your rider reads out")
+            @NotBlank @Pattern(regexp = "\\d{4}", message = "must be the four-digit code your customer reads out")
             String pickupCode
     ) {
     }

@@ -3,7 +3,7 @@
     "title": "Notifications"
   },
   "common": {
-    "yourRider": "your rider",
+    "yourRider": "your customer",
     "continue": "Continue",
     "sending": "Sending...",
     "loading": "Loading...",
@@ -58,7 +58,7 @@
   },
   "profile": {
     "loadError": "Could not load your profile",
-    "photoReason": "Riders see your photo when you are on your way, so they know they have the right vehicle.",
+    "photoReason": "Customers see your photo when you are on your way, so they know they have the right vehicle.",
     "uploadError": "Could not upload that photo. Please try again.",
     "saveError": "Could not save your profile. Please try again.",
     "addName": "Add your name",
@@ -67,7 +67,7 @@
     "unverified": "Unverified",
     "yourPhoto": "Your photo",
     "addPhotoToGoOnline": "Add a photo to go online",
-    "photoRequired": "Riders see this when you are on your way. You cannot go online until you add one. A clear photo of your face, in good light.",
+    "photoRequired": "Customers see this when you are on your way. You cannot go online until you add one. A clear photo of your face, in good light.",
     "changePhoto": "Change photo",
     "addPhoto": "Add photo",
     "yourVehicle": "Your vehicle",
@@ -79,7 +79,7 @@
     "deletedNotice": "Your account has been deleted. Your personal details have been removed.",
     "change": {
       "pendingTitle": "Waiting for SheOut to check",
-      "pendingBody": "Riders keep seeing your current details until our team approves this, so until then use the vehicle shown on your profile.",
+      "pendingBody": "Customers keep seeing your current details until our team approves this, so until then use the vehicle shown on your profile.",
       "name": "Name: {{value}}",
       "dob": "Date of birth: {{value}}",
       "vehicle": "Vehicle: {{value}}",
@@ -181,11 +181,11 @@
     "points": {
       "safety": {
         "title": "Safe by design",
-        "body": "Every rider is a verified woman, every trip starts with a pickup code, and SOS and support are one tap away."
+        "body": "Every customer is a verified woman, every trip starts with a pickup code, and SOS and support are one tap away."
       },
       "earnings": {
         "title": "Your earnings, on record",
-        "body": "Riders pay in the app, so every fare reaches your SheOut wallet with a record behind it. Request a payout any time."
+        "body": "Customers pay in the app, so every fare reaches your SheOut wallet with a record behind it. Request a payout any time."
       },
       "support": {
         "title": "Support that knows your trips",
@@ -252,7 +252,7 @@
     "oneMoreTitle": "One more thing",
     "inProgressTitle": "Verification in progress",
     "readyBody": "Both checks are approved and your photo is on file. You can go online and accept trips.",
-    "oneMoreBody": "Both checks are approved. Add a profile photo and you can go online. Riders use it to check they have the right vehicle.",
+    "oneMoreBody": "Both checks are approved. Add a profile photo and you can go online. Customers use it to check they have the right vehicle.",
     "inProgressBody": "Complete the steps below before you can go online.",
     "addPhoto": "Add your photo",
     "gender": "Gender Verification",
@@ -289,15 +289,15 @@
     "q1": "Why can I not go online?",
     "a1": "Three things have to be in place: your ID and police verification both approved, and a profile photo on your account. Check Verification to see which checks are still pending, and My Profile to add a photo.",
     "q2": "Why do I need a profile photo?",
-    "a2": "Riders see it when you are on your way. It is how a woman getting into a stranger's vehicle at night checks she has the right one. It is never shown to anyone before you accept a trip.",
+    "a2": "Customers see it when you are on your way. It is how a woman getting into a stranger's vehicle at night checks she has the right one. It is never shown to anyone before you accept a trip.",
     "q3": "Why am I not getting requests?",
-    "a3": "You must be online, verified, and allowing location access. Requests are offered to the nearest available partners first, then further out. Requests also pause for up to ten minutes after a trip while the rider pays.",
-    "q4": "How do I contact my rider?",
+    "a3": "You must be online, verified, and allowing location access. Requests are offered to the nearest available partners first, then further out. Requests also pause for up to ten minutes after a trip while the customer pays.",
+    "q4": "How do I contact my customer?",
     "a4": "Through chat on the trip screen, from the moment you accept until the trip ends. Phone numbers are never shared in either direction and cannot be sent through chat. If something needs a call, call us.",
     "q5": "What happens if I cancel a trip?",
     "a5": "You will be asked why, in one tap. Cancelling often, relative to the trips you take on, is reviewed by a person here and never acted on automatically, so the reason you give is your side of it.",
     "q6": "How are my earnings worked out?",
-    "a6": "Your earnings are your share of every trip your riders have paid for. Each paid fare is added to your SheOut wallet, and you can request a payout to your bank or UPI from Wallet & payouts."
+    "a6": "Your earnings are your share of every trip your customers have paid for. Each paid fare is added to your SheOut wallet, and you can request a payout to your bank or UPI from Wallet & payouts."
   },
   "location": {
     "blocked": "Location permission is blocked. Allow it in your browser settings to receive ride requests.",
@@ -334,7 +334,7 @@
     "goOnlineHint": "Go online to start receiving requests",
     "goOffline": "Go Offline",
     "goOnline": "Go Online",
-    "holdTitle": "Waiting for ₹{{amount}} from your last rider",
+    "holdTitle": "Waiting for ₹{{amount}} from your last customer",
     "holdBody": "New requests resume when she pays.",
     "holdBodyUntil": "New requests resume when she pays, or at {{time}}.",
     "activeTrip": "Active trip: {{status}}",
@@ -358,7 +358,7 @@
         "body": "Finding your location. This takes a few seconds."
       },
       "noLocation": {
-        "title": "You're online, but riders can't see you",
+        "title": "You're online, but customers can't see you",
         "body": "Turn on location to receive requests",
         "action": "Turn on location"
       },
@@ -405,18 +405,18 @@
       },
       "afternoon": {
         "greeting": "Good afternoon, {{name}}",
-        "line1": "Riders near you are booking",
+        "line1": "Customers near you are booking",
         "line2": "Stay online to catch the next trip"
       },
       "evening": {
         "greeting": "Good evening, {{name}}",
-        "line1": "Evening rush is on. Riders need you",
+        "line1": "Evening rush is on. Customers need you",
         "line2": "Ride safe, earn well"
       },
       "night": {
         "greeting": "Hello, {{name}}",
         "line1": "Riding late? Keep SOS within reach",
-        "line2": "Rest well. Tomorrow's riders are waiting"
+        "line2": "Rest well. Tomorrow's customers are waiting"
       }
     },
     "there": "there",
@@ -437,17 +437,17 @@
     "PAYMENT_NOT_VERIFIED": "This payment could not be verified.",
     "PAYMENT_NOT_CAPTURED": "The payment did not go through.",
     "INVALID_AMOUNT": "That amount is not allowed.",
-    "CASH_NOT_ACCEPTED": "Cash is no longer accepted. Your rider pays in her app, and the fare goes straight to your wallet.",
+    "CASH_NOT_ACCEPTED": "Cash is no longer accepted. Your customer pays in her app, and the fare goes straight to your wallet.",
     "TRIP_NOT_ENDED": "This trip has not ended yet.",
-    "INVALID_PICKUP_CODE": "That code doesn't match. Ask your rider to read it out again from her screen.",
-    "PICKUP_CODE_REQUIRED": "Enter the four-digit code your rider reads out to you.",
+    "INVALID_PICKUP_CODE": "That code doesn't match. Ask your customer to read it out again from her screen.",
+    "PICKUP_CODE_REQUIRED": "Enter the four-digit code your customer reads out to you.",
     "PICKUP_VERIFICATION_LOCKED": "Too many wrong codes for this trip. Call support and they will sort it out with you.",
     "DESTINATION_CHANGE_NOT_PENDING": "This request is no longer waiting for an answer - it ran out of time, or the trip has ended. The trip continues as it is.",
     "REFERRAL_CODE_INVALID": "That referral code isn't valid. Check it with the friend who sent it, or leave the field empty.",
     "REFERRAL_OWN_CODE": "You can't use your own referral code.",
     "REFERRAL_ALREADY_APPLIED": "You have already joined with a referral code.",
     "REFERRAL_NOT_ELIGIBLE": "Referral codes are for new accounts, entered while signing up.",
-    "UPI_QR_UNAVAILABLE": "A UPI QR can't be made right now. Your rider can pay in her SheOut app instead.",
+    "UPI_QR_UNAVAILABLE": "A UPI QR can't be made right now. Your customer can pay in her SheOut app instead.",
     "SHIFT_CHECK_EXPIRED": "That selfie took too long. Please take it again.",
     "SHIFT_CHECK_UNDER_REVIEW": "Our team is checking your selfie. You can go online once they have.",
     "SELFIE_REQUIRED": "Take the selfie with the in-app camera."
@@ -494,14 +494,14 @@
     "delivery": "Delivery",
     "awaitingPayment": "Awaiting payment",
     "fare": "Fare",
-    "yourRider": "Your rider",
-    "newRider": "New rider",
+    "yourRider": "Your customer",
+    "newRider": "New customer",
     "noNumbers": "Phone numbers are never shared. Message her instead.",
-    "messageRider": "Message your rider",
+    "messageRider": "Message your customer",
     "completed": "Trip completed",
     "earningsInWallet": "Your earnings from this trip are in your wallet.",
     "done": "Done",
-    "overdue": "Your rider hasn't paid yet. You can take new requests. SheOut holds this fare against her account, she can't book again until she pays, and it reaches your wallet when she does.",
+    "overdue": "Your customer hasn't paid yet. You can take new requests. SheOut holds this fare against her account, she can't book again until she pays, and it reaches your wallet when she does.",
     "backHome": "Back to home",
     "ending": "Ending trip...",
     "endTrip": "End trip and request payment",
@@ -518,10 +518,10 @@
     },
     "fareNotCharged": "Quoted fare (not charged)",
     "notAtPickupYet": "The pickup code opens when you reach the pickup point.",
-    "riderCanEndEarly": "Rider getting off before the drop? She can end the trip from her app with \"End trip here\".",
+    "riderCanEndEarly": "Customer getting off before the drop? She can end the trip from her app with \"End trip here\".",
     "awayFromDrop": "You are about {{metres}} m from the drop point. You can still end the trip here, and you will be asked why.",
     "destinationChange": {
-      "title": "Your rider wants to change the destination",
+      "title": "Your customer wants to change the destination",
       "body": "Accept to take her to the new drop at the new fare, or decline to continue as booked.",
       "declineIsFine": "Declining is fine and never counts against you. The trip then continues to {{drop}} at the same fare.",
       "accept": "Accept",
@@ -544,7 +544,7 @@
     "arrivedDropHint": "Let her get off safely and collect your spare helmet. Then end the trip.",
     "arrivedDropHintParcel": "Hand over the parcel, then end the trip.",
     "riderCheck": {
-      "title": "Is this your rider?",
+      "title": "Is this your customer?",
       "samePhoto": "Check her face matches this photo.",
       "noPhoto": "Check her name before she gets on.",
       "helmet": "Give her the spare helmet to wear.",
@@ -681,9 +681,9 @@
     "paid": "Fare paid",
     "settledEarlier": "Settled before in-app payment was required",
     "cash": "Cash, collected by you",
-    "paidBy": "Paid by your rider · {{method}}",
+    "paidBy": "Paid by your customer · {{method}}",
     "waiting": "Waiting for payment",
-    "howPaid": "Your rider pays in her SheOut app - wallet, PhonePe, Google Pay, Paytm or card - or by scanning your SheOut QR below. This updates on its own the moment she does.",
+    "howPaid": "Your customer pays in her SheOut app - wallet, PhonePe, Google Pay, Paytm or card - or by scanning your SheOut QR below. This updates on its own the moment she does.",
     "noCash": "Please don't take cash or a transfer to your own account. Fares paid outside SheOut can't be recorded, and your trip won't count as paid.",
     "youEarned": "You earned",
     "inWallet": "Added to your SheOut wallet",
@@ -691,15 +691,15 @@
     "platformFee": "Platform fee",
     "platformFeeRate": "Platform fee ({{rate}}%)",
     "feeHelp": "What does the platform fee pay for?",
-    "feeExplained": "The platform fee keeps SheOut running for you: partner support whenever you need it, safety features like SOS, live trip sharing and ID-checked riders, and the app, maps and payments themselves. The rate is the same on every trip.",
-    "paidByOffer": "Your rider's fare was covered by a SheOut offer. Your earnings are exactly the same.",
-    "qrShow": "Show UPI QR to rider",
+    "feeExplained": "The platform fee keeps SheOut running for you: partner support whenever you need it, safety features like SOS, live trip sharing and ID-checked customers, and the app, maps and payments themselves. The rate is the same on every trip.",
+    "paidByOffer": "Your customer's fare was covered by a SheOut offer. Your earnings are exactly the same.",
+    "qrShow": "Show UPI QR to customer",
     "qrNew": "Show a new QR",
     "qrLoading": "Getting QR...",
     "qrAlt": "SheOut UPI QR for this fare",
     "qrScan": "Scan with PhonePe, Google Pay, Paytm or any UPI app",
     "qrValidTill": "Valid till {{time}}. The fare goes to your SheOut wallet.",
-    "qrError": "The QR could not be shown. Your rider can pay in her app instead."
+    "qrError": "The QR could not be shown. Your customer can pay in her app instead."
   },
   "sos": {
     "button": "SOS",
@@ -721,7 +721,7 @@
       "done": "Done"
     },
     "selfieTitle": "A quick selfie before you go online",
-    "selfieBody": "So your riders know it's really you. Your phone checks it against the selfie you were verified with.",
+    "selfieBody": "So your customers know it's really you. Your phone checks it against the selfie you were verified with.",
     "tip": {
       "light": "Face the light - not a window behind you",
       "face": "No helmet, sunglasses or mask for this one",
@@ -749,14 +749,14 @@
     "passedTitleName": "You're all set, {{name}}!",
     "passedUntil": "Your safety check is good until {{time}}.",
     "passedBody": "Your safety check is done.",
-    "riderSees": "Riders will see \"Face verified today\"",
+    "riderSees": "Customers will see \"Face verified today\"",
     "goOnline": "Go online",
     "goingOnline": "Going online...",
     "notYet": "Not now",
     "cameraBlocked": "The camera could not be opened. Allow camera access for SheOut in your phone settings, then try again.",
     "helmet": {
       "title": "Now put your helmet on",
-      "body": "Take a photo wearing it, so riders know you ride safely. Keep your spare helmet ready for your rider too.",
+      "body": "Take a photo wearing it, so customers know you ride safely. Keep your spare helmet ready for your customer too.",
       "start": "Take helmet photo",
       "hold": "Helmet on - look at the camera",
       "previewAlt": "You wearing your helmet",
@@ -766,7 +766,7 @@
   },
   "serviceHours": {
     "noNewTrips": "No new trips right now",
-    "outsideHours": "SheOut is outside its operating hours, so riders can't book.",
+    "outsideHours": "SheOut is outside its operating hours, so customers can't book.",
     "paused": "Operations has paused new bookings for a short while.",
     "reopens": "Bookings open again at {{time}}.",
     "backSoon": "Bookings will be back soon.",
@@ -797,7 +797,7 @@
     "expiresSoon_one": "Expires on {{date}}, in {{count}} day. Upload the renewed one now.",
     "expiresSoon_other": "Expires on {{date}}, in {{count}} days. Upload the renewed one now.",
     "expiredOn": "Expired on {{date}}. Upload the new one to go online.",
-    "privateWarning": "A private policy can be refused when you carry paying passengers. Ask your insurer for a commercial policy.",
+    "privateWarning": "A private policy can be refused when you carry paying customers. Ask your insurer for a commercial policy.",
     "upload": "Upload",
     "reupload": "Upload again",
     "uploadRenewal": "Upload the renewed one",
@@ -945,8 +945,8 @@
     "consent": {
       "title": "Agree to the checks",
       "intro": "Before you send anything, here is what SheOut checks and why:",
-      "point1": "We check your ID, a live selfie, your licence and vehicle papers, and a police certificate - so every rider knows her partner is genuine.",
-      "point2": "Only SheOut's verification team sees your documents. Riders never do.",
+      "point1": "We check your ID, a live selfie, your licence and vehicle papers, and a police certificate - so every customer knows her partner is genuine.",
+      "point2": "Only SheOut's verification team sees your documents. Customers never do.",
       "point3": "Your documents are kept while you are a partner and deleted with your account.",
       "readFull": "Read the full consent",
       "hideFull": "Hide the full consent",
@@ -968,7 +968,7 @@
     },
     "photo": {
       "title": "Your profile photo",
-      "why": "Riders see this photo so they know it's you who has arrived. Use a clear, recent photo of your face.",
+      "why": "Customers see this photo so they know it's you who has arrived. Use a clear, recent photo of your face.",
       "add": "Add your photo",
       "added": "Photo added",
       "change": "Change photo",
@@ -989,14 +989,14 @@
       "photoTooSmall": "This photo is too small to read. Take it again, closer, in good light.",
       "validUntil": "Valid until",
       "issuedOn": "Date on the certificate (optional)",
-      "useQuestion": "Is this a commercial policy (for carrying passengers or goods for money)?",
+      "useQuestion": "Is this a commercial policy (for carrying customers or goods for money)?",
       "use": {
         "COMMERCIAL": "Yes, commercial",
         "PRIVATE": "No, private",
         "UNKNOWN": "I'm not sure"
       },
       "useHelp": "Look for the words \"Commercial\", \"Taxi\" or \"Passenger carrying\" on the policy. A private policy may not pay out if something happens on a trip.",
-      "privateWarning": "A private policy can be refused when you carry paying riders. Ask your insurer for a commercial policy.",
+      "privateWarning": "A private policy can be refused when you carry paying customers. Ask your insurer for a commercial policy.",
       "type": {
         "DRIVING_LICENCE": "Driving licence",
         "VEHICLE_RC": "Vehicle RC",
@@ -1008,7 +1008,7 @@
       "why": {
         "DRIVING_LICENCE": "Shows you are allowed to drive this kind of vehicle.",
         "VEHICLE_RC": "Shows the vehicle is registered. It can be in your name or a family member's.",
-        "VEHICLE_INSURANCE": "Covers you and your rider. It must be a commercial policy.",
+        "VEHICLE_INSURANCE": "Covers you and your customer. It must be a commercial policy.",
         "PUC": "Shows the vehicle passed its pollution check.",
         "FITNESS_CERTIFICATE": "Shows an auto or cab is fit to carry passengers.",
         "POLICE_CERTIFICATE": "Confirms you have no police record. Every SheOut partner has one."
@@ -1134,7 +1134,7 @@
     "LICENCE_NAME_MISMATCH": "The name on the licence is not the name on your ID. Send your own licence, or contact support if your name has changed.",
     "LICENCE_NOT_TWO_WHEELER": "This licence is not for two-wheelers. It needs MCWG or MCWOG under class of vehicle.",
     "NOT_A_GOVERNMENT_ID": "This is not a government photo ID. Send your Aadhaar, passport, voter ID or driving licence.",
-    "NOT_COMMERCIAL": "This is a private policy. Carrying paying passengers needs a commercial policy. Ask your insurer for one.",
+    "NOT_COMMERCIAL": "This is a private policy. Carrying paying customers needs a commercial policy. Ask your insurer for one.",
     "NOT_IN_GOVERNMENT_RECORD": "We could not find this {{document}} in the government record. Check the number and send it again.",
     "NUMBER_MISMATCH": "The number you typed is not the number on the {{document}}. Send it again and type the number exactly as printed.",
     "OTHER_VEHICLE": "This {{document}} is for a different vehicle. Send the one for your vehicle.",

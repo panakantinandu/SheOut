@@ -179,7 +179,7 @@ public class PaymentController {
         if (qr.isFailure()) {
             if (qr.error() == PaymentError.GATEWAY_ERROR) {
                 throw new ApiException(HttpStatus.BAD_GATEWAY, "UPI_QR_UNAVAILABLE",
-                        "A UPI QR could not be made right now. The rider can pay in her app instead.");
+                        "A UPI QR could not be made right now. The customer can pay in her app instead.");
             }
             throw toApiException(qr.error());
         }
@@ -226,7 +226,7 @@ public class PaymentController {
                 .orElseThrow(() -> ApiException.unauthorized("Authentication required"));
         BookingParticipants participants = requireParticipant(bookingId);
         if (!caller.accountId().equals(participants.customerId())) {
-            throw ApiException.forbidden("Only the rider pays for a trip");
+            throw ApiException.forbidden("Only the customer pays for a trip");
         }
         return caller.accountId();
     }
@@ -283,7 +283,7 @@ public class PaymentController {
             case NOT_CAPTURED -> new ApiException(HttpStatus.CONFLICT, "PAYMENT_NOT_CAPTURED",
                     "The payment did not go through. You can try again.");
             case CASH_NOT_ACCEPTED -> new ApiException(HttpStatus.GONE, "CASH_NOT_ACCEPTED",
-                    "Cash is no longer accepted. Your rider pays in her app, and the fare goes straight to your wallet.");
+                    "Cash is no longer accepted. Your customer pays in her app, and the fare goes straight to your wallet.");
             case TRIP_NOT_ENDED -> new ApiException(HttpStatus.CONFLICT, "TRIP_NOT_ENDED",
                     "This trip has not ended yet, so there is nothing to pay.");
             case INSUFFICIENT_BALANCE -> new ApiException(HttpStatus.CONFLICT, "INSUFFICIENT_BALANCE",

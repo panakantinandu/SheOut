@@ -129,7 +129,7 @@ public class SupportService implements SupportApi {
             // Left RESOLVED it would sit outside the unresolved count the
             // console badges, and the reply would go unread.
             recordNote(ticket, authorAccountId, authorRole, resolutionNote(ticket, "Reopened by a reply from the "
-                    + (ticket.getRole() == AccountRole.DRIVER ? "partner" : "rider") + "."));
+                    + (ticket.getRole() == AccountRole.DRIVER ? "partner" : "customer") + "."));
             ticket.moveTo(SupportTicketStatus.OPEN, authorAccountId);
         } else {
             ticket.touch();

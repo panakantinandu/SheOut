@@ -100,7 +100,7 @@ public class PrivacyController {
         CurrentAccount caller = CurrentAccountContext.get()
                 .orElseThrow(() -> ApiException.unauthorized("Authentication required"));
         if (caller.role() != AccountRole.CUSTOMER && caller.role() != AccountRole.DRIVER) {
-            throw ApiException.forbidden("Data rights requests are made from the rider and partner apps");
+            throw ApiException.forbidden("Data rights requests are made from the customer and partner apps");
         }
         return caller;
     }

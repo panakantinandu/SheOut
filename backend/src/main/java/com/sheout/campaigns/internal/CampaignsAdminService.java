@@ -94,7 +94,7 @@ public class CampaignsAdminService implements CampaignsAdminApi {
             throw new CampaignValidationException("A percentage discount cannot be more than 100%.");
         }
         if (d.maxUsesPerAccount() != null && d.maxUsesPerAccount() < 1) {
-            throw new CampaignValidationException("Uses per rider must be at least 1.");
+            throw new CampaignValidationException("Uses per customer must be at least 1.");
         }
         if (d.creditValidDays() != null && d.creditValidDays() < 1) {
             throw new CampaignValidationException("Credit validity must be at least 1 day.");

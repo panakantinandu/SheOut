@@ -74,10 +74,10 @@ class KnowledgeBase {
                 %s
                 """.formatted(
                 ASSISTANT_NAME,
-                partner ? "partner (a woman who drives for SheOut)" : "rider (a woman who books rides and deliveries)",
-                partner ? "partner" : "rider",
+                partner ? "partner (a woman who drives for SheOut)" : "customer (a woman who books rides and deliveries)",
+                partner ? "partner" : "customer",
                 knowledge,
-                partner ? "partner app" : "rider app",
+                partner ? "partner app" : "customer app",
                 faq(partner ? "faq.driver." : "faq.customer."));
     }
 

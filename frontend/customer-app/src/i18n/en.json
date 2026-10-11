@@ -42,7 +42,7 @@
     "serviceRideBody": "Ride with a woman partner",
     "serviceParcelBody": "Send it across the city",
     "ride": {
-      "eyebrow": "Women riders",
+      "eyebrow": "Women only",
       "whereTo": "Where are you going?"
     },
     "market": {
@@ -89,7 +89,7 @@
   "about": {
     "title": "About SheOut",
     "version": "Version {{version}}",
-    "body": "Rides and deliveries built around women's safety, with women riders and women partners.",
+    "body": "Rides and deliveries built around women's safety: every customer and every partner is a woman.",
     "feature1Title": "Verified partners",
     "feature1Body": "Every partner passes an ID and police-verification review before she can accept a trip.",
     "feature2Title": "Emergency contacts",
@@ -224,7 +224,7 @@
     "choose": "Choose document",
     "privacyNote": "Only a person on our team sees this, only to confirm you are who you say you are. Never checked by a machine, never shown to partners.",
     "fileHint": "A clear photo (JPG, PNG or HEIC) or a PDF. Make sure the whole document is in the frame and readable.",
-    "whyBody": "SheOut is a women-only platform. A quick ID check is how every rider and partner can trust who they are sharing the road with. A real person reviews it, and you can look around the app while you wait.",
+    "whyBody": "SheOut is a women-only platform. A quick ID check is how every customer and partner can trust who they are sharing the road with. A real person reviews it, and you can look around the app while you wait.",
     "whatWeNeed": "We only look at three things",
     "maskInvite": "You can blur your ID number if you'd like, we only need your name, photo, and gender to verify you.",
     "waitUsually": "Usually reviewed in {{time}}",
@@ -302,10 +302,10 @@
       "subtitle": "Create your account to book safe rides"
     },
     "alreadyRegistered": "That number is already registered, so we are signing you in instead.",
-    "createdForYou": "There was no rider account on this number yet, so we’ve set one up for you.",
+    "createdForYou": "There was no customer account on this number yet, so we’ve set one up for you.",
     "noAccount": {
-      "title": "No rider account on this number yet",
-      "body": "We didn’t find a SheOut rider account for {{phone}}. Create one now, or check the number.",
+      "title": "No customer account on this number yet",
+      "body": "We didn’t find a SheOut customer account for {{phone}}. Create one now, or check the number.",
       "create": "Create my account",
       "otherNumber": "Use a different number"
     },
@@ -930,7 +930,7 @@
     "INVALID_AMOUNT": "Add between ₹10 and ₹10,000, keeping your balance at or under ₹10,000.",
     "CASH_NOT_ACCEPTED": "Cash is no longer accepted. Pay in the app.",
     "TRIP_NOT_ENDED": "This trip has not ended yet, so there is nothing to pay.",
-    "INVALID_PICKUP_CODE": "That code doesn't match. Ask your rider to read it out again.",
+    "INVALID_PICKUP_CODE": "That code doesn't match. Check the code on your screen and read it out to your partner again.",
     "PICKUP_CODE_REQUIRED": "Enter the four-digit pickup code.",
     "PICKUP_VERIFICATION_LOCKED": "Too many wrong codes for this trip. Contact support.",
     "CUSTOMER_NOT_VERIFIED": "Your ID is still to be verified, so this trip cannot be booked yet.",
@@ -946,7 +946,7 @@
     "REFERRAL_ALREADY_APPLIED": "You have already joined with a referral code.",
     "REFERRAL_NOT_ELIGIBLE": "Referral codes are for new accounts, entered while signing up.",
     "INVALID_PHONE": "Enter a 10-digit Indian mobile number.",
-    "NOT_VERIFIED": "Verify your ID first. Every SheOut Seller is a verified SheOut rider.",
+    "NOT_VERIFIED": "Verify your ID first. Only verified SheOut customers can sell on SheOut Seller.",
     "NOTHING_TO_REVIEW": "Add at least one product with a photo before sending your shop for review.",
     "NOT_EDITABLE": "Your shop can't be changed while it is being reviewed, awaiting payment or paused.",
     "PRODUCT_LIMIT_REACHED": "You have reached the most products a shop can list.",
