@@ -46,7 +46,7 @@
       "whereTo": "మీరు ఎక్కడికి వెళ్లాలి?"
     },
     "market": {
-      "title": "మార్కెట్‌ప్లేస్",
+      "title": "SheOut Seller",
       "body": "మీ దగ్గరి మహిళల నుంచి కొనండి",
       "sell": "మీ ఉత్పత్తులు అమ్మండి"
     },
@@ -353,7 +353,7 @@
     "version": "SheOut వెర్షన్ {{version}}",
     "languageSaved": "భాష మార్చబడింది",
     "languageSavedLocally": "ఈ ఫోన్‌లో భాష మార్చబడింది. తదుపరిసారి మీ ఖాతాలో సేవ్ అవుతుంది.",
-    "sell": "SheOutలో అమ్మండి",
+    "sell": "SheOut Sellerలో అమ్మండి",
     "safety": "భద్రతా కేంద్రం"
   },
   "seller": {

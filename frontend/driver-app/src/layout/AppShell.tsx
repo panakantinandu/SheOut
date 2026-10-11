@@ -12,8 +12,8 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const items = [
     { key: 'home', label: t('nav.home'), icon: <Home />, path: '/home' },
-    { key: 'earnings', label: t('nav.earnings'), icon: <Wallet />, path: '/earnings' },
     { key: 'bookings', label: t('nav.bookings'), icon: <ClipboardList />, path: '/bookings' },
+    { key: 'earnings', label: t('nav.earnings'), icon: <Wallet />, path: '/earnings' },
     { key: 'profile', label: t('nav.profile'), icon: <User />, path: '/profile' },
   ];
 

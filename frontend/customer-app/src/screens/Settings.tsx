@@ -98,11 +98,11 @@ export function Settings() {
           <ListRow icon={row(<Info />)} label={t('about.title')} onClick={() => navigate('/about')} />
           <ListRow icon={row(<Lock />)} label={t('legal.privacy')} onClick={() => navigate('/privacy')} />
           <ListRow icon={row(<FileText />)} label={t('legal.terms')} onClick={() => navigate('/terms')} />
-          <ListRow
-            icon={row(<Star />)}
-            label={t('drawer.rate')}
-            onClick={() => (STORE_URL ? window.open(STORE_URL, '_blank', 'noopener') : showToast(t('drawer.rateSoon')))}
-          />
+          {/* Only once there is a store listing to rate: until then the row
+              led nowhere but a "not yet" toast. */}
+          {STORE_URL && (
+            <ListRow icon={row(<Star />)} label={t('drawer.rate')} onClick={() => window.open(STORE_URL, '_blank', 'noopener')} />
+          )}
         </Card>
       </section>
 

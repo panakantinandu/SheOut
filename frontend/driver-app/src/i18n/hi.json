@@ -110,7 +110,7 @@
   "nav": {
     "home": "होम",
     "earnings": "कमाई",
-    "bookings": "बुकिंग्स",
+    "bookings": "ट्रिप्स",
     "profile": "प्रोफ़ाइल",
     "step": {
       "depart": "आगे बढ़ें",
@@ -610,7 +610,7 @@
       "RIDES": "राइड",
       "PARCELS": "पार्सल"
     },
-    "title": "मेरी बुकिंग्स",
+    "title": "मेरी ट्रिप्स",
     "searchPlaceholder": "पिकअप या ड्रॉप खोजें",
     "status": "स्थिति",
     "anyStatus": "कोई भी स्थिति",

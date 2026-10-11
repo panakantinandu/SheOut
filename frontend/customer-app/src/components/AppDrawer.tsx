@@ -62,6 +62,7 @@ export function AppDrawerProvider({ children }: { children: ReactNode }) {
             type="button"
             onClick={() => go('/profile')}
             className="flex w-full items-center gap-3 text-left"
+            aria-label={profile ? undefined : t('profile.title')}
             data-testid="drawer-profile"
           >
             <Avatar url={profile?.profilePhotoUrl} name={profile?.name} size="lg" />
