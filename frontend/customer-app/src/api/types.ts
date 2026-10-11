@@ -152,6 +152,8 @@ export interface BookingSummary {
   /** What she pays: the fare less promoDiscount. */
   amountDue: number;
   promotionName: string | null;
+  /** A delivery's note on what is in the parcel, in the sender's words; null for a ride. */
+  parcelNote?: string | null;
 }
 
 /** A promotion she holds - the signup credit, or a code she entered. */

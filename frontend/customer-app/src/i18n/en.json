@@ -1307,7 +1307,14 @@
       "mismatchPerson": "Not the person in the app",
       "mismatchVehicle": "Not the vehicle or number in the app",
       "mismatchUnsafe": "I don't feel safe",
-      "mismatchNoCharge": "Any of these cancels the ride at no charge and never counts against you. SheOut's team will look into it."
+      "mismatchNoCharge": "Any of these cancels the ride at no charge and never counts against you. SheOut's team will look into it.",
+      "checkTitleParcel": "Check before you hand it over",
+      "mismatchTitleParcel": "Don't hand it over",
+      "mismatchNoChargeParcel": "Any of these cancels the delivery at no charge and never counts against you. SheOut's team will look into it.",
+      "phaseOnTripParcel": "Parcel on its way",
+      "onTripTitleParcel": "Your parcel is on its way",
+      "nearDropTitleParcel": "Your parcel is almost there",
+      "nearDropHintParcel": "Your partner hands it over at the drop, then ends the trip."
     },
     "paidFlash": {
       "title": "Payment successful",
@@ -1320,7 +1327,22 @@
       "minutes": "{{count}} min ago",
       "long": "over an hour ago"
     },
-    "cancelMessage": "Cancelling is free. Your reason helps us understand what went wrong, and is not shown to your partner."
+    "cancelMessage": "Cancelling is free. Your reason helps us understand what went wrong, and is not shown to your partner.",
+    "actions": {
+      "label": "Trip actions",
+      "chat": "Chat",
+      "share": "Share",
+      "support": "Support",
+      "cancel": "Cancel"
+    },
+    "cancelDelivery": "Cancel delivery",
+    "parcel": {
+      "title": "Your parcel",
+      "contents": "What's inside",
+      "noNote": "No description added",
+      "handover": "Hand it over at the pickup. Show your code only after you check it is her.",
+      "onTheWay": "Your partner has it and is taking it to the drop."
+    }
   },
   "nav": {
     "home": "Home",
