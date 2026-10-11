@@ -1,8 +1,8 @@
 import { HeartHandshake, IndianRupee, ShieldCheck } from 'lucide-react';
 import { useGoBack } from '../lib/useGoBack';
 import { Card, IconCircle, SheOutWordmark, TopHeader, useTranslation, MapCredits } from '@sheout/design-system';
+import { APP_VERSION } from '../lib/appVersion';
 
-const APP_VERSION = '0.1.0';
 
 /** About SheOut, told to a partner - what the platform promises her. */
 export function About() {

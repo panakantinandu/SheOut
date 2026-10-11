@@ -19,6 +19,8 @@ export interface PrivacyDataSectionProps {
   onDelete: () => Promise<void>;
   /** Called after a completed deletion - the app signs out and leaves. */
   onDeleted: () => void;
+  /** Opens on the delete explanation (Profile's "Delete my account" lands here). Still two steps. */
+  startWithDelete?: boolean;
 }
 
 const CONFIRM_WORD = 'DELETE';
@@ -43,10 +45,11 @@ export function PrivacyDataSection({
   onDownload,
   onDelete,
   onDeleted,
+  startWithDelete = false,
 }: PrivacyDataSectionProps) {
   const { t } = useTranslation('ds');
   const [downloading, setDownloading] = useState(false);
-  const [step, setStep] = useState<'idle' | 'explain' | 'type'>('idle');
+  const [step, setStep] = useState<'idle' | 'explain' | 'type'>(startWithDelete ? 'explain' : 'idle');
   const [typed, setTyped] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);

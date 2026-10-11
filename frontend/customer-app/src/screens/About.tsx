@@ -3,8 +3,8 @@ import { useGoBack } from '../lib/useGoBack';
 import { Card, IconCircle, TopHeader, contentText, useAppLanguage, useContentSection, MapCredits } from '@sheout/design-system';
 import { contentApi } from '../api/client';
 import { useTranslation } from '@sheout/design-system';
+import { APP_VERSION } from '../lib/appVersion';
 
-const APP_VERSION = '0.1.0';
 
 /**
  * Says what this app actually is and does today rather than marketing copy -

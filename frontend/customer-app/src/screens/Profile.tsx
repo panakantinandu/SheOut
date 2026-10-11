@@ -1,4 +1,4 @@
-import { BadgeCheck, Camera, ChevronRight, MapPin, Receipt, ShieldAlert, User } from 'lucide-react';
+import { BadgeCheck, Camera, ChevronRight, MapPin, Receipt, ShieldAlert, Trash2, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -14,6 +14,7 @@ import {
 import { useAppDrawer } from '../components/AppDrawer';
 import { ApiError, usersApi } from '../api/client';
 import type { CustomerProfileSummary } from '../api/types';
+import { APP_VERSION } from '../lib/appVersion';
 
 /**
  * Who she is on SheOut: her details, places and payments, her ID check and
@@ -26,6 +27,7 @@ import type { CustomerProfileSummary } from '../api/types';
  */
 export function Profile() {
   const { t } = useTranslation();
+  const { t: ds } = useTranslation('ds');
   const navigate = useNavigate();
   const drawer = useAppDrawer();
   const [profile, setProfile] = useState<CustomerProfileSummary | null>(null);
@@ -95,6 +97,18 @@ export function Profile() {
           />
           <ListRow icon={icon(<ShieldAlert />, 'red')} label={t('profile.emergencyContacts')} sublabel={t('profile.emergencyContactsSub')} onClick={() => navigate('/profile/emergency-contacts')} />
         </Card>
+      </section>
+
+      <section>
+        <Card className="p-0">
+          <ListRow
+            icon={<IconCircle tone="soft" size="sm" color="red" icon={<Trash2 />} />}
+            label={ds('privacy.delete')}
+            sublabel={ds('privacy.deleteSub')}
+            onClick={() => navigate('/settings?delete=1')}
+          />
+        </Card>
+        <p className="mt-4 text-center text-caption text-text-secondary">{t('drawer.version', { version: APP_VERSION })}</p>
       </section>
 
     </div>
