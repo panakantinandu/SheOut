@@ -16,6 +16,13 @@ public record WalletSummary(
         BigDecimal cashCollected,
         BigDecimal totalPaidOut,
         BigDecimal pendingPayouts,
-        BigDecimal availableBalance
+        BigDecimal availableBalance,
+        /** Parcel earnings still in their dispute window: earned, not yet withdrawable. */
+        BigDecimal heldEarnings
 ) {
+
+    public WalletSummary(BigDecimal totalEarned, BigDecimal cashCollected, BigDecimal totalPaidOut,
+                         BigDecimal pendingPayouts, BigDecimal availableBalance) {
+        this(totalEarned, cashCollected, totalPaidOut, pendingPayouts, availableBalance, BigDecimal.ZERO);
+    }
 }

@@ -23,7 +23,9 @@ public class WalletEntryEntity extends BaseEntity {
         /** She asked to be paid; the amount is held. Negative. */
         PAYOUT_REQUESTED,
         /** A campaign incentive on a trip, paid by SheOut on top of her share. Positive. */
-        INCENTIVE
+        INCENTIVE,
+        /** A parcel's held earnings, taken back: an operator found her at fault. Negative. */
+        EARNING_WITHHELD
     }
 
     @Column(nullable = false)

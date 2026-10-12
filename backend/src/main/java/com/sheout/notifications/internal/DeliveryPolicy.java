@@ -72,6 +72,8 @@ record DeliveryPolicy(boolean push, boolean emailFallback, boolean smsFallback, 
             case PARTNER_DOCUMENT_EXPIRED, PARTNER_DOCUMENT_REJECTED -> PUSH_AND_EMAIL;
             // Operators on duty, like an SOS: push, every device.
             case TRIP_WATCH_ALERT -> PUSH_ONLY;
+            // Mid-delivery, a question her partner is waiting on: push now; a later text would be stale.
+            case PARCEL_EXCEPTION -> PUSH_ONLY;
             case STAFF_SECURITY_ALERT -> PUSH_ONLY;
             // Her shop's month: worth an email if push missed her. Not a
             // text - that needs a DLT-registered template, and a reminder

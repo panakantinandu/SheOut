@@ -112,7 +112,8 @@ public class BookingController {
                 request.drop().toGeoAddress(),
                 request.parcelNote(),
                 request.orderProductId(),
-                request.orderQuantity()
+                request.orderQuantity(),
+                request.parcel() == null ? null : request.parcel().toDetails()
         );
         Result<BookingSummary, BookingError> result = bookingService.requestBooking(command);
         if (result.isFailure()) {
@@ -440,11 +441,16 @@ public class BookingController {
         CurrentAccount caller = requireRole(AccountRole.DRIVER);
         requireAssignedDriver(caller, bookingId);
         return respond(bookingService.completeTrip(bookingId, caller.accountId(),
-                request == null ? null : request.reason(), request == null ? null : request.note()));
+                request == null ? null : request.reason(), request == null ? null : request.note(),
+                request == null ? null : request.deliveryCode()));
     }
 
-    /** Why she is ending the trip away from the drop, when she is. */
-    public record CompleteTripRequest(DropOffDeviationReason reason, @Size(max = 500) String note) {
+    /**
+     * Why she is ending the trip away from the drop, when she is; and for a
+     * parcel, the four-digit code the receiver gave her.
+     */
+    public record CompleteTripRequest(DropOffDeviationReason reason, @Size(max = 500) String note,
+                                      @Size(max = 8) String deliveryCode) {
     }
 
     /**
@@ -621,7 +627,7 @@ public class BookingController {
                     HttpStatus.CONFLICT, "SERVICE_CLOSED", ServiceStatusController.closedMessage(serviceHours.currentStatus()));
             case PARCEL_NOTE_HAS_PHONE -> new ApiException(
                     HttpStatus.BAD_REQUEST, "PARCEL_NOTE_HAS_PHONE",
-                    "Leave phone numbers out of the parcel note. Your partner can call you through the app.");
+                    "Leave phone numbers out of the parcel note. Your partner can chat with you in the app.");
             case TRIP_ENDS_AFTER_HOURS -> new ApiException(
                     HttpStatus.CONFLICT, "TRIP_ENDS_AFTER_HOURS", ServiceStatusController.endsAfterHoursMessage(serviceHours.currentStatus()));
             case CATEGORY_TYPE_MISMATCH -> new ApiException(
@@ -685,6 +691,13 @@ public class BookingController {
             case DESTINATION_CHANGE_NOT_PENDING -> new ApiException(
                     HttpStatus.CONFLICT, "DESTINATION_CHANGE_NOT_PENDING",
                     "This request is no longer waiting for an answer.");
+            case PARCEL_DETAILS_REQUIRED, PARCEL_RECEIVER_PHONE_INVALID, PARCEL_RULES_CHANGED,
+                 PARCEL_DECLARED_VALUE_TOO_HIGH, PARCEL_PICKUP_PHOTO_REQUIRED, PARCEL_DELIVERY_PHOTO_REQUIRED,
+                 PARCEL_DELIVERY_CODE_REQUIRED, INVALID_PARCEL_DELIVERY_CODE, PARCEL_DELIVERY_CODE_LOCKED,
+                 PARCEL_EXCEPTION_PHOTO_REQUIRED, PARCEL_EXCEPTION_NOTE_REQUIRED, PARCEL_NO_EXCEPTION_PENDING,
+                 PARCEL_LEAVE_WITH_NAME_REQUIRED, PARCEL_PHOTO_INVALID, PARCEL_END_HERE_NOT_ALLOWED,
+                 PARCEL_RETURN_FARE_ALREADY_CHARGED, PARCEL_DISPUTE_ALREADY_OPEN, PARCEL_NO_DISPUTE_OPEN,
+                 NOT_A_PARCEL -> ParcelErrors.toApiException(error);
         };
     }
 
@@ -773,8 +786,24 @@ public class BookingController {
             @jakarta.validation.constraints.Size(max = 300) String parcelNote,
             /** A delivery only: the Marketplace product it carries, so its stock goes down when delivered. Optional. */
             UUID orderProductId,
-            @jakarta.validation.constraints.Min(1) @jakarta.validation.constraints.Max(20) Integer orderQuantity
+            @jakarta.validation.constraints.Min(1) @jakarta.validation.constraints.Max(20) Integer orderQuantity,
+            /** A delivery only, and required for one: who it is for, and what the sender agreed to. */
+            @Valid ParcelDetailsRequest parcel
     ) {
+    }
+
+    public record ParcelDetailsRequest(
+            @Size(max = 80) String receiverName,
+            @Size(max = 20) String receiverPhone,
+            @DecimalMin("0") BigDecimal declaredValue,
+            @Size(max = 20) String prohibitedItemsVersion,
+            boolean prohibitedItemsAcknowledged,
+            boolean sizeAcknowledged
+    ) {
+        com.sheout.booking.ParcelDetails toDetails() {
+            return new com.sheout.booking.ParcelDetails(receiverName, receiverPhone, declaredValue,
+                    prohibitedItemsVersion, prohibitedItemsAcknowledged, sizeAcknowledged);
+        }
     }
 
     /** Same shape as CreateBookingRequest - quoting and booking take the same inputs by definition. */

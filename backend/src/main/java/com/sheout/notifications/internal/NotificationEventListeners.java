@@ -96,6 +96,14 @@ class NotificationEventListeners {
         return language -> Map.of();
     }
 
+    /** Her parcel could not be handed over and her partner is waiting at the drop for her to choose. */
+    @Async(NotificationDeliveryConfig.EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void onParcelDeliveryException(com.sheout.booking.ParcelDeliveryExceptionRaised event) {
+        dispatcher.deliver(event.customerId(), NotificationType.PARCEL_EXCEPTION, localized(event.customerId(), "parcelException",
+                none(), "/tracking/" + event.bookingId(), "parcel-exception-" + event.bookingId(), OutboundMessage.Urgency.ALERT));
+    }
+
     /** Her partner dropped the trip and the app is already looking for another: she is told both, at once. */
     @Async(NotificationDeliveryConfig.EXECUTOR)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)

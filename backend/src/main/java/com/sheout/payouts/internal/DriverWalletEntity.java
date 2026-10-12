@@ -33,6 +33,10 @@ public class DriverWalletEntity extends BaseEntity {
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal pendingPayouts = BigDecimal.ZERO;
 
+    /** Parcel earnings in their dispute window - see EarningHoldService. Not yet hers to withdraw. */
+    @Column(nullable = false, precision = 12, scale = 2)
+    private BigDecimal held = BigDecimal.ZERO;
+
     @Version
     private long version;
 
@@ -41,7 +45,25 @@ public class DriverWalletEntity extends BaseEntity {
     }
 
     public BigDecimal available() {
-        return totalEarned.subtract(cashCollected).subtract(totalPaidOut).subtract(pendingPayouts);
+        return totalEarned.subtract(cashCollected).subtract(totalPaidOut).subtract(pendingPayouts).subtract(getHeld());
+    }
+
+    void hold(BigDecimal amount) {
+        held = getHeld().add(amount);
+    }
+
+    void releaseHeld(BigDecimal amount) {
+        held = getHeld().subtract(amount);
+    }
+
+    /** She was found at fault: the held amount leaves what she earned, as well as what is held. */
+    void withholdHeld(BigDecimal amount) {
+        held = getHeld().subtract(amount);
+        totalEarned = totalEarned.subtract(amount);
+    }
+
+    public BigDecimal getHeld() {
+        return held == null ? BigDecimal.ZERO : held;
     }
 
     void creditEarning(BigDecimal driverShare) {

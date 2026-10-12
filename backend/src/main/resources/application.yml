@@ -392,6 +392,30 @@ sheout:
       # AWS SDK's own default credential chain, which already reads the
       # standard AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY env vars.
 
+  # Parcels: proof of delivery (docs/parcel-dispatch-audit.md, Part 1).
+  # Every default is the safe value: photos required, receiver SMS off.
+  parcel:
+    # "Delivered" only this close to the drop; outside it a reason is
+    # required and the delivery is flagged for an operator.
+    delivery-radius-metres: ${PARCEL_DELIVERY_RADIUS_M:150}
+    # Shown to the sender; she confirms the parcel is under it and fits a bag.
+    max-weight-kg: ${PARCEL_MAX_WEIGHT_KG:5}
+    # Optional, for records only - no compensation is promised against it.
+    max-declared-value: ${PARCEL_MAX_DECLARED_VALUE:5000}
+    # Bump whenever the prohibited-items list (ParcelRules) changes, so every
+    # sender agrees to the list actually in force.
+    prohibited-items-version: ${PARCEL_PROHIBITED_ITEMS_VERSION:2026-10-11}
+    # Pickup and delivery photos required. Off only if uploads are broken
+    # for partners and trips cannot end; the code is still required.
+    photos-required: ${PARCEL_PHOTOS_REQUIRED:true}
+    # Photos and receiver numbers are deleted after this, unless a dispute is open.
+    photo-retention-days: ${PARCEL_PHOTO_RETENTION_DAYS:90}
+    # Parcel earnings wait this long after delivery before she can withdraw them.
+    dispute-window-hours: ${PARCEL_DISPUTE_WINDOW_HOURS:24}
+    # Texts the delivery code to the receiver. Off until DLT approves the
+    # template in ParcelReceiverSms; the sender app always shows the code.
+    receiver-sms-enabled: ${PARCEL_RECEIVER_SMS_ENABLED:false}
+
   dispatch:
     # None of these were specified beyond the offer window's "e.g. 15
     # seconds" - all illustrative defaults, flagged in the dispatch module

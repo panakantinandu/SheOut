@@ -53,10 +53,16 @@ class MigrationPathTest {
         var result = flyway(null).migrate();
 
         assertThat(result.success).isTrue();
-        assertThat(result.targetSchemaVersion).isEqualTo("77");
+        assertThat(result.targetSchemaVersion).isEqualTo("81");
         assertThat(jdbc.queryForObject("select count(*) from information_schema.tables where table_schema = ? and table_name in"
                         + " ('partner_documents','police_verifications','insurance_policies','trip_coverages','tax_invoices')",
                 Integer.class, schema)).isEqualTo(5);
+        // V80: parcel proof of delivery and earnings holds; V81: one active trip per partner.
+        assertThat(jdbc.queryForObject("select count(*) from information_schema.tables where table_schema = ? and table_name in"
+                        + " ('parcel_deliveries','parcel_photos','earning_holds')",
+                Integer.class, schema)).isEqualTo(3);
+        assertThat(jdbc.queryForObject("select count(*) from pg_indexes where schemaname = ? and indexname = 'uq_bookings_one_active_trip_per_partner'",
+                Integer.class, schema)).isEqualTo(1);
     }
 
     @Test
@@ -73,7 +79,7 @@ class MigrationPathTest {
         var result = flyway(null).migrate();
 
         assertThat(result.success).isTrue();
-        assertThat(result.targetSchemaVersion).isEqualTo("77");
+        assertThat(result.targetSchemaVersion).isEqualTo("81");
         // V55: her RC photo is a document of its own now, waiting for an operator to date it.
         assertThat(jdbc.queryForMap("select type, status, document_key from " + schema + ".partner_documents where account_id = ?",
                 partnerWithRc))
@@ -141,7 +147,7 @@ class MigrationPathTest {
         var result = flyway(null).migrate();
 
         assertThat(result.success).isTrue();
-        assertThat(result.targetSchemaVersion).isEqualTo("77");
+        assertThat(result.targetSchemaVersion).isEqualTo("81");
         assertThat(jdbc.queryForObject("select count(*) from information_schema.tables where table_schema = ? and table_name in"
                         + " ('staff_members','staff_invites','staff_recovery_codes','staff_sessions')",
                 Integer.class, schema)).isEqualTo(4);

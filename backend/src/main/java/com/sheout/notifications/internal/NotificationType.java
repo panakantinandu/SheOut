@@ -94,5 +94,8 @@ public enum NotificationType {
     PARTNER_DOCUMENT_EXPIRED,
 
     /** To a partner: an operator turned one of her documents down, with the reason. */
-    PARTNER_DOCUMENT_REJECTED
+    PARTNER_DOCUMENT_REJECTED,
+
+    /** To a sender: her partner could not hand the parcel over, and is waiting for her to choose what happens. */
+    PARCEL_EXCEPTION
 }

@@ -62,6 +62,14 @@ public class PayoutService implements PayoutApi {
         this.bookingApi = bookingApi;
     }
 
+    /** Parcel earnings holds; set by Spring, absent in hand-built tests (nothing is then held). */
+    private EarningHoldService earningHolds;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setEarningHolds(EarningHoldService earningHolds) {
+        this.earningHolds = earningHolds;
+    }
+
     /**
      * Credits the partner for a captured trip. A plain @EventListener, on
      * purpose: it runs inside the capture's own transaction, so the credit
@@ -91,6 +99,10 @@ public class PayoutService implements PayoutApi {
         wallet.creditEarning(event.driverPayout());
         entries.save(WalletEntryEntity.forPayment(driverId, WalletEntryEntity.Type.EARNING, event.driverPayout(),
                 event.bookingId(), event.paymentId()));
+        // A parcel's share waits out its dispute window before she can withdraw it.
+        if (earningHolds != null) {
+            earningHolds.holdIfParcel(wallet, driverId, event.bookingId(), event.driverPayout());
+        }
         if (event.method() == PaymentMethod.CASH) {
             wallet.recordCashCollected(event.amount());
             entries.save(WalletEntryEntity.forPayment(driverId, WalletEntryEntity.Type.CASH_COLLECTED,
@@ -262,7 +274,7 @@ public class PayoutService implements PayoutApi {
     }
 
     private static WalletSummary toWallet(DriverWalletEntity w) {
-        return new WalletSummary(w.getTotalEarned(), w.getCashCollected(), w.getTotalPaidOut(), w.getPendingPayouts(), w.available());
+        return new WalletSummary(w.getTotalEarned(), w.getCashCollected(), w.getTotalPaidOut(), w.getPendingPayouts(), w.available(), w.getHeld());
     }
 
     private static PayoutAccount toAccount(PayoutAccountEntity a) {

@@ -311,7 +311,18 @@ public class DispatchService implements com.sheout.dispatch.NearbyPartnerApi {
             return Result.failure(DispatchError.BOOKING_ALREADY_ASSIGNED);
         }
 
-        Result<BookingSummary, BookingError> assigned = bookingApi.assignDriver(bookingId, driverId);
+        Result<BookingSummary, BookingError> assigned;
+        try {
+            assigned = bookingApi.assignDriver(bookingId, driverId);
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            // The database's own rule (V81): she already holds an active trip.
+            // The availability check above makes this all but impossible; the
+            // index is what makes it certain. The booking goes back to the race.
+            offerStore.releaseClaim(bookingId);
+            offerStore.removeOffer(bookingId, driverId);
+            log.warn("Partner {} refused trip {} by the one-active-trip rule", driverId, bookingId);
+            return Result.failure(DispatchError.DRIVER_NO_LONGER_ELIGIBLE);
+        }
         if (assigned.isFailure()) {
             // Someone/something else changed the booking's state between our claim and this call
             // (e.g. the customer cancelled) - release the claim rather than wedging the booking forever.

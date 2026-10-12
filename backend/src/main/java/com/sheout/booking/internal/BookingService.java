@@ -105,6 +105,18 @@ public class BookingService implements BookingApi {
     void setInsuranceGate(RideInsuranceGate insuranceGate) {
         this.insuranceGate = insuranceGate;
     }
+
+    /**
+     * Proof of delivery for parcels - set by Spring, like the insurance gate,
+     * so the hand-built services in unit tests keep their constructors. With
+     * none set (a test), deliveries run under the old rules.
+     */
+    private ParcelDeliveryService parcels;
+
+    @Autowired
+    void setParcelDeliveryService(ParcelDeliveryService parcels) {
+        this.parcels = parcels;
+    }
     /** Time allowed for a partner to reach the pickup, when judging whether a trip ends in hours. */
     private static final Duration PICKUP_ALLOWANCE = Duration.ofMinutes(15);
 
@@ -303,6 +315,15 @@ public class BookingService implements BookingApi {
         if (parcelNote != null && PHONE_LIKE.matcher(parcelNote).find()) {
             return Result.failure(BookingError.PARCEL_NOTE_HAS_PHONE);
         }
+        // Every delivery says who it is for and that the sender read the
+        // item and size rules - checked before anything is created.
+        boolean withProof = command.type() == com.sheout.booking.BookingType.DELIVERY && parcels != null;
+        if (withProof) {
+            Optional<BookingError> refused = parcels.validate(command.parcel());
+            if (refused.isPresent()) {
+                return Result.failure(refused.get());
+            }
+        }
         BookingEntity booking = new BookingEntity(
                 command.type(),
                 command.category(),
@@ -322,6 +343,9 @@ public class BookingService implements BookingApi {
         booking.recordFareBreakdown(quote.baseFare(), quote.distanceCharge(), quote.timeCharge(),
                 quote.surgeMultiplier(), quote.nightMultiplier(), quote.minimumFareApplied());
         bookingRepository.save(booking);
+        if (withProof) {
+            parcels.recordDetails(booking.getId(), command.parcel(), Instant.now());
+        }
         eventLog.record(booking.getId(), "REQUESTED", null, BookingStatus.REQUESTED, null);
 
         eventPublisher.publish(new BookingRequested(
@@ -368,7 +392,10 @@ public class BookingService implements BookingApi {
         booking.setStatus(BookingStatus.MATCHED);
         eventLog.record(booking.getId(), "MATCHED", previousStatus, BookingStatus.MATCHED, null);
         booking.setMatchedAt(Instant.now());
-        bookingRepository.save(booking);
+        // Flushed here: a partner who already holds an active trip is refused
+        // by the database (V81) at this line, as a DataIntegrityViolationException
+        // the caller handles, not later at commit.
+        bookingRepository.saveAndFlush(booking);
 
         eventPublisher.publish(new BookingMatched(booking.getId(), booking.getCustomerId(), driverId));
         return Result.success(toSummary(booking));
@@ -401,6 +428,11 @@ public class BookingService implements BookingApi {
         // partner approach with nothing to read out.
         booking.setPickupOtp(PickupCode.generate());
         bookingRepository.save(booking);
+        // A parcel's second code, for the receiver - the sender can pass it
+        // on before the parcel is even collected.
+        if (parcels != null) {
+            parcels.issueCode(booking);
+        }
 
         eventPublisher.publish(new BookingAccepted(booking.getId(), booking.getCustomerId(), booking.getDriverId()));
         return Result.success(toSummary(booking));
@@ -462,6 +494,14 @@ public class BookingService implements BookingApi {
             return Result.failure(BookingError.DRIVER_NOT_AT_PICKUP);
         }
 
+        // A parcel is photographed as it is handed over, before the code is
+        // looked at - so a missing photo never costs her a code attempt.
+        if (parcels != null) {
+            Optional<BookingError> refused = parcels.refuseStart(booking);
+            if (refused.isPresent()) {
+                return Result.failure(refused.get());
+            }
+        }
         if (booking.getPickupOtp() == null) {
             return Result.failure(BookingError.PICKUP_CODE_REQUIRED);
         }
@@ -554,6 +594,19 @@ public class BookingService implements BookingApi {
     @Transactional
     public Result<BookingSummary, BookingError> completeTrip(UUID bookingId, UUID driverId,
                                                              DropOffDeviationReason reason, String note) {
+        return completeTrip(bookingId, driverId, reason, note, null);
+    }
+
+    /**
+     * As above; a parcel booked with proof of delivery also needs the
+     * receiver's code (or the sender's "leave it with" answer) and a photo of
+     * the handover, and its drop is checked against the parcel radius. See
+     * ParcelDeliveryService.checkAndRecordDelivery.
+     */
+    @Transactional
+    public Result<BookingSummary, BookingError> completeTrip(UUID bookingId, UUID driverId,
+                                                             DropOffDeviationReason reason, String note,
+                                                             String deliveryCode) {
         // Lock before every read involved in completion. This makes the state
         // check, location check, and final transition one atomic decision.
         Optional<BookingEntity> found = bookingRepository.findLockedById(bookingId);
@@ -573,8 +626,10 @@ public class BookingService implements BookingApi {
 
         Instant now = Instant.now();
         DriverLocation location = locationStore.findLocation(driverId).orElse(null);
-        DropoffGeofence.Decision geofence = dropoffGeofence.check(
-                location, booking.getDrop().getLat(), booking.getDrop().getLng(), now);
+        Optional<ParcelDeliveryEntity> proof = parcels == null ? Optional.empty() : parcels.proofFor(booking);
+        DropoffGeofence.Decision geofence = proof.isPresent()
+                ? parcels.checkAtDrop(location, booking, now)
+                : dropoffGeofence.check(location, booking.getDrop().getLat(), booking.getDrop().getLng(), now);
         String trimmedNote = note == null || note.isBlank() ? null : note.trim();
         if (geofence != DropoffGeofence.Decision.AT_DROP_OFF) {
             if (reason == null) {
@@ -582,6 +637,13 @@ public class BookingService implements BookingApi {
             }
             if (reason.requiresNote() && trimmedNote == null) {
                 return Result.failure(BookingError.DROP_OFF_NOTE_REQUIRED);
+            }
+        }
+        if (proof.isPresent()) {
+            Optional<BookingError> refused = parcels.checkAndRecordDelivery(
+                    booking, proof.get(), deliveryCode, location, geofence, reason, trimmedNote, now);
+            if (refused.isPresent()) {
+                return Result.failure(refused.get());
             }
         }
 
@@ -616,6 +678,11 @@ public class BookingService implements BookingApi {
             return Result.failure(BookingError.BOOKING_NOT_FOUND);
         }
         BookingEntity booking = found.get();
+        // A delivery ends when the receiver gets it. The sender is not at the
+        // drop, and ending it "here" would mark it delivered with no proof.
+        if (booking.getType() == com.sheout.booking.BookingType.DELIVERY) {
+            return Result.failure(BookingError.PARCEL_END_HERE_NOT_ALLOWED);
+        }
         Result<BookingStatus, BookingError> transition =
                 BookingStateMachine.transition(booking.getStatus(), BookingStatus.COMPLETED);
         if (transition.isFailure()) {

@@ -104,5 +104,39 @@ public enum BookingError {
     DESTINATION_FARE_CHANGED,
 
     /** Answering a change that is no longer waiting - it ran out of time, or the trip has ended. */
-    DESTINATION_CHANGE_NOT_PENDING
+    DESTINATION_CHANGE_NOT_PENDING,
+
+    // ---- parcels: proof of delivery (see ParcelDeliveryService) ----
+
+    /** A delivery booked without who it is for, or without agreeing to the item and size rules. */
+    PARCEL_DETAILS_REQUIRED,
+    /** The receiver's number is not a 10-digit Indian mobile number. */
+    PARCEL_RECEIVER_PHONE_INVALID,
+    /** She agreed to an older prohibited-items list than the one in force; she is shown the new one. */
+    PARCEL_RULES_CHANGED,
+    PARCEL_DECLARED_VALUE_TOO_HIGH,
+    /** The parcel is photographed as it is handed over, before the trip starts. */
+    PARCEL_PICKUP_PHOTO_REQUIRED,
+    /** The handover is photographed before the parcel is marked delivered. */
+    PARCEL_DELIVERY_PHOTO_REQUIRED,
+    /** A delivery ends on the receiver's code (or the sender's "leave it with" choice). */
+    PARCEL_DELIVERY_CODE_REQUIRED,
+    INVALID_PARCEL_DELIVERY_CODE,
+    PARCEL_DELIVERY_CODE_LOCKED,
+    /** "Receiver not there" needs a photo of the door or the place first. */
+    PARCEL_EXCEPTION_PHOTO_REQUIRED,
+    PARCEL_EXCEPTION_NOTE_REQUIRED,
+    /** The sender answers only while the partner is waiting for her answer. */
+    PARCEL_NO_EXCEPTION_PENDING,
+    PARCEL_LEAVE_WITH_NAME_REQUIRED,
+    /** Not a photo the server can take: not an image, empty, or too big. */
+    PARCEL_PHOTO_INVALID,
+    /** The sender is not at the drop, so she cannot end a delivery "here". */
+    PARCEL_END_HERE_NOT_ALLOWED,
+    /** The return fare is already part of a charge; refund it instead. */
+    PARCEL_RETURN_FARE_ALREADY_CHARGED,
+    PARCEL_DISPUTE_ALREADY_OPEN,
+    PARCEL_NO_DISPUTE_OPEN,
+    /** A ride, or a delivery booked before proof of delivery. */
+    NOT_A_PARCEL
 }

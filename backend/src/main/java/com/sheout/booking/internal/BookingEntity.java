@@ -189,6 +189,11 @@ public class BookingEntity extends BaseEntity {
         this.destinationChangedAt = at;
     }
 
+    /** An operator took a parcel's return fare off a trip still under way - see ParcelDeliveryService.waiveReturnFare. */
+    void reduceFareEstimate(BigDecimal amount) {
+        this.fareEstimate = fareEstimate.subtract(amount).max(BigDecimal.ZERO);
+    }
+
     public Instant getDestinationChangedAt() {
         return destinationChangedAt;
     }
