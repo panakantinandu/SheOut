@@ -89,6 +89,29 @@ public class AdminOpsService {
     private final com.sheout.booking.TripAlertsApi tripAlerts;
     private final long staleAfterSeconds;
 
+    /** Parcel evidence and earnings holds, for one trip's detail. Set by Spring; empty answers in hand-built tests. */
+    private com.sheout.booking.ParcelDeliveryApi parcelDeliveries = NO_PARCELS;
+    private com.sheout.payouts.EarningHoldApi earningHolds = NO_HOLDS;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setParcelApis(com.sheout.booking.ParcelDeliveryApi parcelDeliveries, com.sheout.payouts.EarningHoldApi earningHolds) {
+        this.parcelDeliveries = parcelDeliveries;
+        this.earningHolds = earningHolds;
+    }
+
+    private static final com.sheout.booking.ParcelDeliveryApi NO_PARCELS = new com.sheout.booking.ParcelDeliveryApi() {
+        public java.util.Optional<com.sheout.booking.ParcelEvidence> evidence(UUID id) { return java.util.Optional.empty(); }
+        public com.sheout.sharedkernel.Result<com.sheout.booking.ParcelEvidence, com.sheout.booking.BookingError> openDispute(UUID id, UUID a, String n) { return com.sheout.sharedkernel.Result.failure(com.sheout.booking.BookingError.NOT_A_PARCEL); }
+        public com.sheout.sharedkernel.Result<com.sheout.booking.ParcelEvidence, com.sheout.booking.BookingError> closeDispute(UUID id, UUID a, com.sheout.booking.ParcelDisputeOutcome o, String n) { return com.sheout.sharedkernel.Result.failure(com.sheout.booking.BookingError.NOT_A_PARCEL); }
+        public com.sheout.sharedkernel.Result<com.sheout.booking.ParcelEvidence, com.sheout.booking.BookingError> markReviewed(UUID id, UUID a, String n) { return com.sheout.sharedkernel.Result.failure(com.sheout.booking.BookingError.NOT_A_PARCEL); }
+        public com.sheout.sharedkernel.Result<com.sheout.booking.ParcelEvidence, com.sheout.booking.BookingError> waiveReturnFare(UUID id, UUID a, String n) { return com.sheout.sharedkernel.Result.failure(com.sheout.booking.BookingError.NOT_A_PARCEL); }
+    };
+    private static final com.sheout.payouts.EarningHoldApi NO_HOLDS = new com.sheout.payouts.EarningHoldApi() {
+        public java.util.Optional<com.sheout.payouts.EarningHold> find(UUID id) { return java.util.Optional.empty(); }
+        public com.sheout.sharedkernel.Result<com.sheout.payouts.EarningHold, com.sheout.payouts.EarningHoldError> hold(UUID id, UUID a, String r) { return com.sheout.sharedkernel.Result.failure(com.sheout.payouts.EarningHoldError.NOT_FOUND); }
+        public com.sheout.sharedkernel.Result<com.sheout.payouts.EarningHold, com.sheout.payouts.EarningHoldError> release(UUID id, UUID a, String r) { return com.sheout.sharedkernel.Result.failure(com.sheout.payouts.EarningHoldError.NOT_FOUND); }
+    };
+
     public AdminOpsService(AdminService adminService, AuthApi authApi, BookingApi bookingApi,
                            CustomerProfileApi customers, DriverProfileApi drivers,
                            EmergencyContactsApi emergencyContacts, VerificationApi verificationApi,
@@ -208,7 +231,8 @@ public class AdminOpsService {
                     party(b.customerId(), AccountRole.CUSTOMER),
                     b.driverId() == null ? null : party(b.driverId(), AccountRole.DRIVER),
                     paid, sosApi.findByBookingId(bookingId), trails.trail(bookingId), partnerNow,
-                    byRider, byPartner, tripAlerts.alertsFor(bookingId), bookingApi.eventsFor(bookingId));
+                    byRider, byPartner, tripAlerts.alertsFor(bookingId), bookingApi.eventsFor(bookingId),
+                    parcelDeliveries.evidence(bookingId).orElse(null), earningHolds.find(bookingId).orElse(null));
         });
     }
 

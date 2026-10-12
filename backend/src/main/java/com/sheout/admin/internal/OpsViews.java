@@ -131,7 +131,11 @@ public final class OpsViews {
             Rating riderRating,
             Rating partnerRating,
             List<com.sheout.booking.TripAlertsApi.TripAlert> alerts,
-            List<com.sheout.booking.BookingEvent> events
+            List<com.sheout.booking.BookingEvent> events,
+            /** A parcel with proof of delivery: codes, photos, drop check, receiver-absent steps, dispute. Null otherwise. */
+            com.sheout.booking.ParcelEvidence parcel,
+            /** The partner's held earnings for a parcel; null when nothing is held (a ride, or not paid yet). */
+            com.sheout.payouts.EarningHold earningHold
     ) {
     }
 

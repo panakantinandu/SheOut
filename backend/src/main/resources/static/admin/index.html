@@ -6959,6 +6959,85 @@ async function loadAccount(accountId, startTab = 'overview') {
   });
 }
 
+// ---- a parcel's evidence ------------------------------------------------------
+/**
+ * Everything to settle a parcel complaint on one card: who it was for, what
+ * the sender agreed to, the delivery code's history, the photos (short-lived
+ * links), the drop check, the receiver-absent steps, the dispute and the
+ * partner's held earnings - with the decisions beside them. The route and
+ * the times are on the trip's own cards. Empty for a ride.
+ */
+function parcelEvidenceCard(d) {
+  const p = d.parcel;
+  if (!p) return '';
+  const b = d.booking, h = d.earningHold;
+  const id = escValue(b.id);
+  const disputeOpen = p.disputeOpenedAt && !p.disputeClosedAt;
+  const PHOTO_TEXT = { PICKUP: 'At pickup', DELIVERY: 'At delivery', EXCEPTION: 'Receiver not there' };
+  const DROP_TEXT = { AT_DROP: '<span class="badge b-green">At the drop</span>', OUTSIDE: '<span class="badge b-red">Outside the drop</span>', UNAVAILABLE: '<span class="badge b-amber">No location</span>' };
+  const btn = (action, label, perm, tone = '') => can(perm) ? `<button class="btn ${tone}" type="button" data-parcel-action="${action}" data-parcel-booking="${id}">${esc(label)}</button>` : '';
+  const photos = (p.photos || []).length
+    ? `<div class="parcel-photos" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px">${p.photos.map(ph => `<figure style="margin:0">
+        ${ph.url ? `<a href="${escValue(ph.url)}" target="_blank" rel="noopener noreferrer"><img src="${escValue(ph.url)}" alt="${esc(PHOTO_TEXT[ph.kind] || ph.kind)}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px"></a>`
+          : '<div class="subtle" style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;border:1px dashed var(--border);border-radius:8px">Deleted (retention)</div>'}
+        <figcaption class="subtle">${esc(PHOTO_TEXT[ph.kind] || ph.kind)} &middot; ${esc(time(ph.takenAt))}${ph.lat != null ? ' &middot; ' + mapsLink(ph.lat, ph.lng, 'where') : ' &middot; no location'}</figcaption></figure>`).join('')}</div>`
+    : '<p class="subtle">No photos.</p>';
+  const holdRow = h ? `<dt>Partner earnings</dt><dd>${rupees(h.amount)} ${h.status === 'HELD' ? (h.operatorHold ? '<span class="badge b-red">Held by operations</span>' : `<span class="badge b-amber">Held until ${esc(time(h.releaseAt))}</span>`) : h.status === 'RELEASED' ? '<span class="badge b-green">Released</span>' : '<span class="badge b-red">Withheld</span>'}${h.reason ? `<div class="subtle">${esc(h.reason)}</div>` : ''}</dd>` : '<dt>Partner earnings</dt><dd class="subtle">Nothing held (not paid yet)</dd>';
+  return `<div class="dx-card full" data-parcel-evidence><h4>Parcel delivery ${disputeOpen ? '<span class="badge b-red">Dispute open</span>' : ''} ${p.reviewFlaggedAt && !p.reviewedAt ? '<span class="badge b-amber">Needs review</span>' : ''}</h4>
+    <dl class="kv">
+      <dt>Receiver</dt><dd>${esc(p.receiverName)} <span class="num subtle">${esc(p.receiverPhoneMasked || 'number erased')}</span></dd>
+      <dt>Declared value</dt><dd>${p.declaredValue != null ? rupees(p.declaredValue) + ' <span class="subtle">(records only)</span>' : '—'}</dd>
+      <dt>Rules agreed</dt><dd>Prohibited items list ${esc(p.prohibitedItemsVersion)} &middot; ${esc(time(p.acknowledgedAt))}</dd>
+      <dt>Delivery code</dt><dd>${p.deliveryVerifiedAt ? `<span class="badge b-green">Verified ${esc(time(p.deliveryVerifiedAt))}</span>` : p.deliveryCodeLocked ? '<span class="badge b-red">Locked</span>' : p.deliveryCodeIssued ? 'Issued, not used' : 'Not issued'}${p.deliveryCodeAttempts ? ` &middot; ${esc(p.deliveryCodeAttempts)} wrong attempt${p.deliveryCodeAttempts > 1 ? 's' : ''}` : ''}</dd>
+      <dt>Drop check</dt><dd>${p.dropCheck ? DROP_TEXT[p.dropCheck] || esc(p.dropCheck) : '—'}${p.dropCheckDistanceM != null ? ` ${esc(p.dropCheckDistanceM)} m from the drop` : ''}${p.outsideReason ? ` &middot; ${esc(humanize(p.outsideReason))}${p.outsideNote ? ': “' + esc(p.outsideNote) + '”' : ''}` : ''}
+        ${p.reviewFlaggedAt ? `<div class="subtle">Flagged: ${esc(humanize(p.reviewFlagReason || ''))}${p.reviewedAt ? ` &middot; reviewed ${esc(time(p.reviewedAt))}: “${esc(p.reviewNote || '')}”` : ''}</div>` : ''}</dd>
+      ${p.exceptionAt ? `<dt>Could not hand over</dt><dd>${esc(humanize(p.exceptionReason || ''))}${p.exceptionNote ? ': “' + esc(p.exceptionNote) + '”' : ''} <span class="subtle">${esc(time(p.exceptionAt))}</span>
+        <div>${p.senderChoice ? `Sender chose: <b>${esc(p.senderChoice === 'LEAVE_WITH' ? 'Leave with ' + (p.leaveWithName || '') : humanize(p.senderChoice))}</b> <span class="subtle">${esc(time(p.senderChoiceAt))}</span>` : '<span class="badge b-amber">Waiting for the sender</span>'}</div>
+        ${p.returnFare != null ? `<div>Return fare ${rupees(p.returnFare)} ${p.returnFareWaivedAt ? '<span class="badge b-green">Waived</span>' : ''}</div>` : ''}</dd>` : ''}
+      ${disputeOpen || p.disputeClosedAt ? `<dt>Dispute</dt><dd>Opened ${esc(time(p.disputeOpenedAt))}${p.disputeNote ? ': “' + esc(p.disputeNote) + '”' : ''}${p.disputeClosedAt ? `<div>Closed ${esc(time(p.disputeClosedAt))}: <b>${esc(humanize(p.disputeOutcome || ''))}</b>${p.disputeResolutionNote ? ' “' + esc(p.disputeResolutionNote) + '”' : ''}</div>` : ''}</dd>` : ''}
+      ${holdRow}
+    </dl>
+    ${photos}
+    <div class="row-actions" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">
+      ${!disputeOpen ? btn('dispute', 'Open dispute', can('support.work') ? 'support.work' : 'payouts.prepare') : ''}
+      ${disputeOpen ? btn('close-cleared', 'Close: partner cleared', 'payouts.prepare') + btn('close-fault', 'Close: partner at fault', 'payouts.prepare', 'btn-reject') : ''}
+      ${p.reviewFlaggedAt && !p.reviewedAt ? btn('reviewed', 'Mark reviewed', 'sos.respond') : ''}
+      ${p.returnFare != null && !p.returnFareWaivedAt && b.status === 'IN_PROGRESS' ? btn('waive', 'Waive return fare', 'refunds.issue') : ''}
+      ${h && h.status === 'HELD' && !h.operatorHold ? btn('hold', 'Hold partner earnings', 'payouts.prepare') : ''}
+      ${h && h.status === 'HELD' && !disputeOpen ? btn('release', 'Release earnings now', 'payouts.prepare') : ''}
+    </div>
+  </div>`;
+}
+
+const PARCEL_ACTIONS = {
+  dispute: { path: 'parcel/dispute', title: 'Open a dispute?', message: 'The partner\'s earnings for this parcel stay held, and its photos are kept, until the dispute is closed.', confirm: 'Open dispute', label: 'What the complaint is (kept with the trip)' },
+  'close-cleared': { path: 'parcel/dispute/close', outcome: 'PARTNER_CLEARED', title: 'Close: partner cleared?', message: 'Her held earnings are released to her.', confirm: 'Close and release', label: 'What you found' },
+  'close-fault': { path: 'parcel/dispute/close', outcome: 'PARTNER_AT_FAULT', title: 'Close: partner at fault?', message: 'Her held earnings for this parcel are withheld - taken off what she earned, never paid. Refund the sender separately if that is owed.', confirm: 'Close and withhold', label: 'What you found' },
+  reviewed: { path: 'parcel/reviewed', title: 'Mark this delivery reviewed?', message: 'It comes off the review list. Nothing else changes.', confirm: 'Mark reviewed', label: 'What you found' },
+  waive: { path: 'parcel/waive-return-fare', title: 'Waive the return fare?', message: 'The return fare comes off this trip before it is charged. Use it when the partner was at fault.', confirm: 'Waive', label: 'Why' },
+  hold: { path: 'earnings/hold', title: 'Hold the partner\'s earnings?', message: 'They stay held past the 24-hour window until someone releases them.', confirm: 'Hold', label: 'Why (shown to operations)' },
+  release: { path: 'earnings/release', title: 'Release the earnings now?', message: 'They go into her available balance at once.', confirm: 'Release', label: 'Why' },
+};
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-parcel-action]');
+  if (!b) return;
+  e.preventDefault();
+  const action = PARCEL_ACTIONS[b.dataset.parcelAction];
+  const bookingId = b.dataset.parcelBooking;
+  if (!action) return;
+  const ok = await confirmAction({ title: action.title, message: action.message, confirmLabel: action.confirm,
+    withReason: true, reasonRequired: true, reasonLabel: action.label, reasonMaxLength: 1000 });
+  if (!ok) return;
+  try {
+    const body = action.outcome ? { outcome: action.outcome, note: ok.reason } : { note: ok.reason };
+    await api(`/admin/bookings/${bookingId}/${action.path}`, { method: 'POST', body: JSON.stringify(body) });
+    toast('ok', 'Done', ok.reason);
+    openBooking(bookingId, true);
+  } catch (err) {
+    if (err.message !== 'unauthorized') toast('bad', 'That did not go through', err.message);
+  }
+});
+
 // ---- one trip ---------------------------------------------------------------
 function openBooking(bookingId, chained = false) {
   openDetail(() => loadBooking(bookingId), chained);
@@ -7058,7 +7137,7 @@ async function loadBooking(bookingId) {
         <td>${esc(who(e))}</td><td class="subtle">${esc(e.detail)}</td>
         <td class="subtle"><span class="num">${esc(e.requestId ? e.requestId.slice(0, 8) : '')}</span>${e.device ? '<div class="clamp" title="' + esc(e.device) + '">' + esc(e.device) + '</div>' : ''}</td></tr>`).join('')}
       </tbody></table></div></div>` : '';
-  const root = detailShell(head, `<div class="dx-grid">${tripAlerts}${party(d.rider, 'Customer')}${party(d.partner, 'Partner')}${routeCard}${timeline}${money}${ratings}${sos}${audit}</div>`);
+  const root = detailShell(head, `<div class="dx-grid">${tripAlerts}${party(d.rider, 'Customer')}${party(d.partner, 'Partner')}${parcelEvidenceCard(d)}${routeCard}${timeline}${money}${ratings}${sos}${audit}</div>`);
 
   const map = createTileMap(root.querySelector('#tripMap'), { center: b.pickup, zoom: 13 });
   const trail = d.trail || [];
