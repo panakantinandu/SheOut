@@ -2,6 +2,9 @@ import type { AssistantReply, AssistantTurn } from '@sheout/design-system';
 import type { LiveSelfieResult, PushApi, SelfieChallenge } from '@sheout/design-system';
 import { installId, networkErrorText, requestErrorMessage, serverErrorText, type ReferralSummary, type ReferralWelcomeDetails } from '@sheout/design-system';
 import type {
+  ParcelExceptionReason,
+  ParcelPhotoKind,
+  ParcelView,
   ApiErrorResponse,
   AuthSession,
   BookingCategory,
@@ -625,6 +628,22 @@ export const routesApi = {
   },
 };
 
+/** A parcel: her side of proof of delivery - the photos, and "can't hand it over". */
+export const parcelApi = {
+  /** The parcel as she may see it: the receiver's first name only, never the code or the number. */
+  get(bookingId: string): Promise<ParcelView> {
+    return request(`/api/v1/bookings/${bookingId}/parcel`);
+  },
+  uploadPhoto(bookingId: string, kind: ParcelPhotoKind, photo: Blob): Promise<ParcelView> {
+    const form = new FormData();
+    form.append('photo', photo, `${kind.toLowerCase()}.jpg`);
+    return request(`/api/v1/bookings/${bookingId}/parcel/photos?kind=${kind}`, { method: 'POST', body: form });
+  },
+  raiseException(bookingId: string, reason: ParcelExceptionReason, note?: string): Promise<ParcelView> {
+    return request(`/api/v1/bookings/${bookingId}/parcel/exception`, { method: 'POST', body: { reason, note } });
+  },
+};
+
 export const bookingApi = {
   /**
    * The ended trip still waiting for the rider's payment that is keeping new
@@ -707,10 +726,11 @@ export const bookingApi = {
   },
 
   /** Away from the drop the server wants a reason (409 DROP_OFF_REASON_REQUIRED); at it, none. */
-  complete(bookingId: string, reason?: string, note?: string): Promise<BookingSummary> {
+  /** deliveryCode: a parcel only - the four digits the receiver gives her. */
+  complete(bookingId: string, reason?: string, note?: string, deliveryCode?: string): Promise<BookingSummary> {
     return request(`/api/v1/bookings/${bookingId}/complete`, {
       method: 'POST',
-      body: reason ? { reason, note } : undefined,
+      body: reason || deliveryCode ? { reason, note, deliveryCode } : undefined,
     });
   },
 

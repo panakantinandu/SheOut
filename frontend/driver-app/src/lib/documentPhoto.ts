@@ -16,7 +16,7 @@ const MIN_SHORT = 320;
  * elsewhere than Safari) or one already too small to read goes as it is -
  * the server accepts HEIC, and says when a photo is too small.
  */
-export async function prepareDocumentPhoto(file: File): Promise<File> {
+export async function prepareDocumentPhoto(file: File, maxEdge = MAX_EDGE, quality = QUALITY): Promise<File> {
   if (!file.type.startsWith('image/')) return file;
   let bitmap: ImageBitmap;
   try {
@@ -30,7 +30,7 @@ export async function prepareDocumentPhoto(file: File): Promise<File> {
     bitmap.close();
     return file;
   }
-  const scale = Math.min(1, MAX_EDGE / long);
+  const scale = Math.min(1, maxEdge / long);
   const canvas = document.createElement('canvas');
   canvas.width = Math.round(bitmap.width * scale);
   canvas.height = Math.round(bitmap.height * scale);
@@ -41,8 +41,17 @@ export async function prepareDocumentPhoto(file: File): Promise<File> {
   }
   context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
   bitmap.close();
-  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', QUALITY));
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality));
   if (!blob) return file;
   const name = file.name.replace(/\.[^.]+$/, '') || 'document';
   return new File([blob], `${name}.jpg`, { type: 'image/jpeg' });
+}
+
+/**
+ * A parcel photo: evidence that a parcel looked like this, here, now - not a
+ * document to read small print on. 1280px and a lighter JPEG keep it to a
+ * few hundred KB on a mobile connection at the kerb.
+ */
+export function prepareParcelPhoto(file: File): Promise<File> {
+  return prepareDocumentPhoto(file, 1280, 0.72);
 }

@@ -567,3 +567,22 @@ export interface ClaimResult {
   /** Null when the trip had no cover: the accident is reported, there is no policy to claim on. */
   cover: TripCover | null;
 }
+
+export type ParcelPhotoKind = 'PICKUP' | 'DELIVERY' | 'EXCEPTION';
+export type ParcelExceptionReason = 'RECEIVER_NOT_THERE' | 'RECEIVER_NOT_ANSWERING' | 'RECEIVER_REFUSED' | 'RECEIVER_HAS_NO_CODE' | 'ADDRESS_NOT_FOUND' | 'OTHER';
+
+/** GET /bookings/{id}/parcel, as the partner sees it: no receiver number, no value, never the code. */
+export interface ParcelView {
+  viewer: 'SENDER' | 'PARTNER';
+  receiverName: string;
+  delivered: boolean;
+  codeAttemptsLeft: number;
+  pickupPhotoTaken: boolean;
+  deliveryPhotoTaken: boolean;
+  awaitingSenderChoice: boolean;
+  exceptionReason: ParcelExceptionReason | null;
+  senderChoice: 'WAIT' | 'LEAVE_WITH' | 'RETURN' | null;
+  leaveWithName: string | null;
+  photosRequired: boolean;
+  deliveryRadiusMetres: number;
+}

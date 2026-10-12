@@ -25,10 +25,12 @@ import {
   TopHeader,
   bookingStatusLabel, formatRupees } from '@sheout/design-system';
 import type { CancellationReason, DropOffReason, MapMarker } from '@sheout/design-system';
-import { ApiError, bookingApi, chatApi, dispatchApi, type AssignedRider } from '../api/client';
+import { ApiError, bookingApi, chatApi, dispatchApi, parcelApi, type AssignedRider } from '../api/client';
+import { ParcelPhotoCapture } from '../components/ParcelPhotoCapture';
+import { ParcelDropStep } from '../components/ParcelDropStep';
 import { TripInsuranceActions } from '../components/TripInsuranceActions';
 import { apiErrorText } from '../lib/apiErrors';
-import type { BookingSummary, PaymentHold, PaymentSummary, TripRoute } from '../api/types';
+import type { BookingSummary, ParcelView, PaymentHold, PaymentSummary, TripRoute } from '../api/types';
 import { CollectPaymentCard } from '../components/CollectPaymentCard';
 import { readPositionOnce, useShareLocation } from '../lib/LocationBroadcastContext';
 import { PartnerSos } from '../components/PartnerSos';
@@ -157,6 +159,11 @@ export function Trip() {
   const [paidFlash, setPaidFlash] = useState<PaymentSummary | null>(null);
 
   const [pickupCode, setPickupCode] = useState('');
+  /** A parcel: its proof-of-delivery state as she may see it (first name, photos, the sender's answer). */
+  const [parcel, setParcel] = useState<ParcelView | null>(null);
+  const [deliveryCodeError, setDeliveryCodeError] = useState<string | null>(null);
+  /** The receiver's code she typed, kept while the away-from-drop reason is asked, so the retry sends it. */
+  const deliveryCodeRef = useRef<string | undefined>(undefined);
   const [codeError, setCodeError] = useState<string | null>(null);
   /** Set once the server says the attempt limit is spent. The keypad closes. */
   const [codeLocked, setCodeLocked] = useState(false);
@@ -290,6 +297,21 @@ export function Trip() {
       clearInterval(interval);
     };
   }, [bookingId]);
+
+  // A parcel's proof of delivery, polled while it is live: the photos she
+  // has taken and, when she could not hand it over, the sender's answer.
+  const parcelLive = booking?.type === 'DELIVERY' && (booking.status === 'ACCEPTED' || booking.status === 'IN_PROGRESS');
+  useEffect(() => {
+    if (!bookingId || !parcelLive) return;
+    let cancelled = false;
+    const load = () => parcelApi.get(bookingId).then((p) => { if (!cancelled) setParcel(p); }).catch(() => {
+      // A parcel booked before proof of delivery: it ends the old way.
+      if (!cancelled) setParcel(null);
+    });
+    load();
+    const interval = setInterval(load, POLL_INTERVAL_MS);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [bookingId, parcelLive]);
 
   /**
    * Draws the road to wherever this phase is going.
@@ -529,7 +551,10 @@ export function Trip() {
       setBooking(updated);
       setPickupCode('');
     } catch (err) {
-      if (err instanceof ApiError && err.body?.error === 'PICKUP_VERIFICATION_LOCKED') {
+      if (err instanceof ApiError && err.body?.error === 'PARCEL_PICKUP_PHOTO_REQUIRED') {
+        // Not a guess: the code was not looked at, so it stays as she typed it.
+        setCodeError(t('trip.parcel.pickupPhotoFirst'));
+      } else if (err instanceof ApiError && err.body?.error === 'PICKUP_VERIFICATION_LOCKED') {
         setCodeLocked(true);
         setCodeError(t('apiError.PICKUP_VERIFICATION_LOCKED'));
       } else {
@@ -548,8 +573,10 @@ export function Trip() {
    * GPS, or because the server says so - she is asked why first; the trip
    * still ends, and the reason goes on the booking.
    */
-  async function handleComplete(reason?: DropOffReason, note?: string) {
+  async function handleComplete(reason?: DropOffReason, note?: string, deliveryCode?: string) {
     if (!bookingId) return;
+    if (deliveryCode !== undefined) deliveryCodeRef.current = deliveryCode;
+    setDeliveryCodeError(null);
     if (!reason && myPosition && !atDropOff) {
       setDropReasonError(null);
       setAskingDropReason(true);
@@ -560,14 +587,21 @@ export function Trip() {
     setDropReasonError(null);
     try {
       await sendFreshPosition();
-      const updated = await bookingApi.complete(bookingId, reason, note);
+      const updated = await bookingApi.complete(bookingId, reason, note, deliveryCodeRef.current);
+      deliveryCodeRef.current = undefined;
       setAskingDropReason(false);
       // Stays on this screen: the fare still has to be collected, and the
       // payment card below appears in place of the trip controls.
       setBooking(updated);
     } catch (err) {
-      if (err instanceof ApiError && err.body?.error === 'DROP_OFF_REASON_REQUIRED') {
+      const code = err instanceof ApiError ? String(err.body?.error ?? '') : '';
+      if (code === 'DROP_OFF_REASON_REQUIRED') {
         setAskingDropReason(true);
+      } else if (code.startsWith('PARCEL_') || code === 'INVALID_PARCEL_DELIVERY_CODE') {
+        // Said in the parcel step, next to the code or the photo it is about.
+        setAskingDropReason(false);
+        setDeliveryCodeError(apiErrorText(err, 'trip.completeError'));
+        if (bookingId) parcelApi.get(bookingId).then(setParcel).catch(() => undefined);
       } else if (reason) {
         setDropReasonError(apiErrorText(err, 'trip.completeError'));
       } else {
@@ -650,7 +684,7 @@ export function Trip() {
             where Google's logo and terms sit, is left clear. */}
         {/* Smaller once she has arrived: the check, the code or End trip is the job now, not the road. */}
         <div
-          className={`relative -mx-screen -mt-6 overflow-hidden shadow-lift transition-[height] duration-500 ${arrived || atDrop ? 'h-[28vh] min-h-[11rem]' : 'h-[46vh] min-h-[17.5rem]'}`}
+          className={`relative -mx-screen -mt-6 overflow-hidden shadow-lift transition-[height] duration-500 ${atDrop && parcel ? 'h-[18vh] min-h-[7rem]' : arrived || atDrop ? 'h-[28vh] min-h-[11rem]' : 'h-[46vh] min-h-[17.5rem]'}`}
           data-testid="trip-map"
         >
           {/* One map at a time: while navigation is open it has its own. */}
@@ -796,6 +830,10 @@ export function Trip() {
                 <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
                 <span>{codeLocked ? <SafetyText k="pickupCode.locked" /> : <SafetyText k="pickupCode.askForCode" />}</span>
               </p>
+              {/* A parcel is photographed as it is handed over, before the code. */}
+              {parcel && !codeLocked && (
+                <ParcelPhotoCapture bookingId={booking.id} kind="PICKUP" taken={parcel.pickupPhotoTaken} onSaved={(p) => { setParcel(p); setCodeError(null); }} />
+              )}
               {!codeLocked && (
                 <>
                   <PickupCodeField
@@ -808,7 +846,7 @@ export function Trip() {
                     disabled={busy}
                     onSubmit={handleConfirmPickup}
                   />
-                  <Button fullWidth disabled={busy || pickupCode.length !== PICKUP_CODE_LENGTH} onClick={handleConfirmPickup}>
+                  <Button fullWidth disabled={busy || pickupCode.length !== PICKUP_CODE_LENGTH || (parcel != null && parcel.photosRequired && !parcel.pickupPhotoTaken)} onClick={handleConfirmPickup}>
                     {busy ? t('trip.checking') : t('trip.confirmAndStart')}
                   </Button>
                 </>
@@ -817,7 +855,21 @@ export function Trip() {
             </div>
           )}
 
-          {phase === 'DROP' && (
+          {/* A parcel ends on the receiver's code and a handover photo - or on the sender's answer. */}
+          {phase === 'DROP' && parcel && (
+            <ParcelDropStep
+              bookingId={booking.id}
+              parcel={parcel}
+              atDropOff={atDropOff}
+              busy={busy}
+              codeError={deliveryCodeError}
+              onParcel={setParcel}
+              onMarkDelivered={(code) => handleComplete(undefined, undefined, code)}
+              onNavigate={() => setNavigating(true)}
+            />
+          )}
+
+          {phase === 'DROP' && !parcel && (
             <div className="space-y-2">
               {!myPosition && <p className="text-center text-xs text-text-secondary">{t('trip.locationNeededToEnd')}</p>}
               {myPosition && !atDropOff && (
@@ -1027,6 +1079,10 @@ export function Trip() {
                   </p>
                 </div>
               </div>
+              {/* A parcel is photographed as it is handed over, before the code. */}
+              {parcel && !codeLocked && (
+                <ParcelPhotoCapture bookingId={booking.id} kind="PICKUP" taken={parcel.pickupPhotoTaken} onSaved={(p) => { setParcel(p); setCodeError(null); }} />
+              )}
               {!codeLocked && (
                 <>
                   <PickupCodeField
@@ -1041,7 +1097,7 @@ export function Trip() {
                   />
                   <Button
                     fullWidth
-                    disabled={busy || pickupCode.length !== PICKUP_CODE_LENGTH}
+                    disabled={busy || pickupCode.length !== PICKUP_CODE_LENGTH || (parcel != null && parcel.photosRequired && !parcel.pickupPhotoTaken)}
                     onClick={handleConfirmPickup}
                   >
                     {busy ? t('trip.checking') : t('trip.confirmAndStart')}
@@ -1168,7 +1224,19 @@ export function Trip() {
                 </Button>
               </>
             )}
-            {booking.status === 'IN_PROGRESS' && (
+            {booking.status === 'IN_PROGRESS' && parcel && (
+              <ParcelDropStep
+                bookingId={booking.id}
+                parcel={parcel}
+                atDropOff={atDropOff}
+                busy={busy}
+                codeError={deliveryCodeError}
+                onParcel={setParcel}
+                onMarkDelivered={(code) => handleComplete(undefined, undefined, code)}
+                onNavigate={() => setNavigating(true)}
+              />
+            )}
+            {booking.status === 'IN_PROGRESS' && !parcel && (
               <>
                 {!myPosition && (
                   <p className="text-center text-sm text-text-secondary">{t('trip.locationNeededToEnd')}</p>

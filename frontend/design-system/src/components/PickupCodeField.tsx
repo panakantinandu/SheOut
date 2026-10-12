@@ -8,6 +8,9 @@ export interface PickupCodeFieldProps {
   disabled?: boolean;
   /** Fires when four digits are entered and Enter is pressed. */
   onSubmit?: () => void;
+  /** For the same four-digit field used for another code - a parcel's delivery code. */
+  label?: string;
+  placeholder?: string;
 }
 
 export const PICKUP_CODE_LENGTH = 4;
@@ -29,7 +32,7 @@ export const PICKUP_CODE_LENGTH = 4;
  * password manager offering that one here would be offering the wrong four
  * digits with complete confidence.
  */
-export function PickupCodeField({ value, onChange, error, disabled, onSubmit }: PickupCodeFieldProps) {
+export function PickupCodeField({ value, onChange, error, disabled, onSubmit, label, placeholder }: PickupCodeFieldProps) {
   const { t } = useTranslation('safety');
   return (
     <TextField
@@ -37,8 +40,8 @@ export function PickupCodeField({ value, onChange, error, disabled, onSubmit }: 
       inputMode="numeric"
       autoComplete="off"
       name="pickup-code"
-      aria-label={t('pickupCode.fieldLabel')}
-      placeholder={t('pickupCode.fieldPlaceholder')}
+      aria-label={label ?? t('pickupCode.fieldLabel')}
+      placeholder={placeholder ?? t('pickupCode.fieldPlaceholder')}
       maxLength={PICKUP_CODE_LENGTH}
       className="text-center font-heading text-2xl tracking-[0.5em] placeholder:text-base placeholder:tracking-normal"
       value={value}
