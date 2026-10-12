@@ -964,7 +964,13 @@
     "INVALID_PRODUCT_TERMS": "Check the stock, ready-in days and minimum order.",
     "TRIP_ENDS_AFTER_HOURS": "This trip would end well after SheOut's service hours. Choose a nearer drop, or book it when bookings open again.",
     "RIDE_INSURANCE_NOT_ACTIVE": "Rides are paused because SheOut cannot insure trips right now. Please try again a little later.",
-    "PARCEL_NOTE_HAS_PHONE": "Leave phone numbers out of the parcel note. Your partner can call you through the app."
+    "PARCEL_NOTE_HAS_PHONE": "Leave phone numbers out of the parcel note. Your partner can call you through the app.",
+    "PARCEL_DETAILS_REQUIRED": "Add the receiver's name and number, and confirm the parcel rules.",
+    "PARCEL_RECEIVER_PHONE_INVALID": "Enter the receiver's 10-digit mobile number.",
+    "PARCEL_DECLARED_VALUE_TOO_HIGH": "The value is above the limit for a parcel.",
+    "PARCEL_NO_EXCEPTION_PENDING": "Your partner is not waiting for an answer now.",
+    "PARCEL_LEAVE_WITH_NAME_REQUIRED": "Name the person it can be left with.",
+    "PARCEL_END_HERE_NOT_ALLOWED": "A delivery ends when the receiver gets it."
   },
   "picker": {
     "noAddress": "No address found at that point. Move the pin somewhere closer to a road or landmark.",
@@ -1034,7 +1040,7 @@
       "details": "What's in the parcel (optional)",
       "detailsPlaceholder": "e.g. small box, handle with care",
       "cta": "Continue",
-      "detailsHint": "Your partner sees this. Leave phone numbers out - she can call you through the app."
+      "detailsHint": "Your partner sees this. Leave phone numbers out - she can chat with you in the app."
     },
     "lunchbox": {
       "title": "Lunch Box Delivery",
@@ -1062,6 +1068,36 @@
       "quantityHint": "When it's delivered, the seller's stock goes down by this many.",
       "fewer": "One fewer",
       "more": "One more"
+    },
+    "parcelSheet": {
+      "title": "Parcel details",
+      "receiverName": "Receiver's name",
+      "receiverNamePlaceholder": "e.g. Priya",
+      "receiverPhone": "Receiver's mobile number",
+      "receiverPhoneHint": "Only you see this number. Your partner sees the first name only.",
+      "receiverPhoneInvalid": "Enter a 10-digit mobile number.",
+      "declaredValue": "Value of the parcel (optional)",
+      "declaredValueHint": "For our records only, up to ₹{{max}}.",
+      "declaredValueTooHigh": "Up to ₹{{max}} only.",
+      "sizeAck": "It weighs under {{kg}} kg and fits in a bag.",
+      "prohibitedTitle": "Do not send",
+      "prohibitedAck": "My parcel has none of these.",
+      "codeHint": "Once a partner accepts, you get a 4-digit delivery code. Share it with the receiver: the parcel is handed over only for that code.",
+      "book": "Book delivery",
+      "back": "Back",
+      "rulesChanged": "The parcel rules have changed. Read them again and confirm."
+    },
+    "prohibited": {
+      "CASH": "Cash",
+      "JEWELLERY": "Jewellery",
+      "ALCOHOL": "Alcohol",
+      "MEDICINES": "Prescription or controlled medicines",
+      "WEAPONS": "Weapons",
+      "FLAMMABLES": "Flammables and chemicals",
+      "ILLEGAL": "Anything illegal",
+      "LIVE_ANIMALS": "Live animals",
+      "ORIGINAL_IDS": "Original ID documents",
+      "CHEQUES_CARDS": "Cheques and bank cards"
     }
   },
   "geo": {
@@ -1314,7 +1350,8 @@
       "phaseOnTripParcel": "Parcel on its way",
       "onTripTitleParcel": "Your parcel is on its way",
       "nearDropTitleParcel": "Your parcel is almost there",
-      "nearDropHintParcel": "Your partner hands it over at the drop, then ends the trip."
+      "nearDropHintParcel": "Your partner hands it over at the drop, then ends the trip.",
+      "moreOptionsParcel": "Change destination"
     },
     "paidFlash": {
       "title": "Payment successful",
@@ -1341,7 +1378,38 @@
       "contents": "What's inside",
       "noNote": "No description added",
       "handover": "Hand it over at the pickup. Show your code only after you check it is her.",
-      "onTheWay": "Your partner has it and is taking it to the drop."
+      "onTheWay": "Your partner has it and is taking it to the drop.",
+      "receiver": "For",
+      "codeTitle": "Delivery code",
+      "codeHint": "Share it with {{name}}. Your partner hands the parcel over only for this code.",
+      "codeHintReturn": "The parcel is coming back to you. Give your partner this code when she hands it over.",
+      "shareCode": "Share code",
+      "shareCodeText": "SheOut delivery code for your parcel: {{code}}. Give it to the partner when she hands the parcel to you.",
+      "codeCopied": "Code copied. Paste it in a message to the receiver.",
+      "delivered": "Delivered with the receiver's code",
+      "leftWith": "Left with {{name}}, as you asked",
+      "photos": "Photos",
+      "photoPICKUP": "At pickup",
+      "photoDELIVERY": "At delivery",
+      "photoEXCEPTION": "At the drop",
+      "photoGone": "Deleted after 90 days",
+      "exceptionTitle": "Your partner could not hand it over",
+      "reasonRECEIVER_NOT_THERE": "Nobody was there",
+      "reasonRECEIVER_NOT_ANSWERING": "The receiver did not answer",
+      "reasonRECEIVER_REFUSED": "The receiver refused it",
+      "reasonRECEIVER_HAS_NO_CODE": "The receiver did not have the code",
+      "reasonADDRESS_NOT_FOUND": "She could not find the address",
+      "reasonOTHER": "Something else",
+      "choose": "What should she do?",
+      "wait": "Ask her to wait",
+      "leaveWith": "Leave it with someone",
+      "leaveWithName": "Their name",
+      "leaveWithConfirm": "Leave it with them",
+      "returnIt": "Bring it back to me",
+      "returnNote": "Adds the one-way fare again: ₹{{fare}}.",
+      "waiting": "Your partner is waiting at the drop.",
+      "returning": "Your partner is bringing it back to you.",
+      "choiceError": "That didn't go through. Try again."
     }
   },
   "nav": {

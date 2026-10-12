@@ -3,6 +3,10 @@ import type { LiveSelfieResult, PushApi, SelfieChallenge } from '@sheout/design-
 import { installId, networkErrorText, requestErrorMessage, serverErrorText, type ReferralSummary, type ReferralWelcomeDetails } from '@sheout/design-system';
 import type {
   ApiErrorResponse,
+  ParcelDetailsInput,
+  ParcelRules,
+  ParcelSenderChoice,
+  ParcelView,
   ClaimResult,
   CoverSummary,
   FareDetails,
@@ -696,6 +700,20 @@ export const routesApi = {
   },
 };
 
+/** A parcel: the rules the sender agrees to, and her side of proof of delivery. */
+export const parcelApi = {
+  rules(): Promise<ParcelRules> {
+    return request('/api/v1/parcels/rules');
+  },
+  /** Her parcel as she may see it: the receiver, the delivery code to pass on, the photos, the partner waiting for her answer. */
+  get(bookingId: string): Promise<ParcelView> {
+    return request(`/api/v1/bookings/${bookingId}/parcel`);
+  },
+  choose(bookingId: string, choice: ParcelSenderChoice, leaveWithName?: string): Promise<ParcelView> {
+    return request(`/api/v1/bookings/${bookingId}/parcel/choice`, { method: 'POST', body: { choice, leaveWithName } });
+  },
+};
+
 export const bookingApi = {
   /**
    * Her oldest ended-and-unpaid trip, or null. While one exists she cannot
@@ -715,6 +733,8 @@ export const bookingApi = {
     /** A Marketplace parcel: the product it carries, so its stock goes down when delivered. */
     orderProductId?: string;
     orderQuantity?: number;
+    /** Required for a delivery: who it is for, and what the sender agreed to. */
+    parcel?: ParcelDetailsInput;
   }): Promise<BookingSummary> {
     return request('/api/v1/bookings', { method: 'POST', body: input });
   },

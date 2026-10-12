@@ -20,7 +20,8 @@ import { refreshServiceStatus, useServiceStatus } from '../lib/useServiceStatus'
 import { ServiceHoursNotice } from '../components/ServiceHoursNotice';
 import { useNearbyDrivers } from '../lib/useNearbyDrivers';
 import { useSavedPlaces } from '../lib/useSavedPlaces';
-import type { BookingCategory, GeoAddress } from '../api/types';
+import type { BookingCategory, GeoAddress, ParcelDetailsInput } from '../api/types';
+import { ParcelDetailsSheet } from '../components/ParcelDetailsSheet';
 import { useTranslation } from '@sheout/design-system';
 
 const DROP_PRESETS: GeoAddress[] = [
@@ -163,8 +164,17 @@ export function DeliveryBooking() {
     };
   }, []);
 
-  async function handleContinue() {
+  /** The parcel details step is open: who it is for, and the rules she agrees to. */
+  const [detailsOpen, setDetailsOpen] = useState(false);
+
+  async function handleContinue(parcel?: ParcelDetailsInput) {
     if (!pickup || !drop) return;
+    // A parcel says who it is for first; the booking goes from that step.
+    if (!isLunchbox && !parcel) {
+      setError(null);
+      setDetailsOpen(true);
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
@@ -179,12 +189,17 @@ export function DeliveryBooking() {
         parcelNote: note,
         orderProductId,
         orderQuantity: orderProductId ? quantity : undefined,
+        parcel,
       });
       // Replaces the form: the phone's back button from the live trip goes
       // Home, never back into a booking form that was already sent.
       navigate(`/tracking/${booking.id}`, { replace: true });
     } catch (err) {
-      setError(apiErrorText(err, 'booking.createError'));
+      setError(err instanceof ApiError && err.body?.error === 'PARCEL_RULES_CHANGED'
+        ? t('delivery.parcelSheet.rulesChanged')
+        : apiErrorText(err, 'booking.createError'));
+      // Anything not about the parcel details is said on the booking sheet, under Book.
+      if (!(err instanceof ApiError && String(err.body?.error ?? '').startsWith('PARCEL_'))) setDetailsOpen(false);
       // Not verified yet is not an error she can fix by reading it: the
       // screen offers the door rather than only naming the wall.
       setNeedsVerification(err instanceof ApiError && err.body?.error === 'CUSTOMER_NOT_VERIFIED');
@@ -297,7 +312,7 @@ export function DeliveryBooking() {
                 {t('booking.verifyNow')}
               </Button>
             )}
-            <Button fullWidth disabled={!pickup || !drop || !servableTrip || submitting || serviceClosed} onClick={handleContinue} data-testid="book-now">
+            <Button fullWidth disabled={!pickup || !drop || !servableTrip || submitting || serviceClosed} onClick={() => handleContinue()} data-testid="book-now">
               {submitting ? t('booking.booking') : t(`delivery.${config.key}.cta`)}
             </Button>
           </>
@@ -356,6 +371,14 @@ export function DeliveryBooking() {
             )}
           </>
         }
+      />
+
+      <ParcelDetailsSheet
+        open={detailsOpen}
+        busy={submitting}
+        error={detailsOpen ? error : null}
+        onBook={(parcel) => handleContinue(parcel)}
+        onClose={() => setDetailsOpen(false)}
       />
 
       <LocationPicker

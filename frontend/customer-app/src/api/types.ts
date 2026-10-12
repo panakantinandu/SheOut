@@ -813,3 +813,61 @@ export interface TaxInvoice {
   igstAmount: number;
   totalAmount: number;
 }
+
+/** What the sender agreed to and who the parcel is for - required when booking a delivery. */
+export interface ParcelDetailsInput {
+  receiverName: string;
+  receiverPhone: string;
+  declaredValue?: number;
+  prohibitedItemsVersion: string;
+  prohibitedItemsAcknowledged: boolean;
+  sizeAcknowledged: boolean;
+}
+
+export interface ParcelRules {
+  maxWeightKg: number;
+  maxDeclaredValue: number;
+  prohibitedItemsVersion: string;
+  /** Codes; the copy for each is under delivery.prohibited.<code>. */
+  prohibitedItems: string[];
+  deliveryRadiusMetres: number;
+  photosRequired: boolean;
+}
+
+export type ParcelSenderChoice = 'WAIT' | 'LEAVE_WITH' | 'RETURN';
+export type ParcelExceptionReason = 'RECEIVER_NOT_THERE' | 'RECEIVER_NOT_ANSWERING' | 'RECEIVER_REFUSED' | 'RECEIVER_HAS_NO_CODE' | 'ADDRESS_NOT_FOUND' | 'OTHER';
+
+export interface ParcelPhoto {
+  kind: 'PICKUP' | 'DELIVERY' | 'EXCEPTION';
+  takenAt: string;
+  lat: number | null;
+  lng: number | null;
+  /** A short-lived link; null once retention has deleted the photo. */
+  url: string | null;
+  deleted: boolean;
+}
+
+/** GET /bookings/{id}/parcel, as the sender sees it. */
+export interface ParcelView {
+  viewer: 'SENDER' | 'PARTNER';
+  receiverName: string;
+  receiverPhone: string | null;
+  declaredValue: number | null;
+  /** Hers to pass on to the receiver, from the moment a partner accepts until it is delivered. */
+  deliveryCode: string | null;
+  delivered: boolean;
+  codeAttemptsLeft: number;
+  pickupPhotoTaken: boolean;
+  deliveryPhotoTaken: boolean;
+  awaitingSenderChoice: boolean;
+  exceptionReason: ParcelExceptionReason | null;
+  exceptionNote: string | null;
+  exceptionAt: string | null;
+  senderChoice: ParcelSenderChoice | null;
+  leaveWithName: string | null;
+  returnFare: number | null;
+  currentFare: number;
+  photosRequired: boolean;
+  deliveryRadiusMetres: number;
+  photos: ParcelPhoto[];
+}

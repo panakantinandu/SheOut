@@ -3,6 +3,12 @@ import { ApiError } from '../api/client';
 
 /** Server error codes the app has its own translated wording for. */
 const KNOWN_CODES = new Set([
+  'PARCEL_DETAILS_REQUIRED',
+  'PARCEL_RECEIVER_PHONE_INVALID',
+  'PARCEL_DECLARED_VALUE_TOO_HIGH',
+  'PARCEL_NO_EXCEPTION_PENDING',
+  'PARCEL_LEAVE_WITH_NAME_REQUIRED',
+  'PARCEL_END_HERE_NOT_ALLOWED',
   'REFERRAL_CODE_INVALID',
   'REFERRAL_OWN_CODE',
   'REFERRAL_ALREADY_APPLIED',

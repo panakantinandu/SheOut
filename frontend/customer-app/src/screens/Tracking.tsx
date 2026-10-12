@@ -849,7 +849,7 @@ export function Tracking() {
           )}
         </Card>
 
-        {isParcel && <ParcelTripSection note={booking.parcelNote} onTrip={onTrip} />}
+        {isParcel && <ParcelTripSection bookingId={booking.id} status={booking.status} note={booking.parcelNote} />}
 
         <Card className="flex items-center justify-between px-5 py-3">
           <span className="text-sm text-text-secondary">{t('tracking.live.fare')}</span>
@@ -863,14 +863,17 @@ export function Tracking() {
         {onTrip && (
           <details className="group rounded-card bg-surface shadow-card" data-testid="trip-more">
             <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-semibold text-text-primary [&::-webkit-details-marker]:hidden">
-              {t('tracking.live.moreOptions')}
+              {isParcel ? t('tracking.live.moreOptionsParcel') : t('tracking.live.moreOptions')}
               <Navigation className="h-4 w-4 text-text-secondary transition-transform group-open:rotate-90" aria-hidden="true" />
             </summary>
             <div className="space-y-3 border-t border-border px-4 py-3">
               <ChangeDestination booking={booking} />
-              <Button variant="secondary" fullWidth disabled={endingHere} onClick={() => { setEndHereError(null); setConfirmEndHere(true); }} data-testid="end-here">
-                {t('tracking.endHere')}
-              </Button>
+              {/* Never for a parcel: the sender is not at the drop, and a delivery ends when the receiver gets it. */}
+              {!isParcel && (
+                <Button variant="secondary" fullWidth disabled={endingHere} onClick={() => { setEndHereError(null); setConfirmEndHere(true); }} data-testid="end-here">
+                  {t('tracking.endHere')}
+                </Button>
+              )}
               {endHereError && <p className="text-center text-sm text-danger">{endHereError}</p>}
             </div>
           </details>
@@ -1016,6 +1019,8 @@ export function Tracking() {
         </Card>
         {/* Her receipt: how the price she was shown was reached. */}
         {booking.status === 'COMPLETED' && <FareDetailsCard bookingId={booking.id} />}
+        {/* A delivered parcel: how it was handed over, and the photos. */}
+        {booking.status === 'COMPLETED' && isParcel && <ParcelTripSection bookingId={booking.id} status={booking.status} note={booking.parcelNote} />}
         </>
       ) : (
         <Card className="text-center" data-testid="searching-card">
@@ -1076,7 +1081,7 @@ export function Tracking() {
         </Card>
       )}
 
-      {booking && isParcel && !isFinished && <ParcelTripSection note={booking.parcelNote} onTrip={false} />}
+      {booking && isParcel && !isFinished && <ParcelTripSection bookingId={booking.id} status={booking.status} note={booking.parcelNote} />}
 
       {/* A completed trip shows what is owed and how to pay it - first, above
           the map: paying is what she is here to do, and a map of a trip that
