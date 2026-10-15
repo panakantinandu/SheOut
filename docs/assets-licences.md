@@ -9,7 +9,7 @@ known is replaced or removed, not kept "until someone checks". Never present
 a photo of a real person as a SheOut customer or partner, and never use
 another brand's logo or a look-alike mark.
 
-Last reviewed: 2026-10-14 (branch `feat/legal-privacy-a11y`).
+Last reviewed: 2026-10-15 (branch `chore/marketing-assets-refresh`).
 
 ## Shipped in the apps
 
@@ -26,7 +26,9 @@ Last reviewed: 2026-10-14 (branch `feat/legal-privacy-a11y`).
 | Fonts: Inter, Poppins, Noto Sans Devanagari, Noto Sans Telugu | Typefaces | Google Fonts | SIL Open Font License 1.1 | None required. Loaded from Google today; self-hosting is allowed by the licence (open item O-16) |
 | `bot-avatars`, `thinking-orbs` | Assistant avatar and thinking animation | npm | MIT | `docs/THIRD_PARTY_LICENSES.md` |
 | Map tiles and Places results | Google Maps Platform | Google | Google Maps Platform Terms | Google's own logo and "Map data" credit stay visible on every map; the code does not hide them |
-| `frontend/customer-app/public/videos/sell-on-sheout.*` | "How to sell" video | Made by SheOut from its own app screens | Owned by SheOut | Check the frames for the replaced art (below) |
+| `frontend/customer-app/public/videos/sell-on-sheout.{en,hi,te}.mp4` and posters, `frontend/marketing-site/public/media/sell-on-sheout*` | "How to sell" walkthrough, one per language | Made by SheOut on 2026-10-15 from its own current app screens with sample data (`seller-shots.mjs`, `seller-video.mjs` in `D:_qa-scratchmarketing-refresh`); the sample product photo is SheOut's own Fashion & Saree category tile | Owned by SheOut. Silent, no voice. "Sample screens" burned in | None |
+| `frontend/marketing-site/public/screens/*.webp`, `media/hero-*`, `og-image.jpg` | The site's app screenshots, hero loop and share image | Captured by SheOut from its own apps with sample data; per-file record in `frontend/marketing-site/screens.json`, method in `docs/marketing-assets.md` | Owned by SheOut. Map areas are Google's, with Google's logo and credit left visible | "Sample screens" label on the site and burned into the share image |
+| Profile photos in the screenshots | Two faces | Cropped from `women.svg` (above), 2026-10-15 | Owned by SheOut | None |
 
 ## Removed on 2026-10-14 (source never recorded)
 
@@ -39,6 +41,6 @@ Last reviewed: 2026-10-14 (branch `feat/legal-privacy-a11y`).
 
 | File | Issue | Who |
 |---|---|---|
-| `frontend/marketing-site/public/screens/*.webp` (17), `public/media/hero-*`, `public/media/sell-on-sheout*`, `public/og-image.jpg` | Real SheOut screens, but recorded with sample data (names, trips, a 4.9 rating) **and they still show the removed illustrations** (scooter, parcel and marketplace tiles; avatars cropped from the old `women.webp`). Every one is labelled "Sample screens" on the site, and the share image has the label burned in | Re-shoot from the current apps with the new art and no rating; then this row goes. Until then the label stays |
+| Six map screens in `frontend/marketing-site/public/screens/` (book, on the way, arrived, on trip, payment, new request) | Still the 2026-10-06 captures: an invented 4.9 (128) rating on three, the removed scooter art and avatars, paise on one. Re-shooting them needs the Google Maps key at build time. The share image, the hero loop and the three other screens were re-shot on 2026-10-15; eight unused screens were removed | Whoever holds the Maps key runs the steps in `docs/marketing-assets.md`. `check-marketing-assets.mjs --strict` (launch gate) fails until done |
 | `backend/src/main/resources/sample-shops/*.jpg` (26) | Product photos for the labelled sample shops. Source not recorded. **Kept, as the founder asked** (sample shops stay until launch) | Founder: say where they came from, or replace them before `MARKETPLACE_SAMPLE_SHOPS` stays on in front of real customers |
 | Voiced explainer videos (not shipped) | Narration made with edge-tts (Microsoft voices through an unofficial client); commercial use is not clearly allowed | Use a licensed TTS service or a recorded voice before publishing |

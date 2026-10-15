@@ -5,9 +5,10 @@ import { stagger } from '../lib/motion';
 import { SampleLabel } from './SampleLabel';
 
 /**
- * The seller story, with the apps' own "Sell on SheOut" video. It has sound
- * and a person speaking, so it never plays on its own - only when pressed,
- * with the browser's controls.
+ * The seller story, with the "Sell on SheOut" walkthrough - the same video
+ * the customer app shows, re-made on 2026-10-15 from the current app with
+ * sample data (docs/marketing-assets.md). It is silent, but it still plays
+ * only when pressed, so a visitor on mobile data does not pay for it unasked.
  */
 export function Sellers() {
   const video = useRef<HTMLVideoElement>(null);

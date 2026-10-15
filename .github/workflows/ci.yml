@@ -75,6 +75,8 @@ jobs:
         run: npm run build --workspace frontend/marketing-site
       - name: No removed claims or placeholder content in what ships
         run: node scripts/check-legal-sync.mjs --bundles frontend/customer-app/dist frontend/driver-app/dist frontend/marketing-site/dist
+      - name: Public site has no invented ratings or counts, and every picture is recorded
+        run: node scripts/check-marketing-assets.mjs
 
   # axe-core on every main screen of both apps (en/hi/te, four widths), the
   # keyboard-only journeys (sign-in, booking, trip, SOS, parcel; partner
