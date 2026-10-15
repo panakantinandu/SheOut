@@ -29,11 +29,12 @@ SheOut-cancelled payments within 7 working days), O-8 (jobs built, off).
 | O-13 | The prohibited parcel items list (today's server list is shown) | Parcel Rules sign-off |
 | O-14 | Is `SENTRY_DSN` set on Render? Is `ANTHROPIC_API_KEY` set? | The Privacy Policy's processor list (`processors[].live` in `legal-entity.config.json`) |
 | O-16 | Self-host the Google Fonts? | IP addresses reaching Google before sign-in |
-| O-19 | Re-shoot the marketing screenshots and videos from the current apps, with the new art and no rating | Removing the "Sample screens" labels; the last unlicensed art (`docs/assets-licences.md`) |
+| O-19 | Re-shoot the marketing screenshots and videos from the current apps, with the new art and no rating. **Done on 2026-10-15 except the six map screens**, which need the Maps key (`docs/marketing-assets.md`) | Removing the "Sample screens" labels; the last unlicensed art (`docs/assets-licences.md`) |
 | O-20 | Where the 26 sample-shop photos came from (kept, as you asked) | Turning sample shops on in front of real customers |
 | O-21 | Who drew the SheOut logo, and that the rights belong to the company | Trademark filing |
 | O-22 | **Upgrade Spring Boot 3.3.4** (out of support) on its own branch: the OWASP scan of 2026-10-15 finds 43 critical and 111 high CVEs, almost all in its managed libraries (Netty, Tomcat, Spring) | Security |
 | O-23 | When to enforce the app CSP (now report-only) - after a preview deploy with maps and checkout open shows no violations | Security headers |
+| O-24 | The customer app's About screen still says every partner passes a "police-verification review" (`about.feature1Body` in en/hi/te, and content block `about.feature.1.body` from V17, served by production today). Missed in Phase 1; found by the launch gate on 2026-10-15 | Claims (D-1). Fix: new wording in the three i18n files and a migration updating the content block |
 
 **For the lawyer, added in Phase 1:** the court-record check as built (consent
 wording `COURT_SCREEN_CONSENT`, the rejection categories, 30-day and 12-month
@@ -122,3 +123,27 @@ code comment.
 | Safety and Community Guidelines | - | Phase 1 |
 | Grievance Redressal | - | Phase 1, after O-4 |
 | Contact and business details | - | Phase 1, after O-1 to O-3 |
+
+## D. Lawyer sign-off
+
+The lawyer's written approval of each document, recorded here and nowhere
+else. `scripts/launch-gate.mjs` reads this table: a row passes only when its
+English column reads `Approved YYYY-MM-DD` (and, once that is done, its Hindi
+and Telugu column too). Hindi and Telugu versions are made only after the
+English is approved (Part B), and are checked by a fluent reader before
+they count. Record who approved and where the written approval is kept.
+
+| Document | English | Hindi and Telugu | Approved by, and where the approval is kept |
+|---|---|---|---|
+| Privacy Policy | Not approved | Not started | |
+| Terms of Use | Not approved | Not started | |
+| Partner Terms | Not approved | Not started | |
+| Refund and Cancellation Policy | Not approved | Not started | |
+| Cookie and Local Storage Policy | Not approved | Not started | |
+| Parcel Rules | Not approved | Not started | |
+| Safety and Community Guidelines | Not approved | Not started | |
+| Grievance Redressal | Not approved | Not started | |
+| Contact and business details | Not approved | Not started | |
+| Consent to verification (partners) | Not approved | Not started | |
+| Consent to a court-record check | Not approved | Not started | |
+| Court-record screening process (reviewer rules: the court-record section of `docs/legal-privacy-a11y-report.md`) | Not approved | n/a | |

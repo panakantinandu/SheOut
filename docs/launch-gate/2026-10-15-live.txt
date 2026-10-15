@@ -1,0 +1,80 @@
+(node:18904) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+
+A. Legal
+  FAIL   Business details complete (legal-entity.config.json)             still TODO_FROM_OWNER: cin, registeredAddress, supportPhone, grievanceOfficer.name (O-2, O-3, O-4)
+  MANUAL LEGAL_STRICT_BUILD=true on all three Vercel projects             Vercel > each project > Settings > Environment Variables (Production). With it on, a build with any placeholder fails
+  FAIL   Legal pages final (no DRAFT or [to be reviewed by lawyer] marks) 11 DRAFT marks, 27 lawyer-review marks in content.ts
+  FAIL   Lawyer sign-off: Privacy Policy                                  English: Not approved
+  FAIL   Lawyer sign-off: Terms of Use                                    English: Not approved
+  FAIL   Lawyer sign-off: Partner Terms                                   English: Not approved
+  FAIL   Lawyer sign-off: Refund and Cancellation Policy                  English: Not approved
+  FAIL   Lawyer sign-off: Cookie and Local Storage Policy                 English: Not approved
+  FAIL   Lawyer sign-off: Parcel Rules                                    English: Not approved
+  FAIL   Lawyer sign-off: Safety and Community Guidelines                 English: Not approved
+  FAIL   Lawyer sign-off: Grievance Redressal                             English: Not approved
+  FAIL   Lawyer sign-off: Contact and business details                    English: Not approved
+  FAIL   Lawyer sign-off: Consent to verification                         English: Not approved
+  FAIL   Lawyer sign-off: Consent to a court-record check                 English: Not approved
+  FAIL   Lawyer sign-off: Court-record screening process                  English: Not approved
+
+B. Claims
+  FAIL   No removed claims in app, site or legal text (D-1)               frontend/customer-app/src/i18n/en.json (feature1Body): "police-verification review"
+                                                                          backend/src/main/resources/db/migration/V17__content_blocks.sql (content block about.feature.1.body): "police-verification review" - unless a later migration or a console edit changed it (--live checks)
+  PASS   Legal pages agree with the server (check-legal-sync)             Legal sync check passed.
+  PASS   Built bundles free of removed claims                             3 local builds, oldest 0 h old. Legal sync check passed (3 bundles scanned).
+  FAIL   Public site: no invented rating or counts, every screenshot current - screens/partner-new-ride-request.webp: old capture - map marker uses the removed scooter illustration; needs the map
+                                                                          - screens/rider-book-ride.webp: old capture - shows the removed scooter illustration; needs the map (Maps key at build time)
+                                                                          - screens/rider-on-trip.webp: old capture - shows an invented 4.9 (128) rating and an avatar cut from the removed women.webp; needs the map
+                                                                          - screens/rider-partner-arrived.webp: old capture - shows an invented 4.9 (128) rating and an avatar cut from the removed women.webp; needs the map
+                                                                          - screens/rider-partner-on-the-way.webp: old capture - shows an invented 4.9 (128) rating and an avatar cut from the removed women.webp; needs the map
+                                                                          - screens/rider-trip-complete.webp: old capture - shows paise (107.44, 1537.58) where the app now shows whole rupees; needs the map
+  MANUAL "Every SheOut trip is insured" is true                           a ride policy is active in the console (insurer, policy number, cover) and INSURANCE_REQUIRED_FOR_RIDES=true; otherwise the app must not show the insured card
+
+C. Switches
+  MANUAL DEV_MODE_ENABLED = false                                         repo default "false"; check Render production (test sign-in codes and test numbers work while it is on)
+  MANUAL LOG_OTP_CODES = false                                            repo default "false"; check Render production (sign-in codes would be written to the logs)
+  MANUAL DEV_OTP_NUMBERS = (blank)                                        repo default ""; check Render production (fixed-code test numbers)
+  MANUAL DEV_OTP_TEST_PREFIX = (blank)                                    repo default ""; check Render production (fixed-code test number range)
+  MANUAL PROMOTIONAL_MESSAGES_ENABLED = false                             repo default "false"; check Render production (no opt-in exists yet (O-10))
+  MANUAL ADMIN_COURT_SCREEN_ENABLED = false                               repo default "false"; check Render production (only after the lawyer signs off the court-record check and its consent)
+  MANUAL ADMIN_PHONE_LOGIN_ENABLED = false                                repo default "false"; check Render production (staff sign in with passkeys only)
+  MANUAL MARKETPLACE_SAMPLE_SHOPS = false                                 repo default "false"; check Render production (sample shops are labelled but not real; photo sources unknown (O-20))
+  MANUAL RETENTION_ENABLED = true                                         repo default "false"; check Render production (after O-8 periods are approved and a dry run is checked)
+  MANUAL RETENTION_DRY_RUN = false                                        repo default "true"; check Render production (after the dry-run report is checked)
+  MANUAL INSURANCE_REQUIRED_FOR_RIDES = true                              repo default "false"; check Render production (rides pause if no policy is active)
+  MANUAL Razorpay live keys, UPI methods on                               RAZORPAY_KEY_ID starts rzp_live_; UPI enabled on the account (GET /v1/methods)
+  FAIL   SMS provider with DLT templates (sign-in codes, SOS texts)       no SMS provider live: sign-in codes and SOS texts to contacts are not sent by SMS
+
+D. Security
+  FAIL   Spring Boot in open-source support                               parent 3.3.4 (out of support; O-22, branches chore/spring-boot-upgrade and chore/spring-boot-4-1)
+  FAIL   Backend dependencies: no critical or high CVEs (OWASP)           1 critical, 9 high findings; report 0 days old. Report from whatever branch was built last - re-run on the release branch
+  FAIL   Frontend dependencies: no critical or high advisories (npm audit) 0 critical, 4 high, 2 moderate, 0 low
+  PASS   customer-app: security headers in vercel.json                    present
+  FAIL   customer-app: Content-Security-Policy enforced                   report-only (O-23: enforce after a preview deploy shows no violations)
+  PASS   driver-app: security headers in vercel.json                      present
+  FAIL   driver-app: Content-Security-Policy enforced                     report-only (O-23: enforce after a preview deploy shows no violations)
+  PASS   marketing-site: security headers in vercel.json                  present
+
+E. People
+  FAIL   Screen-reader pass by a person                                   docs/screen-reader-checklist.md missing (branch test/a11y-booking-flow not merged)
+  MANUAL Mailboxes support@, grievance@, privacy@ receive mail            send a test to each from outside the company; someone reads grievance@ within 48 hours
+  MANUAL Processor DPAs accepted and filed (O-15)                         Render, Vercel, Google Cloud/Firebase, AWS, Razorpay (and Anthropic, Sentry if switched on)
+  MANUAL Breach response owner named (docs/incident-response.md)          who tells the Data Protection Board within 72 hours, and the user message template
+  MANUAL Company bank account, GSTIN, payment gateway in the operating company Razorpay activation needs the business details above
+
+F. Live
+  FAIL   customer app: headers served                                     https://app.sheoutride.com HTTP 200; CSP none; missing x-content-type-options, referrer-policy
+  FAIL   customer app: no removed claims or placeholders in what is served "police-verification review"
+  FAIL   partner app: headers served                                      https://partner.sheoutride.com HTTP 200; CSP none; missing x-content-type-options, referrer-policy
+  PASS   partner app: no removed claims or placeholders in what is served 1 script(s) and the page scanned
+  PASS   public site: headers served                                      https://www.sheoutride.com HTTP 200; CSP none
+  FAIL   public site: no removed claims or placeholders in what is served "police verified"
+  FAIL   content blocks "about" free of removed claims                    about.feature.1.body: "police-verification review"
+  PASS   content blocks "faq" free of removed claims                      22 blocks
+  PASS   content blocks "onboarding" free of removed claims               0 blocks
+  PASS   content blocks "safety" free of removed claims                   0 blocks
+  PASS   sheoutride.com receives mail (MX records)                        smtp.google.com
+
+11 pass, 28 fail, 18 to confirm by hand.
+NOT READY FOR LAUNCH.
