@@ -100,8 +100,8 @@
     "verification": {
       "title": "Who is verified, and how",
       "riders": "Every customer sends an ID document (with the Aadhaar number masked) and takes a live selfie in the app, following on-screen prompts. She cannot book until she is approved.",
-      "partners": "Every partner does the same, and also sends her vehicle's registration certificate, which must match her profile. SheOut's team also records a police verification for every partner. She cannot receive trips until both checks pass.",
-      "people": "Every check is made by a person on SheOut's team - no software approves anyone automatically, and nothing matches faces by itself.",
+      "partners": "Every partner does the same, and also sends her driving licence and her vehicle's registration certificate, which must match her profile. A person on SheOut's team checks them, and she cannot receive trips until they are approved. At the start of every shift she takes a live selfie, which the app matches against her approved photo before she can go online.",
+      "people": "Every approval is made by a person on SheOut's team - no software approves anyone automatically. The one automatic check is a partner's start-of-shift selfie: if it does not match her approved photo, she cannot go online, and after repeated misses a person reviews it.",
       "pickupCode": "Before you get in, read your pickup code out to your partner. Only the partner assigned to your trip can start it with that code."
     },
     "sharing": {
