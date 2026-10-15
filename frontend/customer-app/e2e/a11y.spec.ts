@@ -12,6 +12,9 @@ import { expect, test, type Page } from '@playwright/test';
  */
 
 const ACCOUNT = '00000000-0000-4000-8000-000000000001';
+// The first cases wait on the dev server compiling the app; 60 s is not always enough on a cold start.
+test.describe.configure({ timeout: 120_000 });
+
 const WIDTHS = [360, 375, 390, 430];
 const LANGS = ['en', 'hi', 'te'] as const;
 

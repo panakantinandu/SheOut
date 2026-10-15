@@ -91,7 +91,7 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - name: Rider app
-        run: npm run test:e2e --workspace frontend/customer-app -- a11y --workers=2
+        run: npm run test:e2e --workspace frontend/customer-app -- a11y keyboard-signin --workers=2
       - name: Partner app
         run: npm run test:e2e --workspace frontend/driver-app -- a11y --workers=2
       - name: Console court-record check

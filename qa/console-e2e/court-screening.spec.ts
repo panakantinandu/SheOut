@@ -19,6 +19,11 @@ const ADMIN = resolve(__dirname, '../../backend/src/main/resources/static/admin'
 const PAGE = readFileSync(resolve(ADMIN, 'index.html'), 'utf8');
 const TYPES: Record<string, string> = { svg: 'image/svg+xml', js: 'text/javascript', css: 'text/css', png: 'image/png', json: 'application/json' };
 const PARTNER = '11111111-2222-4333-8444-555555555555';
+/** COURT_SHOTS=<dir> saves a screenshot at each step, for the report. */
+const SHOTS = process.env.COURT_SHOTS;
+const shot = async (page: Page, name: string) => {
+  if (SHOTS) await page.screenshot({ path: resolve(SHOTS, `console-court-${name}.png`) });
+};
 
 type Search = { id: string; district: string; nameVariant: string; outcome: string; note: string | null; searchedOn: string; hasScreenshot: boolean };
 
@@ -109,6 +114,7 @@ test('a reviewer starts a check, logs searches, gets a second sign-off and decid
   await page.goto('http://console.test/admin/');
   await page.locator('[data-tab="courtchecks"]').click();
   await expect(page.getByText('Start a court-record check')).toBeVisible();
+  await shot(page, 'tab');
 
   await page.fill('#courtAccount', PARTNER);
   await page.fill('#courtHome', 'Warangal');
@@ -117,6 +123,7 @@ test('a reviewer starts a check, logs searches, gets a second sign-off and decid
   await expect(dialog).toBeVisible();
   await expect(dialog.getByText('Waiting for her consent')).toBeVisible();
   await expect(dialog.getByText('not police verification')).toBeVisible();
+  await shot(page, 'consent');
   // No search form before she agrees.
   await expect(dialog.locator('#csOutcome')).toHaveCount(0);
   await dialog.getByRole('button', { name: 'Close' }).click();
@@ -134,17 +141,20 @@ test('a reviewer starts a check, logs searches, gets a second sign-off and decid
   await dialog.locator('#csNote').fill('Same name and father\'s name, age close');
   await dialog.getByRole('button', { name: 'Save this search' }).click();
   await expect(dialog.getByText('Match - needs a second reviewer')).toBeVisible();
+  await shot(page, 'match');
 
   // The flagging reviewer cannot sign it off.
   await dialog.locator('#cvSecondNote').fill('looks right');
   await dialog.getByRole('button', { name: 'It may be her' }).click();
   await expect(dialog.getByRole('alert')).toContainText('someone other than the reviewer who flagged it');
+  await shot(page, 'same-reviewer');
 
   mock.otherReviewer();
   await dialog.getByRole('button', { name: 'It may be her' }).click();
   await expect(dialog.getByText('Match confirmed - tell her')).toBeVisible();
   await dialog.getByRole('button', { name: 'Tell her and start her response window' }).click();
   await expect(dialog.getByText('Waiting for her answer')).toBeVisible();
+  await shot(page, 'awaiting-answer');
 
   await dialog.locator('#cdDecision').selectOption('REJECT');
   await dialog.getByRole('button', { name: 'Record the decision' }).click();
@@ -152,6 +162,7 @@ test('a reviewer starts a check, logs searches, gets a second sign-off and decid
   await dialog.locator('#cdReason').selectOption('RECORD_CONFIRMED');
   await dialog.getByRole('button', { name: 'Record the decision' }).click();
   await expect(dialog.locator('.badge', { hasText: 'Not cleared' })).toBeVisible();
+  await shot(page, 'decided');
 
   await page.keyboard.press('Escape');
   await expect(dialog).toBeHidden();

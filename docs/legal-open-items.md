@@ -8,6 +8,38 @@ never shows an invented value.
 Every legal page is a **DRAFT, pending legal review** until the lawyer signs
 off. Each page will say so in a code comment, and this file lists it below.
 
+## Status after Phase 1 (2026-10-15)
+
+**Answered and built** (see `docs/legal-privacy-a11y-report.md`): O-1 (name:
+Snivika Technology Private Limited), O-4 in part (email
+`grievance@sheoutride.com`; name pending, must be India-based), O-5, O-6
+(police claims removed), O-7 ("Sample screens" labels), O-10 (promotions
+paused until an opt-in exists), O-11 (illustrations replaced), O-12
+(wallet by default; original method for failed, duplicate and
+SheOut-cancelled payments within 7 working days), O-8 (jobs built, off).
+
+**Still owed by you:**
+
+| # | What | Blocks |
+|---|---|---|
+| O-2 | CIN, registered office address | The strict build (`LEGAL_STRICT_BUILD=true`) and the footer |
+| O-3 | Public phone number; create the `support@`, `grievance@` mailboxes in Workspace | Same |
+| O-4 | Grievance Officer's name (India-based) | Same |
+| O-8 | Approve the retention periods, then switch the jobs on as a dry run | Retention |
+| O-13 | The prohibited parcel items list (today's server list is shown) | Parcel Rules sign-off |
+| O-14 | Is `SENTRY_DSN` set on Render? Is `ANTHROPIC_API_KEY` set? | The Privacy Policy's processor list (`processors[].live` in `legal-entity.config.json`) |
+| O-16 | Self-host the Google Fonts? | IP addresses reaching Google before sign-in |
+| O-19 | Re-shoot the marketing screenshots and videos from the current apps, with the new art and no rating | Removing the "Sample screens" labels; the last unlicensed art (`docs/assets-licences.md`) |
+| O-20 | Where the 26 sample-shop photos came from (kept, as you asked) | Turning sample shops on in front of real customers |
+| O-21 | Who drew the SheOut logo, and that the rights belong to the company | Trademark filing |
+| O-22 | **Upgrade Spring Boot 3.3.4** (out of support) on its own branch: the OWASP scan of 2026-10-15 finds 43 critical and 111 high CVEs, almost all in its managed libraries (Netty, Tomcat, Spring) | Security |
+| O-23 | When to enforce the app CSP (now report-only) - after a preview deploy with maps and checkout open shows no violations | Security headers |
+
+**For the lawyer, added in Phase 1:** the court-record check as built (consent
+wording `COURT_SCREEN_CONSENT`, the rejection categories, 30-day and 12-month
+retention); "safe rides" wording; the marketing site's helmet line ("brings a
+spare helmet for you", not enforced by the app); Partner Terms in full.
+
 ## A. Inputs and decisions from you (founder)
 
 | # | What | Why it is needed | Safe default until then | Proposed (for you to accept or change) |
