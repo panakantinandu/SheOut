@@ -37,7 +37,7 @@ import { PartnerSos } from '../components/PartnerSos';
 import { DestinationChangePrompt } from '../components/DestinationChangePrompt';
 import { NavigationView } from '../components/NavigationView';
 import { useNavigation } from '../lib/navigation';
-import { useTranslation } from '@sheout/design-system';
+import { LiveAnnouncement, useTranslation } from '@sheout/design-system';
 
 const POLL_INTERVAL_MS = 4000;
 const JUST_ENDED_MS = 15 * 60 * 1000;
@@ -713,6 +713,13 @@ export function Trip() {
 
         {/* What to do now. */}
         <Card className="space-y-4" data-testid="trip-step">
+          {/* Read out as the trip moves on: which step, and what to do now. */}
+          <LiveAnnouncement
+            testId="trip-step-announcement"
+            message={`${phase === 'PICKUP' ? t('trip.stepPickup') : t('trip.stepDrop')}. ${
+              arrived ? t('trip.arrivedTitle') : atDrop ? t('trip.arrivedDropTitle') : phase === 'PICKUP' ? t('trip.goToPickup') : t('trip.goToDrop')
+            }`}
+          />
           <div className="flex items-center justify-between gap-2">
             <StatusBadge tone="primary">{phase === 'PICKUP' ? t('trip.stepPickup') : t('trip.stepDrop')}</StatusBadge>
             {!arrived && !atDrop && (

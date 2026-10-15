@@ -1,5 +1,6 @@
+import { useEffect, useRef } from 'react';
 import { MapPinOff, Power } from 'lucide-react';
-import { Button, Card, SkeletonCard, StatusDot, useTranslation } from '@sheout/design-system';
+import { Button, Card, LiveAnnouncement, SkeletonCard, StatusDot, useTranslation } from '@sheout/design-system';
 import type { HeroState } from '../../lib/driverStatus';
 import { MOOD_FOR, MoodFace } from './MoodFace';
 
@@ -39,6 +40,27 @@ export interface StatusHeroProps {
  */
 export function StatusHero({ state, toggling, onGoOnline, onGoOffline, onTurnOnLocation, onReviewVerification, message, checklistAbove }: StatusHeroProps) {
   const { t } = useTranslation();
+  // Go Online and Go Offline are different buttons, and the card is re-keyed
+  // on every state change, so going online removed the button she had
+  // focused - more than once (connecting, then live) - and focus fell to the
+  // page. While her focus is on the toggle, it follows the toggle.
+  const box = useRef<HTMLDivElement>(null);
+  const onToggle = useRef(false);
+  useEffect(() => {
+    const note = (e: FocusEvent) => {
+      const id = (e.target as HTMLElement | null)?.dataset?.testid ?? '';
+      onToggle.current = id === 'go-online' || id === 'go-offline';
+    };
+    document.addEventListener('focusin', note);
+    return () => document.removeEventListener('focusin', note);
+  }, []);
+  useEffect(() => {
+    if (!onToggle.current) return;
+    if (document.activeElement && document.activeElement !== document.body) return;
+    const next = box.current?.querySelector<HTMLButtonElement>('[data-testid="go-offline"], [data-testid="go-online"]');
+    // Disabled while the request runs, and a disabled button takes no focus.
+    if (next && !next.disabled) next.focus();
+  }, [state, toggling]);
 
   if (state === 'loading') return <SkeletonCard lines={3} label={t('home.loadingProfile')} />;
 
@@ -51,7 +73,10 @@ export function StatusHero({ state, toggling, onGoOnline, onGoOffline, onTurnOnL
   );
 
   return (
+    <div ref={box}>
     <Card tone={tone} className="relative overflow-hidden" data-testid="status-hero" data-state={state}>
+      {/* Read out when her state changes: going online, online, location off, reconnecting. */}
+      <LiveAnnouncement message={`${title(state, t)}. ${state === 'verification' && checklistAbove ? t('home.verificationSeeChecklist') : body(state, t)}`} testId="hero-announcement" />
       <div key={state} className="relative z-10 space-y-4 motion-safe:animate-fade-in">
         <div className={warning ? 'flex items-start gap-3' : 'min-h-[6rem] pr-28'}>
           {warning && <MoodFace mood={MOOD_FOR[state]} size={4} className="motion-safe:animate-pop-in" />}
@@ -111,6 +136,7 @@ export function StatusHero({ state, toggling, onGoOnline, onGoOffline, onTurnOnL
         </span>
       )}
     </Card>
+    </div>
   );
 }
 

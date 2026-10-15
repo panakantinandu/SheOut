@@ -482,7 +482,9 @@
     "myTrips": "నా ట్రిప్‌లు చూడండి",
     "youEarn": "మీ సంపాదన",
     "fareAndFee": "ఛార్జీ {{fare}} · SheOut కమిషన్ {{percent}}%",
-    "decline": "తిరస్కరించండి"
+    "decline": "తిరస్కరించండి",
+    "announce": "కొత్త రిక్వెస్ట్. మీ సంపాదన {{amount}}. పికప్: {{pickup}}. స్పందించడానికి {{seconds}} సెకన్లు.",
+    "announceTimeUp": "ఈ రిక్వెస్ట్ సమయం ముగిసింది."
   },
   "trip": {
     "pickup": "పికప్",

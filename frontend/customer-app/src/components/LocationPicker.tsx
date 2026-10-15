@@ -1,7 +1,7 @@
 import { Crosshair, MapPin, MapPinned, Search, X, Home, Briefcase } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
-import { Button, Card, IconCircle, LiveMap, TextField } from '@sheout/design-system';
+import { Button, Card, IconCircle, LiveMap, TextField, useDialogFocus } from '@sheout/design-system';
 import type { GeoAddress } from '../api/types';
 import {
   CITY_CENTRE,
@@ -112,6 +112,10 @@ export function LocationPicker({
   const [error, setError] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
   const inFlight = useRef<AbortController | null>(null);
+  // A dialog to the keyboard: focus stays inside while it is open, Escape
+  // closes it, and focus goes back to the field that opened it.
+  const dialog = useRef<HTMLDivElement>(null);
+  useDialogFocus(dialog, open, onClose);
 
   /** Where the map tab's pin starts: the current choice, or the area she searched for. */
   const [mapStart, setMapStart] = useState<GeoAddress | null>(null);
@@ -277,9 +281,14 @@ export function LocationPicker({
       }
       style={asSheet ? { top: sheetTop } : undefined}
       data-testid="location-picker"
+      ref={dialog}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="location-picker-title"
+      tabIndex={-1}
     >
       <div className={`flex items-center gap-3 px-screen ${asSheet ? 'pt-4' : 'pt-6'}`}>
-        <h2 className="flex-1 font-heading text-section text-text-primary">{title}</h2>
+        <h2 id="location-picker-title" className="flex-1 font-heading text-section text-text-primary">{title}</h2>
         <button
           type="button"
           aria-label={t('common.close')}

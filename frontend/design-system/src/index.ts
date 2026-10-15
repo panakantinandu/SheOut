@@ -31,5 +31,6 @@ export * from './lib/useOtpSender';
 export * from './lib/useRouteLine';
 export * from './lib/referral';
 export * from './lib/afterSignIn';
+export * from './lib/useDialogFocus';
 export * from './lib/distress';
 export * from './lib/richMotion';

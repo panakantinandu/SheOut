@@ -76,7 +76,9 @@ jobs:
       - name: No removed claims or placeholder content in what ships
         run: node scripts/check-legal-sync.mjs --bundles frontend/customer-app/dist frontend/driver-app/dist frontend/marketing-site/dist
 
-  # axe-core on every main screen of both apps (en/hi/te, four widths) and the
+  # axe-core on every main screen of both apps (en/hi/te, four widths), the
+  # keyboard-only journeys (sign-in, booking, trip, SOS, parcel; partner
+  # go-online, offer, trip) with their screen-reader announcements, and the
   # console's court-record check flow, all against mocked APIs. A serious or
   # critical accessibility violation fails the run.
   accessibility:
@@ -91,8 +93,8 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - name: Rider app
-        run: npm run test:e2e --workspace frontend/customer-app -- a11y keyboard-signin --workers=2
+        run: npm run test:e2e --workspace frontend/customer-app -- --workers=2
       - name: Partner app
-        run: npm run test:e2e --workspace frontend/driver-app -- a11y --workers=2
+        run: npm run test:e2e --workspace frontend/driver-app -- --workers=2
       - name: Console court-record check
         run: npx playwright test -c qa/console-e2e
