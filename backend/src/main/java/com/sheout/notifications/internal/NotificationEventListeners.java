@@ -648,7 +648,12 @@ class NotificationEventListeners {
         };
     }
 
-    private static String rupees(BigDecimal amount) {
-        return "₹" + (amount == null ? "0.00" : amount.setScale(2, RoundingMode.HALF_UP).toPlainString());
+    /** "₹107" for a whole amount, "₹1537.58" only when there are paise - never "₹107.00". */
+    static String rupees(BigDecimal amount) {
+        if (amount == null) return "₹0";
+        BigDecimal exact = amount.setScale(2, RoundingMode.HALF_UP);
+        return "₹" + (exact.signum() == 0 || exact.remainder(BigDecimal.ONE).signum() == 0
+                ? exact.setScale(0, RoundingMode.UNNECESSARY).toPlainString()
+                : exact.toPlainString());
     }
 }

@@ -1,6 +1,6 @@
 import { CheckCircle2, MapPinned, XCircle } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { Button, Card, CountdownRing, DestinationChangeCompare, IconCircle, Overlay, useTranslation } from '@sheout/design-system';
+import { Button, Card, CountdownRing, DestinationChangeCompare, IconCircle, Overlay, formatAmount, useTranslation } from '@sheout/design-system';
 import { bookingApi } from '../api/client';
 import type { BookingSummary, DestinationChange } from '../api/types';
 import { apiErrorText } from '../lib/apiErrors';
@@ -91,7 +91,7 @@ export function DestinationChangePrompt({ booking, onAnswered }: { booking: Book
           <div className="min-w-0 flex-1">
             <p className="font-heading text-card-title text-text-primary">{t('trip.destinationChange.acceptedTitle')}</p>
             <p className="mt-1 text-sm text-text-secondary">
-              {t('trip.destinationChange.acceptedBody', { drop: change.newDrop.label, fare: change.newFare.toFixed(2), was: change.oldFare.toFixed(2) })}
+              {t('trip.destinationChange.acceptedBody', { drop: change.newDrop.label, fare: formatAmount(change.newFare, true), was: formatAmount(change.oldFare, true) })}
             </p>
           </div>
         </Card>
@@ -102,7 +102,7 @@ export function DestinationChangePrompt({ booking, onAnswered }: { booking: Book
           <div className="min-w-0 flex-1">
             <p className="font-heading text-card-title text-text-primary">{t('trip.destinationChange.declinedTitle')}</p>
             <p className="mt-1 text-sm text-text-secondary">
-              {t('trip.destinationChange.declinedBody', { drop: change.oldDrop.label, fare: change.oldFare.toFixed(2) })}
+              {t('trip.destinationChange.declinedBody', { drop: change.oldDrop.label, fare: formatAmount(change.oldFare, true) })}
             </p>
           </div>
         </Card>

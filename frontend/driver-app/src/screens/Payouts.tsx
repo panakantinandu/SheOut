@@ -9,6 +9,7 @@ import {
   IconCircle,
   SkeletonCard,
   StatusBadge,
+  formatRupees,
   TextField,
   TopHeader,
 } from '@sheout/design-system';
@@ -60,14 +61,18 @@ function detailsProblem(body: SavePayoutAccount): string | null {
   return null;
 }
 
-const RUPEES = new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
 /**
- * Exact to the paisa. AmountText rounds to whole rupees, which suits a fare
- * but not a balance or a payout: ₹100.50 requested must not read as ₹101.
+ * Exact to the paisa, never rounded: ₹100.50 requested must not read as ₹101.
+ * A whole amount has no decimals - "₹3,413", not "₹3,413.00".
  */
 function rupees(amount: number): string {
-  return `₹${RUPEES.format(amount)}`;
+  return formatRupees(amount, true);
+}
+
+/** The balance as the amount field's starting value: "3413", or "3412.68" when there are paise. */
+function amountInput(amount: number): string {
+  const paise = Math.round(amount * 100);
+  return paise % 100 === 0 ? String(paise / 100) : (paise / 100).toFixed(2);
 }
 
 /** "XXXXXXXX9012" -> "•••• 9012": the last four digits, the way banks print them. */
@@ -119,7 +124,7 @@ export function Payouts() {
     load().then((fetched) => {
       if (fetched && !fetched.account) setEditing(true);
       if (fetched && fetched.wallet.availableBalance >= MIN_PAYOUT) {
-        setAmount(fetched.wallet.availableBalance.toFixed(2));
+        setAmount(amountInput(fetched.wallet.availableBalance));
       }
     });
   }, [load]);
