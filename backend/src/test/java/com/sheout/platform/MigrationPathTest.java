@@ -53,7 +53,7 @@ class MigrationPathTest {
         var result = flyway(null).migrate();
 
         assertThat(result.success).isTrue();
-        assertThat(result.targetSchemaVersion).isEqualTo("84");
+        assertThat(result.targetSchemaVersion).isEqualTo("85");
         assertThat(jdbc.queryForObject("select count(*) from information_schema.tables where table_schema = ? and table_name in"
                         + " ('partner_documents','police_verifications','insurance_policies','trip_coverages','tax_invoices')",
                 Integer.class, schema)).isEqualTo(5);
@@ -73,6 +73,11 @@ class MigrationPathTest {
         // V84: the About screen no longer claims a police-verification review.
         assertThat(jdbc.queryForObject("select value from " + schema + ".content_blocks where content_key = 'about.feature.1.body'",
                 String.class)).doesNotContainIgnoringCase("police").contains("live face check");
+        // V85: SOS wording no longer promises that SheOut texts the contacts.
+        assertThat(jdbc.queryForObject("select value from " + schema + ".content_blocks where content_key = 'about.feature.2.body'",
+                String.class)).doesNotContain("by SMS").contains("from your own phone");
+        assertThat(jdbc.queryForObject("select value from " + schema + ".content_blocks where content_key = 'faq.customer.4.answer'",
+                String.class)).doesNotContain("are sent an SMS").contains("cannot text your emergency contacts yet");
     }
 
     @Test
@@ -89,7 +94,7 @@ class MigrationPathTest {
         var result = flyway(null).migrate();
 
         assertThat(result.success).isTrue();
-        assertThat(result.targetSchemaVersion).isEqualTo("84");
+        assertThat(result.targetSchemaVersion).isEqualTo("85");
         // V55: her RC photo is a document of its own now, waiting for an operator to date it.
         assertThat(jdbc.queryForMap("select type, status, document_key from " + schema + ".partner_documents where account_id = ?",
                 partnerWithRc))
@@ -157,7 +162,7 @@ class MigrationPathTest {
         var result = flyway(null).migrate();
 
         assertThat(result.success).isTrue();
-        assertThat(result.targetSchemaVersion).isEqualTo("84");
+        assertThat(result.targetSchemaVersion).isEqualTo("85");
         assertThat(jdbc.queryForObject("select count(*) from information_schema.tables where table_schema = ? and table_name in"
                         + " ('staff_members','staff_invites','staff_recovery_codes','staff_sessions')",
                 Integer.class, schema)).isEqualTo(4);
