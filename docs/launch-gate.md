@@ -98,5 +98,5 @@ with `--live`: **11 pass, 28 fail, 18 manual. Not ready.** The failures:
 - **Security:** this branch is on Spring Boot 3.3.4; the last OWASP report (from the 4.1.1 build) has 1 critical and 9 high; npm audit has 4 high (firebase; react-router is fixed on `chore/react-router-advisory`); CSP is report-only on both apps. **Live, the customer and partner apps serve no security headers at all:** the Phase 1 headers are not deployed.
 - **People:** no screen-reader pass recorded. The checklist is on `test/a11y-booking-flow`, not merged into this branch.
 
-Several failures clear when the branches are merged and deployed; the rest
+The order to merge them in, and the staging checklist to run first, are in `docs/release-plan.md`. Several failures clear when the branches are merged and deployed; the rest
 need the owner, the lawyer or a person with a screen reader.

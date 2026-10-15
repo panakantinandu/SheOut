@@ -25,7 +25,7 @@ SheOut-cancelled payments within 7 working days), O-8 (jobs built, off).
 | O-2 | CIN, registered office address | The strict build (`LEGAL_STRICT_BUILD=true`) and the footer |
 | O-3 | Public phone number; create the `support@`, `grievance@` mailboxes in Workspace | Same |
 | O-4 | Grievance Officer's name (India-based) | Same |
-| O-8 | Approve the retention periods, then switch the jobs on as a dry run | Retention |
+| O-8 | Approve the retention periods, then switch the jobs on as a dry run. **Owner's decision 2026-10-15: jobs stay OFF until the lawyer has reviewed the periods** | Retention |
 | O-13 | The prohibited parcel items list (today's server list is shown) | Parcel Rules sign-off |
 | O-14 | Is `SENTRY_DSN` set on Render? Is `ANTHROPIC_API_KEY` set? | The Privacy Policy's processor list (`processors[].live` in `legal-entity.config.json`) |
 | O-16 | Self-host the Google Fonts? | IP addresses reaching Google before sign-in |
@@ -34,7 +34,7 @@ SheOut-cancelled payments within 7 working days), O-8 (jobs built, off).
 | O-21 | Who drew the SheOut logo, and that the rights belong to the company | Trademark filing |
 | O-22 | **Upgrade Spring Boot 3.3.4** (out of support) on its own branch: the OWASP scan of 2026-10-15 finds 43 critical and 111 high CVEs, almost all in its managed libraries (Netty, Tomcat, Spring) | Security |
 | O-23 | When to enforce the app CSP (now report-only) - after a preview deploy with maps and checkout open shows no violations | Security headers |
-| O-24 | The customer app's About screen still says every partner passes a "police-verification review" (`about.feature1Body` in en/hi/te, and content block `about.feature.1.body` from V17, served by production today). Missed in Phase 1; found by the launch gate on 2026-10-15 | Claims (D-1). Fix: new wording in the three i18n files and a migration updating the content block |
+| O-24 | The customer app's About screen and Safety Centre said every partner passes a "police-verification review". **Fixed on `fix/about-claim-o24` (6bd4c2b)**: en/hi/te wording, assistant knowledge, and migration V84 for the content block production serves. Live only after merge and deploy. The same scan found SOS wording that says SheOut texts emergency contacts while no SMS provider is live (`docs/claim-scan-2026-10-15.md`, section 1) - for your decision | Claims (D-1) |
 
 **For the lawyer, added in Phase 1:** the court-record check as built (consent
 wording `COURT_SCREEN_CONSENT`, the rejection categories, 30-day and 12-month

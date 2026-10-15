@@ -52,12 +52,12 @@ const CLAIMS = [
     for (const [k, v] of Object.entries(o)) {
       if (k.startsWith('_')) continue;
       if (typeof v === 'string' && v.includes('TODO_FROM_OWNER')) todo.push(path + k);
-      else if (v && typeof v === 'object' && !Array.isArray(v)) walk(v, `${path}${k}.`);
+      else if (v && typeof v === 'object') walk(v, `${path}${k}.`); // objects and lists (officer appointments)
     }
   };
   walk(entity, '');
   add('A. Legal', 'Business details complete (legal-entity.config.json)', todo.length ? 'FAIL' : 'PASS',
-    todo.length ? `still TODO_FROM_OWNER: ${todo.join(', ')} (O-2, O-3, O-4)` : 'no placeholders');
+    todo.length ? `still TODO_FROM_OWNER (kept on purpose until the owner supplies them): ${todo.join(', ')} (O-2, O-3, O-4)` : 'no placeholders');
   add('A. Legal', 'LEGAL_STRICT_BUILD=true on all three Vercel projects', 'MANUAL',
     'Vercel > each project > Settings > Environment Variables (Production). With it on, a build with any placeholder fails');
 
@@ -131,6 +131,18 @@ const CLAIMS = [
       (m.stdout + m.stderr).trim().split('\n').filter((l) => l.startsWith('- ')).join('\n') || (m.stdout + m.stderr).trim());
   } else add('B. Claims', 'Public site: no invented rating or counts, every screenshot current', 'FAIL', 'scripts/check-marketing-assets.mjs missing (branch chore/marketing-assets-refresh not merged)');
 
+  {
+    const entityCfg = JSON.parse(read('frontend/design-system/src/legal/legal-entity.config.json'));
+    const smsLive = entityCfg.processors.some((p) => p.key === 'sms' && p.live);
+    const SAYS_SHEOUT_TEXTS = /sends them your location by SMS|are sent an SMS|is sent an SMS|SheOut texts every emergency contact|messages your emergency contacts|texts every emergency contact/i;
+    const sosFiles = ['frontend/customer-app/src/i18n/en.json', 'frontend/customer-app/src/i18n/en.safety.json', 'frontend/marketing-site/src/content.ts',
+      'backend/src/main/resources/assistant/knowledge.md', 'backend/src/main/resources/db/migration/V17__content_blocks.sql'].filter(exists);
+    const says = sosFiles.filter((f) => SAYS_SHEOUT_TEXTS.test(read(f)));
+    add('B. Claims', 'SOS wording matches what happens (SMS to contacts)', smsLive || !says.length ? 'PASS' : 'FAIL',
+      smsLive ? 'an SMS provider is live' : says.length
+        ? `no SMS provider is live, but these say SheOut texts the contacts (en; hi/te follow): ${says.join(', ')}`
+        : 'no text claims SheOut sends the SMS');
+  }
   add('B. Claims', '"Every SheOut trip is insured" is true', 'MANUAL',
     'a ride policy is active in the console (insurer, policy number, cover) and INSURANCE_REQUIRED_FOR_RIDES=true; otherwise the app must not show the insured card');
 }
@@ -157,7 +169,8 @@ const CLAIMS = [
     ['ADMIN_COURT_SCREEN_ENABLED', 'false', 'only after the lawyer signs off the court-record check and its consent', (v) => v === 'false'],
     ['ADMIN_PHONE_LOGIN_ENABLED', 'false', 'staff sign in with passkeys only', (v) => v === 'false'],
     ['MARKETPLACE_SAMPLE_SHOPS', 'false', 'sample shops are labelled but not real; photo sources unknown (O-20)', (v) => v === 'false'],
-    ['RETENTION_ENABLED', 'true', 'after O-8 periods are approved and a dry run is checked', (v) => v === 'true'],
+    // Owner's decision 2026-10-15: OFF until the lawyer has reviewed the periods (O-8). Launch needs them on.
+    ['RETENTION_ENABLED', 'true', 'stays false until the owner approves the O-8 periods after legal review; then a dry run', (v) => v === 'true'],
     ['RETENTION_DRY_RUN', 'false', 'after the dry-run report is checked', (v) => v === 'false'],
     ['INSURANCE_REQUIRED_FOR_RIDES', 'true', 'rides pause if no policy is active', (v) => v === 'true'],
   ];
