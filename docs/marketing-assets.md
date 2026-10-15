@@ -13,7 +13,7 @@ checks it in CI.
   number is invented. Partners show as "New partner" / "Not rated yet".
 - **Whole rupees**, as the apps charge.
 - **Only art SheOut owns** (`docs/assets-licences.md`). Profile photos in the
-  shots are crops of `design-system/src/assets/art/women.svg`.
+  shots are the original avatars, cropped from the founder's `design-system/src/assets/art/women.webp`.
 - No real person's name, number, plate or photo. The sample names (Ananya,
   Lakshmi, Priya), `+91 90000 001xx` numbers and the `TS09EB5678` plate are
   invented test data.
@@ -23,7 +23,7 @@ checks it in CI.
 | Picture | State |
 |---|---|
 | 2 screens without a map (partner home, payouts) | Re-shot from the current apps (the marketplace screen stood in for the seller video until it was re-made, then was removed) |
-| 6 screens with a map (book, partner on the way, arrived, on trip, payment, new request) | **Still the 2026-10-06 shots**: invented 4.9 (128) rating on three, the removed scooter and avatar art, paise on the payment screen. They need the Google map, and the local builds have no Maps key |
+| 4 screens with a map (partner on the way, arrived, on trip, payment) | **Still the 2026-10-06 shots**: an invented 4.9 (128) rating on three, paise on the payment screen. They need the Google map, and the local builds have no Maps key. (Book a ride and New request are 2026-10-06 shots too, with the founder's own art and nothing wrong in them.) |
 | 8 screens nothing on the site used (home, safety, SOS, contacts, ID verified, earnings, going to pickup, partner on trip) | Removed from `public/screens`; re-shot copies are in the capture folder if a section wants them |
 | Share image (`og-image.jpg`) | Rebuilt from re-shot screens without a map |
 | Hero loop (`media/hero-*`) | Re-rendered from re-shot screens without a map. The trip sequence returns when the map screens are re-shot |
@@ -41,7 +41,7 @@ on the record/replay harness in `D:\SheOut-Marketing`):
   addresses works. Every API call is answered from answers recorded from a
   local backend (`D:\SheOut-Marketing\fixtures`). Nothing is fetched from
   Vercel and nothing reaches the production backend. It blanks ratings, rounds
-  money to whole rupees, and swaps in the women.svg avatars.
+  money to whole rupees, and uses the original avatars.
 - `video-build/render.mjs loop` renders the 24-second hero loop from those
   shots.
 - `publish.mjs` writes the site's screens (618×1259 WebP), the share image and

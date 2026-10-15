@@ -1,14 +1,14 @@
 {
   "about": "Every screenshot and video on the public site: when it was captured and from what. 'oldCapture' says what is wrong with a picture that still has to be re-shot; scripts/check-marketing-assets.mjs lists those, and fails on them with --strict (the launch gate). How to re-shoot: docs/marketing-assets.md.",
-  "screens": {
-    "partner-home-online": { "captured": "2026-10-15", "from": "partner app, branch feat/legal-privacy-a11y 86a1471, sample data" },
-    "partner-payouts": { "captured": "2026-10-15", "from": "partner app, branch fix/whole-rupee-money 685d629 (whole-rupee fix), sample data" },
-    "rider-book-ride": { "captured": "2026-10-06", "from": "live customer app", "oldCapture": "shows the removed scooter illustration; needs the map (Maps key at build time)" },
-    "rider-partner-on-the-way": { "captured": "2026-10-06", "from": "live customer app", "oldCapture": "shows an invented 4.9 (128) rating and an avatar cut from the removed women.webp; needs the map" },
-    "rider-partner-arrived": { "captured": "2026-10-06", "from": "live customer app", "oldCapture": "shows an invented 4.9 (128) rating and an avatar cut from the removed women.webp; needs the map" },
-    "rider-on-trip": { "captured": "2026-10-06", "from": "live customer app", "oldCapture": "shows an invented 4.9 (128) rating and an avatar cut from the removed women.webp; needs the map" },
+  "screens": {
+    "partner-home-online": { "captured": "2026-10-15", "from": "local build of release/2026-10-staging with the founder's own art, sample data" },
+    "partner-payouts": { "captured": "2026-10-15", "from": "local build of release/2026-10-staging with the founder's own art, sample data" },
+    "rider-book-ride": { "captured": "2026-10-06", "from": "live customer app (the founder's own art; nothing wrong in it)" },
+    "rider-partner-on-the-way": { "captured": "2026-10-06", "from": "live customer app", "oldCapture": "shows an invented 4.9 (128) rating; needs the map" },
+    "rider-partner-arrived": { "captured": "2026-10-06", "from": "live customer app", "oldCapture": "shows an invented 4.9 (128) rating; needs the map" },
+    "rider-on-trip": { "captured": "2026-10-06", "from": "live customer app", "oldCapture": "shows an invented 4.9 (128) rating; needs the map" },
     "rider-trip-complete": { "captured": "2026-10-06", "from": "live customer app", "oldCapture": "shows paise (107.44, 1537.58) where the app now shows whole rupees; needs the map" },
-    "partner-new-ride-request": { "captured": "2026-10-06", "from": "live partner app", "oldCapture": "map marker uses the removed scooter illustration; needs the map" }
+    "partner-new-ride-request": { "captured": "2026-10-06", "from": "live partner app (the founder's own art; nothing wrong in it)" }
   },
   "other": {
     "og-image.jpg": { "captured": "2026-10-15", "from": "rider home, safety centre and dark partner home from the 2026-10-15 capture, 'Sample screens' burned in" },
