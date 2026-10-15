@@ -72,6 +72,8 @@ expectEqual(
 // must never ship. Case-insensitive; matched in built JS, CSS and HTML.
 const BANNED = [
   /police[- ]verified/i,
+  /police[- ]verification review/i, // O-24: the About screen
+  /records a police verification/i, // O-24: the Safety Centre
   /background[- ]verified/i,
   /100% safe/i,
   /lorem ipsum/i,

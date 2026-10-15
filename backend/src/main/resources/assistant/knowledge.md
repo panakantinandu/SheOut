@@ -30,11 +30,16 @@ setting the pickup and drop themselves.
   SheOut's operations team compares the selfie with the ID photo and checks
   the document. Nothing is approved automatically - no face-matching software
   decides. A customer cannot book until she is approved.
-- A partner does the same, plus her vehicle's registration certificate (RC),
-  which must match the registration number on her profile. SheOut's
-  operations team also records a police verification for every partner.
-  A partner cannot go online and receive trips until both checks pass, and
-  she is re-checked as verified each time a trip is offered.
+- A partner does the same, plus her driving licence and her vehicle's
+  registration certificate (RC), which must match the registration number on
+  her profile. A person on SheOut's operations team checks them, and she
+  cannot go online and receive trips until they are approved. She is
+  re-checked as verified each time a trip is offered.
+- At the start of every shift a partner takes a live selfie, which the app
+  matches against her approved photo. If it does not match she cannot go
+  online, and after repeated misses a person reviews it. This is the only
+  automatic face check; it never approves anyone.
+- Do not say partners are police verified or background checked.
 - A rejected document comes back with the reason, and can be sent again.
 
 ## During a trip

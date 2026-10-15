@@ -53,7 +53,7 @@ class MigrationPathTest {
         var result = flyway(null).migrate();
 
         assertThat(result.success).isTrue();
-        assertThat(result.targetSchemaVersion).isEqualTo("83");
+        assertThat(result.targetSchemaVersion).isEqualTo("84");
         assertThat(jdbc.queryForObject("select count(*) from information_schema.tables where table_schema = ? and table_name in"
                         + " ('partner_documents','police_verifications','insurance_policies','trip_coverages','tax_invoices')",
                 Integer.class, schema)).isEqualTo(5);
@@ -70,6 +70,9 @@ class MigrationPathTest {
         assertThat(jdbc.queryForObject("select count(*) from information_schema.tables where table_schema = ? and table_name in"
                         + " ('court_screenings','court_screening_searches','court_screening_report')",
                 Integer.class, schema)).isEqualTo(3);
+        // V84: the About screen no longer claims a police-verification review.
+        assertThat(jdbc.queryForObject("select value from " + schema + ".content_blocks where content_key = 'about.feature.1.body'",
+                String.class)).doesNotContainIgnoringCase("police").contains("live face check");
     }
 
     @Test
@@ -86,7 +89,7 @@ class MigrationPathTest {
         var result = flyway(null).migrate();
 
         assertThat(result.success).isTrue();
-        assertThat(result.targetSchemaVersion).isEqualTo("83");
+        assertThat(result.targetSchemaVersion).isEqualTo("84");
         // V55: her RC photo is a document of its own now, waiting for an operator to date it.
         assertThat(jdbc.queryForMap("select type, status, document_key from " + schema + ".partner_documents where account_id = ?",
                 partnerWithRc))
@@ -154,7 +157,7 @@ class MigrationPathTest {
         var result = flyway(null).migrate();
 
         assertThat(result.success).isTrue();
-        assertThat(result.targetSchemaVersion).isEqualTo("83");
+        assertThat(result.targetSchemaVersion).isEqualTo("84");
         assertThat(jdbc.queryForObject("select count(*) from information_schema.tables where table_schema = ? and table_name in"
                         + " ('staff_members','staff_invites','staff_recovery_codes','staff_sessions')",
                 Integer.class, schema)).isEqualTo(4);
