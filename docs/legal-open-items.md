@@ -16,7 +16,7 @@ Snivika Technology Private Limited), O-4 in part (email
 (police claims removed), O-7 ("Sample screens" labels), O-10 (promotions
 paused until an opt-in exists), O-11 (illustrations replaced), O-12
 (wallet by default; original method for failed, duplicate and
-SheOut-cancelled payments within 7 working days), O-8 (jobs built, off).
+SheOut-cancelled payments within 7 working days), O-8 (jobs built, off - and on 2026-10-15 the owner decided they stay off until the lawyer has reviewed the periods).
 
 **Still owed by you:**
 
@@ -25,7 +25,7 @@ SheOut-cancelled payments within 7 working days), O-8 (jobs built, off).
 | O-2 | CIN, registered office address | The strict build (`LEGAL_STRICT_BUILD=true`) and the footer |
 | O-3 | Public phone number; create the `support@`, `grievance@` mailboxes in Workspace | Same |
 | O-4 | Grievance Officer's name (India-based) | Same |
-| O-8 | Approve the retention periods, then switch the jobs on as a dry run. **Owner's decision 2026-10-15: jobs stay OFF until the lawyer has reviewed the periods** | Retention |
+| O-8 | Approve the retention periods, then switch the jobs on as a dry run | Retention |
 | O-13 | The prohibited parcel items list (today's server list is shown) | Parcel Rules sign-off |
 | O-14 | Is `SENTRY_DSN` set on Render? Is `ANTHROPIC_API_KEY` set? | The Privacy Policy's processor list (`processors[].live` in `legal-entity.config.json`) |
 | O-16 | Self-host the Google Fonts? | IP addresses reaching Google before sign-in |
