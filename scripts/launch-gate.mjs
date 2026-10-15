@@ -101,14 +101,20 @@ const CLAIMS = [
     }
   }
   // Content blocks seeded by migrations (the English the apps show first; editable in the console).
+  // A seeded value that a later migration rewrites (as V84 does for about.feature.1.body) no longer counts.
   const mig = 'backend/src/main/resources/db/migration';
-  for (const f of readdirSync(join(root, mig)).filter((n) => n.endsWith('.sql'))) {
+  const version = (f) => Number(f.match(/^V(\d+)__/)?.[1] ?? 0);
+  const migrations = readdirSync(join(root, mig)).filter((n) => n.endsWith('.sql')).sort((x, y) => version(x) - version(y));
+  const updatedLater = (key, v) => migrations.some((f) => version(f) > v
+    && new RegExp(`UPDATE\\s+content_blocks[\\s\\S]*?content_key\\s*=\\s*'${key.replace(/\./g, '\\.')}'`, 'i').test(read(`${mig}/${f}`)));
+  for (const f of migrations) {
     const t = read(`${mig}/${f}`);
     for (const [re, what] of CLAIMS) {
       for (const line of t.split('\n')) {
         if (re.test(line) && /content_blocks|'[a-z]+\.[a-z0-9.]+'/.test(line)) {
           const key = line.match(/'([a-z]+\.[a-z0-9.]+)'/)?.[1] ?? '?';
-          hits.push(`${mig}/${f} (content block ${key}): ${what} - unless a later migration or a console edit changed it (--live checks)`);
+          if (key !== '?' && updatedLater(key, version(f))) continue;
+          hits.push(`${mig}/${f} (content block ${key}): ${what} - unless a console edit changed it (--live checks)`);
         }
       }
     }
