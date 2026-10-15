@@ -34,7 +34,7 @@ SheOut-cancelled payments within 7 working days), O-8 (jobs built, off - and on 
 | O-21 | Who drew the SheOut logo, and that the rights belong to the company | Trademark filing |
 | O-22 | **Upgrade Spring Boot 3.3.4** (out of support) on its own branch: the OWASP scan of 2026-10-15 finds 43 critical and 111 high CVEs, almost all in its managed libraries (Netty, Tomcat, Spring) | Security |
 | O-23 | When to enforce the app CSP (now report-only) - after a preview deploy with maps and checkout open shows no violations | Security headers |
-| O-24 | The customer app's About screen and Safety Centre said every partner passes a "police-verification review". **Fixed on `fix/about-claim-o24` (6bd4c2b)**: en/hi/te wording, assistant knowledge, and migration V84 for the content block production serves. Live only after merge and deploy. The same scan found SOS wording that says SheOut texts emergency contacts while no SMS provider is live (`docs/claim-scan-2026-10-15.md`, section 1) - for your decision | Claims (D-1) |
+| O-24 | The customer app's About screen and Safety Centre said every partner passes a "police-verification review". **Fixed on `fix/about-claim-o24` (6bd4c2b)**: en/hi/te wording, assistant knowledge, and migration V84 for the content block production serves. Live only after merge and deploy. The same scan found SOS wording that said SheOut texts emergency contacts while no SMS provider is live - **fixed on `fix/sos-sms-wording` (f8b91d7, V85)** after the owner's go-ahead; change it back when the SMS provider is live | Claims (D-1) |
 
 **For the lawyer, added in Phase 1:** the court-record check as built (consent
 wording `COURT_SCREEN_CONSENT`, the rejection categories, 30-day and 12-month

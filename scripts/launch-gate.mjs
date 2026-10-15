@@ -141,8 +141,10 @@ const CLAIMS = [
     const entityCfg = JSON.parse(read('frontend/design-system/src/legal/legal-entity.config.json'));
     const smsLive = entityCfg.processors.some((p) => p.key === 'sms' && p.live);
     const SAYS_SHEOUT_TEXTS = /sends them your location by SMS|are sent an SMS|is sent an SMS|SheOut texts every emergency contact|messages your emergency contacts|texts every emergency contact/i;
+    // The V17 seed counts only while no later migration rewrites both SOS blocks (V85 does).
+    const seedStands = !updatedLater('about.feature.2.body', 17) || !updatedLater('faq.customer.4.answer', 17);
     const sosFiles = ['frontend/customer-app/src/i18n/en.json', 'frontend/customer-app/src/i18n/en.safety.json', 'frontend/marketing-site/src/content.ts',
-      'backend/src/main/resources/assistant/knowledge.md', 'backend/src/main/resources/db/migration/V17__content_blocks.sql'].filter(exists);
+      'backend/src/main/resources/assistant/knowledge.md', ...(seedStands ? ['backend/src/main/resources/db/migration/V17__content_blocks.sql'] : [])].filter(exists);
     const says = sosFiles.filter((f) => SAYS_SHEOUT_TEXTS.test(read(f)));
     add('B. Claims', 'SOS wording matches what happens (SMS to contacts)', smsLive || !says.length ? 'PASS' : 'FAIL',
       smsLive ? 'an SMS provider is live' : says.length
@@ -280,7 +282,12 @@ if (LIVE) {
       const r = await get(`${API}/api/v1/content?prefix=${prefix}`);
       if (r.status !== 200) { add('F. Live', `content blocks "${prefix}"`, 'MANUAL', `${API} answered HTTP ${r.status}`); continue; }
       const blocks = JSON.parse(r.text);
-      const bad = Object.entries(blocks).flatMap(([k, v]) => CLAIMS.filter(([re]) => re.test(v)).map(([, w]) => `${k}: ${w}`));
+      const smsLive = JSON.parse(read('frontend/design-system/src/legal/legal-entity.config.json')).processors.some((p) => p.key === 'sms' && p.live);
+      const promisesText = /sends them your location by SMS|are sent an SMS|SheOut texts every emergency contact/i;
+      const bad = Object.entries(blocks).flatMap(([k, v]) => [
+        ...CLAIMS.filter(([re]) => re.test(v)).map(([, w]) => `${k}: ${w}`),
+        ...(!smsLive && promisesText.test(v) ? [`${k}: says SheOut texts SOS contacts, but no SMS provider is live`] : []),
+      ]);
       add('F. Live', `content blocks "${prefix}" free of removed claims`, bad.length ? 'FAIL' : 'PASS', bad.join('\n') || `${Object.keys(blocks).length} blocks`);
     } catch (e) { add('F. Live', `content blocks "${prefix}"`, 'MANUAL', `${API}: ${e.message}`); }
   }

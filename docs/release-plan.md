@@ -17,29 +17,30 @@ the full backend suite gave **599 tests, 0 failures** (Spring Boot 4.1.1, local 
 |---|---|---|---|---|
 | 1 | `feat/legal-privacy-a11y` | `86a1471` | Legal pages, consent, claims removed, retention jobs (off), court-record screening (off), security headers (CSP report-only), a11y fixes | V82, V83 |
 | 2 | `fix/about-claim-o24` | `6bd4c2b` | About and Safety Centre partner-check wording (O-24); claim-scan report | **V84** (content block) |
-| 3 | `fix/whole-rupee-money` | `685d629` | No ".00" on whole amounts: Payouts, destination change, pushes/texts/emails | - |
-| 4 | `feat/grievance-officer-regimes` | `d123005` | An officer per grievance regime, dated appointments, all still TODO_FROM_OWNER | - |
-| 5 | `chore/react-router-advisory` | `fb40ea0` | react-router-dom 7.18.4 (advisory fix) | - |
-| 6 | `test/a11y-booking-flow` | `3fa495a` | Keyboard and screen-reader fixes and journeys; screen-reader checklist | - |
-| 7 | `chore/marketing-assets-refresh` | `4275187` | Re-shot site assets, seller video off the site, marketing-assets check in CI | - |
-| 8 | `docs/launch-gate` | (the commit that adds this file) | Launch gate doc and script; this plan | - |
+| 3 | `fix/sos-sms-wording` | `f8b91d7` | SOS wording: SheOut cannot text contacts yet; one-tap text from her own phone (stacked on 2) | **V85** (content blocks) |
+| 4 | `fix/whole-rupee-money` | `685d629` | No ".00" on whole amounts: Payouts, destination change, pushes/texts/emails | - |
+| 5 | `feat/grievance-officer-regimes` | `d123005` | An officer per grievance regime, dated appointments, all still TODO_FROM_OWNER | - |
+| 6 | `chore/react-router-advisory` | `fb40ea0` | react-router-dom 7.18.4 (advisory fix) | - |
+| 7 | `test/a11y-booking-flow` | `3fa495a` | Keyboard and screen-reader fixes and journeys; screen-reader checklist | - |
+| 8 | `chore/marketing-assets-refresh` | `4275187` | Re-shot site assets, seller video off the site, marketing-assets check in CI | - |
+| 9 | `docs/launch-gate` | (the commit that adds this file) | Launch gate doc and script; this plan | - |
 
 Why this order:
 
 - **1 first.** Every other branch was cut from it.
-- **2-4 next.** Small fixes on top of 1. Branch 2 holds the only new migration, V84, so it goes in early and nothing later depends on renumbering.
-- **8 after 7.** Branch 8 is stacked on 7.
+- **2-5 next.** Small fixes on top of 1. Branches 2 and 3 hold the only new migrations, V84 and V85, so they go in early and nothing later needs renumbering. Branch 3 is stacked on 2.
+- **9 after 8.** Branch 9 is stacked on 8.
 - Each step is a `git merge --no-ff`, so any one of them can be reverted alone.
 
 ### Stage 2: merge after staging run 2 (with the upgrade) passes
 
 | # | Branch | Head | What it brings |
 |---|---|---|---|
-| 9 | `chore/spring-boot-upgrade` | `f36b00a` | Spring Boot 3.5.16, Tomcat/Netty/Log4j pins |
-| 10 | `chore/spring-boot-4-1` | `f338ba1` | Spring Boot 4.1.1 (Framework 7, Jackson 3, Hibernate 7); report with follow-ups F-1 to F-3 |
+| 10 | `chore/spring-boot-upgrade` | `f36b00a` | Spring Boot 3.5.16, Tomcat/Netty/Log4j pins |
+| 11 | `chore/spring-boot-4-1` | `f338ba1` | Spring Boot 4.1.1 (Framework 7, Jackson 3, Hibernate 7); report with follow-ups F-1 to F-3 |
 
 The upgrade goes last, so rolling it back never takes product fixes with it.
-Merging 9 before 10 keeps "back to 3.5.16" a single revert. Neither branch has
+Merging 10 before 11 keeps "back to 3.5.16" a single revert. Neither branch has
 a migration.
 
 ### Not in this plan
@@ -94,7 +95,7 @@ upgrade on top. Mark each line Pass, or write what happened.
 ### 0. Deploy and smoke
 
 - [ ] The deploy log shows the integration branch's commit; readiness answers 200.
-- [ ] `flyway_schema_history` on the staging database ends at **84**, with V82, V83 and V84 successful.
+- [ ] `flyway_schema_history` on the staging database ends at **85**, with V82 to V85 successful.
 - [ ] Staff console: sign in with a passkey; a role without `verification.review` cannot open court-record checks (403).
 
 ### 1. Ride booking
@@ -136,7 +137,7 @@ upgrade on top. Mark each line Pass, or write what happened.
 
 - [ ] During a trip, the customer presses SOS: the countdown appears with focus on Cancel. Cancel sends nothing.
 - [ ] SOS sent: operators see the alert in the console at once, with location.
-- [ ] Her SMS app opens with the contacts and location filled in (no SMS provider). **Compare with the app's wording** (claim-scan report, section 1). It still says SheOut texts them.
+- [ ] The screen says no contact was reached (no SMS provider) and offers the one-tap "text from my phone" button. It opens her SMS app with the contacts and location filled in. About, the FAQ and the Safety Centre say exactly this (V85).
 - [ ] Partner SOS works the same.
 - [ ] An SOS nobody takes rings again: an urgent push and every open console, every 2 minutes, until someone takes it or it is resolved (`SOS_ESCALATION_*`).
 
@@ -174,5 +175,5 @@ upgrade on top. Mark each line Pass, or write what happened.
 | 1 | | | | | |
 | 2 | | | | | |
 
-After run 1 passes: merge 1-8. After run 2 passes: merge 9-10. Then run
+After run 1 passes: merge 1-9. After run 2 passes: merge 10-11. Then run
 `node scripts/launch-gate.mjs --live`.
