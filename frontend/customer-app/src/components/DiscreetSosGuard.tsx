@@ -149,7 +149,9 @@ export function DiscreetSosGuard({ children }: { children: ReactNode }) {
           <SafetyText k="discreet.permissionChip" />
         </button>
       )}
-      <Overlay open={countdown !== null} label={s('discreet.countdownTitle')} align="centre" className="px-4">
+      {/* Escape cancels, as the focused Cancel button does: a keyboard user
+          is never stuck in the countdown, and nothing is sent by it. */}
+      <Overlay open={countdown !== null} label={s('discreet.countdownTitle')} align="centre" className="px-4" onDismiss={() => setCountdown(null)}>
         <div className="w-full rounded-card bg-surface p-6 text-center shadow-overlay" data-testid="sos-countdown" role="alertdialog">
           <p className="font-heading text-section text-text-primary"><SafetyText k="discreet.countdownTitle" /></p>
           <p className="my-4 font-heading text-[5rem] leading-none text-danger" aria-live="assertive" data-testid="sos-countdown-seconds">

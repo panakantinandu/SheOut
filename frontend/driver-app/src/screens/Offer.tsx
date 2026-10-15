@@ -1,7 +1,7 @@
 import { Navigation } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { AmountText, Button, Card, CountdownRing, LiveMap, SkeletonCard, StickyActions, TopHeader, formatRupees, useRouteLine } from '@sheout/design-system';
+import { AmountText, Button, Card, CountdownRing, LiveAnnouncement, LiveMap, SkeletonCard, StickyActions, TopHeader, formatRupees, useRouteLine } from '@sheout/design-system';
 import type { MapMarker } from '@sheout/design-system';
 import { ApiError, bookingApi, dispatchApi, routesApi } from '../api/client';
 import { apiErrorText } from '../lib/apiErrors';
@@ -60,6 +60,12 @@ export function Offer() {
   const [unavailable, setUnavailable] = useState(false);
   const [responding, setResponding] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(OFFER_WINDOW_SECONDS);
+  // A screen reader hears the offer once, the moment it arrives - what she
+  // earns, where, how long she has - and focus moves to its details, not to
+  // Accept, so a stray Enter never takes a trip. Frozen at arrival: the
+  // seconds ticking down must not be read out every second.
+  const [announcement, setAnnouncement] = useState('');
+  const details = useRef<HTMLDivElement>(null);
   const seenAtRef = useRef(Date.now());
 
   // Keep sharing position while this screen is open. This screen is what a
@@ -180,15 +186,29 @@ export function Offer() {
   if (offer?.pickup) markers.push({ key: 'pickup', lat: offer.pickup.lat, lng: offer.pickup.lng, label: t('trip.pickup'), kind: 'pickup' });
   if (offer?.drop) markers.push({ key: 'drop', lat: offer.drop.lat, lng: offer.drop.lng, label: t('trip.drop'), kind: 'drop' });
 
+  useEffect(() => {
+    if (!offer || announcement) return;
+    setAnnouncement(
+      t('offer.announce', {
+        amount: formatRupees(offer.partnerEarnings ?? offer.fareEstimate ?? 0),
+        pickup: offer.pickup?.label ?? '',
+        seconds: secondsLeft,
+      })
+    );
+    details.current?.focus();
+    // Once per offer; the seconds are read at arrival only.
+  }, [offer]);
+
   return (
     <div className="space-y-6">
+      <LiveAnnouncement urgent message={secondsLeft > 0 ? announcement : t('offer.announceTimeUp')} testId="offer-announcement" />
       <TopHeader variant="back" title={t('offer.title')} onBack={() => navigate('/home')} />
 
       {!offer && !error && !unavailable && <SkeletonCard lines={3} label={t('offer.loading')} />}
       {error && <p className="text-sm text-danger">{error}</p>}
 
       {offer && !unavailable && (
-        <>
+        <div ref={details} tabIndex={-1} className="space-y-6 outline-none" data-testid="offer-details">
           {/* Sized to the screen: on a short phone the trip details (distance
               included) stay above the Accept bar. */}
           {markers.length > 0 && <LiveMap markers={markers} route={route} className="h-[22vh] max-h-52 min-h-32" />}
@@ -263,7 +283,7 @@ export function Offer() {
               </Button>
             </div>
           </StickyActions>
-        </>
+        </div>
       )}
 
       {unavailable && (

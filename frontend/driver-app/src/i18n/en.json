@@ -482,7 +482,9 @@
     "myTrips": "See my trips",
     "youEarn": "You earn",
     "fareAndFee": "Fare {{fare}} · SheOut commission {{percent}}%",
-    "decline": "Decline"
+    "decline": "Decline",
+    "announce": "New request. You earn {{amount}}. Pickup: {{pickup}}. {{seconds}} seconds to respond.",
+    "announceTimeUp": "Time is up for this request."
   },
   "trip": {
     "pickup": "Pickup",

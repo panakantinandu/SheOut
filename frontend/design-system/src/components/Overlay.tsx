@@ -1,4 +1,5 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
+import { useDialogFocus } from '../lib/useDialogFocus';
 import { createPortal } from 'react-dom';
 import { cn } from '../lib/cn';
 
@@ -35,19 +36,17 @@ export interface OverlayProps {
  * lands on it never reads as an action to a screen reader.
  */
 export function Overlay({ open, label, onDismiss, align = 'centre', className, children }: OverlayProps) {
+  const panel = useRef<HTMLDivElement>(null);
+  // Focus in, Tab kept inside, Escape dismisses, focus back to the opener.
+  useDialogFocus(panel, open, onDismiss);
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onDismiss?.();
-    };
-    document.addEventListener('keydown', onKey);
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {
-      document.removeEventListener('keydown', onKey);
       document.body.style.overflow = previousOverflow;
     };
-  }, [open, onDismiss]);
+  }, [open]);
 
   if (!open || typeof document === 'undefined') return null;
 
@@ -66,7 +65,9 @@ export function Overlay({ open, label, onDismiss, align = 'centre', className, c
       {/* The backdrop dismisses; a tap inside the panel must not bubble up
           and dismiss it too. */}
       <div
-        className={cn('w-full', align === 'sheet' ? 'max-w-md' : 'flex max-w-md justify-center')}
+        ref={panel}
+        tabIndex={-1}
+        className={cn('w-full outline-none', align === 'sheet' ? 'max-w-md' : 'flex max-w-md justify-center')}
         onClick={(e) => e.stopPropagation()}
       >
         {children}

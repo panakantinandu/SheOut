@@ -482,7 +482,9 @@
     "myTrips": "मेरी ट्रिप देखें",
     "youEarn": "आपकी कमाई",
     "fareAndFee": "किराया {{fare}} · SheOut कमीशन {{percent}}%",
-    "decline": "मना करें"
+    "decline": "मना करें",
+    "announce": "नई रिक्वेस्ट। आपकी कमाई {{amount}}। पिकअप: {{pickup}}। जवाब देने के लिए {{seconds}} सेकंड।",
+    "announceTimeUp": "इस रिक्वेस्ट का समय खत्म हो गया।"
   },
   "trip": {
     "pickup": "पिकअप",

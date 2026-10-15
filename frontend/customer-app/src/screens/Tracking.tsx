@@ -2,7 +2,7 @@ import { ArrowLeft, BadgeCheck, CheckCircle2, Headphones, Navigation, SearchX, S
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { hasAppHistory } from '../lib/useGoBack';
-import { AggregateRatingText, AmountText, Avatar, Button, HelmetIcon, PaymentSuccessFlash, CancelReasonDialog, ConfirmDialog, Card, CUSTOMER_CANCELLATION_REASONS, IconCircle, LiveMap, OpenInMapsButton, PickupCodeCard, SafetyText, SkeletonCard, StatusBadge, SuccessCheck, ThinkingIndicator, TopHeader, bookingStatusLabel, vehicleLabel, useRouteLine } from '@sheout/design-system';
+import { LiveAnnouncement, AggregateRatingText, AmountText, Avatar, Button, HelmetIcon, PaymentSuccessFlash, CancelReasonDialog, ConfirmDialog, Card, CUSTOMER_CANCELLATION_REASONS, IconCircle, LiveMap, OpenInMapsButton, PickupCodeCard, SafetyText, SkeletonCard, StatusBadge, SuccessCheck, ThinkingIndicator, TopHeader, bookingStatusLabel, vehicleLabel, useRouteLine } from '@sheout/design-system';
 import type { CancellationReason as SharedCancellationReason, MapMarker } from '@sheout/design-system';
 import { ApiError, bookingApi, chatApi, dispatchApi, routesApi } from '../api/client';
 import type { AssignedDriver, BookingStatus, BookingSummary, DriverLocation, PaymentSummary } from '../api/types';
@@ -665,6 +665,8 @@ export function Tracking() {
 
     return (
       <div className="space-y-4" data-testid="tracking-live">
+        {/* What the headline says, read out when it changes: partner coming (and how far), arrived, on the trip. */}
+        <LiveAnnouncement message={title} testId="trip-announcement" />
         {/* The map steps back when there is something to do: at the kerb, the check and the code matter more than the map. */}
         <div
           className={`relative -mx-screen -mt-6 overflow-hidden shadow-lift transition-[height] duration-500 ${partnerArrived && !onTrip ? 'h-[22vh] min-h-[8rem]' : 'h-[42vh] min-h-[16rem]'}`}
@@ -900,8 +902,18 @@ export function Tracking() {
     );
   }
 
+  const headerTitle = searchFailed
+    ? t('tracking.header.noDrivers')
+    : isFinished
+      ? (booking?.status === 'CANCELLED' ? t('tracking.header.cancelled') : paymentDue ? t('tracking.header.paymentDue') : t('tracking.header.completed'))
+      : hasDriver
+        ? t('tracking.header.onTheWay')
+        : t('tracking.search.searching.title');
+
   return (
     <div className="space-y-6">
+      {/* Searching, no partner found, cancelled, completed: read out when it changes. */}
+      <LiveAnnouncement message={headerTitle} testId="trip-announcement" />
       <TopHeader
         variant="back"
         title={
