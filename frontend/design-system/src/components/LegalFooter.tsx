@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { LEGAL_ENTITY, entityValue } from '../legal/entity';
+import { LEGAL_ENTITY, entityValue, grievanceOfficer } from '../legal/entity';
 import { highlightPlaceholders } from './highlightPlaceholders';
 import { cn } from '../lib/cn';
 
@@ -37,6 +37,8 @@ export interface LegalFooterProps {
 export function LegalFooter({ baseUrl = '', tone = 'default', className }: LegalFooterProps) {
   const { t } = useTranslation('ds');
   const e = LEGAL_ENTITY;
+  // The consumer-complaints officer in effect today (one per regime in legal-entity.config.json).
+  const officer = grievanceOfficer('consumerEcommerce');
   const muted = tone === 'inverse' ? 'text-white/70' : 'text-text-secondary';
   const strong = tone === 'inverse' ? 'text-white' : 'text-text-primary';
   return (
@@ -67,7 +69,7 @@ export function LegalFooter({ baseUrl = '', tone = 'default', className }: Legal
       </p>
       <p>
         {highlightPlaceholders(
-          t('legal.footer.grievance', { name: entityValue(e.grievanceOfficer.name), email: e.grievanceOfficer.email })
+          t('legal.footer.grievance', { name: entityValue(officer.name), email: officer.email })
         )}
       </p>
     </footer>

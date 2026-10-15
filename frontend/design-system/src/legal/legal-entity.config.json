@@ -6,11 +6,47 @@
   "registeredAddress": "TODO_FROM_OWNER",
   "supportEmail": "support@sheoutride.com",
   "supportPhone": "TODO_FROM_OWNER",
-  "grievanceOfficer": {
-    "name": "TODO_FROM_OWNER",
-    "designation": "Grievance Officer",
-    "email": "grievance@sheoutride.com",
-    "basedIn": "India"
+  "grievanceOfficers": {
+    "_comment": "One entry per grievance regime, each a list of appointments. To change an officer, add an appointment with its effectiveFrom date (YYYY-MM-DD) - the pages show the one in effect on the day they are read, and earlier ones stay on record. Never delete a past appointment. Which regimes apply is for the lawyer to confirm (docs/legal-open-items.md).",
+    "consumerEcommerce": {
+      "rule": "Consumer Protection (E-Commerce) Rules, 2020, rule 4",
+      "handles": "complaints about a trip, a delivery, a payment or a refund",
+      "appointments": [
+        {
+          "name": "TODO_FROM_OWNER",
+          "designation": "Grievance Officer",
+          "email": "grievance@sheoutride.com",
+          "basedIn": "India",
+          "effectiveFrom": "TODO_FROM_OWNER"
+        }
+      ]
+    },
+    "dataProtection": {
+      "rule": "Digital Personal Data Protection Rules, 2025, rule 9",
+      "handles": "questions and complaints about your personal data",
+      "appointments": [
+        {
+          "name": "TODO_FROM_OWNER",
+          "designation": "Grievance Officer (personal data)",
+          "email": "grievance@sheoutride.com",
+          "basedIn": "India",
+          "effectiveFrom": "TODO_FROM_OWNER"
+        }
+      ]
+    },
+    "itIntermediary": {
+      "rule": "Information Technology (Intermediary Guidelines and Digital Media Ethics Code) Rules, 2021, rule 3(2)",
+      "handles": "complaints about a marketplace listing or other content on SheOut",
+      "appointments": [
+        {
+          "name": "TODO_FROM_OWNER",
+          "designation": "Grievance Officer",
+          "email": "grievance@sheoutride.com",
+          "basedIn": "India",
+          "effectiveFrom": "TODO_FROM_OWNER"
+        }
+      ]
+    }
   },
   "courts": "Hyderabad, Telangana",
   "dataLocation": "Singapore",

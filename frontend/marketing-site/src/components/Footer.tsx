@@ -2,11 +2,12 @@ import { ArrowRight, Mail } from 'lucide-react';
 import { SheOutWordmark } from '../../../design-system/src/components/SheOutLogo';
 import womenArt from '../../../design-system/src/assets/art/women.svg';
 import { LINKS, NAV } from '../content';
-import { LEGAL_ENTITY, entityValue, TODO_LEGAL } from '../../../design-system/src/legal/entity';
+import { LEGAL_ENTITY, entityValue, grievanceOfficer, TODO_LEGAL } from '../../../design-system/src/legal/entity';
 import { stagger } from '../lib/motion';
 
 /** The last ask, then the footer - one dark block so the page ends on the brand. */
 export function Footer() {
+  const officer = grievanceOfficer('consumerEcommerce');
   return (
     <footer className="relative overflow-hidden bg-[#160735] text-white">
       <div className="absolute left-1/2 top-0 h-[36rem] w-[60rem] -translate-x-1/2 rounded-full bg-primary-mid/25 blur-[140px]" aria-hidden />
@@ -78,9 +79,9 @@ export function Footer() {
             {LEGAL_ENTITY.legalName} · CIN <Detail value={LEGAL_ENTITY.cin} /> · Registered office: <Detail value={LEGAL_ENTITY.registeredAddress} />
           </p>
           <p>
-            Grievance Officer: <Detail value={LEGAL_ENTITY.grievanceOfficer.name} />,{' '}
-            <a href={`mailto:${LEGAL_ENTITY.grievanceOfficer.email}`} className="underline hover:text-white">
-              {LEGAL_ENTITY.grievanceOfficer.email}
+            Grievance Officer: <Detail value={officer.name} />,{' '}
+            <a href={`mailto:${officer.email}`} className="underline hover:text-white">
+              {officer.email}
             </a>
           </p>
           <p className="text-white/50">&copy; {new Date().getFullYear()} {LEGAL_ENTITY.legalName}</p>

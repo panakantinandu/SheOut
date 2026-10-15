@@ -24,7 +24,7 @@ SheOut-cancelled payments within 7 working days), O-8 (jobs built, off).
 |---|---|---|
 | O-2 | CIN, registered office address | The strict build (`LEGAL_STRICT_BUILD=true`) and the footer |
 | O-3 | Public phone number; create the `support@`, `grievance@` mailboxes in Workspace | Same |
-| O-4 | Grievance Officer's name (India-based) | Same |
+| O-4 | Grievance Officer's name (India-based) and the date each appointment starts, per regime: consumer complaints (E-Commerce Rules r.4), personal data (DPDP Rules r.9), marketplace content (IT Rules r.3(2)) - one person may hold all three. **Kept as TODO_FROM_OWNER on purpose** while the directors and shareholders may change. Lawyer to confirm which regimes apply | Same. A change later is one added appointment in `legal-entity.config.json` (`grievanceOfficers`), no code change |
 | O-8 | Approve the retention periods, then switch the jobs on as a dry run | Retention |
 | O-13 | The prohibited parcel items list (today's server list is shown) | Parcel Rules sign-off |
 | O-14 | Is `SENTRY_DSN` set on Render? Is `ANTHROPIC_API_KEY` set? | The Privacy Policy's processor list (`processors[].live` in `legal-entity.config.json`) |
