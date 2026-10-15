@@ -16,32 +16,33 @@ the full backend suite gave **599 tests, 0 failures** (Spring Boot 4.1.1, local 
 | # | Branch | Head | What it brings | Migration |
 |---|---|---|---|---|
 | 1 | `feat/legal-privacy-a11y` | `86a1471` | Legal pages, consent, claims removed, retention jobs (off), court-record screening (off), security headers (CSP report-only), a11y fixes | V82, V83 |
-| 2 | `fix/about-claim-o24` | `6bd4c2b` | About and Safety Centre partner-check wording (O-24); claim-scan report | **V84** (content block) |
-| 3 | `fix/sos-sms-wording` | `f8b91d7` | SOS wording: SheOut cannot text contacts yet; one-tap text from her own phone (stacked on 2) | **V85** (content blocks) |
-| 4 | `fix/whole-rupee-money` | `685d629` | No ".00" on whole amounts: Payouts, destination change, pushes/texts/emails | - |
-| 5 | `feat/grievance-officer-regimes` | `d123005` | An officer per grievance regime, dated appointments, all still TODO_FROM_OWNER | - |
-| 6 | `chore/react-router-advisory` | `fb40ea0` | react-router-dom 7.18.4 (advisory fix) | - |
-| 7 | `test/a11y-booking-flow` | `3fa495a` | Keyboard and screen-reader fixes and journeys; screen-reader checklist | - |
-| 8 | `chore/marketing-assets-refresh` | `31246c7` | Re-shot site assets, re-made seller video on the site, marketing-assets check in CI | - |
-| 9 | `chore/seller-video-refresh` | `1b5b9ca` | The seller walkthrough in the customer app, re-made, en/hi/te | - |
-| 10 | `docs/launch-gate` | (the commit that adds this file) | Launch gate doc and script; this plan | - |
+| 2 | `fix/restore-original-art` | `7071c9e` | The founder's own illustrations and category pictures back, unchanged from main (owner's decision 2026-10-15) | - |
+| 3 | `fix/about-claim-o24` | `6bd4c2b` | About and Safety Centre partner-check wording (O-24); claim-scan report | **V84** (content block) |
+| 4 | `fix/sos-sms-wording` | `f8b91d7` | SOS wording: SheOut cannot text contacts yet; one-tap text from her own phone (stacked on 2) | **V85** (content blocks) |
+| 5 | `fix/whole-rupee-money` | `685d629` | No ".00" on whole amounts: Payouts, destination change, pushes/texts/emails | - |
+| 6 | `feat/grievance-officer-regimes` | `d123005` | An officer per grievance regime, dated appointments, all still TODO_FROM_OWNER | - |
+| 7 | `chore/react-router-advisory` | `fb40ea0` | react-router-dom 7.18.4 (advisory fix) | - |
+| 8 | `test/a11y-booking-flow` | `3fa495a` | Keyboard and screen-reader fixes and journeys; screen-reader checklist | - |
+| 9 | `chore/marketing-assets-refresh` | `d3a53dd` | Re-shot site assets, re-made seller video on the site, marketing-assets check in CI | - |
+| 10 | `chore/seller-video-refresh` | `9f0fb85` | The seller walkthrough in the customer app, re-made, en/hi/te | - |
+| 11 | `docs/launch-gate` | (the commit that adds this file) | Launch gate doc and script; this plan | - |
 
 Why this order:
 
 - **1 first.** Every other branch was cut from it.
-- **2-5 next.** Small fixes on top of 1. Branches 2 and 3 hold the only new migrations, V84 and V85, so they go in early and nothing later needs renumbering. Branch 3 is stacked on 2.
-- **10 after 8.** Branch 10 is stacked on 8. Branch 9 is independent (customer app only).
+- **2-6 next.** Small fixes on top of 1; 2 brings back the founder's own pictures. Branches 3 and 4 hold the only new migrations, V84 and V85, so they go in early and nothing later needs renumbering. Branch 4 is stacked on 3.
+- **11 after 9.** Branch 11 is stacked on 9. Branch 10 is independent (customer app only).
 - Each step is a `git merge --no-ff`, so any one of them can be reverted alone.
 
 ### Stage 2: merge after staging run 2 (with the upgrade) passes
 
 | # | Branch | Head | What it brings |
 |---|---|---|---|
-| 11 | `chore/spring-boot-upgrade` | `f36b00a` | Spring Boot 3.5.16, Tomcat/Netty/Log4j pins |
-| 12 | `chore/spring-boot-4-1` | `f338ba1` | Spring Boot 4.1.1 (Framework 7, Jackson 3, Hibernate 7); report with follow-ups F-1 to F-3 |
+| 12 | `chore/spring-boot-upgrade` | `f36b00a` | Spring Boot 3.5.16, Tomcat/Netty/Log4j pins |
+| 13 | `chore/spring-boot-4-1` | `f338ba1` | Spring Boot 4.1.1 (Framework 7, Jackson 3, Hibernate 7); report with follow-ups F-1 to F-3 |
 
 The upgrade goes last, so rolling it back never takes product fixes with it.
-Merging 11 before 12 keeps "back to 3.5.16" a single revert. Neither branch has
+Merging 12 before 13 keeps "back to 3.5.16" a single revert. Neither branch has
 a migration.
 
 ### Not in this plan
@@ -56,8 +57,8 @@ a migration.
 unmerged work there, build a local integration branch (the merges above, in
 order), push **that branch, not `main`**, and set the staging service's branch
 to it in the Render dashboard. The run 1 integration branch is
-`release/2026-10-staging` (branches 1-10 merged in order); the run 2 one is
-`release/2026-10-staging-upgrade` (the same plus 11 and 12). Render does not deploy on push here, so use Manual Deploy, then prove
+`release/2026-10-staging` (branches 1-11 merged in order); the run 2 one is
+`release/2026-10-staging-upgrade` (the same plus 12 and 13). Render does not deploy on push here, so use Manual Deploy, then prove
 the new build is live (deploy log commit, and `/actuator/health/readiness`
 returns 200) before testing.
 
@@ -177,5 +178,5 @@ upgrade on top. Mark each line Pass, or write what happened.
 | 1 | | | | | |
 | 2 | | | | | |
 
-After run 1 passes: merge 1-10. After run 2 passes: merge 11-12. Then run
+After run 1 passes: merge 1-11. After run 2 passes: merge 12-13. Then run
 `node scripts/launch-gate.mjs --live`.
