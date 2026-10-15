@@ -1,7 +1,8 @@
 import { ArrowRight, Mail } from 'lucide-react';
 import { SheOutWordmark } from '../../../design-system/src/components/SheOutLogo';
-import womenArt from '../../../design-system/src/assets/art/women.webp';
+import womenArt from '../../../design-system/src/assets/art/women.svg';
 import { LINKS, NAV } from '../content';
+import { LEGAL_ENTITY, entityValue, TODO_LEGAL } from '../../../design-system/src/legal/entity';
 import { stagger } from '../lib/motion';
 
 /** The last ask, then the footer - one dark block so the page ends on the brand. */
@@ -58,13 +59,39 @@ export function Footer() {
             <ul className="mt-4 space-y-3 text-white/70">
               <li><a href={LINKS.riderApp} className="hover:text-white">Rider app</a></li>
               <li><a href={LINKS.partnerApp} className="hover:text-white">Partner app</a></li>
-              <li><a href={LINKS.terms} className="hover:text-white">Terms of Service</a></li>
+              <li><a href={LINKS.terms} className="hover:text-white">Terms of Use</a></li>
               <li><a href={LINKS.privacy} className="hover:text-white">Privacy Policy</a></li>
+              <li><a href={LINKS.partnerTerms} className="hover:text-white">Partner Terms</a></li>
+              <li><a href={LINKS.refunds} className="hover:text-white">Refunds and cancellation</a></li>
+              <li><a href={LINKS.parcelRules} className="hover:text-white">Parcel Rules</a></li>
+              <li><a href={LINKS.safetyGuidelines} className="hover:text-white">Safety Guidelines</a></li>
+              <li><a href={LINKS.storagePolicy} className="hover:text-white">Cookies and storage</a></li>
+              <li><a href={LINKS.grievance} className="hover:text-white">Grievance Redressal</a></li>
+              <li><a href={LINKS.contact} className="hover:text-white">Contact and business details</a></li>
+              <li><a href={LINKS.deleteAccount} className="hover:text-white">Delete your account</a></li>
             </ul>
           </div>
         </div>
-        <p className="border-t border-white/10 py-8 text-sm text-white/50">&copy; {new Date().getFullYear()} SheOut. By women, for women.</p>
+        <div className="space-y-2 border-t border-white/10 py-8 text-sm text-white/60" data-testid="business-details">
+          <p className="text-white/80">{LEGAL_ENTITY.brandLine}.</p>
+          <p>
+            {LEGAL_ENTITY.legalName} · CIN <Detail value={LEGAL_ENTITY.cin} /> · Registered office: <Detail value={LEGAL_ENTITY.registeredAddress} />
+          </p>
+          <p>
+            Grievance Officer: <Detail value={LEGAL_ENTITY.grievanceOfficer.name} />,{' '}
+            <a href={`mailto:${LEGAL_ENTITY.grievanceOfficer.email}`} className="underline hover:text-white">
+              {LEGAL_ENTITY.grievanceOfficer.email}
+            </a>
+          </p>
+          <p className="text-white/50">&copy; {new Date().getFullYear()} {LEGAL_ENTITY.legalName}</p>
+        </div>
       </div>
     </footer>
   );
+}
+
+/** A business detail, or - while the owner has not supplied it - a placeholder nobody can mistake for a real value. */
+function Detail({ value }: { value: string }) {
+  const shown = entityValue(value);
+  return shown === TODO_LEGAL ? <span className="font-semibold text-[#ff8a8a]">{shown}</span> : <>{shown}</>;
 }

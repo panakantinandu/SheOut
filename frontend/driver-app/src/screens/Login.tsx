@@ -5,7 +5,7 @@ import { ArrowRight, Languages, ShieldCheck, Wallet, Headset } from 'lucide-reac
 import { ApiError, authApi, takeSessionEndedReason, usersApi } from '../api/client';
 import type { AuthSession } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
-import { useTranslation } from '@sheout/design-system';
+import { afterSignInPath, useTranslation } from '@sheout/design-system';
 
 
 /**
@@ -115,7 +115,7 @@ export function Login() {
       // Long enough to read the notice before the screen changes; skipped
       // entirely when there is nothing to say.
       const delay = mode === 'register' && !session.newAccount ? 1400 : 0;
-      setTimeout(() => navigate('/home', { replace: true }), delay);
+      setTimeout(() => navigate(afterSignInPath(location.state), { replace: true }), delay);
     }
   }
 

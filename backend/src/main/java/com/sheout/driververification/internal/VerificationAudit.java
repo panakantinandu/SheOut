@@ -49,6 +49,19 @@ public class VerificationAudit {
     static final String CHECK_OVERRIDE_REQUESTED = "CHECK_OVERRIDE_REQUESTED";
     static final String CHECK_OVERRIDDEN = "CHECK_OVERRIDDEN";
     static final String SAMPLE_SECOND_LOOK = "SAMPLE_SECOND_LOOK";
+    // Court-record screening (CourtScreeningService).
+    static final String COURT_SCREEN_REQUESTED = "COURT_SCREEN_REQUESTED";
+    static final String COURT_SCREEN_CONSENTED = "COURT_SCREEN_CONSENTED";
+    static final String COURT_SCREEN_WITHDRAWN = "COURT_SCREEN_WITHDRAWN";
+    static final String COURT_SCREEN_VIEWED = "COURT_SCREEN_VIEWED";
+    static final String COURT_SCREEN_SUBJECT_UPDATED = "COURT_SCREEN_SUBJECT_UPDATED";
+    static final String COURT_SCREEN_SEARCH_LOGGED = "COURT_SCREEN_SEARCH_LOGGED";
+    static final String COURT_SCREEN_SCREENSHOT_ADDED = "COURT_SCREEN_SCREENSHOT_ADDED";
+    static final String COURT_SCREEN_SECOND_SIGNOFF = "COURT_SCREEN_SECOND_SIGNOFF";
+    static final String COURT_SCREEN_PARTNER_NOTIFIED = "COURT_SCREEN_PARTNER_NOTIFIED";
+    static final String COURT_SCREEN_PARTNER_RESPONDED = "COURT_SCREEN_PARTNER_RESPONDED";
+    static final String COURT_SCREEN_DECIDED = "COURT_SCREEN_DECIDED";
+    static final String COURT_SCREEN_ANONYMISED = "COURT_SCREEN_ANONYMISED";
 
     private final VerificationAuditRepository repository;
     private final StaffAudit staffAudit;

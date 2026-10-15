@@ -586,3 +586,25 @@ export interface ParcelView {
   photosRequired: boolean;
   deliveryRadiusMetres: number;
 }
+
+/** GET /api/v1/driver-verification/court-screening - where her court-record screening stands. No case details, ever. */
+export type CourtScreeningStatus =
+  | 'CONSENT_REQUESTED'
+  | 'SEARCHING'
+  | 'MATCH_TO_CONFIRM'
+  | 'MATCH_CONFIRMED'
+  | 'AWAITING_RESPONSE'
+  | 'RESPONSE_RECEIVED'
+  | 'AWAITING_PCC'
+  | 'APPROVED'
+  | 'APPROVED_WITH_NOTE'
+  | 'REJECTED'
+  | 'WITHDRAWN';
+
+export interface CourtScreeningView {
+  status: CourtScreeningStatus;
+  consentVersion: string;
+  consentNeeded: boolean;
+  responseDueAt: string | null;
+  responded: boolean;
+}

@@ -769,7 +769,7 @@
   .login { width: 100%; max-width: 380px; }
   .login .card { padding: 26px; }
   .login .brand { border: 0; padding: 0 0 18px; }
-  .login h2 { font-size: 17px; font-weight: 700; }
+  .login h1, .login h2 { font-size: 17px; font-weight: 700; }
   .login p.lead { margin: 5px 0 18px; color: var(--muted); font-size: 13px; }
   .login label { display: block; font-size: 12px; color: var(--muted); margin: 12px 0 5px; font-weight: 600; }
   .login input { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; font: inherit; }
@@ -949,6 +949,7 @@
   .timeline li.pending::before { background: var(--line); }
   .timeline .t { color: var(--muted); font-size: 12px; }
   .contact-list { list-style: none; margin: 0; padding: 0; }
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
   .contact-list li { display: flex; gap: 10px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line-soft); font-size: 13px; }
   .contact-list li:last-child { border-bottom: 0; }
   .contact-list li .grow { flex: 1; min-width: 0; }
@@ -1784,7 +1785,7 @@
 <body>
 
 <!-- ============================== LOGIN ============================== -->
-<div class="login-wrap" id="loginWrap" hidden>
+<main class="login-wrap" id="loginWrap" hidden>
   <div class="login">
     <div class="card">
       <div class="brand">
@@ -1794,7 +1795,7 @@
         </div>
       </div>
       <div id="signInBlock">
-      <h2>Sign in</h2>
+      <h1>Sign in</h1>
       <p class="lead">Your work email, your password, and the 6-digit code from the authenticator app on your phone - or your passkey.</p>
       <div class="banner banner-err" id="loginErr" hidden></div>
       <form id="login">
@@ -1816,7 +1817,7 @@
       <div id="inviteBlock" hidden></div>
     </div>
   </div>
-</div>
+</main>
 
 <!-- ============================== APP ============================== -->
 <div class="shell" id="app" hidden>
@@ -1878,6 +1879,10 @@
       <button data-tab="changes" aria-current="false">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="7" r="4"/><path d="M11.5 15H7a4 4 0 0 0-4 4v2"/><path d="M21.4 16.6a1 1 0 0 0-3-3l-4 4a2 2 0 0 0-.5.9l-.8 2.8a.5.5 0 0 0 .6.6l2.8-.8a2 2 0 0 0 .9-.5z"/></svg>
         <span class="nl">Profile Changes</span> <span class="count" id="cChanges"></span>
+      </button>
+      <button data-tab="courtchecks" aria-current="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M5 7h14"/><path d="M5 7l-3 7a3 3 0 0 0 6 0z"/><path d="M19 7l-3 7a3 3 0 0 0 6 0z"/><path d="M8 21h8"/></svg>
+        <span class="nl">Court-record checks</span> <span class="count" id="cCourt" hidden></span>
       </button>
       <button data-tab="vsample" aria-current="false">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/><path d="m8.5 11 1.8 1.8 3.2-3.3"/></svg>
@@ -3812,6 +3817,46 @@ const VIEWS = {
     },
   },
 
+  /**
+   * Manual court-record screening (CourtScreeningService). A SCREENING AID,
+   * NOT POLICE VERIFICATION: nothing here may be described to anyone as
+   * police or background verification. Nothing is scraped or submitted:
+   * eCourts opens in a new tab and the reviewer writes down what she saw.
+   * Answers 404 while ADMIN_COURT_SCREEN_ENABLED is off.
+   */
+  courtchecks: {
+    title: 'Court-record checks',
+    desc: 'A screening aid, not police verification. Search public court records (eCourts) by hand, write down every search, and decide with a second reviewer when anything may match. Never tell anyone a partner is police or background verified because of this.',
+    cardTitle: 'Open checks',
+    hint: 'Oldest first',
+    above: paintCourtChecks,
+    empty: { icon: ICON_EMPTY_QUEUE, title: 'No open court-record checks', text: 'Start one above with the partner account ID.' },
+    columns: [
+      { key: 'partner', label: 'Partner' },
+      { key: 'status', label: 'Stage' },
+      { key: 'updated', label: 'Last change' },
+      { key: 'act', label: '' },
+    ],
+    load: async () => {
+      try {
+        const rows = await api('/admin/court-screenings');
+        $('cCourt').textContent = rows.length;
+        $('cCourt').hidden = !rows.length;
+        return rows;
+      } catch (err) {
+        if (err.status === 404) return [];
+        throw err;
+      }
+    },
+    cell: (r, key) => {
+      if (key === 'partner') return `<span class="num">${esc(r.accountId)}</span>`;
+      if (key === 'status') return courtBadge(r.status) + (r.responseDueAt ? `<div class="subtle">Answer due ${esc(time(r.responseDueAt))}</div>` : '');
+      if (key === 'updated') return `<span class="subtle">${esc(time(r.updatedAt))}</span>`;
+      if (key === 'act') return `<button class="btn btn-primary" type="button" data-courtopen="${escValue(r.accountId)}">Open</button>`;
+      return '—';
+    },
+  },
+
   trust: {
     title: 'Trust Review',
     desc: 'Accounts worth a look, whether because they cancel too often or because they are rated badly. One list, because an account doing both is one case, not two. Being listed here is not a penalty and nothing has been done to these accounts — read the numbers, decide, then either clear the flag or block. Every one of these figures has an innocent reading and a guilty one, and only you can tell them apart.',
@@ -4419,7 +4464,8 @@ document.addEventListener('click', async e => {
   const back = $('modalRoot').innerHTML;
   const layer = document.createElement('div');
   layer.innerHTML = `<div class="overlay step-overlay"><div class="modal">
-    <div class="modal-head"><h3>Refund or credit</h3><p>Paid into her SheOut wallet. Above your own limit it goes to an owner to approve.</p></div>
+    <div class="modal-head"><h3>Refund or credit</h3><p>Paid into her SheOut wallet. Above your own limit it goes to an owner to approve.</p>
+      <p class="hint" id="rfSource">A failed payment that took her money, a double charge, or a trip SheOut cancelled after she paid online goes back to how she paid instead: ask finance to refund it from Razorpay.</p></div>
     <div class="modal-body">
       <label for="rfAmount">Amount (\u20b9)</label><input id="rfAmount" type="number" min="1" max="10000" step="1">
       ${booking ? `<label class="check"><input type="checkbox" id="rfTrip" checked> For the trip this is about (never more than she paid for it)</label>` : ''}
@@ -4429,6 +4475,11 @@ document.addEventListener('click', async e => {
     <div class="modal-foot"><button class="btn" type="button" data-rf-cancel>Cancel</button>
       <button class="btn btn-primary" type="button" data-rf-go>Refund</button></div></div></div>`;
   $('stepRoot').before(layer);
+  // The promised timeline, from the server's configuration (REFUND_TO_SOURCE_WORKING_DAYS).
+  api('/admin/refunds/policy').then(p => {
+    const el = layer.querySelector('#rfSource');
+    if (el && p && p.toSourceWorkingDays) el.textContent += ` It must reach her within ${p.toSourceWorkingDays} working days.`;
+  }).catch(() => {});
   const close = () => layer.remove();
   layer.querySelector('[data-rf-cancel]').addEventListener('click', close);
   layer.querySelector('[data-rf-go]').addEventListener('click', async () => {
@@ -6093,10 +6144,188 @@ function compareContentKeys(a, b) {
  */
 const AUDIENCE_TEXT = { ALL_CUSTOMERS: 'All customers', ALL_DRIVERS: 'All partners', BOTH: 'Everyone', SELLER_WAITLIST: 'SheOut Seller waitlist ("Notify me")' };
 
+const COURT_STATUS = {
+  CONSENT_REQUESTED: ['b-grey', 'Waiting for her consent'],
+  SEARCHING: ['b-amber', 'Searching'],
+  MATCH_TO_CONFIRM: ['b-red', 'Match - needs a second reviewer'],
+  MATCH_CONFIRMED: ['b-red', 'Match confirmed - tell her'],
+  AWAITING_RESPONSE: ['b-amber', 'Waiting for her answer'],
+  RESPONSE_RECEIVED: ['b-amber', 'She answered'],
+  AWAITING_PCC: ['b-amber', 'Waiting for a police clearance certificate'],
+  APPROVED: ['b-green', 'Cleared'],
+  APPROVED_WITH_NOTE: ['b-green', 'Cleared, with a note'],
+  REJECTED: ['b-red', 'Not cleared'],
+  WITHDRAWN: ['b-grey', 'She withdrew consent'],
+};
+const COURT_OUTCOME = { NO_MATCH: 'No match', POSSIBLE_MATCH: 'Possible match', CONFIRMED_MATCH: 'Confirmed match', COULD_NOT_SEARCH: 'Could not search' };
+const COURT_REASON = { RECORD_CONFIRMED: 'A record two reviewers agree is hers', IDENTITY_UNCLEAR: 'Who she is could not be established', NO_RESPONSE: 'She did not answer in time', PCC_NOT_PROVIDED: 'No police clearance certificate', OTHER: 'Other' };
+const courtBadge = (st) => { const [cls, text] = COURT_STATUS[st] || ['b-grey', st]; return `<span class="badge ${cls}">${esc(text)}</span>`; };
+
+/** Start a check, the counts, and the reviewer's how-to. */
+async function paintCourtChecks(host) {
+  let report = null;
+  let off = false;
+  try { report = await api('/admin/court-screenings/report'); } catch (err) { off = err.status === 404; }
+  host.innerHTML = `
+    <div class="card above-card">
+      <div class="card-head"><h2>Start a court-record check</h2><span class="hint">A screening aid, not police verification</span></div>
+      ${off ? '<p class="banner banner-err">Court-record checks are switched off (ADMIN_COURT_SCREEN_ENABLED).</p>' : `
+      <div class="compose">
+        <div class="row">
+          <label class="field"><span>Partner account ID</span><input id="courtAccount" maxlength="36" autocomplete="off"></label>
+          <label class="field"><span>Her home district (added to the search)</span><input id="courtHome" maxlength="100" autocomplete="off"></label>
+          <button class="btn btn-primary" id="courtStart" type="button">Ask for her consent</button>
+        </div>
+        <p class="hint">She is asked in her app first. Nothing may be searched until she agrees.</p>
+        ${report ? `<p class="hint">Checks: ${report.total} · flagged ${report.flagged} · waiting for a second reviewer ${report.awaitingSecondSignOff} · answers overdue ${report.responseOverdue}${report.averageHoursConsentToDecision != null ? ` · average ${report.averageHoursConsentToDecision} h from consent to decision` : ''}</p>` : ''}
+      </div>
+      <details class="hint"><summary>How to search</summary>
+        <ul>
+          <li>Search each district listed, for every spelling and transliteration of her name.</li>
+          <li>Search pending and disposed cases.</li>
+          <li>Before calling anything a match, compare the father's or husband's name, the age and the address with her ID.</li>
+          <li>Write down every search, including "Could not search" and why.</li>
+          <li>For a possible match, keep only the case type or section, its status, the year and the court. Never copy the judgment or anyone else's name.</li>
+        </ul>
+      </details>`}
+    </div>`;
+  if (off) return;
+  $('courtStart').addEventListener('click', async () => {
+    const accountId = $('courtAccount').value.trim();
+    if (!/^[0-9a-f-]{36}$/i.test(accountId)) { toast('bad', 'Enter the partner account ID'); $('courtAccount').focus(); return; }
+    const home = $('courtHome').value.trim();
+    try {
+      await api(`/admin/court-screenings/${accountId}`, { method: 'POST', body: JSON.stringify({ extraDistricts: home ? [home] : [] }) });
+      toast('ok', 'Asked for her consent', 'She sees the request in her app.');
+      render();
+      openCourtCheck(accountId);
+    } catch (err) {
+      if (err.message !== 'unauthorized') toast('bad', 'Could not start the check', err.message);
+    }
+  });
+}
+
+/** One partner's check: what was searched, and every action the rules allow now. */
+async function openCourtCheck(accountId) {
+  const layer = document.createElement('div');
+  $('stepRoot').before(layer);
+  const close = () => layer.remove();
+  const paint = async () => {
+    let s;
+    try { s = await api(`/admin/court-screenings/${accountId}`); } catch (err) {
+      close();
+      if (err.message !== 'unauthorized') toast('bad', 'Could not open the check', err.message);
+      return;
+    }
+    const open = !['APPROVED', 'APPROVED_WITH_NOTE', 'REJECTED', 'WITHDRAWN'].includes(s.status);
+    const searchable = ['SEARCHING', 'MATCH_TO_CONFIRM', 'RESPONSE_RECEIVED', 'AWAITING_PCC'].includes(s.status);
+    const variants = (s.nameVariants || []).length ? s.nameVariants : [s.applicantName || ''];
+    layer.innerHTML = `<div class="overlay step-overlay"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="courtTitle">
+      <div class="modal-head"><h3 id="courtTitle">Court-record check</h3><p>${esc(s.disclaimer)}</p></div>
+      <div class="modal-body">
+        <p>${courtBadge(s.status)}</p>
+        <dl class="kv">
+          <dt>Name on her profile</dt><dd>${esc(s.applicantName || '—')}</dd>
+          <dt>Date of birth</dt><dd>${esc(s.dateOfBirth || '—')}</dd>
+          <dt>Her consent</dt><dd>${s.consentAt ? `${esc(time(s.consentAt))} (version ${esc(s.consentVersion)})` : 'Not yet'}</dd>
+          <dt>Districts</dt><dd>${esc((s.districts || []).join(', '))}</dd>
+          ${s.partnerResponse ? `<dt>Her answer</dt><dd>${esc(s.partnerResponse)}</dd>` : ''}
+          ${s.secondOutcome ? `<dt>Second reviewer</dt><dd>${esc(s.secondOutcome)}: ${esc(s.secondNote || '')}</dd>` : ''}
+          ${s.decision ? `<dt>Decision</dt><dd>${esc(s.decision)}${s.reasonCategory ? ` - ${esc(COURT_REASON[s.reasonCategory] || s.reasonCategory)}` : ''}${s.decisionNote ? `: ${esc(s.decisionNote)}` : ''}</dd>` : ''}
+        </dl>
+        ${open ? `<label class="field"><span>Name variants (one per line)</span><textarea id="cvVariants" rows="3" maxlength="1500">${esc((s.nameVariants || []).join('\n'))}</textarea></label>
+        <label class="field"><span>Father's or husband's name, as on her ID</span><input id="cvRelative" maxlength="150" value="${escValue(s.relativeName || '')}"></label>
+        <button class="btn" type="button" data-cv="subject">Save names</button>` : ''}
+        <h4>Searches</h4>
+        ${(s.searches || []).length ? `<ul class="contact-list">${s.searches.map(x => `<li><span class="grow"><b>${esc(COURT_OUTCOME[x.outcome] || x.outcome)}</b> · ${esc(x.district)}${x.court ? `, ${esc(x.court)}` : ''} · "${esc(x.nameVariant)}" · ${esc(x.searchedOn)}${x.caseType ? `<div class="subtle">${esc(x.caseType)} · ${esc(x.caseStatus || '')} · ${esc(x.caseYear || '')}</div>` : ''}${x.note ? `<div class="subtle">${esc(x.note)}</div>` : ''}</span>${x.hasScreenshot ? `<button class="btn" type="button" data-cvshot="${escValue(x.id)}">Screenshot</button>` : (searchable ? `<label class="btn">Add screenshot<input type="file" accept="image/*" class="sr-only" data-cvupload="${escValue(x.id)}"></label>` : '')}</li>`).join('')}</ul>` : '<p class="subtle">No searches yet.</p>'}
+        ${searchable ? `<h4>Log a search</h4>
+          <p><a class="btn" href="${escValue(s.eCourtsSearchUrl)}" target="_blank" rel="noopener noreferrer">Open eCourts party-name search</a></p>
+          <div class="row">
+            <label class="field"><span>District</span><select id="csDistrict">${(s.districts || []).map(d => `<option>${esc(d)}</option>`).join('')}</select></label>
+            <label class="field"><span>Name searched</span><select id="csName">${variants.map(v => `<option>${esc(v)}</option>`).join('')}</select></label>
+            <label class="field"><span>Outcome</span><select id="csOutcome">${Object.entries(COURT_OUTCOME).map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join('')}</select></label>
+          </div>
+          <label class="field"><span>Court (optional)</span><input id="csCourt" maxlength="150"></label>
+          <label class="field"><span>Note (needed for anything but No match)</span><textarea id="csNote" rows="2" maxlength="1000"></textarea></label>
+          <div class="row">
+            <label class="field"><span>Case type or section</span><input id="csType" maxlength="100"></label>
+            <label class="field"><span>Case status</span><input id="csStatus" maxlength="30"></label>
+            <label class="field"><span>Year</span><input id="csYear" type="number" min="1950" max="2100"></label>
+          </div>
+          <button class="btn btn-primary" type="button" data-cv="search">Save this search</button>` : ''}
+        ${s.status === 'MATCH_TO_CONFIRM' ? `<h4>Second reviewer</h4>
+          <label class="field"><span>Your note</span><textarea id="cvSecondNote" rows="2" maxlength="1000"></textarea></label>
+          <button class="btn btn-primary" type="button" data-cv="agree">It may be her</button>
+          <button class="btn" type="button" data-cv="disagree">It is not her</button>` : ''}
+        ${s.status === 'MATCH_CONFIRMED' ? `<h4>Tell her</h4><p class="subtle">She is told a record may share her name, and gets until the response date to explain or send a police clearance certificate. No case details are shown to her.</p>
+          <button class="btn btn-primary" type="button" data-cv="notify">Tell her and start her response window</button>` : ''}
+        ${open && s.status !== 'CONSENT_REQUESTED' && s.status !== 'MATCH_TO_CONFIRM' ? `<h4>Decision</h4>
+          <div class="row">
+            <label class="field"><span>Decision</span><select id="cdDecision"><option value="APPROVE">Clear</option><option value="APPROVE_WITH_NOTE">Clear, with a note</option><option value="ASK_FOR_PCC">Ask for a police clearance certificate</option><option value="REJECT">Not cleared</option></select></label>
+            <label class="field"><span>Reason (for Not cleared)</span><select id="cdReason"><option value="">—</option>${Object.entries(COURT_REASON).map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join('')}</select></label>
+          </div>
+          <label class="field"><span>Note</span><textarea id="cdNote" rows="2" maxlength="1000"></textarea></label>
+          ${s.status === 'AWAITING_PCC' ? `<div class="row">
+            <label class="field"><span>Certificate date</span><input id="cdPccDate" type="date"></label>
+            <label class="field"><span>Issuing authority</span><input id="cdPccAuth" maxlength="200"></label>
+            <label class="field"><span>Valid until (optional)</span><input id="cdPccUntil" type="date"></label>
+          </div>` : ''}
+          <button class="btn btn-primary" type="button" data-cv="decide">Record the decision</button>` : ''}
+        <p class="field-err" id="cvErr" hidden role="alert"></p>
+      </div>
+      <div class="modal-foot"><button class="btn" type="button" data-cv="close">Close</button></div></div></div>`;
+    layer.querySelector('[data-cv="close"]').focus();
+  };
+  const err = (m) => { const e = layer.querySelector('#cvErr'); if (e) { e.textContent = m; e.hidden = false; } };
+  const val = (id) => { const el = layer.querySelector('#' + id); return el ? el.value.trim() : ''; };
+  const send = async (path, body, method = 'POST') => {
+    try {
+      await api(`/admin/court-screenings/${accountId}${path}`, { method, body: body ? JSON.stringify(body) : undefined });
+      await paint();
+      render();
+    } catch (e) { if (e.message !== 'unauthorized') err(e.message); }
+  };
+  layer.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+  layer.addEventListener('change', async (e) => {
+    const input = e.target.closest('[data-cvupload]');
+    if (!input || !input.files[0]) return;
+    const form = new FormData();
+    form.append('file', input.files[0]);
+    try {
+      await apiUpload(`/admin/court-screenings/${accountId}/searches/${input.dataset.cvupload}/screenshot`, form);
+      await paint();
+    } catch (e2) { err(e2.message); }
+  });
+  layer.addEventListener('click', async (e) => {
+    const shot = e.target.closest('[data-cvshot]');
+    if (shot) {
+      try { const r = await api(`/admin/court-screenings/${accountId}/searches/${shot.dataset.cvshot}/screenshot`); window.open(r.url, '_blank', 'noopener'); } catch (e2) { err(e2.message); }
+      return;
+    }
+    const b = e.target.closest('[data-cv]');
+    if (!b) return;
+    const act = b.dataset.cv;
+    if (act === 'close') return close();
+    if (act === 'subject') return send('/subject', { nameVariants: val('cvVariants').split('\n').map(x => x.trim()).filter(Boolean), relativeName: val('cvRelative') }, 'PUT');
+    if (act === 'search') return send('/searches', { district: val('csDistrict'), nameVariant: val('csName'), outcome: val('csOutcome'), court: val('csCourt') || null, note: val('csNote') || null, caseType: val('csType') || null, caseStatus: val('csStatus') || null, caseYear: val('csYear') ? Number(val('csYear')) : null });
+    if (act === 'agree' || act === 'disagree') return send('/second-signoff', { agree: act === 'agree', note: val('cvSecondNote') });
+    if (act === 'notify') return send('/notify');
+    if (act === 'decide') return send('/decision', { decision: val('cdDecision'), reasonCategory: val('cdReason') || null, note: val('cdNote') || null, pccIssuedOn: val('cdPccDate') || null, pccAuthority: val('cdPccAuth') || null, pccValidUntil: val('cdPccUntil') || null });
+  });
+  await paint();
+}
+
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-courtopen]');
+  if (!btn) return;
+  e.preventDefault();
+  openCourtCheck(btn.dataset.courtopen);
+}, true);
+
 function paintCompose(host) {
   host.innerHTML = `
     <div class="card above-card">
-      <div class="card-head"><h2>New announcement</h2><span class="hint">Reaches every phone in the audience at once</span></div>
+      <div class="card-head"><h2>New announcement</h2><span class="hint">Reaches every phone in the audience at once. News and offers are paused until people can opt in; a service or safety notice still goes out.</span></div>
       <div class="compose">
         <label class="field"><span>Title</span>
           <input id="annTitle" maxlength="120" placeholder="What this is about" autocomplete="off"></label>
@@ -6106,6 +6335,11 @@ function paintCompose(host) {
         <div class="row">
           <label class="field"><span>Audience</span>
             <select id="annAudience">${Object.entries(AUDIENCE_TEXT).map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join('')}</select></label>
+          <label class="field"><span>Kind of message</span>
+            <select id="annPurpose">
+              <option value="SERVICE">Service or safety notice</option>
+              <option value="PROMOTIONAL">News or offer (promotional)</option>
+            </select></label>
           <label class="sms"><input type="checkbox" id="annSms">
             <span><strong>Also send SMS</strong> - safety advisories only. Charged per message, and the text must match a DLT-approved template.</span></label>
           <button class="btn btn-primary send" id="annSend" type="button">Send announcement</button>
@@ -6123,6 +6357,7 @@ function paintCompose(host) {
       return;
     }
     const audience = $('annAudience').value;
+    const purpose = $('annPurpose').value;
     const sendSms = $('annSms').checked;
     let who = { ALL_CUSTOMERS: 'all customers', ALL_DRIVERS: 'all partners', BOTH: 'everyone' }[audience];
     if (audience === 'SELLER_WAITLIST') {
@@ -6145,7 +6380,7 @@ function paintCompose(host) {
     if (!ok) return;
     $('annSend').disabled = true;
     try {
-      const result = await api('/admin/announcements', { method: 'POST', body: JSON.stringify({ title, body, audience, sendSms }) });
+      const result = await api('/admin/announcements', { method: 'POST', body: JSON.stringify({ title, body, audience, purpose, sendSms }) });
       toast('ok', 'Announcement sent', result.audience === 'SELLER_WAITLIST'
         ? `Delivered to ${result.pushAccepted} ${result.pushAccepted === 1 ? 'person' : 'people'} on the waitlist`
         : `Push ${result.pushAccepted > 0 ? 'sent' : 'not sent'} · ${result.emailsSent} emails`);
@@ -8529,6 +8764,7 @@ const ROW_ACCENT = {
   docexpired: () => 'red',
   policedue: (r) => (r.daysLeft != null && r.daysLeft <= 7 ? 'red' : 'amber'),
   shiftchecks: (r) => (r.check.status === 'NEEDS_REVIEW' ? 'red' : 'grey'),
+  courtchecks: (r) => (['MATCH_TO_CONFIRM', 'AWAITING_RESPONSE', 'RESPONSE_RECEIVED'].includes(r.status) ? 'amber' : 'blue'),
   feedback: (r) => (r.averageStars == null ? 'grey' : r.averageStars < 3 ? 'red' : r.averageStars < 4 ? 'amber' : 'green'),
   announcements: () => 'brand',
 };
@@ -9261,6 +9497,7 @@ const TAB_ACCESS = {
   vsample: anyOf('verification.all'),
   vrates: anyOf('verification.all'),
   shiftchecks: anyOf('verification.review'),
+  courtchecks: anyOf('verification.review'),
   bookings: anyOf('trips.view'),
   feedback: anyOf('trips.view'),
   payouts: anyOf('payouts.prepare', 'payouts.approve', 'payments.view'),

@@ -54,6 +54,7 @@ import { findFaceIn } from '../lib/faceMatch';
 import { PhotoPicker } from '../components/verification/PhotoPicker';
 import { blockerText } from '../lib/readinessText';
 import { daysUntil, formatDay } from '../lib/documentDates';
+import { CourtScreeningCard } from '../components/CourtScreeningCard';
 
 /** Telangana Police's Police Verification Certificate portal (i-Verify). */
 const TS_POLICE_PORTAL = 'https://pvc.tspolice.gov.in/';
@@ -399,6 +400,9 @@ export function Verification() {
           </section>
         );
       })}
+
+      {/* Only when a reviewer asked for a court-record check (and the feature is on). */}
+      <CourtScreeningCard />
 
       {/* PAN: optional, and deliberately nothing to do with the checks above. */}
       <section className="space-y-2">

@@ -28,9 +28,9 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="mx-auto flex min-h-screen max-w-md flex-col bg-background">
       {/* Screens fade and rise slightly as they arrive - see PageTransition.
           Keyed by path, so switching tabs is movement rather than a cut. */}
-      <div className="flex-1 overflow-y-auto px-screen pb-28 pt-6">
+      <main className="flex-1 overflow-y-auto px-screen pb-28 pt-6">
         <PageTransition transitionKey={location.pathname}>{children}</PageTransition>
-      </div>
+      </main>
       <div className="fixed inset-x-0 bottom-0 mx-auto max-w-md">
         <BottomNavBar
           items={items.map((item) => ({

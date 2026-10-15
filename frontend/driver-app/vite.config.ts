@@ -3,10 +3,12 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import { pushWorkerImport, sheoutPushWorker } from '@sheout/design-system/push-worker-plugin'
 import { faceModels } from './face-models-plugin'
+import { legalEntityGuard } from '@sheout/design-system/legal-guard'
 
 export default defineConfig({
   plugins: [
     react(),
+    legalEntityGuard(),
     sheoutPushWorker(),
     faceModels(),
     VitePWA({

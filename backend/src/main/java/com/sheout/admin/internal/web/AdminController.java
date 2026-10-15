@@ -26,6 +26,8 @@ import com.sheout.sharedkernel.Result;
 import com.sheout.notifications.Announcement;
 import com.sheout.notifications.AnnouncementApi;
 import com.sheout.notifications.AnnouncementAudience;
+import com.sheout.notifications.AnnouncementPurpose;
+import com.sheout.notifications.AnnouncementRefusal;
 import com.sheout.sharedkernel.web.ApiException;
 import com.sheout.sharedkernel.web.PageResponse;
 import jakarta.validation.Valid;
@@ -208,9 +210,19 @@ public class AdminController {
     @PostMapping("/announcements")
     public ResponseEntity<Announcement> broadcast(@Valid @RequestBody BroadcastRequest request) {
         CurrentAccount caller = caller();
-        return ResponseEntity.ok(announcements.broadcast(
-                request.title().trim(), request.body().trim(), request.audience(),
-                Boolean.TRUE.equals(request.sendSms()), caller.accountId()));
+        // No purpose given is treated as promotional: the safe reading.
+        AnnouncementPurpose purpose = request.purpose() == null ? AnnouncementPurpose.PROMOTIONAL : request.purpose();
+        Result<Announcement, AnnouncementRefusal> result = announcements.broadcast(
+                request.title().trim(), request.body().trim(), request.audience(), purpose,
+                Boolean.TRUE.equals(request.sendSms()), caller.accountId());
+        if (!result.isSuccess()) {
+            throw switch (result.error()) {
+                case PROMOTIONAL_PAUSED -> new ApiException(HttpStatus.CONFLICT, "PROMOTIONAL_PAUSED",
+                        "Promotional messages are paused until customers and partners can opt in. "
+                                + "Send it only if it is a service or safety notice.");
+            };
+        }
+        return ResponseEntity.ok(result.value());
     }
 
     /** What has been broadcast, newest first, with what actually went out. */
@@ -225,7 +237,9 @@ public class AdminController {
             @NotBlank @Size(max = 1000) String body,
             @NotNull AnnouncementAudience audience,
             /** Off unless ticked - see the method's note. */
-            Boolean sendSms
+            Boolean sendSms,
+            /** SERVICE or PROMOTIONAL; missing means PROMOTIONAL. */
+            AnnouncementPurpose purpose
     ) {
     }
 

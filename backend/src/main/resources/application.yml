@@ -163,11 +163,58 @@ sheout:
     # The Grievance Officer's email - where a data-rights request or a
     # grievance goes under India's DPDP Act, and the contact the privacy
     # policy must name. Shown in both apps' Privacy & Data and Help screens.
-    # Blank by default; the apps then say a grievance contact is not yet
-    # available rather than showing nothing. Must be set before launch.
-    grievance-officer-email: ${GRIEVANCE_OFFICER_EMAIL:}
+    # The same address as legal-entity.config.json in the design system.
+    grievance-officer-email: ${GRIEVANCE_OFFICER_EMAIL:grievance@sheoutride.com}
+
+  retention:
+    # Deleting personal data once it is old enough (privacy.internal.
+    # RetentionSweeper). OFF until the founder approves the periods
+    # (docs/legal-open-items.md, O-8). Switched on, it first runs as a dry
+    # run: it only counts, into retention_runs. RETENTION_DRY_RUN=false is
+    # the separate step that deletes. The periods below are the proposals;
+    # remove one (or set it to 0) to stop that task.
+    enabled: ${RETENTION_ENABLED:false}
+    dry-run: ${RETENTION_DRY_RUN:true}
+    days:
+      chat-messages: ${RETENTION_DAYS_CHAT:90}
+      shift-photos: ${RETENTION_DAYS_SHIFT_PHOTOS:30}
+      rejected-documents: ${RETENTION_DAYS_REJECTED_DOCUMENTS:30}
+      court-screenings-rejected: ${RETENTION_DAYS_COURT_SCREEN_REJECTED:30}
+      court-screenings-departed: ${RETENTION_DAYS_COURT_SCREEN_DEPARTED:365}
+
+  refunds:
+    # Working days within which a refund that must go back to the original
+    # payment method (failed payment with money taken, double charge, a trip
+    # SheOut cancelled after she paid online) reaches her. Promised in the
+    # Refund and Cancellation Policy (legal-entity.config.json,
+    # refundToSourceWorkingDays) - CI keeps the two equal. Done by finance
+    # from the Razorpay dashboard until a refund API exists:
+    # docs/refunds-to-source.md.
+    to-source-working-days: ${REFUND_TO_SOURCE_WORKING_DAYS:7}
+
+  legal:
+    # The Terms and Privacy Policy version recorded when someone agrees at
+    # sign-up. Must equal LEGAL_VERSION in the design system's
+    # legal/content.ts - the version she was shown - which CI checks
+    # (scripts/check-legal-sync.mjs). Acceptance is recorded once; changing
+    # this does not ask anyone to agree again.
+    terms-version: ${LEGAL_TERMS_VERSION:2026-10-02}
 
   verification:
+    # Manual court-record screening (CourtScreeningService): a person
+    # searches public court records by hand and writes each search down. A
+    # screening aid, never "police verification". OFF by default; while off
+    # every screening endpoint answers 404 and partners see nothing.
+    court-screen:
+      enabled: ${ADMIN_COURT_SCREEN_ENABLED:false}
+      # The wording she agrees to (COURT_SCREEN_CONSENT in the design
+      # system's legal content). Bumping it asks again at the next screening.
+      consent-version: ${COURT_SCREEN_CONSENT_VERSION:2026-10-14-draft}
+      # Days she has to answer once told a record may match her name, or once
+      # asked for a police clearance certificate.
+      response-days: ${COURT_SCREEN_RESPONSE_DAYS:7}
+      # Searched for every partner; her home district is added per screening.
+      districts: ${COURT_SCREEN_DISTRICTS:Hyderabad,Rangareddy,Medchal-Malkajgiri}
     # What the app tells somebody who is waiting, BEFORE there are enough
     # real reviews to measure. Said as a target ("we aim to") rather than
     # as a fact, and replaced by the measured median once five reviews
@@ -574,6 +621,11 @@ sheout:
     # REENGAGEMENT_ENABLED=false to stop them without a deploy.
     reengagement:
       enabled: ${REENGAGEMENT_ENABLED:true}
+    # News, offers, "we miss you" nudges and promotional announcements. Off
+    # until customers and partners can opt in (docs/legal-open-items.md,
+    # O-10): with it off, the nudger does not run and a promotional
+    # broadcast is refused. Service and safety notices are unaffected.
+    promotional-enabled: ${PROMOTIONAL_MESSAGES_ENABLED:false}
     sms:
       twilio:
         # Blank by default, same treatment as Razorpay's key-id/key-secret -

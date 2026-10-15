@@ -32,6 +32,12 @@ public @interface Pii {
         /** A PAN: the first five characters hidden. */
         PAN,
         /** A bank account number or UPI id: only the last characters, unless her role pays partners. */
-        BANK
+        BANK,
+        /**
+         * A licence, RC, policy, PUC or police-certificate number: only the
+         * last four, unless her role reviews documents and has to compare
+         * the number with the image.
+         */
+        DOCUMENT
     }
 }

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { STEPS } from '../content';
 import { Device } from './Device';
+import { SampleLabel } from './SampleLabel';
 
 /**
  * Scroll-told walkthrough. On wide screens the phone stays pinned while the
@@ -85,7 +86,8 @@ export function HowItWorks() {
             <div className="sticky top-[calc(50vh-330px)]">
               <div className="relative mx-auto w-[320px]">
                 <div className="absolute -inset-10 -z-10 rounded-full bg-gradient-to-br from-primary-mid/30 via-[#C026D3]/20 to-accent-orange/30 blur-3xl motion-safe:animate-drift-slow" />
-                <div className="device">
+                <div className="device relative">
+                  <SampleLabel className="left-1/2 top-4 -translate-x-1/2" />
                   <div className="device-screen">
                     {STEPS.map((s, i) => (
                       <img

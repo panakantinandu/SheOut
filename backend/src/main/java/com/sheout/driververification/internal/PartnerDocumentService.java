@@ -1023,4 +1023,24 @@ public class PartnerDocumentService {
     private static boolean blank(String s) {
         return s == null || s.isBlank();
     }
+
+    /**
+     * Retention: the image of a document that was rejected before the cutoff.
+     * The row stays - its type, number, the reason and who decided - so a
+     * re-used fraudulent number can still be recognised; only the photo of
+     * her document goes. Counts only when dryRun.
+     */
+    @Transactional
+    public int purgeRejectedImagesBefore(Instant cutoff, boolean dryRun, int limit) {
+        List<PartnerDocumentEntity> rejected = documents.findRejectedWithImageBefore(PartnerDocumentStatus.REJECTED, cutoff,
+                org.springframework.data.domain.PageRequest.of(0, limit));
+        if (!dryRun) {
+            for (PartnerDocumentEntity doc : rejected) {
+                storage.delete(doc.getDocumentKey());
+                doc.setDocumentKey(null);
+                documents.save(doc);
+            }
+        }
+        return rejected.size();
+    }
 }

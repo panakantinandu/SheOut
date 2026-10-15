@@ -40,6 +40,8 @@ export * from './PickupCodeField';
 export * from './PickupCodeCard';
 export * from './LegalDocumentView';
 export * from './LegalConsentNotice';
+export * from './LegalFooter';
+export * from './DeleteAccountInfo';
 export * from './SupportTicketThread';
 export * from './RaiseIssueForm';
 export * from './SupportTicketList';

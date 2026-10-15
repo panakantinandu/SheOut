@@ -50,4 +50,13 @@ interface ShiftCheckRepository extends JpaRepository<ShiftCheckEntity, UUID> {
     List<ShiftCheckEntity> findExpiredPhotos(@Param("accountId") UUID accountId,
                                              @Param("before") Instant before,
                                              @Param("settled") Collection<ShiftCheckEntity.Status> settled);
+
+    /** Retention, across every partner: settled checks before the cutoff that still have photos. */
+    @Query("""
+            select c from ShiftCheckEntity c
+            where c.submittedAt < :before and c.selfieKey is not null and c.status in :settled
+            """)
+    List<ShiftCheckEntity> findSettledWithPhotosBefore(@Param("before") Instant before,
+                                                       @Param("settled") Collection<ShiftCheckEntity.Status> settled,
+                                                       Pageable page);
 }

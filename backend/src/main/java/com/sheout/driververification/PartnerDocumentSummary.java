@@ -3,6 +3,7 @@ package com.sheout.driververification;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
+import com.sheout.sharedkernel.privacy.Pii;
 
 /**
  * One document, as an operator sees it in a queue or on her Documents tab.
@@ -14,7 +15,7 @@ public record PartnerDocumentSummary(
         UUID accountId,
         PartnerDocumentType type,
         PartnerDocumentStatus status,
-        String documentNumber,
+        @Pii(Pii.Kind.DOCUMENT) String documentNumber,
         LocalDate issuedOn,
         LocalDate validUntil,
         String rejectionReason,

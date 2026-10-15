@@ -33,9 +33,10 @@ import java.util.Set;
  * - a rider's own app asking for her own trip - nothing changes.
  * <p>
  * Everyone in the console sees the masked form, owners included: an owner's
- * session is the one most worth stealing. The one exception is bank details
+ * session is the one most worth stealing. The exceptions are bank details
  * for the roles that send payouts (payouts.prepare), whose job is typing them
- * into the bank.
+ * into the bank, and document numbers for the roles that review documents,
+ * whose job is checking the number against the image.
  */
 @Component
 class ConsoleMasking extends SimpleModule {
@@ -110,6 +111,16 @@ class ConsoleMasking extends SimpleModule {
                 }
                 case BANK -> {
                     if (StaffContext.has(Permission.PAYOUTS_PREPARE)) {
+                        super.serializeAsField(bean, gen, provider);
+                    } else {
+                        gen.writeStringField(getName(), Masking.bank(value.toString()));
+                    }
+                }
+                case DOCUMENT -> {
+                    // Reviewers compare the number with the document's image, which
+                    // they open anyway (and that opening is recorded); nobody else
+                    // needs more than the last four.
+                    if (StaffContext.has(Permission.VERIFICATION_REVIEW) || StaffContext.has(Permission.VERIFICATION_POLICE_RECORD)) {
                         super.serializeAsField(bean, gen, provider);
                     } else {
                         gen.writeStringField(getName(), Masking.bank(value.toString()));

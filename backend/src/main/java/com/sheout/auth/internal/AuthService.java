@@ -50,7 +50,7 @@ public class AuthService implements AuthApi {
                         // The wording she agreed to. Bumped when the documents
                         // change, so an old acceptance is not read as consent
                         // to something she never saw.
-                        @Value("${sheout.legal.terms-version:2026-09-20}") String termsVersion,
+                        @Value("${sheout.legal.terms-version}") String termsVersion,
                         // Off in production: staff sign in with email, password
                         // and an authenticator code (the staff module). On only
                         // for local development and the switch-over.

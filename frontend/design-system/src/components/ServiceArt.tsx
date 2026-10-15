@@ -1,11 +1,11 @@
-import bikeTaxiArt from '../assets/art/bike-taxi.webp';
-import parcelArt from '../assets/art/parcel.webp';
+import bikeTaxiArt from '../assets/art/bike-taxi.svg';
+import parcelArt from '../assets/art/parcel.svg';
 import { cn } from '../lib/cn';
 
 export { bikeTaxiArt, parcelArt };
-export { default as womenArt } from '../assets/art/women.webp';
-/** The Marketplace's picture, in the same 3D rounded style as the ride and parcel tiles. */
-export { default as marketplaceArt } from '../assets/art/marketplace.webp';
+export { default as womenArt } from '../assets/art/women.svg';
+/** The Marketplace's picture, in the same rounded-tile style as the ride and parcel art. */
+export { default as marketplaceArt } from '../assets/art/marketplace.svg';
 
 export type ServiceArtKind = 'ride' | 'parcel';
 export type ServiceArtSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
@@ -28,8 +28,11 @@ const sizes: Record<ServiceArtSize, string> = {
  * into a dozen places (the wallet, the fare card, a partner's trip card)
  * because the real artwork sat outside both apps, in the repository's
  * public/ folder, and only three screens reached it. It now lives here,
- * resized from 1254 px PNGs of ~1.5 MB to 480 px WebP of 25-40 KB, and every
- * screen takes it from this one place.
+ * and every screen takes it from this one place.
+ * <p>
+ * The pictures are SVGs drawn for SheOut (2026-10-14), replacing earlier
+ * images whose source and licence were never recorded - see
+ * docs/assets-licences.md.
  * <p>
  * Decorative by default: the text beside it names the service. Pass a
  * label when the picture stands alone.

@@ -577,6 +577,7 @@ public class VerificationCheckService {
             case INSURANCE -> "Waiting for the vehicle's insurance.";
             case PAN -> "Optional. Only used for payouts.";
             case BACKGROUND -> "Waiting for her police certificate.";
+            case COURT_RECORD_SCREEN -> "Only when a reviewer screens public court records.";
         };
     }
 

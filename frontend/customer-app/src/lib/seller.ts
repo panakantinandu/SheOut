@@ -1,12 +1,12 @@
 import type { SellerCategory, SellerStatus } from '../api/types';
-import fashionArt from '../assets/seller/fashion-saree.webp';
-import beautyArt from '../assets/seller/beauty.webp';
-import tailoringArt from '../assets/seller/tailoring.webp';
-import mehandiArt from '../assets/seller/mehandi.webp';
-import giftsArt from '../assets/seller/gifts.webp';
-import ornamentsArt from '../assets/seller/ornaments.webp';
-import foodArt from '../assets/seller/food.webp';
-import otherArt from '../assets/seller/other.webp';
+import fashionArt from '../assets/seller/fashion-saree.svg';
+import beautyArt from '../assets/seller/beauty.svg';
+import tailoringArt from '../assets/seller/tailoring.svg';
+import mehandiArt from '../assets/seller/mehandi.svg';
+import giftsArt from '../assets/seller/gifts.svg';
+import ornamentsArt from '../assets/seller/ornaments.svg';
+import foodArt from '../assets/seller/food.svg';
+import otherArt from '../assets/seller/other.svg';
 
 /**
  * The SheOut Seller categories, each with its own photo and a tint from the

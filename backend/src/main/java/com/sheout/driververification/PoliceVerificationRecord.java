@@ -3,6 +3,7 @@ package com.sheout.driververification;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
+import com.sheout.sharedkernel.privacy.Pii;
 
 /**
  * One recorded police-check decision and what it rested on. A partner has
@@ -14,7 +15,7 @@ public record PoliceVerificationRecord(
         UUID accountId,
         VerificationStatus outcome,
         PoliceVerificationMethod method,
-        String certificateNumber,
+        @Pii(Pii.Kind.DOCUMENT) String certificateNumber,
         LocalDate issuedOn,
         String issuingAuthority,
         LocalDate reverifyDueOn,

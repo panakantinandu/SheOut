@@ -21,5 +21,13 @@ public enum CheckType {
     /** Her PAN, for payouts. Optional, and never part of approval. */
     PAN,
     /** Her police check. Partners only. */
-    BACKGROUND
+    BACKGROUND,
+    /**
+     * A manual search of public court records (CourtScreeningService). A
+     * screening aid, not police verification, and never part of the computed
+     * plan: a row exists only once a reviewer has decided a screening, so the
+     * weekly sample second-looks those decisions too. Off unless
+     * ADMIN_COURT_SCREEN_ENABLED=true.
+     */
+    COURT_RECORD_SCREEN
 }
