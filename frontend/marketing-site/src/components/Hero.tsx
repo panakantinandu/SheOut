@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ArrowRight, BadgeCheck, IndianRupee, Pause, Play, ShieldAlert } from 'lucide-react';
 import { HERO, LINKS } from '../content';
 import { useInView, usePrefersReducedMotion } from '../lib/motion';
+import { SampleLabel } from './SampleLabel';
 
 const CHIP_ICONS = [BadgeCheck, IndianRupee, ShieldAlert];
 
@@ -57,6 +58,7 @@ export function Hero() {
         <source src="/media/hero-loop.webm" type="video/webm" />
         <source src="/media/hero-loop.mp4" type="video/mp4" />
       </video>
+      <SampleLabel className="right-4 top-20 lg:top-24" />
       </div>
       {/* Brand wash: solid where the words are, clear where the phones are. */}
       <div className="absolute inset-0 -z-10 bg-[linear-gradient(to_top,#160735_0%,#160735_48%,rgba(22,7,53,0.55)_70%,rgba(22,7,53,0.35)_100%)] lg:bg-[linear-gradient(to_right,#160735_0%,#160735_32%,rgba(22,7,53,0.7)_48%,rgba(22,7,53,0.15)_75%,rgba(22,7,53,0.35)_100%)]" />

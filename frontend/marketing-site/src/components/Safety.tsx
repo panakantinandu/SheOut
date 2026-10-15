@@ -20,7 +20,7 @@ function CardText({ k, icon: Icon }: { k: string; icon: typeof BadgeCheck }) {
 
 /** The checks a partner passes, ticking themselves off as the card arrives. */
 function Checklist() {
-  const items = ['Government ID + live selfie', 'Police verification', 'Driving licence and RC', 'Vehicle insurance', 'Reviewed by a person'];
+  const items = ['Government ID + live selfie', 'Driving licence and RC', 'Vehicle insurance', 'Reviewed by a person'];
   return (
     <ul className="mt-6 grid gap-2.5 sm:grid-cols-2">
       {items.map((t, i) => (

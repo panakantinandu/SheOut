@@ -11,8 +11,9 @@ import { RaiseIssue } from './screens/RaiseIssue'
 import { SupportTicket } from './screens/SupportTicket'
 import { Home } from './screens/Home'
 import { Login } from './screens/Login'
-import { Privacy } from './screens/Privacy'
-import { Terms } from './screens/Terms'
+import { LegalPage } from './screens/LegalPage'
+import { DeleteAccountPage } from './screens/DeleteAccountPage'
+import { LEGAL_PAGES, type LegalPath } from '@sheout/design-system'
 import { Notifications } from './screens/Notifications'
 import { Offer } from './screens/Offer'
 import { Payouts } from './screens/Payouts'
@@ -65,8 +66,10 @@ function App() {
     <Routes>
       <Route path="/" element={<Splash />} />
       <Route path="/login" element={<Login />} />
-      <Route path="/privacy" element={publicPage(<Privacy />)} />
-      <Route path="/terms" element={publicPage(<Terms />)} />
+      {(Object.keys(LEGAL_PAGES) as LegalPath[]).map((path) => (
+        <Route key={path} path={path} element={publicPage(<LegalPage path={path} />)} />
+      ))}
+      <Route path="/delete-account" element={publicPage(<DeleteAccountPage />)} />
 
       <Route path="/home" element={shell(<Home />)} />
       <Route path="/earnings" element={shell(<Earnings />)} />

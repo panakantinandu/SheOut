@@ -10,6 +10,14 @@ export const LINKS = {
   sellers: 'https://app.sheoutride.com/seller',
   terms: 'https://app.sheoutride.com/terms',
   privacy: 'https://app.sheoutride.com/privacy',
+  partnerTerms: 'https://app.sheoutride.com/partner-terms',
+  refunds: 'https://app.sheoutride.com/refunds',
+  parcelRules: 'https://app.sheoutride.com/parcel-rules',
+  safetyGuidelines: 'https://app.sheoutride.com/safety-guidelines',
+  storagePolicy: 'https://app.sheoutride.com/storage-policy',
+  grievance: 'https://app.sheoutride.com/grievance',
+  contact: 'https://app.sheoutride.com/contact',
+  deleteAccount: 'https://app.sheoutride.com/delete-account',
   support: 'mailto:support@sheoutride.com',
   supportEmail: 'support@sheoutride.com',
 };
@@ -28,7 +36,7 @@ export const HERO = {
   body: 'Book a bike taxi or send a parcel across the city. Every partner is a verified woman, the fare is fixed before you book, and SOS is one tap away on every trip.',
   primary: 'Book a ride',
   secondary: 'Drive with SheOut',
-  chips: ['ID and police-verified partners', 'Fixed fare before you book', 'SOS on every trip'],
+  chips: ['Every partner checked by a person', 'Fixed fare before you book', 'SOS on every trip'],
 };
 
 export const TICKER = [
@@ -106,7 +114,7 @@ export const SAFETY = {
     {
       key: 'checked',
       title: 'Every partner is checked',
-      body: 'ID with a live selfie, police verification, and her licence, RC and insurance reviewed by a person before her first trip.',
+      body: 'Her ID with a live selfie, and her licence, RC and vehicle insurance, reviewed by a person before her first trip.',
     },
     { key: 'riders', title: 'Riders are verified too', body: 'Every rider confirms who she is with a government ID before her first ride, so partners know who they are picking up.' },
     { key: 'code', title: 'A code only you can give', body: 'The trip starts only when you tell your partner your 4-digit pickup code.' },

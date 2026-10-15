@@ -1,43 +1,34 @@
 import { Trans } from 'react-i18next';
 export interface LegalConsentNoticeProps {
-  /** What the button beneath it says, so the sentence matches the action. */
-  actionLabel: string;
+  /** Kept for callers; the notice no longer names the button (it is not consent). */
+  actionLabel?: string;
   onOpenTerms: () => void;
   onOpenPrivacy: () => void;
   className?: string;
 }
 
+/** Inline links inside a sentence: at least 24px tall (WCAG 2.2, 2.5.8). */
+const LINK = 'inline-block min-h-[24px] py-0.5 font-semibold text-primary underline';
+
 /**
- * The notice shown on both apps' sign-in screens.
+ * The notice on both apps' sign-in screens: where the Terms and the Privacy
+ * Policy are, before anything is sent.
  * <p>
- * Placed ABOVE the button, not below it. A consent line underneath the
- * thing it governs is read after the decision, which is no notice at all.
- * <p>
- * Deliberately a notice with links rather than a tick-box you must find and
- * check. There is no separate signup step here - verifying a code both
- * creates and enters an account - so a box would sit on the code screen,
- * after the SMS has already been sent, which is later than the point of
- * collection. Naming the action ("Send OTP") in the sentence, with both
- * documents one tap away before anything is submitted, is the honest
- * version of clickwrap. If the company's counsel wants a recorded, timestamped
- * acceptance instead, that needs a backend field to record it against and a
- * re-prompt when the version changes - a real change, not a checkbox.
+ * NOT CONSENT. It used to say "By tapping Send OTP you agree" - consent
+ * implied by using the thing she was trying to use. Agreement is now an
+ * unticked box she ticks when she creates her account (ConsentCheckbox, on
+ * Complete profile), recorded with the version she saw. This line only
+ * points at the documents and says she will be asked.
  */
-export function LegalConsentNotice({
-  actionLabel,
-  onOpenTerms,
-  onOpenPrivacy,
-  className,
-}: LegalConsentNoticeProps) {
+export function LegalConsentNotice({ onOpenTerms, onOpenPrivacy, className }: LegalConsentNoticeProps) {
   return (
     <p className={className ?? 'text-center text-xs leading-relaxed text-text-secondary'}>
       <Trans
         ns="ds"
         i18nKey="consent.text"
-        values={{ action: actionLabel }}
         components={{
-          terms: <button type="button" onClick={onOpenTerms} className="font-semibold text-primary underline" />,
-          privacy: <button type="button" onClick={onOpenPrivacy} className="font-semibold text-primary underline" />,
+          terms: <button type="button" onClick={onOpenTerms} className={LINK} />,
+          privacy: <button type="button" onClick={onOpenPrivacy} className={LINK} />,
         }}
       />
     </p>

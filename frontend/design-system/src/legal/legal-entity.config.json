@@ -1,0 +1,34 @@
+{
+  "_comment": "The single source for SheOut's business details and its list of processors. Every legal page, footer and contact screen reads from here. TODO_FROM_OWNER is shown as a visible placeholder and makes a strict production build (LEGAL_STRICT_BUILD=true) fail. Never replace a placeholder with a guess. A processor appears in the Privacy Policy only while live is true.",
+  "brandLine": "SheOut, a brand of Snivika Technology Private Limited",
+  "legalName": "Snivika Technology Private Limited",
+  "cin": "TODO_FROM_OWNER",
+  "registeredAddress": "TODO_FROM_OWNER",
+  "supportEmail": "support@sheoutride.com",
+  "supportPhone": "TODO_FROM_OWNER",
+  "grievanceOfficer": {
+    "name": "TODO_FROM_OWNER",
+    "designation": "Grievance Officer",
+    "email": "grievance@sheoutride.com",
+    "basedIn": "India"
+  },
+  "courts": "Hyderabad, Telangana",
+  "dataLocation": "Singapore",
+  "grievanceAcknowledgeHours": 48,
+  "grievanceResolveDays": 30,
+  "refundToSourceWorkingDays": 7,
+  "processors": [
+    { "key": "render", "live": true },
+    { "key": "vercel", "live": true },
+    { "key": "googleMaps", "live": true },
+    { "key": "googleFonts", "live": true },
+    { "key": "googleSignIn", "live": true },
+    { "key": "firebase", "live": true },
+    { "key": "razorpay", "live": true },
+    { "key": "aws", "live": true },
+    { "key": "nominatim", "live": true },
+    { "key": "anthropic", "live": false },
+    { "key": "sentry", "live": false },
+    { "key": "sms", "live": false }
+  ]
+}

@@ -1,4 +1,4 @@
-import { FileText, Info, Languages, Lock, LogOut, Smartphone, Star } from 'lucide-react';
+import { Building2, Cookie, FileText, Info, Languages, Lock, LogOut, MessageSquareWarning, Package, Receipt, ShieldCheck, Smartphone, Star } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
@@ -97,8 +97,14 @@ export function Settings() {
         <h2 className="mb-3 font-heading text-section text-text-primary">{t('settings.aboutLegal')}</h2>
         <Card className="divide-y divide-border p-0">
           <ListRow icon={row(<Info />)} label={t('about.title')} onClick={() => navigate('/about')} />
-          <ListRow icon={row(<Lock />)} label={t('legal.privacy')} onClick={() => openLegalDocument('/privacy')} />
-          <ListRow icon={row(<FileText />)} label={t('legal.terms')} onClick={() => openLegalDocument('/terms')} />
+          <ListRow icon={row(<Lock />)} label={ds('legal.pages.privacy')} onClick={() => openLegalDocument('/privacy')} />
+          <ListRow icon={row(<FileText />)} label={ds('legal.pages.terms')} onClick={() => openLegalDocument('/terms')} />
+          <ListRow icon={row(<Receipt />)} label={ds('legal.pages.refunds')} onClick={() => openLegalDocument('/refunds')} />
+          <ListRow icon={row(<Package />)} label={ds('legal.pages.parcelRules')} onClick={() => openLegalDocument('/parcel-rules')} />
+          <ListRow icon={row(<ShieldCheck />)} label={ds('legal.pages.safetyGuidelines')} onClick={() => openLegalDocument('/safety-guidelines')} />
+          <ListRow icon={row(<MessageSquareWarning />)} label={ds('legal.pages.grievance')} onClick={() => openLegalDocument('/grievance')} />
+          <ListRow icon={row(<Cookie />)} label={ds('legal.pages.storagePolicy')} onClick={() => openLegalDocument('/storage-policy')} />
+          <ListRow icon={row(<Building2 />)} label={ds('legal.pages.contact')} onClick={() => openLegalDocument('/contact')} />
           {/* Only once there is a store listing to rate: until then the row
               led nowhere but a "not yet" toast. */}
           {STORE_URL && (

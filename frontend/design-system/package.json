@@ -10,6 +10,7 @@
     "./preview": "./src/preview/DesignSystemPreview.tsx",
     "./tailwind-preset": "./tailwind-preset.js",
     "./push-worker-plugin": "./push/vite-plugin.mjs",
+    "./legal-guard": "./legal-guard/vite-plugin.mjs",
     "./theme.css": "./src/theme.css"
   },
   "dependencies": {

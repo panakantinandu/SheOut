@@ -65,7 +65,13 @@ jobs:
           node-version: "22"
           cache: npm
       - run: npm ci
+      - name: Legal pages agree with the server
+        run: node scripts/check-legal-sync.mjs
       - name: Rider app
         run: npm run build --workspace frontend/customer-app
       - name: Partner app
         run: npm run build --workspace frontend/driver-app
+      - name: Public site
+        run: npm run build --workspace frontend/marketing-site
+      - name: No removed claims or placeholder content in what ships
+        run: node scripts/check-legal-sync.mjs --bundles frontend/customer-app/dist frontend/driver-app/dist frontend/marketing-site/dist

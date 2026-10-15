@@ -163,9 +163,16 @@ sheout:
     # The Grievance Officer's email - where a data-rights request or a
     # grievance goes under India's DPDP Act, and the contact the privacy
     # policy must name. Shown in both apps' Privacy & Data and Help screens.
-    # Blank by default; the apps then say a grievance contact is not yet
-    # available rather than showing nothing. Must be set before launch.
-    grievance-officer-email: ${GRIEVANCE_OFFICER_EMAIL:}
+    # The same address as legal-entity.config.json in the design system.
+    grievance-officer-email: ${GRIEVANCE_OFFICER_EMAIL:grievance@sheoutride.com}
+
+  legal:
+    # The Terms and Privacy Policy version recorded when someone agrees at
+    # sign-up. Must equal LEGAL_VERSION in the design system's
+    # legal/content.ts - the version she was shown - which CI checks
+    # (scripts/check-legal-sync.mjs). Acceptance is recorded once; changing
+    # this does not ask anyone to agree again.
+    terms-version: ${LEGAL_TERMS_VERSION:2026-10-02}
 
   verification:
     # What the app tells somebody who is waiting, BEFORE there are enough

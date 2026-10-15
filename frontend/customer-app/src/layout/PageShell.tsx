@@ -21,9 +21,9 @@ import { useLocation } from 'react-router-dom';
 export function PageShell({ children }: { children: ReactNode }) {
   const location = useLocation();
   return (
-    <div className="mx-auto min-h-screen max-w-md bg-background px-screen pb-12 pt-6">
+    <main className="mx-auto min-h-screen max-w-md bg-background px-screen pb-12 pt-6">
       {/* The same arrival animation the tab screens get - see PageTransition. */}
       <PageTransition transitionKey={location.pathname}>{children}</PageTransition>
-    </div>
+    </main>
   );
 }

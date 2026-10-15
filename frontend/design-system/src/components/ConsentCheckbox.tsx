@@ -68,7 +68,7 @@ export function ConsentCheckbox({ checked, onChange, onOpenTerms, onOpenPrivacy,
                   e.preventDefault();
                   onOpenTerms();
                 }}
-                className="font-semibold text-primary underline"
+                className="inline-block min-h-[24px] py-0.5 font-semibold text-primary underline"
               />
             ),
             privacy: (
@@ -78,7 +78,7 @@ export function ConsentCheckbox({ checked, onChange, onOpenTerms, onOpenPrivacy,
                   e.preventDefault();
                   onOpenPrivacy();
                 }}
-                className="font-semibold text-primary underline"
+                className="inline-block min-h-[24px] py-0.5 font-semibold text-primary underline"
               />
             ),
           }}

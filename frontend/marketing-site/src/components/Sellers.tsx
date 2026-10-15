@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { ArrowRight, Play } from 'lucide-react';
 import { LINKS, SELLERS } from '../content';
 import { stagger } from '../lib/motion';
+import { SampleLabel } from './SampleLabel';
 
 /**
  * The seller story, with the apps' own "Sell on SheOut" video. It has sound
@@ -54,6 +55,7 @@ export function Sellers() {
                 >
                   <source src="/media/sell-on-sheout.mp4" type="video/mp4" />
                 </video>
+                <SampleLabel className="left-3 top-3" />
               </div>
               {!started && (
                 <button

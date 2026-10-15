@@ -2,10 +2,12 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import { pushWorkerImport, sheoutPushWorker } from '@sheout/design-system/push-worker-plugin'
+import { legalEntityGuard } from '@sheout/design-system/legal-guard'
 
 export default defineConfig({
   plugins: [
     react(),
+    legalEntityGuard(),
     sheoutPushWorker(),
     VitePWA({
       // 'prompt', not 'autoUpdate': the app decides WHEN a new version is

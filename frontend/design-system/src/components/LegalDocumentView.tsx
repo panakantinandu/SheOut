@@ -3,7 +3,9 @@ import { X } from 'lucide-react';
 import { Card } from './Card';
 import { TopHeader } from './TopHeader';
 import { SheOutWordmark } from './SheOutLogo';
-import { TODO_LAWYER, TODO_LEGAL, type LegalDocument } from '../legal/content';
+import { type LegalDocument, type LegalPath } from '../legal/content';
+import { highlightPlaceholders } from './highlightPlaceholders';
+import { LegalFooter } from './LegalFooter';
 import { useAppLanguage } from '../i18n';
 import { useTranslation } from 'react-i18next';
 
@@ -30,7 +32,7 @@ const TAB_PARAM = 'view=tab';
  * profile - and back brought her to an empty form. A tab leaves all of that
  * where it was, and the document is a page she can share, print or keep.
  */
-export function openLegalDocument(path: '/terms' | '/privacy') {
+export function openLegalDocument(path: LegalPath | '/delete-account') {
   window.open(`${path}?${TAB_PARAM}`, '_blank', 'noopener');
 }
 
@@ -121,26 +123,10 @@ export function LegalDocumentView({ document, onBack, standalone = false, canClo
           </Card>
         </section>
       ))}
+
+      <LegalFooter />
     </div>
   );
 }
 
-/**
- * Makes an unfinished section impossible to mistake for a finished one -
- * both a fact only the company can supply and wording a lawyer has not yet
- * approved. Exported for the partner app's consent step.
- */
-export function highlightPlaceholders(text: string) {
-  const markers = [TODO_LEGAL, TODO_LAWYER].filter((m) => text.includes(m));
-  if (!markers.length) return text;
-  const pattern = new RegExp(`(${markers.map((m) => m.replace(/[[\]]/g, '\\$&')).join('|')})`);
-  return text.split(pattern).map((part, i) =>
-    markers.includes(part) ? (
-      <span key={i} className="font-semibold text-danger">
-        {part}
-      </span>
-    ) : (
-      part
-    )
-  );
-}
+export { highlightPlaceholders };
