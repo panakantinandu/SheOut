@@ -22,25 +22,26 @@ the full backend suite gave **599 tests, 0 failures** (Spring Boot 4.1.1, local 
 | 5 | `feat/grievance-officer-regimes` | `d123005` | An officer per grievance regime, dated appointments, all still TODO_FROM_OWNER | - |
 | 6 | `chore/react-router-advisory` | `fb40ea0` | react-router-dom 7.18.4 (advisory fix) | - |
 | 7 | `test/a11y-booking-flow` | `3fa495a` | Keyboard and screen-reader fixes and journeys; screen-reader checklist | - |
-| 8 | `chore/marketing-assets-refresh` | `4275187` | Re-shot site assets, seller video off the site, marketing-assets check in CI | - |
-| 9 | `docs/launch-gate` | (the commit that adds this file) | Launch gate doc and script; this plan | - |
+| 8 | `chore/marketing-assets-refresh` | `31246c7` | Re-shot site assets, re-made seller video on the site, marketing-assets check in CI | - |
+| 9 | `chore/seller-video-refresh` | `1b5b9ca` | The seller walkthrough in the customer app, re-made, en/hi/te | - |
+| 10 | `docs/launch-gate` | (the commit that adds this file) | Launch gate doc and script; this plan | - |
 
 Why this order:
 
 - **1 first.** Every other branch was cut from it.
 - **2-5 next.** Small fixes on top of 1. Branches 2 and 3 hold the only new migrations, V84 and V85, so they go in early and nothing later needs renumbering. Branch 3 is stacked on 2.
-- **9 after 8.** Branch 9 is stacked on 8.
+- **10 after 8.** Branch 10 is stacked on 8. Branch 9 is independent (customer app only).
 - Each step is a `git merge --no-ff`, so any one of them can be reverted alone.
 
 ### Stage 2: merge after staging run 2 (with the upgrade) passes
 
 | # | Branch | Head | What it brings |
 |---|---|---|---|
-| 10 | `chore/spring-boot-upgrade` | `f36b00a` | Spring Boot 3.5.16, Tomcat/Netty/Log4j pins |
-| 11 | `chore/spring-boot-4-1` | `f338ba1` | Spring Boot 4.1.1 (Framework 7, Jackson 3, Hibernate 7); report with follow-ups F-1 to F-3 |
+| 11 | `chore/spring-boot-upgrade` | `f36b00a` | Spring Boot 3.5.16, Tomcat/Netty/Log4j pins |
+| 12 | `chore/spring-boot-4-1` | `f338ba1` | Spring Boot 4.1.1 (Framework 7, Jackson 3, Hibernate 7); report with follow-ups F-1 to F-3 |
 
 The upgrade goes last, so rolling it back never takes product fixes with it.
-Merging 10 before 11 keeps "back to 3.5.16" a single revert. Neither branch has
+Merging 11 before 12 keeps "back to 3.5.16" a single revert. Neither branch has
 a migration.
 
 ### Not in this plan
@@ -54,8 +55,9 @@ a migration.
 `sheout-backend-staging` (Render, `render.yaml`) builds from GitHub. To test
 unmerged work there, build a local integration branch (the merges above, in
 order), push **that branch, not `main`**, and set the staging service's branch
-to it in the Render dashboard. **This needs your go-ahead: nothing is pushed
-yet.** Render does not deploy on push here, so use Manual Deploy, then prove
+to it in the Render dashboard. The run 1 integration branch is
+`release/2026-10-staging` (branches 1-10 merged in order); the run 2 one is
+`release/2026-10-staging-upgrade` (the same plus 11 and 12). Render does not deploy on push here, so use Manual Deploy, then prove
 the new build is live (deploy log commit, and `/actuator/health/readiness`
 returns 200) before testing.
 
@@ -175,5 +177,5 @@ upgrade on top. Mark each line Pass, or write what happened.
 | 1 | | | | | |
 | 2 | | | | | |
 
-After run 1 passes: merge 1-9. After run 2 passes: merge 10-11. Then run
+After run 1 passes: merge 1-10. After run 2 passes: merge 11-12. Then run
 `node scripts/launch-gate.mjs --live`.
