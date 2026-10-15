@@ -32,7 +32,23 @@ The Hindi and Telugu wording is my draft. A fluent reader should check it.
 
 ## Found, not changed (for your decision)
 
-### 1. SOS texts to emergency contacts - **wrong today**
+### 1. SOS texts to emergency contacts - **fixed on `fix/sos-sms-wording`**
+
+Owner's go-ahead 2026-10-15. Every place below now says that SheOut's team is
+alerted at once, that SheOut cannot text the contacts yet, and that the SOS
+screen gives a one-tap button to text them from her own phone. The changes:
+
+- en/hi/te text in the app;
+- the public site's two lines;
+- the assistant's steps, which also say "never say SheOut has texted them";
+- the two content blocks, by `V85__sos_contacts_wording.sql`, with a migration test;
+- the CI bundle check, which fails on the old phrases.
+
+**When the SMS provider goes live, change this wording back** and remove the
+four SOS patterns from `check-legal-sync.mjs`. The Hindi and Telugu are my
+drafts, to be checked by a fluent reader.
+
+What the scan found before the fix:
 
 No SMS provider is live (DLT pending). Today, SOS alerts SheOut's team and
 opens the customer's **own** SMS app with the message ready, and she presses
@@ -49,7 +65,7 @@ places say SheOut sends the texts:
 | Assistant knowledge, SOS steps 2-3 | "SheOut texts every emergency contact ... an SMS" |
 | Sign-up, `en.json:116` | "your emergency contacts are texted from it if you press SOS" (ambiguous) |
 
-Suggested fix: say what happens today ("SOS alerts SheOut's team and opens
+The fix, as suggested: say what happens today ("SOS alerts SheOut's team and opens
 your SMS app with a message to your contacts, ready to send"), and switch the
 wording when the SMS provider goes live. The fix needs a content-block
 migration like V84.

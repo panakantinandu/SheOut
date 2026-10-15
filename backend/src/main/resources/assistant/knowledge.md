@@ -68,12 +68,12 @@ setting the pickup and drop themselves.
 1. Open SOS (the red button in the bottom bar) and press the SOS circle.
    A 5-second countdown appears with a large Cancel button: the alert goes
    when it ends, or at once with "Send SOS now". Cancel alerts nobody.
-2. The app takes your location and sends the alert to SheOut. SheOut texts
-   every emergency contact you have saved an SMS with your location, and
-   SheOut's operations team is alerted on their devices at the same moment.
-   You see how many of your contacts were reached.
-3. If SheOut's text could not reach someone, the app offers to send the same
-   message from your own phone's SMS app in one tap, and to share your
+2. The app takes your location and sends the alert to SheOut, and SheOut's
+   operations team is alerted on their devices at once. SheOut cannot text
+   your emergency contacts yet - its SMS service is waiting for approval.
+   Never say SheOut has texted them.
+3. The SOS screen gives a one-tap button to text your contacts from your own
+   phone's SMS app, with your location filled in, and a way to share your
    location another way.
 4. "Call 112" dials 112, India's emergency number for police, ambulance,
    fire and the women's helpline. SheOut works only in Telangana, so it is

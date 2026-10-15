@@ -93,7 +93,7 @@
     "feature1Title": "Verified partners",
     "feature1Body": "A person checks every partner's ID documents and driving licence before her first trip, and she passes a live face check at the start of every shift.",
     "feature2Title": "Emergency contacts",
-    "feature2Body": "Add contacts to your account and one tap on SOS sends them your location by SMS."
+    "feature2Body": "Save contacts on your account. When you raise an SOS, SheOut's team gets your location at once, and the SOS screen lets you text your contacts from your own phone in one tap."
   },
   "common": {
     "continue": "Continue",
@@ -113,7 +113,7 @@
   "addPhone": {
     "title": "Add your phone number",
     "subtitle": "One more step before you can ride.",
-    "why": "Your partner calls you on this number at pickup, your emergency contacts are texted from it if you press SOS, and support calls you back on it. We send a code to check it is yours.",
+    "why": "Your partner calls you on this number at pickup, and support calls you back on it. We send a code to check it is yours.",
     "verify": "Verify number",
     "signOut": "Use a different account"
   },
@@ -287,7 +287,7 @@
     "q3": "When do I see who is picking me up?",
     "a3": "Once she accepts your trip. You will see her name, photo, vehicle and registration number, and her rating. Nothing about her is shown before that, because until she accepts she may not be the one coming.",
     "q4": "Who can see my SOS alert?",
-    "a4": "The emergency contacts saved on your account are sent an SMS with your live location, and the alert is raised to SheOut operators. If the SMS cannot be sent, the SOS screen lets you text them from your own phone.",
+    "a4": "SheOut's operators get the alert with your live location at once. SheOut cannot text your emergency contacts yet - its SMS service is waiting for approval - so the SOS screen gives you a one-tap button to text them from your own phone, with your location filled in.",
     "q5": "How am I charged?",
     "a5": "Per trip, in the app: from your SheOut wallet, or online by UPI, card or netbanking. Cash is not accepted. See Payment History for what you have paid."
   },

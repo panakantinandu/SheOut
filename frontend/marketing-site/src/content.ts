@@ -122,7 +122,7 @@ export const SAFETY = {
     {
       key: 'sos',
       title: 'SOS on every trip',
-      body: "One tap alerts SheOut's safety team with your location and messages your emergency contacts. Call 112 from the same screen.",
+      body: "One tap alerts SheOut's safety team with your location, and lets you text your emergency contacts from your own phone. Call 112 from the same screen.",
     },
   ],
 };
@@ -170,7 +170,7 @@ export const FAQ = [
   { q: 'How do I pay?', a: 'In the app: from your SheOut wallet, by UPI or by card. Fares are never paid in cash.' },
   {
     q: 'What happens when I press SOS?',
-    a: "SheOut's safety team is alerted with your live location, and the emergency contacts you saved are messaged. You can also call 112 from the same screen.",
+    a: "SheOut's safety team is alerted with your live location, and the SOS screen lets you text the emergency contacts you saved from your own phone in one tap. You can also call 112 from the same screen.",
   },
   {
     q: 'Do I need to download an app?',

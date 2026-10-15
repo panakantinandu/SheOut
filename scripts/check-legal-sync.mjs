@@ -74,6 +74,11 @@ const BANNED = [
   /police[- ]verified/i,
   /police[- ]verification review/i, // O-24: the About screen
   /records a police verification/i, // O-24: the Safety Centre
+  // SheOut cannot text SOS contacts until an SMS provider is live (DLT). Remove these four when it is.
+  /sends them your location by SMS/i,
+  /are sent an SMS with your live location/i,
+  /everyone here is sent an SMS/i,
+  /SheOut texts every emergency contact/i,
   /background[- ]verified/i,
   /100% safe/i,
   /lorem ipsum/i,

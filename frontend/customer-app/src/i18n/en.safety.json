@@ -4,7 +4,7 @@
     "dangerBody": "A ticket is read when support reaches it. If you need help this minute, use SOS to alert your emergency contacts, or call {{number}}."
   },
   "contacts": {
-    "whatSosDoes": "If you raise an SOS, everyone here is sent an SMS with your location.",
+    "whatSosDoes": "If you raise an SOS, the SOS screen lets you text everyone here from your own phone in one tap, with your location filled in.",
     "tellThem": "They are never messaged at any other time. Please tell them you have added their number. It is their number, not yours, and they have not agreed to anything with us.",
     "emptyWarning": "SOS cannot reach anyone until you add at least one person.",
     "removeWarning": "{{name}} will no longer be told if you raise an SOS."
@@ -68,8 +68,8 @@
     "sos": {
       "title": "What SOS does, step by step",
       "step1": "Open SOS - the red button in the bottom bar - and press the SOS circle. A 5-second countdown appears with a large Cancel button; the SOS goes when it ends, or at once if you press Send SOS now.",
-      "step2": "Your location goes to SheOut. SheOut texts every emergency contact you have saved, with your location, and SheOut's operations team is alerted at the same moment.",
-      "step3": "You see how many of your contacts were reached. If a text could not reach someone, you can send it from your own phone in one tap.",
+      "step2": "Your location goes to SheOut, and SheOut's operations team is alerted at once. SheOut cannot text your emergency contacts yet - its SMS service is waiting for approval.",
+      "step3": "The SOS screen then gives you a one-tap button to text your contacts from your own phone, with your location filled in. Press Send in your SMS app.",
       "step4": "Call {{number}} from the same screen if you need police, an ambulance or fire services.",
       "contacts": "Your emergency contacts are only ever messaged when you raise an SOS. Add them in Profile > Emergency contacts, and tell them you have.",
       "open": "Open SOS"
