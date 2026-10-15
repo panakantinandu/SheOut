@@ -1,22 +1,15 @@
-import { useRef, useState } from 'react';
-import { ArrowRight, Play } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { LINKS, SELLERS } from '../content';
 import { stagger } from '../lib/motion';
-import { SampleLabel } from './SampleLabel';
+import { Device } from './Device';
 
 /**
- * The seller story, with the apps' own "Sell on SheOut" video. It has sound
- * and a person speaking, so it never plays on its own - only when pressed,
- * with the browser's controls.
+ * The seller story, with the marketplace screen from the customer app. The
+ * "Sell on SheOut" walkthrough video came off the site on 2026-10-15: it still
+ * showed the removed illustrations (docs/assets-licences.md). It comes back
+ * once it is re-recorded from the current app.
  */
 export function Sellers() {
-  const video = useRef<HTMLVideoElement>(null);
-  const [started, setStarted] = useState(false);
-  const start = () => {
-    setStarted(true);
-    requestAnimationFrame(() => video.current?.play().catch(() => {}));
-  };
-
   return (
     <section id="sellers" className="relative py-24 sm:py-32">
       <div className="wrap">
@@ -43,33 +36,11 @@ export function Sellers() {
               </a>
             </div>
 
-            <div className="relative mx-auto w-full max-w-[340px]" data-reveal="right">
-              <div className="overflow-hidden rounded-[28px] bg-black shadow-[0_40px_80px_-30px_rgba(36,10,80,0.6)] ring-1 ring-black/5">
-                <video
-                  ref={video}
-                  className="aspect-[9/16] w-full object-cover"
-                  poster="/media/sell-on-sheout-poster.webp"
-                  preload="none"
-                  playsInline
-                  controls={started}
-                >
-                  <source src="/media/sell-on-sheout.mp4" type="video/mp4" />
-                </video>
-                <SampleLabel className="left-3 top-3" />
-              </div>
-              {!started && (
-                <button
-                  type="button"
-                  onClick={start}
-                  className="group absolute inset-0 grid place-items-center rounded-[28px]"
-                  aria-label="Play the Sell on SheOut video"
-                >
-                  <span className="relative grid h-20 w-20 place-items-center rounded-full bg-white/95 text-primary shadow-overlay transition-transform duration-300 ease-out-expo group-hover:scale-110">
-                    <span className="absolute inset-0 rounded-full bg-white/60 motion-safe:animate-pulse-ring" />
-                    <Play className="relative ml-1 h-8 w-8 fill-current" aria-hidden />
-                  </span>
-                </button>
-              )}
+            <div className="relative mx-auto w-[min(78vw,300px)]" data-reveal="right">
+              <Device
+                screen="rider-marketplace"
+                alt="The SheOut marketplace: shops run by women nearby, by category - fashion and sarees, beauty and more"
+              />
             </div>
           </div>
         </div>
