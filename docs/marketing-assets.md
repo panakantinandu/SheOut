@@ -22,12 +22,12 @@ checks it in CI.
 
 | Picture | State |
 |---|---|
-| 3 screens without a map (marketplace, partner home, payouts) | Re-shot from the current apps |
+| 2 screens without a map (partner home, payouts) | Re-shot from the current apps (the marketplace screen stood in for the seller video until it was re-made, then was removed) |
 | 6 screens with a map (book, partner on the way, arrived, on trip, payment, new request) | **Still the 2026-10-06 shots**: invented 4.9 (128) rating on three, the removed scooter and avatar art, paise on the payment screen. They need the Google map, and the local builds have no Maps key |
 | 8 screens nothing on the site used (home, safety, SOS, contacts, ID verified, earnings, going to pickup, partner on trip) | Removed from `public/screens`; re-shot copies are in the capture folder if a section wants them |
 | Share image (`og-image.jpg`) | Rebuilt from re-shot screens without a map |
 | Hero loop (`media/hero-*`) | Re-rendered from re-shot screens without a map. The trip sequence returns when the map screens are re-shot |
-| "Sell on SheOut" video | **Taken off the site.** It shows the removed illustrations and category photos (it is silent; there is no voice). The marketplace screen stands in. The same video still ships inside the customer app (`customer-app/public/videos/sell-on-sheout.*`) and needs the same re-recording |
+| "Sell on SheOut" video | **Re-made on 2026-10-15** from the current app: a scripted walkthrough of the three ways in and the four registration steps, sample data, captions, no voice. English on the site; English, Hindi and Telugu in the customer app (each customer gets her language). Made by `seller-shots.mjs` (screens) and `seller-video.mjs` (video). The Hindi and Telugu captions need a fluent reader |
 | Partner payouts screen | Showed `₹3,413.00`: the screen printed two decimals. Fixed in the app on `fix/whole-rupee-money`; the site screenshot was re-shot from that build and reads `₹3,413` |
 
 ## How to re-shoot
@@ -75,12 +75,3 @@ for the re-shot screens, and run `node scripts/check-marketing-assets.mjs --stri
 
 - **The six map screenshots** and the hero loop's trip sequence: run the
   command above once `maps.env` exists.
-- **The "Sell on SheOut" video**, on the site and inside the customer app
-  (`customer-app/public/videos/sell-on-sheout.*`). The original was the
-  owner's own screen recording of 30 September
-  (`public/SheOut-Seller-Registration(SampleVideo).mp4`, untracked),
-  reframed and encoded to 720×1280. Re-recording needs either a new recording
-  from the current app (it would then be reframed and encoded the same way),
-  or a scripted walkthrough built for it. The seller screens have no map, so
-  the key is not needed for this one. Until then the in-app copy still shows
-  the old art.
