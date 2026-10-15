@@ -28,7 +28,7 @@ checks it in CI.
 | Share image (`og-image.jpg`) | Rebuilt from re-shot screens without a map |
 | Hero loop (`media/hero-*`) | Re-rendered from re-shot screens without a map. The trip sequence returns when the map screens are re-shot |
 | "Sell on SheOut" video | **Taken off the site.** It shows the removed illustrations and category photos (it is silent; there is no voice). The marketplace screen stands in. The same video still ships inside the customer app (`customer-app/public/videos/sell-on-sheout.*`) and needs the same re-recording |
-| Partner payouts screen | Showed `₹3,413.00`: the screen printed two decimals. Fixed in the app on `fix/whole-rupee-money`; the payouts screenshot is re-shot after that merges |
+| Partner payouts screen | Showed `₹3,413.00`: the screen printed two decimals. Fixed in the app on `fix/whole-rupee-money`; the site screenshot was re-shot from that build and reads `₹3,413` |
 
 ## How to re-shoot
 

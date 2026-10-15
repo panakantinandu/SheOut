@@ -3,7 +3,7 @@
   "screens": {
     "rider-marketplace": { "captured": "2026-10-15", "from": "customer app, branch feat/legal-privacy-a11y 86a1471, sample data" },
     "partner-home-online": { "captured": "2026-10-15", "from": "partner app, branch feat/legal-privacy-a11y 86a1471, sample data" },
-    "partner-payouts": { "captured": "2026-10-15", "from": "partner app, branch feat/legal-privacy-a11y 86a1471, sample data" },
+    "partner-payouts": { "captured": "2026-10-15", "from": "partner app, branch fix/whole-rupee-money 685d629 (whole-rupee fix), sample data" },
     "rider-book-ride": { "captured": "2026-10-06", "from": "live customer app", "oldCapture": "shows the removed scooter illustration; needs the map (Maps key at build time)" },
     "rider-partner-on-the-way": { "captured": "2026-10-06", "from": "live customer app", "oldCapture": "shows an invented 4.9 (128) rating and an avatar cut from the removed women.webp; needs the map" },
     "rider-partner-arrived": { "captured": "2026-10-06", "from": "live customer app", "oldCapture": "shows an invented 4.9 (128) rating and an avatar cut from the removed women.webp; needs the map" },
