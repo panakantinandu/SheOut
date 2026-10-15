@@ -58,6 +58,11 @@ expectEqual(
 );
 
 expectEqual(
+  'Court-record screening consent version (content.ts vs application.yml)',
+  one(content, /export const COURT_SCREEN_CONSENT_VERSION = '([^']+)'/, 'COURT_SCREEN_CONSENT_VERSION'),
+  one(yml, /consent-version: \$\{COURT_SCREEN_CONSENT_VERSION:([^}]+)\}/, 'court-screen consent-version')
+);
+expectEqual(
   'Refund to original method, working days (legal-entity.config.json vs application.yml)',
   String(entity.refundToSourceWorkingDays),
   one(yml, /to-source-working-days: \$\{REFUND_TO_SOURCE_WORKING_DAYS:([^}]+)\}/, 'to-source-working-days')

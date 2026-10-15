@@ -40,6 +40,7 @@ public class ManualCheckProvider implements CheckProvider {
             case INSURANCE -> "A person reads the policy: this vehicle, commercial use, in date.";
             case PAN -> "A person checks her PAN.";
             case BACKGROUND -> "A person reads her police certificate.";
+            case COURT_RECORD_SCREEN -> "A person searches public court records by hand. A screening aid, not police verification.";
         }, null);
     }
 }

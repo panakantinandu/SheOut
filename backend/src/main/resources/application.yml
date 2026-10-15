@@ -179,6 +179,8 @@ sheout:
       chat-messages: ${RETENTION_DAYS_CHAT:90}
       shift-photos: ${RETENTION_DAYS_SHIFT_PHOTOS:30}
       rejected-documents: ${RETENTION_DAYS_REJECTED_DOCUMENTS:30}
+      court-screenings-rejected: ${RETENTION_DAYS_COURT_SCREEN_REJECTED:30}
+      court-screenings-departed: ${RETENTION_DAYS_COURT_SCREEN_DEPARTED:365}
 
   refunds:
     # Working days within which a refund that must go back to the original
@@ -199,6 +201,20 @@ sheout:
     terms-version: ${LEGAL_TERMS_VERSION:2026-10-02}
 
   verification:
+    # Manual court-record screening (CourtScreeningService): a person
+    # searches public court records by hand and writes each search down. A
+    # screening aid, never "police verification". OFF by default; while off
+    # every screening endpoint answers 404 and partners see nothing.
+    court-screen:
+      enabled: ${ADMIN_COURT_SCREEN_ENABLED:false}
+      # The wording she agrees to (COURT_SCREEN_CONSENT in the design
+      # system's legal content). Bumping it asks again at the next screening.
+      consent-version: ${COURT_SCREEN_CONSENT_VERSION:2026-10-14-draft}
+      # Days she has to answer once told a record may match her name, or once
+      # asked for a police clearance certificate.
+      response-days: ${COURT_SCREEN_RESPONSE_DAYS:7}
+      # Searched for every partner; her home district is added per screening.
+      districts: ${COURT_SCREEN_DISTRICTS:Hyderabad,Rangareddy,Medchal-Malkajgiri}
     # What the app tells somebody who is waiting, BEFORE there are enough
     # real reviews to measure. Said as a target ("we aim to") rather than
     # as a fact, and replaced by the measured median once five reviews

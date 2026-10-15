@@ -1206,5 +1206,42 @@
       "POLICE_CERTIFICATE": "police certificate",
       "BACKGROUND_CHECK_REPORT": "background check report"
     }
+  },
+  "courtScreen": {
+    "heading": "Court-record check",
+    "error": "Could not save that. Try again.",
+    "consent": {
+      "title": "May we check public court records?",
+      "body": "Before you carry customers, a person on our team searches the public eCourts website for your name, by hand. This is a screening, not police verification. You will be told before any decision and can explain.",
+      "read": "Read the full wording",
+      "hide": "Hide the full wording",
+      "agree": "I agree to the court-record check"
+    },
+    "checking": {
+      "title": "We are checking public court records",
+      "body": "A person on our team is doing this by hand. It usually takes a few days. You do not need to do anything now.",
+      "received": "Thank you. We are looking at what you sent."
+    },
+    "moreInfo": {
+      "title": "We need more information",
+      "body": "While checking public court records, we found a record that may share your name. This often turns out to be someone else. Tell us anything that helps, or send your own police clearance certificate.",
+      "due": "Please answer by {{date}}.",
+      "label": "Your answer",
+      "send": "Send my answer",
+      "pcc": "You can upload a police clearance certificate under Police verification on this screen."
+    },
+    "pcc": {
+      "title": "We need more information",
+      "body": "Please upload a police clearance certificate under Police verification on this screen."
+    },
+    "done": "The court-record check is complete.",
+    "notCleared": "We could not complete your court-record check, so we cannot let you carry customers for now. If you think this is a mistake, write to our Grievance Officer from the Grievance Redressal page.",
+    "withdrawn": "You withdrew your consent and we stopped the check. Without it, we may not be able to let you carry customers.",
+    "withdraw": {
+      "label": "Withdraw my consent",
+      "warning": "If you withdraw, we stop the check. Without it, we may not be able to let you carry customers.",
+      "keep": "Keep the check",
+      "confirm": "Withdraw consent"
+    }
   }
 }

@@ -31,11 +31,14 @@ class AccountDeletionDocumentListener {
     private final PartnerDocumentService partnerDocuments;
     private final PoliceVerificationService police;
     private final VerificationCheckService checks;
+    private final CourtScreeningService courtScreenings;
 
     AccountDeletionDocumentListener(VerificationRecordRepository records, DocumentStorage documentStorage,
                                     ShiftCheckService shiftChecks, PartnerDocumentService partnerDocuments,
-                                    PoliceVerificationService police, VerificationCheckService checks) {
+                                    PoliceVerificationService police, VerificationCheckService checks,
+                                    CourtScreeningService courtScreenings) {
         this.checks = checks;
+        this.courtScreenings = courtScreenings;
         this.records = records;
         this.documentStorage = documentStorage;
         this.shiftChecks = shiftChecks;
@@ -57,6 +60,10 @@ class AccountDeletionDocumentListener {
         // What the automatic checks noticed (a typed name, a matching number)
         // and any override note; each check's status and who decided stay.
         checks.eraseFor(event.accountId());
+        // A court-record screening is kept, anonymised, until its retention
+        // period after she leaves (court-screenings-departed) - long enough to
+        // answer a later safety complaint, then it goes.
+        courtScreenings.markLeft(event.accountId());
         records.findByAccountId(event.accountId()).ifPresent(record -> {
             if (record.getAadhaarDocumentKey() != null) {
                 documentStorage.delete(record.getAadhaarDocumentKey());

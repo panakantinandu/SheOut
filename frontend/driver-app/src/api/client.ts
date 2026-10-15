@@ -2,6 +2,7 @@ import type { AssistantReply, AssistantTurn } from '@sheout/design-system';
 import type { LiveSelfieResult, PushApi, SelfieChallenge } from '@sheout/design-system';
 import { installId, networkErrorText, requestErrorMessage, serverErrorText, type ReferralSummary, type ReferralWelcomeDetails } from '@sheout/design-system';
 import type {
+  CourtScreeningView,
   ParcelExceptionReason,
   ParcelPhotoKind,
   ParcelView,
@@ -464,6 +465,26 @@ export const verificationApi = {
   /** She agrees to the version she was shown. 409 CONSENT_VERSION_OUTDATED if it changed meanwhile. */
   acceptConsent(version: string): Promise<ConsentStatus> {
     return request('/api/v1/driver-verification/consent', { method: 'POST', body: { version } });
+  },
+
+  /**
+   * Her court-record screening, if a reviewer asked for one. 404 (ApiError)
+   * when there is none or the feature is off - the card then shows nothing.
+   */
+  getCourtScreening(): Promise<CourtScreeningView> {
+    return request('/api/v1/driver-verification/court-screening');
+  },
+
+  acceptCourtScreening(version: string): Promise<CourtScreeningView> {
+    return request('/api/v1/driver-verification/court-screening/consent', { method: 'POST', body: { version } });
+  },
+
+  withdrawCourtScreening(): Promise<CourtScreeningView> {
+    return request('/api/v1/driver-verification/court-screening/withdraw', { method: 'POST' });
+  },
+
+  respondToCourtScreening(text: string): Promise<CourtScreeningView> {
+    return request('/api/v1/driver-verification/court-screening/response', { method: 'POST', body: { text } });
   },
 
   /**

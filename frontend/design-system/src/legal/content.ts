@@ -109,6 +109,7 @@ export const PRIVACY_POLICY: LegalDocument = {
         'Your emergency contacts: names and numbers you enter, used only when you raise an SOS.',
         'For parcels: the receiver\'s name and phone number, and photos the partner takes at pickup and handover.',
         'For partners: your driving licence, vehicle registration (RC), insurance and PUC certificates and their numbers, your vehicle number, any police or background certificate you upload, a selfie, a short set of liveness frames and a photo of your helmet at the start of each shift, and the bank account or UPI ID your earnings are paid to.',
+        'For partners, only if SheOut asks and you agree separately: a record of our manual search of public court records for your name (where we searched, under which name, what we found). It is a screening, not police verification. If you are not cleared, the details are anonymised after 30 days; when you leave, after 12 months.',
         'For sellers in the Marketplace: your shop details, and the phone or WhatsApp number you choose to show to signed-in customers.',
         'Technical details: a notification token if you allow notifications, the type of browser you sign in from (shown to you under "Your devices"), and a random install ID used to stop referral fraud.',
       ],
@@ -626,6 +627,45 @@ export const PARTNER_VERIFICATION_CONSENT: LegalDocument = {
       paragraphs: [
         `My documents are kept while I am a SheOut partner, and deleted with my account. Whether I was verified, and when, is kept as part of the record of the trips I took. ${TODO_LAWYER}`,
         `I can withdraw this consent by deleting my account. Without it, SheOut cannot verify me and I cannot go online. ${TODO_LAWYER}`,
+      ],
+    },
+  ],
+};
+
+/**
+ * Agreeing to a manual search of public court records, asked only when a
+ * reviewer requests a screening (and only while ADMIN_COURT_SCREEN_ENABLED is
+ * on). The server checks she agreed to exactly this version
+ * (COURT_SCREEN_CONSENT_VERSION); CI keeps the two equal.
+ * <p>
+ * DRAFT, pending legal review: every paragraph carries the lawyer marker.
+ * It must never describe the result as police or background verification.
+ */
+export const COURT_SCREEN_CONSENT_VERSION = '2026-10-14-draft';
+
+export const COURT_SCREEN_CONSENT: LegalDocument = {
+  title: 'Consent to a court-record check',
+  effective: `Version ${COURT_SCREEN_CONSENT_VERSION}`,
+  intro: `I agree to SheOut searching public court records for my name, as described below, as part of deciding whether I can carry customers. ${TODO_LAWYER}`,
+  sections: [
+    {
+      heading: 'What SheOut does',
+      paragraphs: [
+        `A trained member of SheOut's team searches the public eCourts website by hand for cases under my name and its spellings, in Hyderabad, Rangareddy, Medchal-Malkajgiri and my home district. Nothing is searched automatically. This is a screening, not police verification. ${TODO_LAWYER}`,
+        `If a record might be mine, a second person checks it. Before any decision against me, SheOut tells me and gives me time - the app shows the date - to explain or to send my own police clearance certificate. ${TODO_LAWYER}`,
+      ],
+    },
+    {
+      heading: 'What is kept',
+      paragraphs: [
+        `Each search: where, under which name, when, and what was found. For a possible match, only the type of case, its status, the year and the court - never the judgment or anyone else's name. ${TODO_LAWYER}`,
+        `If I am not cleared, the reason category is kept and the details are anonymised after 30 days. When I leave SheOut, the record is anonymised after 12 months. ${TODO_LAWYER}`,
+      ],
+    },
+    {
+      heading: 'My choices',
+      paragraphs: [
+        `I can withdraw this consent at any time in the app. The search then stops. Without it, SheOut may not be able to let me carry customers. ${TODO_LAWYER}`,
       ],
     },
   ],

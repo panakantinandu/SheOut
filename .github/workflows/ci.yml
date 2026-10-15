@@ -75,3 +75,24 @@ jobs:
         run: npm run build --workspace frontend/marketing-site
       - name: No removed claims or placeholder content in what ships
         run: node scripts/check-legal-sync.mjs --bundles frontend/customer-app/dist frontend/driver-app/dist frontend/marketing-site/dist
+
+  # axe-core on every main screen of both apps (en/hi/te, four widths) and the
+  # console's court-record check flow, all against mocked APIs. A serious or
+  # critical accessibility violation fails the run.
+  accessibility:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Rider app
+        run: npm run test:e2e --workspace frontend/customer-app -- a11y --workers=2
+      - name: Partner app
+        run: npm run test:e2e --workspace frontend/driver-app -- a11y --workers=2
+      - name: Console court-record check
+        run: npx playwright test -c qa/console-e2e
