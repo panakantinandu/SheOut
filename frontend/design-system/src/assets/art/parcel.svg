@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 480">
+  <!-- SheOut original artwork (2026-10-14): a parcel on its way, with a drop pin. Drawn for SheOut; no third-party artwork. -->
+  <defs>
+    <linearGradient id="pc-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFE4CC"/>
+      <stop offset="1" stop-color="#FFB27A"/>
+    </linearGradient>
+    <clipPath id="pc-clip"><rect width="480" height="480" rx="104"/></clipPath>
+  </defs>
+  <g clip-path="url(#pc-clip)">
+  <rect width="480" height="480" rx="104" fill="url(#pc-bg)"/>
+  <!-- road -->
+  <path d="M-10 420C120 360 200 400 300 330s150-40 200-60v220H-10z" fill="#F96717" opacity="0.85"/>
+  <path d="M40 430C150 380 220 410 310 350" stroke="#FFFFFF" stroke-width="10" stroke-dasharray="26 22" stroke-linecap="round" fill="none" opacity="0.8"/>
+  <!-- speed lines -->
+  <g stroke="#F96717" stroke-width="14" stroke-linecap="round">
+    <line x1="44" y1="226" x2="110" y2="226"/>
+    <line x1="62" y1="262" x2="118" y2="262"/>
+    <line x1="44" y1="298" x2="104" y2="298"/>
+  </g>
+  <!-- box (isometric) -->
+  <g>
+    <path d="M240 150l108 52v124l-108 52-108-52V202z" fill="#C8833F"/>
+    <path d="M240 150l108 52-108 52-108-52z" fill="#E9A866"/>
+    <path d="M240 254v124l108-52V202z" fill="#B06E2E"/>
+    <path d="M186 176l108 52v44l-24 12v-44L162 188z" fill="#F6D2A8"/>
+    <rect x="262" y="300" width="56" height="34" rx="6" fill="#FFFFFF" opacity="0.9" transform="rotate(-25 290 317)"/>
+  </g>
+  <!-- drop pin -->
+  <g transform="translate(330 52)">
+    <path d="M44 0c24 0 44 20 44 44 0 33-44 78-44 78S0 77 0 44C0 20 20 0 44 0z" fill="#D6131F"/>
+    <circle cx="44" cy="44" r="17" fill="#FFFFFF"/>
+  </g>
+  </g>
+</svg>

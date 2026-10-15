@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 480">
+  <!-- SheOut original artwork (2026-10-14): a woman on a scooter, with a pickup pin. Drawn for SheOut; no third-party artwork. -->
+  <defs>
+    <linearGradient id="bt-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8F63E6"/>
+      <stop offset="1" stop-color="#4A1A9E"/>
+    </linearGradient>
+    <linearGradient id="bt-body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#B69BFF"/>
+      <stop offset="1" stop-color="#7B4FD6"/>
+    </linearGradient>
+    <clipPath id="bt-clip"><rect width="480" height="480" rx="104"/></clipPath>
+  </defs>
+  <g clip-path="url(#bt-clip)">
+  <rect width="480" height="480" rx="104" fill="url(#bt-bg)"/>
+  <!-- skyline -->
+  <g fill="#FFFFFF" opacity="0.12">
+    <rect x="40" y="170" width="44" height="150" rx="6"/>
+    <rect x="92" y="130" width="54" height="190" rx="6"/>
+    <rect x="154" y="190" width="40" height="130" rx="6"/>
+    <rect x="300" y="150" width="50" height="170" rx="6"/>
+    <rect x="358" y="200" width="70" height="120" rx="6"/>
+  </g>
+  <!-- road and speed lines -->
+  <rect x="0" y="372" width="480" height="108" fill="#36116F" opacity="0.55"/>
+  <g stroke="#FFFFFF" stroke-width="10" stroke-linecap="round" opacity="0.5">
+    <line x1="40" y1="262" x2="98" y2="262"/>
+    <line x1="24" y1="292" x2="70" y2="292"/>
+  </g>
+  <!-- pickup pin -->
+  <g transform="translate(352 64)">
+    <path d="M40 0c22 0 40 18 40 40 0 30-40 70-40 70S0 70 0 40C0 18 18 0 40 0z" fill="#FFFFFF"/>
+    <circle cx="40" cy="40" r="15" fill="#F96717"/>
+  </g>
+  <!-- scooter -->
+  <g>
+    <circle cx="150" cy="372" r="44" fill="#241A33"/>
+    <circle cx="150" cy="372" r="18" fill="#EDE5FA"/>
+    <circle cx="352" cy="372" r="44" fill="#241A33"/>
+    <circle cx="352" cy="372" r="18" fill="#EDE5FA"/>
+    <path d="M110 344c0-30 24-46 56-46h112c18 0 28 10 34 24l24 52H128c-10 0-18-8-18-18z" fill="url(#bt-body)"/>
+    <rect x="176" y="282" width="98" height="22" rx="11" fill="#241A33"/>
+    <path d="M316 322l-26-120" stroke="#241A33" stroke-width="16" stroke-linecap="round"/>
+    <path d="M272 196h44" stroke="#241A33" stroke-width="14" stroke-linecap="round"/>
+    <rect x="96" y="236" width="74" height="58" rx="12" fill="#FCA325"/>
+    <rect x="96" y="256" width="74" height="10" fill="#F96717" opacity="0.6"/>
+  </g>
+  <!-- rider -->
+  <g>
+    <path d="M232 146c-26 4-44 24-72 34" stroke="#1F1424" stroke-width="18" stroke-linecap="round" fill="none"/>
+    <path d="M226 292l22-96c4-18 20-28 38-24 18 4 26 20 22 38l-18 74z" fill="#E04F8C"/>
+    <path d="M286 200l34 4" stroke="#E04F8C" stroke-width="20" stroke-linecap="round"/>
+    <circle cx="322" cy="204" r="10" fill="#C98F6B"/>
+    <path d="M238 290l58 4 18 36" stroke="#36116F" stroke-width="24" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <rect x="252" y="160" width="26" height="24" rx="10" fill="#C98F6B"/>
+    <circle cx="262" cy="134" r="34" fill="#C98F6B"/>
+    <path d="M224 132a38 40 0 0 1 76-4l-6 2h-70z" fill="#F96717"/>
+    <rect x="262" y="124" width="40" height="14" rx="7" fill="#241A33" opacity="0.85"/>
+  </g>
+  </g>
+</svg>

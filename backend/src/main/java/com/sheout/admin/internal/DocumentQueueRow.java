@@ -6,6 +6,7 @@ import com.sheout.driververification.PartnerDocumentType;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
+import com.sheout.sharedkernel.privacy.Pii;
 
 /**
  * One row of the documents queues: a partner and one thing about her
@@ -26,7 +27,7 @@ public record DocumentQueueRow(
         UUID documentId,
         PartnerDocumentType documentType,
         PartnerDocumentStatus status,
-        String documentNumber,
+        @Pii(Pii.Kind.DOCUMENT) String documentNumber,
         LocalDate validUntil,
         Long daysLeft,
         Instant submittedAt,

@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 374">
+  <!-- SheOut original artwork (2026-10-14): three women side by side. Drawn for SheOut; no third-party artwork, no real person. -->
+  <!-- left: purple -->
+  <g>
+    <path d="M40 374c0-92 50-150 128-150s128 58 128 150z" fill="#7B4FD6"/>
+    <path d="M132 224h72l-36 42z" fill="#EDE5FA"/>
+    <rect x="148" y="190" width="40" height="44" rx="16" fill="#C98F6B"/>
+    <path d="M94 150c0-54 32-92 74-92s76 38 76 92c0 50-12 96-20 120H108c-8-24-14-70-14-120z" fill="#2A1A2F"/>
+    <ellipse cx="168" cy="146" rx="50" ry="58" fill="#D9A07C"/>
+    <path d="M116 132c10-44 44-62 80-52 22 6 38 24 42 52-34-6-62-22-74-40-12 22-26 34-48 40z" fill="#2A1A2F"/>
+    <path d="M150 170q18 14 36 0" stroke="#8A4B3A" stroke-width="5" stroke-linecap="round" fill="none"/>
+    <circle cx="150" cy="146" r="5" fill="#2A1A2F"/>
+    <circle cx="186" cy="146" r="5" fill="#2A1A2F"/>
+  </g>
+  <!-- centre: pink, in front -->
+  <g>
+    <path d="M212 374c0-104 62-168 148-168s148 64 148 168z" fill="#E04F8C"/>
+    <path d="M318 206h84l-42 48z" fill="#FDE7F0"/>
+    <rect x="338" y="168" width="44" height="50" rx="18" fill="#B87A57"/>
+    <path d="M270 128c0-62 38-104 90-104s92 42 92 104c0 66-16 112-26 140H296c-10-28-26-74-26-140z" fill="#1F1424"/>
+    <ellipse cx="360" cy="122" rx="58" ry="66" fill="#C98F6B"/>
+    <path d="M300 112c10-52 52-74 96-62 26 8 42 30 46 62-40-4-70-24-84-46-14 24-32 40-58 46z" fill="#1F1424"/>
+    <path d="M338 152q22 18 44 0" stroke="#7A3D2E" stroke-width="6" stroke-linecap="round" fill="none"/>
+    <circle cx="338" cy="122" r="6" fill="#1F1424"/>
+    <circle cx="382" cy="122" r="6" fill="#1F1424"/>
+    <circle cx="300" cy="138" r="7" fill="#FCA325"/>
+    <circle cx="420" cy="138" r="7" fill="#FCA325"/>
+  </g>
+  <!-- right: yellow -->
+  <g>
+    <path d="M424 374c0-92 50-150 128-150s128 58 128 150z" fill="#FCA325"/>
+    <path d="M516 224h72l-36 42z" fill="#FFF2DE"/>
+    <rect x="532" y="190" width="40" height="44" rx="16" fill="#D9A07C"/>
+    <circle cx="552" cy="72" r="30" fill="#2A1A2F"/>
+    <ellipse cx="552" cy="146" rx="50" ry="58" fill="#E3B08E"/>
+    <path d="M500 142c2-50 30-74 52-74s50 24 52 74c-20-4-40-18-52-38-12 20-32 34-52 38z" fill="#2A1A2F"/>
+    <path d="M534 170q18 14 36 0" stroke="#8A4B3A" stroke-width="5" stroke-linecap="round" fill="none"/>
+    <circle cx="534" cy="146" r="5" fill="#2A1A2F"/>
+    <circle cx="570" cy="146" r="5" fill="#2A1A2F"/>
+  </g>
+</svg>

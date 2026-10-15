@@ -3,6 +3,7 @@ package com.sheout.driververification;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import com.sheout.sharedkernel.privacy.Pii;
 
 /**
  * Whether a partner may take trips right now, and if not, exactly why.
@@ -58,7 +59,7 @@ public record PartnerReadiness(
             boolean required,
             /** Null when nothing is on file. */
             PartnerDocumentStatus status,
-            String documentNumber,
+            @Pii(Pii.Kind.DOCUMENT) String documentNumber,
             LocalDate issuedOn,
             LocalDate validUntil,
             String rejectionReason,

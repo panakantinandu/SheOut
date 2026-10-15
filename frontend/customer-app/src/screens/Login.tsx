@@ -450,11 +450,11 @@ export function Login() {
               <p className="mt-6 text-center text-sm text-text-secondary">
                 {mode === 'login' ? (
                   <>
-                    <Trans i18nKey="login.newHint" components={{ link: <button type="button" onClick={() => setMode('signup')} className="font-semibold text-primary underline" /> }} />
+                    <Trans i18nKey="login.newHint" components={{ action: <button type="button" onClick={() => setMode('signup')} className="inline-block min-h-[24px] py-0.5 font-semibold text-primary underline" /> }} />
                   </>
                 ) : (
                   <>
-                    <Trans i18nKey="login.existingHint" components={{ link: <button type="button" onClick={() => setMode('login')} className="font-semibold text-primary underline" /> }} />
+                    <Trans i18nKey="login.existingHint" components={{ action: <button type="button" onClick={() => setMode('login')} className="inline-block min-h-[24px] py-0.5 font-semibold text-primary underline" /> }} />
                   </>
                 )}
               </p>
