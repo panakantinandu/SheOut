@@ -2,21 +2,26 @@ import { Play, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Button, Overlay, useTranslation } from '@sheout/design-system';
 
-const VIDEO = '/videos/sell-on-sheout.mp4';
-const POSTER = '/videos/sell-on-sheout-poster.webp';
+/** One video per language, captions in that language; English when there is none for hers. */
+const VIDEO_LANGS = ['en', 'hi', 'te'];
+const media = (language: string) => {
+  const lang = VIDEO_LANGS.includes(language) ? language : 'en';
+  return { video: `/videos/sell-on-sheout.${lang}.mp4`, poster: `/videos/sell-on-sheout-poster.${lang}.webp` };
+};
 
 /**
  * "Watch how it works": the one-minute walk-through of opening a shop,
  * under Start selling on the Marketplace.
  * <p>
  * A picture and a play button, not an autoplaying video in the page: the
- * file is 2.6 MB, and a woman scrolling the Marketplace on mobile data
+ * file is about 2 MB, and a woman scrolling the Marketplace on mobile data
  * should not pay for it unless she asks. Tapped, it opens full screen - it
  * is a phone-shaped video, made to be watched upright - and it ends on
  * Start selling, so what she just watched is one tap away.
  */
 export function SellHowToVideo({ onStart }: { onStart: () => void }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const { video: VIDEO, poster: POSTER } = media(i18n.language);
   const [open, setOpen] = useState(false);
 
   return (
@@ -55,7 +60,8 @@ export function SellHowToVideo({ onStart }: { onStart: () => void }) {
 }
 
 function HowToPlayer({ onClose, onStart }: { onClose: () => void; onStart: () => void }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const { video: VIDEO, poster: POSTER } = media(i18n.language);
   const video = useRef<HTMLVideoElement>(null);
   const [ended, setEnded] = useState(false);
 
