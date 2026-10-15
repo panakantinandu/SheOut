@@ -16,9 +16,9 @@
  * NOT LEGAL ADVICE. Wording a lawyer has not approved is either marked
  * {@link TODO_LAWYER} in the text or listed in docs/legal-open-items.md.
  */
-import { LEGAL_ENTITY, TODO_LEGAL, entityValue, isProcessorLive, type ProcessorKey } from './entity';
+import { GRIEVANCE_REGIMES, LEGAL_ENTITY, TODO_LEGAL, entityValue, grievanceLine, grievanceOfficer, isProcessorLive, type ProcessorKey } from './entity';
 
-export { TODO_LEGAL, TODO_FROM_OWNER, LEGAL_ENTITY, entityValue, isProcessorLive, missingEntityValues } from './entity';
+export { TODO_LEGAL, TODO_FROM_OWNER, LEGAL_ENTITY, entityValue, isProcessorLive, missingEntityValues, grievanceOfficer, grievanceLine } from './entity';
 
 export interface LegalSection {
   heading: string;
@@ -50,8 +50,9 @@ export const LEGAL_UPDATED = '14 October 2026';
 const effective = (version: string = LEGAL_VERSION) => `Version ${version} · Last updated ${LEGAL_UPDATED}`;
 
 const E = LEGAL_ENTITY;
-const officer = E.grievanceOfficer;
-const grievanceLine = `${entityValue(officer.name)}, ${officer.designation}, ${officer.email}`;
+// One officer per grievance regime (legal-entity.config.json), the appointment in effect today.
+const consumerOfficer = grievanceLine('consumerEcommerce');
+const dataOfficer = grievanceLine('dataProtection');
 
 /** Wording a lawyer has not yet approved. Rendered visibly, like TODO_LEGAL. */
 export const TODO_LAWYER = '[to be reviewed by lawyer]';
@@ -84,7 +85,7 @@ const whoWeAre = (): LegalSection => ({
   heading: 'Who we are',
   paragraphs: [
     `${E.brandLine}. Registered name: ${E.legalName}. CIN: ${entityValue(E.cin)}. Registered office: ${entityValue(E.registeredAddress)}.`,
-    `Contact: ${E.supportEmail}, ${entityValue(E.supportPhone)}. Grievance Officer: ${grievanceLine}.`,
+    `Contact: ${E.supportEmail}, ${entityValue(E.supportPhone)}. Grievance Officer: ${consumerOfficer}. Personal data: ${dataOfficer}.`,
   ],
 });
 
@@ -182,7 +183,7 @@ export const PRIVACY_POLICY: LegalDocument = {
         'You can ask for a copy of your data, correct it, delete your account, withdraw a consent, and name someone to act for you if you cannot.',
         'In the app, under Profile, Privacy & Data: "Download my data" gives you a file of what we hold about your account, and "Delete my account" closes it at once. You can also delete your account from the "Delete your account" page on our website. Completed trips and payments stay for the period the law requires, showing you as "Deleted User".',
         'Withdrawing consent for identity checks means we can no longer offer you the service, because every customer and partner on SheOut is verified.',
-        `For anything else, write to the Grievance Officer: ${grievanceLine}. We acknowledge within ${E.grievanceAcknowledgeHours} hours and answer within ${E.grievanceResolveDays} days. If you are not satisfied, you can complain to the Data Protection Board of India.`,
+        `For anything else, write to the Grievance Officer for personal data: ${dataOfficer}. We acknowledge within ${E.grievanceAcknowledgeHours} hours and answer within ${E.grievanceResolveDays} days. If you are not satisfied, you can complain to the Data Protection Board of India.`,
       ],
     },
     {
@@ -288,7 +289,7 @@ export const TERMS_OF_SERVICE: LegalDocument = {
       heading: 'Law, disputes and complaints',
       paragraphs: [
         `These terms are governed by the laws of India, and the courts at ${E.courts} have jurisdiction. ${TODO_LAWYER}`,
-        `Complaints: write to the Grievance Officer, ${grievanceLine}. We acknowledge within ${E.grievanceAcknowledgeHours} hours and resolve within ${E.grievanceResolveDays} days.`,
+        `Complaints: write to the Grievance Officer, ${consumerOfficer}. We acknowledge within ${E.grievanceAcknowledgeHours} hours and resolve within ${E.grievanceResolveDays} days.`,
       ],
     },
     whoWeAre(),
@@ -354,7 +355,7 @@ export const PARTNER_TERMS: LegalDocument = {
       heading: 'Law, disputes and complaints',
       paragraphs: [
         `These terms are governed by the laws of India, and the courts at ${E.courts} have jurisdiction. ${TODO_LAWYER}`,
-        `Complaints: write to the Grievance Officer, ${grievanceLine}.`,
+        `Complaints: write to the Grievance Officer, ${consumerOfficer}.`,
       ],
     },
     whoWeAre(),
@@ -399,7 +400,7 @@ export const REFUND_POLICY: LegalDocument = {
     {
       heading: 'Asking for a refund',
       paragraphs: [
-        `Open the trip in the app and choose "Report an issue", or write to ${E.supportEmail}. If you are not happy with the answer, write to the Grievance Officer, ${grievanceLine}.`,
+        `Open the trip in the app and choose "Report an issue", or write to ${E.supportEmail}. If you are not happy with the answer, write to the Grievance Officer, ${consumerOfficer}.`,
       ],
     },
     {
@@ -560,7 +561,11 @@ export const GRIEVANCE_PAGE: LegalDocument = {
     {
       heading: 'Grievance Officer',
       paragraphs: [
-        `If support has not resolved it, or the complaint is about your personal data, write to our Grievance Officer: ${grievanceLine}. The Grievance Officer is based in ${officer.basedIn}.`,
+        'If support has not resolved it, write to the Grievance Officer for your kind of complaint:',
+        ...GRIEVANCE_REGIMES.map((regime) => {
+          const r = E.grievanceOfficers[regime];
+          return `For ${r.handles}: ${grievanceLine(regime)}, based in ${grievanceOfficer(regime).basedIn} (${r.rule}).`;
+        }),
         'Please include your registered phone number and, for a trip, its date and time. Never send us your sign-in code.',
       ],
     },

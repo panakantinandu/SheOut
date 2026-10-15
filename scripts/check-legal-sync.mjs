@@ -51,9 +51,29 @@ expectEqual(
 const frontItems = [...(one(content, /PARCEL_PROHIBITED_ITEMS: Record<string, string> = \{([\s\S]*?)\};/, 'items') ?? '').matchAll(/^\s*([A-Z_]+):/gm)].map((m) => m[1]);
 const backItems = [...(one(parcelRules, /PROHIBITED_ITEMS = List\.of\(([\s\S]*?)\);/, 'PROHIBITED_ITEMS') ?? '').matchAll(/"([A-Z_]+)"/g)].map((m) => m[1]);
 expectEqual('Parcel prohibited items (content.ts vs ParcelRules)', frontItems, backItems);
+// Grievance officers: one list of appointments per regime (see entity.ts grievanceOfficer).
+const today = new Date().toISOString().slice(0, 10);
+const isDate = (d) => /^\d{4}-\d{2}-\d{2}$/.test(d) && !Number.isNaN(Date.parse(`${d}T00:00:00Z`)) && new Date(`${d}T00:00:00Z`).toISOString().startsWith(d);
+const inEffect = (list) => {
+  const started = list.filter((a) => a.effectiveFrom === 'TODO_FROM_OWNER' || (isDate(a.effectiveFrom) && a.effectiveFrom <= today));
+  const dated = started.filter((a) => a.effectiveFrom !== 'TODO_FROM_OWNER').sort((a, b) => a.effectiveFrom.localeCompare(b.effectiveFrom));
+  return dated.at(-1) ?? started.at(-1);
+};
+for (const regime of ['consumerEcommerce', 'dataProtection', 'itIntermediary']) {
+  const list = entity.grievanceOfficers?.[regime]?.appointments ?? [];
+  if (!list.length) failures.push(`grievanceOfficers.${regime}: no appointment`);
+  list.forEach((a, i) => {
+    const where = `grievanceOfficers.${regime}.appointments[${i}]`;
+    if (a.effectiveFrom !== 'TODO_FROM_OWNER' && !isDate(a.effectiveFrom)) failures.push(`${where}.effectiveFrom must be YYYY-MM-DD or TODO_FROM_OWNER, not "${a.effectiveFrom}"`);
+    if (a.basedIn !== 'India') failures.push(`${where}.basedIn must be India (the rules require a resident officer)`);
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(a.email ?? '')) failures.push(`${where}.email is not an email address`);
+  });
+  const dates = list.map((a) => a.effectiveFrom).filter(isDate);
+  if (dates.join() !== [...dates].sort().join()) failures.push(`grievanceOfficers.${regime}: appointments must be oldest first`);
+}
 expectEqual(
-  'Grievance Officer email (legal-entity.config.json vs application.yml)',
-  entity.grievanceOfficer.email,
+  'Grievance Officer email in effect today (legal-entity.config.json consumerEcommerce vs application.yml)',
+  inEffect(entity.grievanceOfficers?.consumerEcommerce?.appointments ?? [])?.email,
   one(yml, /grievance-officer-email: \$\{GRIEVANCE_OFFICER_EMAIL:([^}]*)\}/, 'grievance-officer-email')
 );
 

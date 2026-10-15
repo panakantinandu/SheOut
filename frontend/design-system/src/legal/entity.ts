@@ -1,4 +1,7 @@
 import config from './legal-entity.config.json';
+import { ISO_DATE, officerInEffect, type GrievanceOfficer, type GrievanceRegime, type GrievanceRegimeConfig } from './officers';
+
+export { GRIEVANCE_REGIMES, officerInEffect, type GrievanceOfficer, type GrievanceRegime, type GrievanceRegimeConfig } from './officers';
 
 /**
  * SheOut's business details and its processors, read from
@@ -40,7 +43,7 @@ export interface LegalEntity {
   registeredAddress: string;
   supportEmail: string;
   supportPhone: string;
-  grievanceOfficer: { name: string; designation: string; email: string; basedIn: string };
+  grievanceOfficers: Record<GrievanceRegime, GrievanceRegimeConfig> & { _comment?: string };
   courts: string;
   dataLocation: string;
   grievanceAcknowledgeHours: number;
@@ -54,6 +57,20 @@ export const LEGAL_ENTITY = config as LegalEntity;
 /** True for a processor SheOut really uses today. Only these are named in the Privacy Policy. */
 export function isProcessorLive(key: ProcessorKey): boolean {
   return LEGAL_ENTITY.processors.some((p) => p.key === key && p.live);
+}
+
+/** The officer for a regime on a given day (see officerInEffect). */
+export function grievanceOfficer(regime: GrievanceRegime, today: Date = new Date(), entity: LegalEntity = LEGAL_ENTITY): GrievanceOfficer {
+  return officerInEffect(entity.grievanceOfficers[regime].appointments, today);
+}
+
+/** "Name, Designation, email (since 1 November 2026)" - with placeholders where the owner has not supplied a value. */
+export function grievanceLine(regime: GrievanceRegime, today: Date = new Date()): string {
+  const o = grievanceOfficer(regime, today);
+  const since = ISO_DATE.test(o.effectiveFrom)
+    ? ` (since ${new Date(`${o.effectiveFrom}T00:00:00Z`).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })})`
+    : '';
+  return `${entityValue(o.name)}, ${o.designation}, ${o.email}${since}`;
 }
 
 /** Every config value still waiting for the owner, by its path - for the build guard and tests. */
