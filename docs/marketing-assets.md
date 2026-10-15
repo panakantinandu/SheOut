@@ -28,7 +28,7 @@ checks it in CI.
 | Share image (`og-image.jpg`) | Rebuilt from re-shot screens without a map |
 | Hero loop (`media/hero-*`) | Re-rendered from re-shot screens without a map. The trip sequence returns when the map screens are re-shot |
 | "Sell on SheOut" video | **Taken off the site.** It shows the removed illustrations and category photos (it is silent; there is no voice). The marketplace screen stands in. The same video still ships inside the customer app (`customer-app/public/videos/sell-on-sheout.*`) and needs the same re-recording |
-| Partner payouts screen | Shows `₹3,413.00`: the payouts screen itself prints two decimals. An app fix, not a marketing one |
+| Partner payouts screen | Showed `₹3,413.00`: the screen printed two decimals. Fixed in the app on `fix/whole-rupee-money`; the payouts screenshot is re-shot after that merges |
 
 ## How to re-shoot
 
@@ -47,23 +47,40 @@ on the record/replay harness in `D:\SheOut-Marketing`):
 - `publish.mjs` writes the site's screens (618×1259 WebP), the share image and
   the hero loop into `frontend/marketing-site/public`.
 
-To finish the eight map screens, someone with the Maps key runs this in
-PowerShell (the key is the one in the Vercel project's environment
-variables; it is never written to a file):
+**Pending until the owner supplies the Maps key** (decision of 2026-10-15:
+the key is never taken from a live site). The owner creates a local file
+**outside the repo**, `D:SheOut-Marketingmaps.env`, with two lines copied
+from the Vercel project:
 
-```powershell
-$env:VITE_GOOGLE_MAPS_API_KEY = '<key from Vercel>'
-$env:VITE_GOOGLE_MAPS_MAP_ID  = '<map id from Vercel>'
-npm run build --workspace frontend/customer-app
-npm run build --workspace frontend/driver-app
-Remove-Item Env:VITE_GOOGLE_MAPS_API_KEY, Env:VITE_GOOGLE_MAPS_MAP_ID
-$env:PLAYWRIGHT_BROWSERS_PATH = 'D:\DevTools\ms-playwright'
-node D:\_qa-scratch\marketing-refresh\shots.mjs replay
-$env:MAPS = '1'
-node D:\_qa-scratch\marketing-refresh\video-build\render.mjs loop
-node D:\_qa-scratch\marketing-refresh\publish.mjs
+```
+VITE_GOOGLE_MAPS_API_KEY=...
+VITE_GOOGLE_MAPS_MAP_ID=...
 ```
 
-Then look at every shot. Remove the `oldCapture` notes from `screens.json`
-for the re-shot screens, run `node scripts/check-marketing-assets.mjs --strict`,
-and rebuild the apps without the key before any other test.
+Then, with `chore/marketing-assets-refresh` checked out:
+
+```
+node D:_qa-scratchmarketing-refreshun-with-maps.mjs
+```
+
+It builds both apps with the key (passed only to the build, never printed or
+written), takes every screenshot, rebuilds both apps **without** the key,
+renders the hero loop with the trip sequence, and publishes into the site.
+Without the file it stops and changes nothing.
+
+Then look at every shot, remove the `oldCapture` notes from `screens.json`
+for the re-shot screens, and run `node scripts/check-marketing-assets.mjs --strict`.
+
+## Still pending
+
+- **The six map screenshots** and the hero loop's trip sequence: run the
+  command above once `maps.env` exists.
+- **The "Sell on SheOut" video**, on the site and inside the customer app
+  (`customer-app/public/videos/sell-on-sheout.*`). The original was the
+  owner's own screen recording of 30 September
+  (`public/SheOut-Seller-Registration(SampleVideo).mp4`, untracked),
+  reframed and encoded to 720×1280. Re-recording needs either a new recording
+  from the current app (it would then be reframed and encoded the same way),
+  or a scripted walkthrough built for it. The seller screens have no map, so
+  the key is not needed for this one. Until then the in-app copy still shows
+  the old art.
