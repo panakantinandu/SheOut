@@ -1,6 +1,6 @@
 import { CheckCircle2, Clock, MapPinned, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Button, Card, DestinationChangeCompare, IconCircle, Overlay, useTranslation } from '@sheout/design-system';
+import { Button, Card, DestinationChangeCompare, IconCircle, Overlay, formatAmount, useTranslation } from '@sheout/design-system';
 import { ApiError, bookingApi } from '../api/client';
 import type { BookingSummary, DestinationChangeState, FareQuote, GeoAddress } from '../api/types';
 import { apiErrorText } from '../lib/apiErrors';
@@ -129,7 +129,7 @@ export function ChangeDestination({ booking }: { booking: BookingSummary }) {
           <div className="min-w-0 flex-1">
             <p className="font-heading text-card-title text-text-primary">{t('changeDestination.acceptedTitle')}</p>
             <p className="mt-1 text-sm text-text-secondary">
-              {t('changeDestination.acceptedBody', { drop: change.newDrop.label, fare: change.newFare.toFixed(2), was: change.oldFare.toFixed(2) })}
+              {t('changeDestination.acceptedBody', { drop: change.newDrop.label, fare: formatAmount(change.newFare, true), was: formatAmount(change.oldFare, true) })}
             </p>
           </div>
         </Card>
@@ -143,7 +143,7 @@ export function ChangeDestination({ booking }: { booking: BookingSummary }) {
               {change.status === 'DECLINED' ? t('changeDestination.declinedTitle') : t('changeDestination.expiredTitle')}
             </p>
             <p className="mt-1 text-sm text-text-secondary">
-              {t('changeDestination.continuesBody', { drop: change.oldDrop.label, fare: change.oldFare.toFixed(2) })}
+              {t('changeDestination.continuesBody', { drop: change.oldDrop.label, fare: formatAmount(change.oldFare, true) })}
             </p>
           </div>
         </Card>
@@ -191,8 +191,8 @@ export function ChangeDestination({ booking }: { booking: BookingSummary }) {
               {booking.promoDiscount > 0 && (
                 <p className="mt-2 text-sm text-text-secondary">
                   {t('changeDestination.promoStill', {
-                    discount: booking.promoDiscount.toFixed(2),
-                    pay: Math.max(0, proposal.quote.fareEstimate - booking.promoDiscount).toFixed(2),
+                    discount: formatAmount(booking.promoDiscount, true),
+                    pay: formatAmount(Math.max(0, proposal.quote.fareEstimate - booking.promoDiscount), true),
                   })}
                 </p>
               )}

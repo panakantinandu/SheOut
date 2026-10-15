@@ -51,10 +51,10 @@ class RefundNotificationsTest {
 
         ArgumentCaptor<OutboundMessage> sent = ArgumentCaptor.forClass(OutboundMessage.class);
         verify(dispatcher).deliver(eq(rider), eq(NotificationType.REFUND_ISSUED), sent.capture());
-        assertThat(sent.getValue().title()).isEqualTo("₹120.00 refunded to your SheOut wallet");
+        assertThat(sent.getValue().title()).isEqualTo("₹120 refunded to your SheOut wallet");
         assertThat(sent.getValue().body()).isEqualTo("Your balance is now ₹340.50. Use it for your next ride.");
         assertThat(sent.getValue().link()).isEqualTo("/wallet");
-        assertThat(sent.getValue().englishSms()).startsWith("SheOut: ₹120.00 refunded to your SheOut wallet.");
+        assertThat(sent.getValue().englishSms()).startsWith("SheOut: ₹120 refunded to your SheOut wallet.");
     }
 
     @Test

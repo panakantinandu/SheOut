@@ -1,5 +1,5 @@
 import { ArrowDown, MapPin } from 'lucide-react';
-import { AmountText } from './AmountText';
+import { AmountText, formatRupees } from './AmountText';
 import { useTranslation } from 'react-i18next';
 
 export interface DestinationChangeCompareProps {
@@ -79,7 +79,7 @@ export function DestinationChangeCompare({
           ? t('destinationChange.sameFare')
           : t(
               `destinationChange.${audience}${difference > 0 ? 'More' : 'Less'}`,
-              { amount: `₹${Math.abs(difference).toFixed(2)}` },
+              { amount: formatRupees(Math.abs(difference), true) },
             )}
       </p>
       <p className="mt-1 text-caption text-text-secondary">{t('destinationChange.pricedFrom')}</p>
