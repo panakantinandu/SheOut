@@ -1,8 +1,8 @@
 import { useRef, type PointerEvent } from 'react';
 import { ArrowUpRight } from 'lucide-react';
-import bikeArt from '../../../design-system/src/assets/art/bike-taxi.svg';
-import parcelArt from '../../../design-system/src/assets/art/parcel.svg';
-import marketArt from '../../../design-system/src/assets/art/marketplace.svg';
+import bikeArt from '../../../design-system/src/assets/art/bike-taxi.webp';
+import parcelArt from '../../../design-system/src/assets/art/parcel.webp';
+import marketArt from '../../../design-system/src/assets/art/marketplace.webp';
 import { LINKS, SERVICES } from '../content';
 import { stagger, usePrefersReducedMotion } from '../lib/motion';
 

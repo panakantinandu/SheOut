@@ -15,12 +15,9 @@ Last reviewed: 2026-10-14 (branch `feat/legal-privacy-a11y`).
 
 | File | What | Source | Licence / terms | Attribution |
 |---|---|---|---|---|
-| `frontend/design-system/src/assets/art/bike-taxi.svg` | Ride tile: woman on a scooter, pin | Drawn for SheOut, 2026-10-14 | Owned by SheOut | None |
-| `frontend/design-system/src/assets/art/parcel.svg` | Parcel tile | Drawn for SheOut, 2026-10-14 | Owned by SheOut | None |
-| `frontend/design-system/src/assets/art/marketplace.svg` | Marketplace tile: shop, bag | Drawn for SheOut, 2026-10-14 | Owned by SheOut | None |
-| `frontend/design-system/src/assets/art/women.svg` | Three women, stylised (no real person) | Drawn for SheOut, 2026-10-14 | Owned by SheOut | None |
-| `frontend/customer-app/src/assets/seller/*.svg` (8) | Marketplace category tiles | Generated for SheOut, 2026-10-14, by `make-category-art.cjs` (QA scratch): a gradient tile with one Lucide glyph | Tile: owned by SheOut. Glyph: Lucide, ISC | Lucide's ISC notice ships in `node_modules/lucide-react/LICENSE`; no visible credit required |
-| Icons throughout (`lucide-react`) | UI icons | lucide.dev | ISC | As above |
+| `frontend/design-system/src/assets/art/{bike-taxi,parcel,marketplace,women}.webp` | Ride, parcel and marketplace tiles; three women | **The founder's own images**, used since before 2026-10-14. Replaced on 2026-10-14 by drawn SVGs and **restored on 2026-10-15 at the founder's direction** | The founder's. Where they came from and that SheOut may use them commercially is for the founder to record (open item O-11) | None |
+| `frontend/customer-app/src/assets/seller/*.webp` (8) | Marketplace category pictures | Same: **the founder's own images**, restored on 2026-10-15 at the founder's direction | Same (O-11) | None |
+| Icons throughout (`lucide-react`) | UI icons | lucide.dev | ISC | The ISC notice ships in `node_modules/lucide-react/LICENSE`; no visible credit required |
 | `frontend/*/public/icons/*`, `Logo.jpeg`, `public/SheOut-Workspace-*.png` | SheOut logo and app icons | SheOut | Owned by SheOut. **Confirm who drew the logo** and that the rights were assigned to the company (open item O-11) | None |
 | `frontend/driver-app/public/models/face/*` | Face-detection models | `@vladmandic/face-api` | MIT | In the package |
 | Fonts: Inter, Poppins, Noto Sans Devanagari, Noto Sans Telugu | Typefaces | Google Fonts | SIL Open Font License 1.1 | None required. Loaded from Google today; self-hosting is allowed by the licence (open item O-16) |
@@ -28,12 +25,12 @@ Last reviewed: 2026-10-14 (branch `feat/legal-privacy-a11y`).
 | Map tiles and Places results | Google Maps Platform | Google | Google Maps Platform Terms | Google's own logo and "Map data" credit stay visible on every map; the code does not hide them |
 | `frontend/customer-app/public/videos/sell-on-sheout.*` | "How to sell" video | Made by SheOut from its own app screens | Owned by SheOut | Check the frames for the replaced art (below) |
 
-## Removed on 2026-10-14 (source never recorded)
+## Restored on 2026-10-15
 
-| File | What it was | Why it went |
-|---|---|---|
-| `design-system/src/assets/art/{bike-taxi,parcel,marketplace,women}.webp` | 3D-style illustrations, likely AI-generated | Source and licence never recorded. Replaced by the SVGs above |
-| `customer-app/src/assets/seller/*.webp` (8) | Photo-style category pictures, several showing people | Same. A realistic picture of a person must not read as a real seller. Replaced by the category tiles above |
+On 2026-10-14 the four illustrations and the eight category pictures were
+replaced by drawn SVGs, because their source had not been recorded. The founder
+said these are SheOut's own images and asked for them back, so the originals
+were restored unchanged from `main` and the SVGs removed.
 
 ## Still to resolve
 

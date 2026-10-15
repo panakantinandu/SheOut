@@ -1,6 +1,6 @@
 import { ArrowRight, Mail } from 'lucide-react';
 import { SheOutWordmark } from '../../../design-system/src/components/SheOutLogo';
-import womenArt from '../../../design-system/src/assets/art/women.svg';
+import womenArt from '../../../design-system/src/assets/art/women.webp';
 import { LINKS, NAV } from '../content';
 import { LEGAL_ENTITY, entityValue, TODO_LEGAL } from '../../../design-system/src/legal/entity';
 import { stagger } from '../lib/motion';
