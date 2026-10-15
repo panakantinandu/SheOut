@@ -54,6 +54,9 @@ class ReengagementNudger {
     ReengagementNudger(PushDeviceRepository devices, ReengagementNudgeRepository nudges, AuthApi authApi,
                        DriverProfileApi drivers, NotificationCopy copy, NotificationDispatcher dispatcher,
                        @Value("${sheout.notifications.reengagement.enabled:true}") boolean enabled,
+                       // A "we miss you" is promotional: it needs an opt-in
+                       // that does not exist yet, so it waits for both.
+                       @Value("${sheout.notifications.promotional-enabled:false}") boolean promotionalEnabled,
                        com.sheout.sharedkernel.cluster.ClusterLock lock) {
         this.lock = lock;
         this.devices = devices;
@@ -62,7 +65,7 @@ class ReengagementNudger {
         this.drivers = drivers;
         this.copy = copy;
         this.dispatcher = dispatcher;
-        this.enabled = enabled;
+        this.enabled = enabled && promotionalEnabled;
     }
 
     @Scheduled(cron = "${sheout.notifications.reengagement.cron:0 5/30 * * * *}", zone = "Asia/Kolkata")

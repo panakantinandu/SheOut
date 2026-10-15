@@ -8,7 +8,8 @@
 //   - the Terms version the apps show = the one the server records;
 //   - the partner verification consent version = the server's;
 //   - the prohibited parcel items and their version = ParcelRules;
-//   - the Grievance Officer email = the server's default.
+//   - the Grievance Officer email = the server's default;
+//   - the refund-to-original-method timeline = the server's.
 // Bundle checks: no claim SheOut cannot stand behind, and no placeholder
 // text, in what a browser downloads.
 import { readFileSync, readdirSync, statSync } from 'node:fs';
@@ -54,6 +55,12 @@ expectEqual(
   'Grievance Officer email (legal-entity.config.json vs application.yml)',
   entity.grievanceOfficer.email,
   one(yml, /grievance-officer-email: \$\{GRIEVANCE_OFFICER_EMAIL:([^}]*)\}/, 'grievance-officer-email')
+);
+
+expectEqual(
+  'Refund to original method, working days (legal-entity.config.json vs application.yml)',
+  String(entity.refundToSourceWorkingDays),
+  one(yml, /to-source-working-days: \$\{REFUND_TO_SOURCE_WORKING_DAYS:([^}]+)\}/, 'to-source-working-days')
 );
 
 // Claims removed in docs/legal-audit.md (D-1) and placeholder content that

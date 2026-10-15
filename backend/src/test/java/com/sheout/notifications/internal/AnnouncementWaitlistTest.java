@@ -3,6 +3,7 @@ package com.sheout.notifications.internal;
 import com.sheout.auth.AuthApi;
 import com.sheout.notifications.Announcement;
 import com.sheout.notifications.AnnouncementAudience;
+import com.sheout.notifications.AnnouncementPurpose;
 import com.sheout.notifications.internal.channel.FcmPushChannel;
 import com.sheout.notifications.internal.channel.OutboundMessage;
 import com.sheout.users.CustomerProfileApi;
@@ -35,7 +36,7 @@ class AnnouncementWaitlistTest {
     private final AuthApi auth = mock(AuthApi.class);
     private final FeatureWaitlistApi waitlist = mock(FeatureWaitlistApi.class);
     private final AnnouncementService service = new AnnouncementService(announcements, push, dispatcher, customers, drivers,
-            auth, waitlist, 0, 2000);
+            auth, waitlist, 0, 2000, false);
 
     @Test
     void theSellerWaitlistIsToldOneByOneAndNobodyElse() {
@@ -44,8 +45,9 @@ class AnnouncementWaitlistTest {
         when(waitlist.interestedAccountIds(WaitlistFeature.SELLER)).thenReturn(List.of(first, second));
         when(announcements.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
+        // Sent while promotional messages are paused: everyone on a waitlist asked to be told.
         Announcement sent = service.broadcast("SheOut Seller is here", "Open the Seller tab to browse or start your shop.",
-                AnnouncementAudience.SELLER_WAITLIST, false, UUID.randomUUID());
+                AnnouncementAudience.SELLER_WAITLIST, AnnouncementPurpose.PROMOTIONAL, false, UUID.randomUUID()).value();
 
         ArgumentCaptor<OutboundMessage> message = ArgumentCaptor.forClass(OutboundMessage.class);
         verify(dispatcher).deliver(eq(first), eq(NotificationType.ANNOUNCEMENT), message.capture());

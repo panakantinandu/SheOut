@@ -5,6 +5,8 @@ import com.sheout.auth.AuthApi;
 import com.sheout.notifications.Announcement;
 import com.sheout.notifications.AnnouncementApi;
 import com.sheout.notifications.AnnouncementAudience;
+import com.sheout.notifications.AnnouncementPurpose;
+import com.sheout.notifications.AnnouncementRefusal;
 import com.sheout.notifications.internal.channel.OutboundMessage;
 import com.sheout.notifications.internal.channel.FcmPushChannel;
 import com.sheout.sharedkernel.Result;
@@ -67,6 +69,8 @@ class AnnouncementService implements AnnouncementApi {
     private final FeatureWaitlistApi waitlist;
     private final long emailBatchPauseMs;
     private final int emailMaxRecipients;
+    /** PROMOTIONAL_MESSAGES_ENABLED: off until customers and partners can opt in. */
+    private final boolean promotionalEnabled;
 
     AnnouncementService(AnnouncementRepository announcements,
                         FcmPushChannel push,
@@ -79,7 +83,8 @@ class AnnouncementService implements AnnouncementApi {
                         // in a minute; SendGrid's free tier is 100 a day. Both
                         // are a pause between batches, not a code change.
                         @Value("${sheout.notifications.announcement.email-batch-pause-ms:1000}") long emailBatchPauseMs,
-                        @Value("${sheout.notifications.announcement.email-max-recipients:2000}") int emailMaxRecipients) {
+                        @Value("${sheout.notifications.announcement.email-max-recipients:2000}") int emailMaxRecipients,
+                        @Value("${sheout.notifications.promotional-enabled:false}") boolean promotionalEnabled) {
         this.announcements = announcements;
         this.push = push;
         this.dispatcher = dispatcher;
@@ -89,19 +94,30 @@ class AnnouncementService implements AnnouncementApi {
         this.waitlist = waitlist;
         this.emailBatchPauseMs = emailBatchPauseMs;
         this.emailMaxRecipients = emailMaxRecipients;
+        this.promotionalEnabled = promotionalEnabled;
     }
 
     @Override
     @Transactional
-    public Announcement broadcast(String title, String body, AnnouncementAudience audience, boolean sendSms, UUID sentBy) {
+    public Result<Announcement, AnnouncementRefusal> broadcast(String title, String body, AnnouncementAudience audience,
+                                                               AnnouncementPurpose purpose, boolean sendSms, UUID sentBy) {
         AnnouncementEntity record = new AnnouncementEntity(title, body, audience, sendSms, sentBy);
         List<String> notes = new ArrayList<>();
 
         OutboundMessage message = OutboundMessage.of(title, body, "/notifications");
 
         if (audience == AnnouncementAudience.SELLER_WAITLIST) {
-            return toWaitlist(record, message, WaitlistFeature.SELLER, "/seller");
+            // She asked to be told when it opens: that request is the consent.
+            return Result.success(toWaitlist(record, message, WaitlistFeature.SELLER, "/seller"));
         }
+
+        // News, offers and "come back" messages need an opt-in that does not
+        // exist yet, so they are refused rather than sent to everybody.
+        if (purpose == AnnouncementPurpose.PROMOTIONAL && !promotionalEnabled) {
+            log.info("Announcement '{}' to {} refused: promotional messages are paused until there is an opt-in", title, audience);
+            return Result.failure(AnnouncementRefusal.PROMOTIONAL_PAUSED);
+        }
+        notes.add(purpose == AnnouncementPurpose.PROMOTIONAL ? "promotional" : "service notice");
 
         // 1. Push: one call per audience.
         int accepted = 0;
@@ -142,7 +158,7 @@ class AnnouncementService implements AnnouncementApi {
         announcements.save(record);
         log.info("Announcement '{}' to {}: push accepted {}/{}, emails {} sent {} failed",
                 title, audience, accepted, accepted + pushFailed, sent, emailFailed);
-        return record.toSummary();
+        return Result.success(record.toSummary());
     }
 
     @Override

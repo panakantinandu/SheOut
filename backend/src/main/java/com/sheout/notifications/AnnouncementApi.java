@@ -1,5 +1,7 @@
 package com.sheout.notifications;
 
+import com.sheout.sharedkernel.Result;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -20,8 +22,13 @@ public interface AnnouncementApi {
      * sent only when sendSms is true, because every SMS must match a
      * DLT-approved template and is charged per message; it is for a safety
      * advisory, not for news.
+     * <p>
+     * A PROMOTIONAL broadcast to a whole audience is refused while
+     * promotional messages are paused (no opt-in exists yet). A waitlist
+     * broadcast is not refused: everyone on it asked to be told.
      */
-    Announcement broadcast(String title, String body, AnnouncementAudience audience, boolean sendSms, UUID sentBy);
+    Result<Announcement, AnnouncementRefusal> broadcast(String title, String body, AnnouncementAudience audience,
+                                                        AnnouncementPurpose purpose, boolean sendSms, UUID sentBy);
 
     /** What has been broadcast, newest first. */
     List<Announcement> history(int limit);

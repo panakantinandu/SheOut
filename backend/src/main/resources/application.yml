@@ -166,6 +166,30 @@ sheout:
     # The same address as legal-entity.config.json in the design system.
     grievance-officer-email: ${GRIEVANCE_OFFICER_EMAIL:grievance@sheoutride.com}
 
+  retention:
+    # Deleting personal data once it is old enough (privacy.internal.
+    # RetentionSweeper). OFF until the founder approves the periods
+    # (docs/legal-open-items.md, O-8). Switched on, it first runs as a dry
+    # run: it only counts, into retention_runs. RETENTION_DRY_RUN=false is
+    # the separate step that deletes. The periods below are the proposals;
+    # remove one (or set it to 0) to stop that task.
+    enabled: ${RETENTION_ENABLED:false}
+    dry-run: ${RETENTION_DRY_RUN:true}
+    days:
+      chat-messages: ${RETENTION_DAYS_CHAT:90}
+      shift-photos: ${RETENTION_DAYS_SHIFT_PHOTOS:30}
+      rejected-documents: ${RETENTION_DAYS_REJECTED_DOCUMENTS:30}
+
+  refunds:
+    # Working days within which a refund that must go back to the original
+    # payment method (failed payment with money taken, double charge, a trip
+    # SheOut cancelled after she paid online) reaches her. Promised in the
+    # Refund and Cancellation Policy (legal-entity.config.json,
+    # refundToSourceWorkingDays) - CI keeps the two equal. Done by finance
+    # from the Razorpay dashboard until a refund API exists:
+    # docs/refunds-to-source.md.
+    to-source-working-days: ${REFUND_TO_SOURCE_WORKING_DAYS:7}
+
   legal:
     # The Terms and Privacy Policy version recorded when someone agrees at
     # sign-up. Must equal LEGAL_VERSION in the design system's
@@ -581,6 +605,11 @@ sheout:
     # REENGAGEMENT_ENABLED=false to stop them without a deploy.
     reengagement:
       enabled: ${REENGAGEMENT_ENABLED:true}
+    # News, offers, "we miss you" nudges and promotional announcements. Off
+    # until customers and partners can opt in (docs/legal-open-items.md,
+    # O-10): with it off, the nudger does not run and a promotional
+    # broadcast is refused. Service and safety notices are unaffected.
+    promotional-enabled: ${PROMOTIONAL_MESSAGES_ENABLED:false}
     sms:
       twilio:
         # Blank by default, same treatment as Razorpay's key-id/key-secret -

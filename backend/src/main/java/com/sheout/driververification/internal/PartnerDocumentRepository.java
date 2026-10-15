@@ -2,12 +2,14 @@ package com.sheout.driververification.internal;
 
 import com.sheout.driververification.PartnerDocumentStatus;
 import com.sheout.driververification.PartnerDocumentType;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import jakarta.persistence.LockModeType;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
@@ -69,4 +71,13 @@ interface PartnerDocumentRepository extends JpaRepository<PartnerDocumentEntity,
 
     /** Current rows already expired - the console's "Expired / blocked" queue. */
     List<PartnerDocumentEntity> findBySupersededAtIsNullAndStatusOrderByExpiredAtDesc(PartnerDocumentStatus status);
+
+    /** Retention: rejected documents reviewed before the cutoff whose image is still stored. */
+    @Query("""
+            select d from PartnerDocumentEntity d
+            where d.status = :rejected and d.reviewedAt < :before and d.documentKey is not null
+            """)
+    List<PartnerDocumentEntity> findRejectedWithImageBefore(@Param("rejected") PartnerDocumentStatus rejected,
+                                                            @Param("before") Instant before,
+                                                            Pageable page);
 }

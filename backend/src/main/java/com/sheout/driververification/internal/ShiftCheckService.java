@@ -494,4 +494,22 @@ public class ShiftCheckService implements ShiftCheckApi {
     private static boolean isPhoto(DocumentUpload upload) {
         return upload != null && DocumentRules.check(upload) == null && DocumentRules.photoTypeOf(upload.content()) != null;
     }
+
+    /**
+     * Retention, across every partner: photos of checks that settled before
+     * the cutoff. The per-account housekeeping above only runs when that
+     * partner submits her next check; this reaches the partner who stopped.
+     * The rows and outcomes stay. Counts only when dryRun.
+     */
+    @Transactional
+    public int purgePhotosBefore(Instant cutoff, boolean dryRun, int limit) {
+        List<ShiftCheckEntity> old = checks.findSettledWithPhotosBefore(cutoff, SETTLED, PageRequest.of(0, limit));
+        if (!dryRun) {
+            for (ShiftCheckEntity check : old) {
+                deletePhotos(check);
+                checks.save(check);
+            }
+        }
+        return old.size();
+    }
 }

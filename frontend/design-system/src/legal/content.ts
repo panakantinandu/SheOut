@@ -108,7 +108,7 @@ export const PRIVACY_POLICY: LegalDocument = {
         'Messages you send in trip chat, ratings you give, and support requests.',
         'Your emergency contacts: names and numbers you enter, used only when you raise an SOS.',
         'For parcels: the receiver\'s name and phone number, and photos the partner takes at pickup and handover.',
-        'For partners: your driving licence, vehicle registration (RC), insurance and PUC certificates and their numbers, your vehicle number, any police or background certificate you upload, a selfie at the start of each shift, and the bank account or UPI ID your earnings are paid to.',
+        'For partners: your driving licence, vehicle registration (RC), insurance and PUC certificates and their numbers, your vehicle number, any police or background certificate you upload, a selfie, a short set of liveness frames and a photo of your helmet at the start of each shift, and the bank account or UPI ID your earnings are paid to.',
         'For sellers in the Marketplace: your shop details, and the phone or WhatsApp number you choose to show to signed-in customers.',
         'Technical details: a notification token if you allow notifications, the type of browser you sign in from (shown to you under "Your devices"), and a random install ID used to stop referral fraud.',
       ],
@@ -117,7 +117,7 @@ export const PRIVACY_POLICY: LegalDocument = {
       heading: 'Face matching',
       paragraphs: [
         'When you verify, a person compares your selfie with your ID photo. Partners also take a selfie at the start of each shift. The phone compares it with the verified selfie, and the comparison may also be checked by Amazon Web Services in Mumbai. We keep the selfies and the similarity score. We do not keep a face template, and the comparison is used for nothing else.',
-        `Selfies are kept while your account is active and deleted with your account. ${TODO_LAWYER}`,
+        `Your verification selfie is kept while your account is open and deleted with it. Start-of-shift photos (the selfie, the liveness frames and the helmet photo) are deleted once they are 30 days old, when you next start a shift; the result of each check is kept. ${TODO_LAWYER}`,
       ],
     },
     {
@@ -164,7 +164,8 @@ export const PRIVACY_POLICY: LegalDocument = {
         'Sign-in codes last a few minutes. A signed-in session lasts up to 30 days.',
         `Parcel photos and the receiver's phone number are deleted 90 days after the delivery, unless a dispute about it is still open.`,
         'Everything else on this page is kept while your account is open and deleted or anonymised when you delete your account. Two exceptions: trip and payment records are kept as long as tax and accounting law requires, and records about a safety report or dispute are kept until it is resolved.',
-        `We are setting shorter periods for chat messages, selfies, location history and closed applications, and will update this page when they start. ${TODO_LAWYER}`,
+        'Start-of-shift photos are deleted once they are 30 days old, when the partner next starts a shift.',
+        `We are setting shorter periods for chat messages, location history and the images of rejected documents, and will update this page when they start. ${TODO_LAWYER}`,
       ],
     },
     {

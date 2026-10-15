@@ -769,7 +769,7 @@
   .login { width: 100%; max-width: 380px; }
   .login .card { padding: 26px; }
   .login .brand { border: 0; padding: 0 0 18px; }
-  .login h2 { font-size: 17px; font-weight: 700; }
+  .login h1, .login h2 { font-size: 17px; font-weight: 700; }
   .login p.lead { margin: 5px 0 18px; color: var(--muted); font-size: 13px; }
   .login label { display: block; font-size: 12px; color: var(--muted); margin: 12px 0 5px; font-weight: 600; }
   .login input { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; font: inherit; }
@@ -1784,7 +1784,7 @@
 <body>
 
 <!-- ============================== LOGIN ============================== -->
-<div class="login-wrap" id="loginWrap" hidden>
+<main class="login-wrap" id="loginWrap" hidden>
   <div class="login">
     <div class="card">
       <div class="brand">
@@ -1794,7 +1794,7 @@
         </div>
       </div>
       <div id="signInBlock">
-      <h2>Sign in</h2>
+      <h1>Sign in</h1>
       <p class="lead">Your work email, your password, and the 6-digit code from the authenticator app on your phone - or your passkey.</p>
       <div class="banner banner-err" id="loginErr" hidden></div>
       <form id="login">
@@ -1816,7 +1816,7 @@
       <div id="inviteBlock" hidden></div>
     </div>
   </div>
-</div>
+</main>
 
 <!-- ============================== APP ============================== -->
 <div class="shell" id="app" hidden>
@@ -4419,7 +4419,8 @@ document.addEventListener('click', async e => {
   const back = $('modalRoot').innerHTML;
   const layer = document.createElement('div');
   layer.innerHTML = `<div class="overlay step-overlay"><div class="modal">
-    <div class="modal-head"><h3>Refund or credit</h3><p>Paid into her SheOut wallet. Above your own limit it goes to an owner to approve.</p></div>
+    <div class="modal-head"><h3>Refund or credit</h3><p>Paid into her SheOut wallet. Above your own limit it goes to an owner to approve.</p>
+      <p class="hint" id="rfSource">A failed payment that took her money, a double charge, or a trip SheOut cancelled after she paid online goes back to how she paid instead: ask finance to refund it from Razorpay.</p></div>
     <div class="modal-body">
       <label for="rfAmount">Amount (\u20b9)</label><input id="rfAmount" type="number" min="1" max="10000" step="1">
       ${booking ? `<label class="check"><input type="checkbox" id="rfTrip" checked> For the trip this is about (never more than she paid for it)</label>` : ''}
@@ -4429,6 +4430,11 @@ document.addEventListener('click', async e => {
     <div class="modal-foot"><button class="btn" type="button" data-rf-cancel>Cancel</button>
       <button class="btn btn-primary" type="button" data-rf-go>Refund</button></div></div></div>`;
   $('stepRoot').before(layer);
+  // The promised timeline, from the server's configuration (REFUND_TO_SOURCE_WORKING_DAYS).
+  api('/admin/refunds/policy').then(p => {
+    const el = layer.querySelector('#rfSource');
+    if (el && p && p.toSourceWorkingDays) el.textContent += ` It must reach her within ${p.toSourceWorkingDays} working days.`;
+  }).catch(() => {});
   const close = () => layer.remove();
   layer.querySelector('[data-rf-cancel]').addEventListener('click', close);
   layer.querySelector('[data-rf-go]').addEventListener('click', async () => {
@@ -6096,7 +6102,7 @@ const AUDIENCE_TEXT = { ALL_CUSTOMERS: 'All customers', ALL_DRIVERS: 'All partne
 function paintCompose(host) {
   host.innerHTML = `
     <div class="card above-card">
-      <div class="card-head"><h2>New announcement</h2><span class="hint">Reaches every phone in the audience at once</span></div>
+      <div class="card-head"><h2>New announcement</h2><span class="hint">Reaches every phone in the audience at once. News and offers are paused until people can opt in; a service or safety notice still goes out.</span></div>
       <div class="compose">
         <label class="field"><span>Title</span>
           <input id="annTitle" maxlength="120" placeholder="What this is about" autocomplete="off"></label>
@@ -6106,6 +6112,11 @@ function paintCompose(host) {
         <div class="row">
           <label class="field"><span>Audience</span>
             <select id="annAudience">${Object.entries(AUDIENCE_TEXT).map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join('')}</select></label>
+          <label class="field"><span>Kind of message</span>
+            <select id="annPurpose">
+              <option value="SERVICE">Service or safety notice</option>
+              <option value="PROMOTIONAL">News or offer (promotional)</option>
+            </select></label>
           <label class="sms"><input type="checkbox" id="annSms">
             <span><strong>Also send SMS</strong> - safety advisories only. Charged per message, and the text must match a DLT-approved template.</span></label>
           <button class="btn btn-primary send" id="annSend" type="button">Send announcement</button>
@@ -6123,6 +6134,7 @@ function paintCompose(host) {
       return;
     }
     const audience = $('annAudience').value;
+    const purpose = $('annPurpose').value;
     const sendSms = $('annSms').checked;
     let who = { ALL_CUSTOMERS: 'all customers', ALL_DRIVERS: 'all partners', BOTH: 'everyone' }[audience];
     if (audience === 'SELLER_WAITLIST') {
@@ -6145,7 +6157,7 @@ function paintCompose(host) {
     if (!ok) return;
     $('annSend').disabled = true;
     try {
-      const result = await api('/admin/announcements', { method: 'POST', body: JSON.stringify({ title, body, audience, sendSms }) });
+      const result = await api('/admin/announcements', { method: 'POST', body: JSON.stringify({ title, body, audience, purpose, sendSms }) });
       toast('ok', 'Announcement sent', result.audience === 'SELLER_WAITLIST'
         ? `Delivered to ${result.pushAccepted} ${result.pushAccepted === 1 ? 'person' : 'people'} on the waitlist`
         : `Push ${result.pushAccepted > 0 ? 'sent' : 'not sent'} · ${result.emailsSent} emails`);
