@@ -5433,10 +5433,17 @@ function paintIdentityStep(body, v, step, after) {
  * audit trail with the approval; for an RC, the PUC validity Vahan shows
  * files her PUC, so she uploads no PUC certificate at all.
  * Kept in one place so a changed address is a one-line fix.
+ * <p>
+ * 2026-10-16: the old national licence-status page (parivahan.gov.in/rcdlstatus)
+ * is gone (404), and the Vahan citizen login timed out. Sarathi's own state
+ * page is the entry that works (Telangana is on it); the mParivahan app is the
+ * fallback for both - it reads the same records and needs only the number.
  */
 const GOV_LINKS = {
-  DRIVING_LICENCE: { url: 'https://parivahan.gov.in/rcdlstatus/?pur_cd=101', label: 'Open licence status (Parivahan)', where: 'Sarathi licence record' },
-  VEHICLE_RC: { url: 'https://vahan.parivahan.gov.in/nrservices/faces/user/citizen/citizenlogin.xhtml', label: 'Open vehicle details (Vahan)', where: 'Vahan vehicle record - or the mParivahan app, RC details' },
+  DRIVING_LICENCE: { url: 'https://sarathi.parivahan.gov.in/sarathiservice/stateSelection.do', label: 'Open Sarathi (licence record)', where: 'Sarathi licence record',
+    how: 'Choose Telangana, then Driving Licence services and the licence details search; enter the licence number and date of birth below. If Sarathi does not load, use the mParivahan app: DL Dashboard, then the licence number.' },
+  VEHICLE_RC: { url: 'https://vahan.parivahan.gov.in/vahanservice/vahan/ui/statevalidation/homepage.xhtml', label: 'Open Vahan (vehicle record)', where: 'Vahan vehicle record - or the mParivahan app, RC details',
+    how: 'Vahan is often slow. If it does not load in a minute, use the mParivahan app: RC Dashboard, then the vehicle number below.' },
 };
 const ddmmyyyy = iso => (iso ? iso.split('-').reverse().join('-') : '');
 
@@ -5449,6 +5456,7 @@ function govPanel(type, v, doc) {
   return `<div class="rv-gov">
       <div class="rv-checks-h">Step 1 · Check the government record (free)</div>
       <a class="btn btn-primary btn-sm" href="${escValue(link.url)}" target="_blank" rel="noopener noreferrer">${esc(link.label)} ↗</a>
+      <p class="subtle">${esc(link.how)}</p>
       ${rc ? copyRow('Vehicle number', doc.documentNumber) : copyRow('Licence number', doc.documentNumber) + copyRow('Date of birth', ddmmyyyy(v.dateOfBirth))}
       <div class="gov-result" role="radiogroup" aria-label="What the record shows">
         <label class="rv-check"><input type="radio" name="govResult" value="FOUND"><span>Found in the ${esc(link.where)}, and it matches${rc ? '' : ' her name'}</span></label>
