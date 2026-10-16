@@ -518,8 +518,10 @@ autos and cabs) fitness certificate - `driververification`'s
    **`POST /api/v1/admin/verification/documents/{documentId}/review`**
    `{ decision, reason, documentNumber, issuedOn, validUntil, insuranceUseType }`
    - the fields are corrections. Approving needs the file, the number, the
-   valid-until date (not already past) and, for insurance, a commercial-use
-   policy. Rejecting needs a reason, which she is sent.
+   valid-until date (not already past). Rejecting needs a reason, which she
+   is sent. Whether her insurance must be commercial is checked by the
+   readiness gate per vehicle (autos and cabs, `COMMERCIAL_INSURANCE_SERVICES`),
+   not at review.
    An operator can also put a document on file for her
    (`POST /api/v1/admin/verification/{accountId}/documents/{type}`), and it
    goes through the same review.
@@ -577,10 +579,11 @@ the server starting.
 - **The ID submission no longer requires the RC.** The RC is its own
   checklist step now. An RC that an older app still sends with the ID is
   filed as her `VEHICLE_RC` for review.
-- **Commercial insurance at review time is checked strictly.** The
-  operator's approval does not know her vehicle, so it requires a
-  commercial policy whenever any vehicle SheOut takes carries passengers -
-  which is all of them today. The gate itself checks per vehicle.
+- **Commercial insurance is checked per vehicle, at the gate.** Autos and
+  cabs need a commercial policy; a bike's own private policy is accepted, as
+  Rapido and Uber Moto accept it (MVAG 2025 lets states allow non-transport
+  motorcycles; passengers are covered by the platform's trip policy). The
+  review approves the document; readiness decides if it is enough.
 - **The services-per-vehicle map repeats dispatch's matching rule**
   (parcels go to bikes) rather than importing it, to avoid a module cycle.
   Change both together.
