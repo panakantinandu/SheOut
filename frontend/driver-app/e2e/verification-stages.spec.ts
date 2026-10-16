@@ -67,3 +67,20 @@ for (const vehicle of ['BIKE', 'AUTO'] as const) {
     else await expect(asked).toBeVisible();
   });
 }
+
+test('a police certificate due again within two months is called out before she sends it', async ({ page }) => {
+  await open(page, 'BIKE');
+  await page.getByTestId('stage-police').click();
+  await page.getByTestId('step-POLICE_CERTIFICATE').getByRole('button').first().click();
+  const issued = page.getByTestId('doc-issued-POLICE_CERTIFICATE');
+  await expect(issued).toBeVisible({ timeout: 20_000 });
+  // Issued 11 months and 2 weeks ago: still accepted, due again in about two weeks.
+  const d = new Date();
+  d.setUTCMonth(d.getUTCMonth() - 11);
+  d.setUTCDate(d.getUTCDate() - 14);
+  await issued.fill(d.toISOString().slice(0, 10));
+  await expect(page.getByTestId('police-due-soon')).toContainText(/due again on .* in \d+ days/);
+  // A recent one says nothing of the kind.
+  await issued.fill(new Date(Date.now() - 20 * 86_400_000).toISOString().slice(0, 10));
+  await expect(page.getByTestId('police-due-soon')).toHaveCount(0);
+});

@@ -7,6 +7,7 @@ import { prepareDocumentPhoto } from '../lib/documentPhoto';
 import {
   NUMBER_MAX_LENGTH,
   earliestPoliceIssue,
+  policeDueOn,
   isPlate,
   latestValidUntil,
   normalizeNumber,
@@ -99,6 +100,10 @@ export function DocumentForm({
   const issueTooOld = police && issuedOn !== '' && issuedOn < oldestPolice;
   const issueInFuture = police && issuedOn !== '' && issuedOn > today;
   const issueError = issueTooOld ? t('verify.doc.policeTooOld') : issueInFuture ? t('verify.doc.issueFuture') : undefined;
+  // Accepted, but due again soon: say so before she sends it, not two days later.
+  const dueOn = police && issuedOn !== '' && !issueError ? policeDueOn(issuedOn) : null;
+  const dueInDays = dueOn ? daysUntil(dueOn) : null;
+  const dueSoon = dueInDays !== null && dueInDays <= 60;
   const ownerNameOk = owner === 'SELF' || /^[\p{L} .'-]{2,100}$/u.test(ownerName.trim());
 
   const missing = !file
@@ -304,8 +309,13 @@ export function DocumentForm({
             error={issueError}
             data-testid="doc-issued-POLICE_CERTIFICATE"
           />
-          {!issueError && (
+          {!issueError && !dueSoon && (
             <p className="px-1 text-caption text-text-secondary">{t('verify.doc.policeIssueHint', { date: formatDay(oldestPolice) })}</p>
+          )}
+          {dueSoon && dueOn && (
+            <p className="rounded-input bg-accent-orange-tint px-3 py-2 text-caption text-text-primary" role="status" data-testid="police-due-soon">
+              {t('verify.doc.policeDueSoon', { date: formatDay(dueOn), count: Math.max(0, dueInDays ?? 0) })}
+            </p>
           )}
         </div>
       )}

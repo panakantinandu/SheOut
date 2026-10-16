@@ -1097,6 +1097,8 @@
       "fixNumber": "Check the number",
       "fixDate": "Check the date",
       "tooFar": "That date is too far ahead for this document. Check the year.",
+      "policeDueSoon_one": "This certificate is due again on {{date}} - tomorrow. You can send it, but a newer one saves you doing this again so soon.",
+      "policeDueSoon_other": "This certificate is due again on {{date}} - in {{count}} days. You can send it, but a newer one saves you doing this again so soon.",
       "policeTooOld": "This certificate is more than 12 months old. Apply for a new one.",
       "issueFuture": "The date on the certificate can't be in the future.",
       "needIssuedOn": "Add the date on the certificate",

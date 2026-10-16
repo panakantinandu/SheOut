@@ -5146,7 +5146,10 @@ function reviewSteps(v) {
   });
   const cert = v.documents.find(d => d.type === 'POLICE_CERTIFICATE' && !d.supersededAt && d.status !== 'REJECTED');
   const p = v.policeVerificationStatus;
-  steps.push({ key: 'police', label: 'Police', state: g !== 'VERIFIED' ? 'blocked' : p === 'VERIFIED' ? 'done' : p === 'REJECTED' ? 'rejected' : cert ? 'waiting' : 'missing' });
+  // A new certificate she sent while already verified (a renewal) waits for a person too: without this the
+  // step read "done" and the new certificate was never put in front of anyone.
+  const certWaiting = cert && (cert.status === 'UNDER_REVIEW' || cert.status === 'PENDING');
+  steps.push({ key: 'police', label: 'Police', state: g !== 'VERIFIED' ? 'blocked' : certWaiting ? 'waiting' : p === 'VERIFIED' ? 'done' : p === 'REJECTED' ? 'rejected' : cert ? 'waiting' : 'missing' });
   steps.push({ key: 'summary', label: 'Summary', state: v.readiness.ready ? 'done' : 'waiting' });
   return steps;
 }

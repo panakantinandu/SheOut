@@ -82,6 +82,13 @@ export function latestValidUntil(type: PartnerDocumentType, today: string): stri
 }
 
 /** The oldest a police certificate can be and still be accepted: re-verification is every 12 months by default. */
+/** When a police certificate issued on this day must be redone (POLICE_REVERIFY_MONTHS on the server, 12). */
+export function policeDueOn(issuedOn: string, months = 12): string {
+  const d = new Date(`${issuedOn}T00:00:00Z`);
+  d.setUTCMonth(d.getUTCMonth() + months);
+  return d.toISOString().slice(0, 10);
+}
+
 export function earliestPoliceIssue(today: string, months = 12): string {
   const d = new Date(`${today}T00:00:00Z`);
   d.setUTCMonth(d.getUTCMonth() - months);
