@@ -108,6 +108,8 @@ export function NotificationInbox({ fetchPage, markRead, markAllRead, onOpen, re
   const [hasMore, setHasMore] = useState(false);
   const [page, setPage] = useState(0);
   const [unread, setUnread] = useState(0);
+  /** Unread when she opened the inbox: marked read on the server at once (the bell clears), still shown as new here. */
+  const [freshCount, setFreshCount] = useState(0);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
@@ -123,13 +125,21 @@ export function NotificationInbox({ fetchPage, markRead, markAllRead, onOpen, re
         setTotal(result.page.totalItems);
         setHasMore(result.page.hasMore);
         setPage(pageNumber);
-        setUnread(result.unreadCount);
+        // Opening the inbox is reading it, as on other apps: the badge clears now, and what was unread keeps its
+        // highlight for this visit so she can still see what is new.
+        if (pageNumber === 0 && result.unreadCount > 0) {
+          setFreshCount(result.unreadCount);
+          setUnread(0);
+          void markAllRead().catch(() => undefined);
+        } else if (pageNumber === 0) {
+          setUnread(0);
+        }
         setError(null);
       } catch {
         if (current === generation.current) setError(t('inbox.loadError'));
       }
     },
-    [fetchPage]
+    [fetchPage, markAllRead]
   );
 
   useEffect(() => {
@@ -207,9 +217,13 @@ export function NotificationInbox({ fetchPage, markRead, markAllRead, onOpen, re
   return (
     <PullToRefresh onRefresh={() => load(0)}>
       <div className="space-y-6" data-testid="inbox">
-      {(unread > 0 || deleteAll) && (
+      {(unread > 0 || freshCount > 0 || deleteAll) && (
         <div className="flex items-center justify-between gap-2">
-          {unread > 0 ? (
+          {freshCount > 0 ? (
+            <span className="rounded-full bg-primary-light px-3 py-1 text-caption text-primary" data-testid="inbox-new">
+              {t('inbox.newCount', { count: freshCount })}
+            </span>
+          ) : unread > 0 ? (
             <span className="rounded-full bg-primary-light px-3 py-1 text-caption text-primary" data-testid="inbox-unread">
               {t('inbox.unread', { count: unread })}
             </span>

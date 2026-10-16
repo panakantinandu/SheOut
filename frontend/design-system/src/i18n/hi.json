@@ -102,6 +102,8 @@
     "off": "इस डिवाइस पर सूचनाएँ बंद हैं। सब कुछ यहाँ फिर भी दिखता रहेगा।"
   },
   "inbox": {
+    "newCount_one": "1 नई",
+    "newCount_other": "{{count}} नई",
     "justNow": "अभी",
     "minutesAgo_one": "{{count}} मिनट पहले",
     "minutesAgo_other": "{{count}} मिनट पहले",

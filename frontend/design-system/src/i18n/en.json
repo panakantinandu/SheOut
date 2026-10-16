@@ -102,6 +102,8 @@
     "off": "Notifications are off on this device. Everything still appears here."
   },
   "inbox": {
+    "newCount_one": "1 new",
+    "newCount_other": "{{count}} new",
     "justNow": "Just now",
     "minutesAgo_one": "{{count}} min ago",
     "minutesAgo_other": "{{count}} min ago",

@@ -102,6 +102,8 @@
     "off": "ఈ పరికరంలో నోటిఫికేషన్లు ఆఫ్‌లో ఉన్నాయి. అన్నీ ఇక్కడ కనిపిస్తూనే ఉంటాయి."
   },
   "inbox": {
+    "newCount_one": "1 కొత్తది",
+    "newCount_other": "{{count}} కొత్తవి",
     "justNow": "ఇప్పుడే",
     "minutesAgo_one": "{{count}} నిమి. క్రితం",
     "minutesAgo_other": "{{count}} నిమి. క్రితం",
