@@ -954,7 +954,8 @@
   },
   "verify": {
     "title": "वेरिफ़ाई हों",
-    "progress": "{{total}} में से {{done}} पूरे",
+    "stagesProgress": "{{total}} में से {{done}} चरण पूरे",
+    "stepInStage": "{{stage}} · {{total}} में से कदम {{n}}",
     "readyTitle": "आप वेरिफ़ाइड हैं",
     "readyBody": "सब कुछ मंज़ूर हो गया है। होम से ऑनलाइन जाएँ और कमाना शुरू करें।",
     "goHome": "होम पर जाएँ",

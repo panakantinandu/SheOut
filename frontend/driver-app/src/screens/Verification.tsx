@@ -103,7 +103,7 @@ type Translate = (key: string, options?: Record<string, unknown>) => string;
  * them are needed - but that every step was open at once, each with its own
  * paragraphs, so nothing said "do this now". Now:
  * <ul>
- *   <li>One card on top: how far she is ("3 of 8 done"), and the one next
+ *   <li>One card on top: how far she is, in the four stages of the tracker ("1 of 4 stages done"), and the one next
  *       thing, with a Continue button that opens it. When everything is
  *       sent, it says nothing is needed from her and that she will be
  *       notified - so a wait does not read as something she missed.</li>
@@ -219,8 +219,6 @@ export function Verification() {
     policeStep(t, summary, docState('POLICE_CERTIFICATE'), consented, blockers, warnings, sent),
   ];
 
-  const total = steps.length;
-  const done = steps.filter((s) => s.state === 'done' || s.state === 'soon').length;
   // Something sent back comes before something not yet done: it already
   // stopped a review, and she has the paper in hand from last time.
   const next =
@@ -251,6 +249,10 @@ export function Verification() {
   // The stage shown: the one she tapped, else the one her next step is in,
   // else the first not finished - so she sees one stage at a time.
   const shownStage: Stage = stageOpen ?? next?.section ?? STAGES.find((s) => stageStates[s] !== 'done') ?? 'ready';
+  // Counted the way the tracker above shows it: four stages, not every task inside them.
+  const stagesDone = STAGES.filter((s) => stageStates[s] === 'done').length;
+  const nextStageSteps = next ? steps.filter((s) => s.section === next.section) : [];
+  const nextStepNumber = next ? nextStageSteps.indexOf(next) + 1 : 0;
 
   return (
     <ApplicantFacts.Provider value={{ name: profile?.name, dateOfBirth: profile?.dateOfBirth }}>
@@ -269,11 +271,19 @@ export function Verification() {
       <Card tone={ready ? 'success' : 'default'} className="space-y-4" data-testid="readiness-card" data-state={ready ? 'ready' : next ? 'next' : 'waiting'}>
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm">
-            <span className="font-semibold text-text-primary" data-testid="verify-progress">{t('verify.progress', { done, total })}</span>
-            <span className="text-text-secondary">{Math.round((done / total) * 100)}%</span>
+            <span className="font-semibold text-text-primary" data-testid="verify-progress">
+              {t('verify.stagesProgress', { done: stagesDone, total: STAGES.length })}
+            </span>
           </div>
-          <div className="h-2 overflow-hidden rounded-full bg-background" aria-hidden="true">
-            <div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${(done / total) * 100}%` }} />
+          <div className="grid grid-cols-4 gap-1" aria-hidden="true">
+            {STAGES.map((s) => (
+              <div
+                key={s}
+                className={`h-2 rounded-full transition-colors duration-500 ${
+                  stageStates[s] === 'done' ? 'bg-primary' : stageStates[s] === 'fix' ? 'bg-danger' : stageStates[s] === 'waiting' ? 'bg-primary/40' : 'bg-background'
+                }`}
+              />
+            ))}
           </div>
         </div>
 
@@ -294,6 +304,11 @@ export function Verification() {
           <div>
             <p className="text-caption font-semibold uppercase tracking-wide text-text-secondary">{t('verify.nextLabel')}</p>
             <p className="mt-1 font-heading text-card-title text-text-primary" data-testid="verify-next">{next.title}</p>
+            {nextStageSteps.length > 1 && (
+              <p className="mt-0.5 text-caption text-text-secondary" data-testid="verify-step-in-stage">
+                {t('verify.stepInStage', { stage: t(`verify.stage.${next.section}`), n: nextStepNumber, total: nextStageSteps.length })}
+              </p>
+            )}
             {next.state === 'fix' && (
               <p className="mt-1 text-sm text-danger">
                 <span className="font-semibold">{t('verify.howToFix')}: </span>

@@ -954,7 +954,8 @@
   },
   "verify": {
     "title": "Get verified",
-    "progress": "{{done}} of {{total}} done",
+    "stagesProgress": "{{done}} of {{total}} stages done",
+    "stepInStage": "{{stage}} · step {{n}} of {{total}}",
     "readyTitle": "You're verified",
     "readyBody": "Everything is approved. Go online from Home and start earning.",
     "goHome": "Go to Home",
