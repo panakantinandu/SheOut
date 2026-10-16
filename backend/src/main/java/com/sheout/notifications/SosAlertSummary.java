@@ -32,6 +32,9 @@ public record SosAlertSummary(
         /** Her phone opened its own SMS app to her contacts - the fallback when data was slow or absent. */
         boolean smsFallbackOpened,
         /** When she raised it on the phone; earlier than createdAt when it waited in the queue. */
-        Instant triggeredAt
+        Instant triggeredAt,
+        /** What the operator found when she closed it; null while ACTIVE and on alerts closed before V86. */
+        SosResolution resolutionOutcome,
+        String resolutionNote
 ) {
 }

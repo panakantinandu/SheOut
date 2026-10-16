@@ -949,6 +949,13 @@
   .timeline li.pending::before { background: var(--line); }
   .timeline .t { color: var(--muted); font-size: 12px; }
   .contact-list { list-style: none; margin: 0; padding: 0; }
+  .sos-steps ol { margin: 0; padding-left: 20px; display: grid; gap: 14px; }
+  .sos-steps ol > li { font-size: 13px; line-height: 1.5; }
+  .sos-steps ol > li p { margin: 4px 0 0; }
+  .sos-steps .btn { margin-left: 6px; }
+  .sos-outcomes { border: 0; padding: 0; margin: 8px 0; display: grid; gap: 6px; }
+  .sos-outcomes label { display: flex; gap: 8px; align-items: flex-start; font-weight: 400; justify-content: flex-start; text-align: left; margin: 0; cursor: pointer; }
+  .sos-outcomes input[type="radio"] { width: auto; flex: none; margin: 3px 0 0; }
   .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
   .contact-list li { display: flex; gap: 10px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line-soft); font-size: 13px; }
   .contact-list li:last-child { border-bottom: 0; }
@@ -2132,6 +2139,85 @@ const SELLER_CATEGORY_TEXT = {
  * phone, not SheOut - the console knows it was opened, not that it was sent.
  */
 const SOS_TRIGGER_TEXT = { BUTTON: 'SOS button', SHAKE: 'Discreet: shake', BACK_TAP: 'Discreet: back tap', SHORTCUT: 'Phone shortcut' };
+/** What the operator found when she closes an SOS - SosResolution on the server. */
+const SOS_OUTCOMES = [
+  ['FALSE_ALARM', 'False alarm - she was reached and is safe; pressed by mistake'],
+  ['SAFE_CONFIRMED', 'She was reached - something happened, and she is safe now'],
+  ['CONTACT_CONFIRMED_SAFE', 'She could not be reached; her emergency contact confirmed she is safe'],
+  ['POLICE_INVOLVED', 'Police (112) called or with her'],
+  ['OTHER', 'Something else - say what in the note'],
+];
+
+/**
+ * Respond: the steps for an SOS, in order, with every number on the panel -
+ * the same steps as docs/sos-runbook.md. Phones arrive masked; Show reveals
+ * them (recorded), as everywhere in the console.
+ */
+function openSosResponse(r) {
+  const partner = r.raisedBy === 'PARTNER';
+  const who = esc(r.customerName || 'her');
+  const other = partner ? 'the customer on her trip' : 'the partner driving her';
+  const reveal = accountId => ({ subject: 'ACCOUNT_PHONE', accountId, bookingId: r.bookingId || undefined });
+  const contacts = r.emergencyContacts || [];
+  const coords = `${Number(r.lat).toFixed(5)}, ${Number(r.lng).toFixed(5)}`;
+  openModal(`
+    <div class="modal-head" data-testid="sos-respond">
+      <h3>SOS from ${who} <span class="badge ${partner ? 'b-role-driver' : 'b-role-customer'}">${partner ? 'Partner' : 'Customer'}</span></h3>
+      <p>Raised ${esc(time(r.createdAt))}${r.bookingId ? ' during a trip' : ', not on a trip'}. Work down the steps. Keep the alert open until she is safe.</p>
+    </div>
+    <div class="modal-body sos-steps">
+      <ol>
+        <li data-sos-step="call-her"><b>Call ${who} now.</b> ${telLink(r.customerPhone, reveal(r.customerAccountId))}
+          <p class="subtle">Say: "This is SheOut safety. You pressed SOS - are you safe? Can you talk?" If she cannot talk freely, ask yes/no questions:
+          "Are you in danger? Are you still in the vehicle? Should I call the police?" No answer: try once more straight away.</p></li>
+        <li data-sos-step="police"><b>Call 112 if</b> she says she is in danger, cannot speak freely, or does not answer twice.
+          <a class="btn" href="tel:112">Call 112</a>
+          <p class="subtle">Tell them her name, her phone and where she is - ${mapsLink(r.lat, r.lng, 'map')} <span class="num">${coords}</span>${r.bookingId ? ' - and the vehicle (Where is the trip now shows it, live)' : ''}. Then keep calling her.</p></li>
+        ${r.bookingId ? `<li data-sos-step="other-party"><b>Call ${other}${r.otherPartyName ? ' - ' + esc(r.otherPartyName) : ''}.</b>
+          ${r.otherPartyAccountId ? telLink(r.otherPartyPhone, reveal(r.otherPartyAccountId)) : '<span class="subtle">No one assigned yet</span>'}
+          ${can('trips.live.view') ? `<button class="btn" type="button" data-alert-live="${escValue(r.bookingId)}">Where is the trip now</button>` : ''}
+          <p class="subtle">Only to find out where she is and what is happening. If she has said that person is the danger, do not call them - that is a 112 call.</p></li>` : ''}
+        <li data-sos-step="contacts"><b>Call her emergency contacts.</b>
+          ${contacts.length ? `<ul class="contact-list">${contacts.map((c, i) => `<li><span class="grow"><b>${esc(c.name)}</b> <span class="subtle">${esc(c.relationship || '')}</span></span>${telLink(c.phoneNumber, { subject: 'EMERGENCY_CONTACT_PHONE', accountId: r.customerAccountId, bookingId: r.bookingId || undefined, index: i })}</li>`).join('')}</ul>`
+            : `<p class="subtle">None saved${partner ? ' - partners have none on file' : ''}. It is down to SheOut.</p>`}
+          <p class="subtle"${contacts.length ? '' : ' hidden'}>${r.contactsNotified > 0 ? `${r.contactsNotified} got a text. Call them anyway if she cannot be reached.` : 'Nobody has been texted (SheOut has no SMS service yet). Call them: say she raised an SOS, where, and that SheOut is on it. Ask if they can reach her.'}</p></li>
+        <li data-sos-step="close"><b>Close it once she is safe</b> - or the police have it. Say what happened.
+          <fieldset class="sos-outcomes">
+            ${SOS_OUTCOMES.map(([v, label]) => `<label><input type="radio" name="sosOutcome" value="${v}"> ${esc(label)}</label>`).join('')}
+          </fieldset>
+          <label for="sosNote">Note</label>
+          <textarea id="sosNote" maxlength="500" placeholder="e.g. Called her at 21:04, she was safe at home; pressed by mistake"></textarea>
+          <p class="field-err" id="sosErr" hidden></p></li>
+      </ol>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" data-cancel type="button">Keep it open</button>
+      <button class="btn btn-primary" data-sos-close type="button">Close the alert</button>
+    </div>`, { wide: true });
+  const root = $('modalRoot');
+  root.querySelector('[data-cancel]').addEventListener('click', closeModal);
+  root.querySelector('[data-sos-close]').addEventListener('click', async ev => {
+    const btn = ev.currentTarget;
+    const picked = root.querySelector('input[name="sosOutcome"]:checked');
+    const note = root.querySelector('#sosNote').value.trim();
+    const err = root.querySelector('#sosErr');
+    const say = text => { err.textContent = text; err.hidden = false; };
+    if (!picked) return say('Pick what happened.');
+    if (picked.value === 'OTHER' && !note) { root.querySelector('#sosNote').focus(); return say('Say what happened in the note.'); }
+    btn.disabled = true;
+    try {
+      await api(`/admin/sos/${r.id}/resolve`, { method: 'POST', body: JSON.stringify({ outcome: picked.value, note: note || null }) });
+      closeModal();
+      toast('ok', 'Alert closed', 'What happened is recorded with it.');
+      render();
+    } catch (e) {
+      btn.disabled = false;
+      if (e.message === 'unauthorized') return;
+      say(e.message);
+    }
+  });
+}
+
 function sosDelivery(r) {
   const trigger = `<div class="subtle">${esc(SOS_TRIGGER_TEXT[r.triggerSource] || 'SOS button')}</div>`;
   let arrived;
@@ -3128,7 +3214,7 @@ const VIEWS = {
 
   sos: {
     title: 'SOS Alerts',
-    desc: 'Live safety alerts raised by customers and partners. "Reached" counts the emergency contacts an SMS actually got through to — if it reads 0, nobody was told. A partner has no emergency contacts on file: her alert is yours to answer.',
+    desc: 'Live safety alerts raised by customers and partners. Press Respond: it lists what to do, in order, with every number to call - her, the other person on the trip, her emergency contacts and 112. "Reached" counts the contacts an SMS got through to; while SheOut has no SMS service it reads 0, so the contacts are yours to call.',
     cardTitle: 'Active alerts',
     hint: 'Open the location link to see exactly where the alert came from',
     empty: { icon: ICON_EMPTY_SOS, title: 'No active SOS alerts', text: 'Alerts raised from the customer and partner apps appear here until they are resolved.' },
@@ -3164,7 +3250,7 @@ const VIEWS = {
       // Nobody on it is what the clock is for; once someone is, it is theirs to see through.
       if (key === 'waiting') return (WORK.sos || {})[r.id] ? `<span class="wait">${waited(r.createdAt).text}</span>` : slaClock(r.createdAt, WORK_SLA && WORK_SLA.sosAck);
       if (key === 'holder') return holderCell('sos', r.id, { soft: true, manage: 'support.all' });
-      if (key === 'act') return `<button class="btn btn-primary" data-resolve="${r.id}" type="button">Mark resolved</button>`;
+      if (key === 'act') return `<button class="btn btn-primary" data-sos-respond="${escValue(r.id)}" type="button">Respond</button>`;
       return '—';
     },
   },
@@ -8999,22 +9085,10 @@ $('refresh').addEventListener('click', async () => {
 
 // Delegated so freshly rendered rows need no re-binding.
 $('rows').addEventListener('click', async e => {
-  const resolveBtn = e.target.closest('[data-resolve]');
-  if (resolveBtn) {
-    const ok = await confirmAction({
-      title: 'Mark this SOS alert as resolved?',
-      message: 'Only do this once the situation has actually been dealt with. The alert will leave the active list.',
-      confirmLabel: 'Mark resolved',
-    });
-    if (!ok) return;
-    try {
-      await api(`/admin/sos/${resolveBtn.dataset.resolve}/resolve`, { method: 'POST' });
-      toast('ok', 'Alert resolved', 'It has been removed from the active list.');
-      render();
-    } catch (err) {
-      if (err.message === 'unauthorized') return;
-      toast('bad', 'Could not resolve that alert', err.message);
-    }
+  const respondBtn = e.target.closest('[data-sos-respond]');
+  if (respondBtn) {
+    const alert = lastRows.find(r => r.id === respondBtn.dataset.sosRespond);
+    if (alert) openSosResponse(alert);
     return;
   }
   const markPaidBtn = e.target.closest('[data-markpaid]');

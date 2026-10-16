@@ -3,6 +3,7 @@ package com.sheout.admin.internal;
 import com.sheout.notifications.SosDeliveryChannel;
 import com.sheout.notifications.SosTriggerSource;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 /** One active SOS alert with the customer identified. */
@@ -27,6 +28,23 @@ public record SosAlertRow(
         SosTriggerSource triggerSource,
         SosDeliveryChannel deliveryChannel,
         boolean smsFallbackOpened,
-        Instant triggeredAt
+        Instant triggeredAt,
+        /**
+         * The other person on the trip it was raised on - the partner when a
+         * rider pressed it, the rider when a partner did. Null with no trip,
+         * or before a partner was assigned. The operator calls them next if
+         * she cannot be reached (docs/sos-runbook.md).
+         */
+        UUID otherPartyAccountId,
+        String otherPartyName,
+        String otherPartyPhone,
+        /**
+         * Her saved emergency contacts, in their saved order (the reveal's index).
+         * SheOut cannot text them yet (no SMS provider), so the operator calls them.
+         */
+        List<Contact> emergencyContacts
 ) {
+    /** The phone is masked in the console like any other; Show reveals it. */
+    public record Contact(String name, String relationship, String phoneNumber) {
+    }
 }

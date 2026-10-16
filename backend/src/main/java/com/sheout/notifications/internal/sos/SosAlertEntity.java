@@ -1,6 +1,7 @@
 package com.sheout.notifications.internal.sos;
 
 import com.sheout.notifications.SosDeliveryChannel;
+import com.sheout.notifications.SosResolution;
 import com.sheout.notifications.SosStatus;
 import com.sheout.notifications.SosTriggerSource;
 import com.sheout.sharedkernel.BaseEntity;
@@ -60,6 +61,14 @@ public class SosAlertEntity extends BaseEntity {
 
     @Column(name = "triggered_at")
     private Instant triggeredAt;
+
+    /** What the operator found; set with resolvedAt/resolvedBy by resolve(). */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "resolution_outcome", length = 30)
+    private SosResolution resolutionOutcome;
+
+    @Column(name = "resolution_note", length = 500)
+    private String resolutionNote;
 
     @Column(name = "client_alert_id", unique = true)
     private UUID clientAlertId;
@@ -148,9 +157,19 @@ public class SosAlertEntity extends BaseEntity {
      * alert resolved without recording who did it - hence no plain
      * setStatus on this entity.
      */
-    public void resolve(UUID resolvedByAccountId) {
+    public void resolve(UUID resolvedByAccountId, SosResolution outcome, String note) {
         this.status = SosStatus.RESOLVED;
         this.resolvedAt = Instant.now();
         this.resolvedBy = resolvedByAccountId;
+        this.resolutionOutcome = outcome;
+        this.resolutionNote = note;
+    }
+
+    public SosResolution getResolutionOutcome() {
+        return resolutionOutcome;
+    }
+
+    public String getResolutionNote() {
+        return resolutionNote;
     }
 }

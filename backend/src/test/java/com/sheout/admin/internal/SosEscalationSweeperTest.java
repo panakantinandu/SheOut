@@ -67,7 +67,7 @@ class SosEscalationSweeperTest {
         StaffLiveEvents live = (type, audience, json) -> liveEvents.add(type + " " + audience + " " + json);
         sweeper = new SosEscalationSweeper(sos, work, sla, directory, pushes, live, claims, true, 2, 3);
         active.add(new SosAlertSummary(alertId, UUID.randomUUID(), UUID.randomUUID(), 17.38, 78.48, SosStatus.ACTIVE,
-                1, 0, raised, null, null, SosTriggerSource.BUTTON, SosDeliveryChannel.DATA, false, raised));
+                1, 0, raised, null, null, SosTriggerSource.BUTTON, SosDeliveryChannel.DATA, false, raised, null, null));
     }
 
     @Test

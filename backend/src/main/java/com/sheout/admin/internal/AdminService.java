@@ -49,10 +49,11 @@ public class AdminService {
     private final AuthApi authApi;
     private final CustomerProfileApi customerProfileApi;
     private final DriverProfileApi driverProfileApi;
+    private final com.sheout.users.EmergencyContactsApi emergencyContactsApi;
 
     public AdminService(VerificationApi verificationApi, SosApi sosApi, BookingApi bookingApi,
                  PaymentApi paymentApi, AuthApi authApi, CustomerProfileApi customerProfileApi,
-                 DriverProfileApi driverProfileApi) {
+                 DriverProfileApi driverProfileApi, com.sheout.users.EmergencyContactsApi emergencyContactsApi) {
         this.verificationApi = verificationApi;
         this.sosApi = sosApi;
         this.bookingApi = bookingApi;
@@ -60,6 +61,7 @@ public class AdminService {
         this.authApi = authApi;
         this.customerProfileApi = customerProfileApi;
         this.driverProfileApi = driverProfileApi;
+        this.emergencyContactsApi = emergencyContactsApi;
     }
 
     /**
@@ -96,8 +98,9 @@ public class AdminService {
                 .toList();
     }
 
-    public Result<SosAlertSummary, SosError> resolveAlert(UUID alertId, UUID adminAccountId) {
-        return sosApi.resolve(alertId, adminAccountId);
+    public Result<SosAlertSummary, SosError> resolveAlert(UUID alertId, UUID adminAccountId,
+                                                          com.sheout.notifications.SosResolution outcome, String note) {
+        return sosApi.resolve(alertId, adminAccountId, outcome, note);
     }
 
     /**
@@ -147,6 +150,14 @@ public class AdminService {
                 ? driverProfileApi.findByAccountId(alert.customerAccountId()) : Optional.empty();
         Optional<CustomerProfileSummary> riderProfile = partner
                 ? Optional.empty() : customerProfileApi.findByAccountId(alert.customerAccountId());
+        // The other person on that trip: whoever she is riding with, or her rider.
+        UUID otherParty = alert.bookingId() == null ? null : bookingApi.findById(alert.bookingId())
+                .map(b -> partner ? b.customerId() : b.driverId())
+                .filter(id -> !id.equals(alert.customerAccountId()))
+                .orElse(null);
+        String otherPartyName = otherParty == null ? null : partner
+                ? customerProfileApi.findByAccountId(otherParty).map(CustomerProfileSummary::name).orElse(null)
+                : driverProfileApi.findByAccountId(otherParty).map(DriverProfileSummary::name).orElse(null);
         return new SosAlertRow(
                 alert.id(),
                 alert.customerAccountId(),
@@ -165,7 +176,13 @@ public class AdminService {
                 alert.triggerSource(),
                 alert.deliveryChannel(),
                 alert.smsFallbackOpened(),
-                alert.triggeredAt()
+                alert.triggeredAt(),
+                otherParty,
+                otherPartyName,
+                otherParty == null ? null : phoneFor(otherParty),
+                emergencyContactsApi.findContactsByAccountId(alert.customerAccountId()).stream()
+                        .map(c -> new SosAlertRow.Contact(c.name(), c.relationship(), c.phoneNumber()))
+                        .toList()
         );
     }
 

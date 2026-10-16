@@ -149,9 +149,16 @@ public class AdminController {
 
     @RequiresPermission(Permission.SOS_RESPOND)
     @PostMapping("/sos/{alertId}/resolve")
-    public ResponseEntity<SosAlertSummary> resolveAlert(@PathVariable UUID alertId) {
+    public ResponseEntity<SosAlertSummary> resolveAlert(@PathVariable UUID alertId,
+                                                        @Valid @RequestBody ResolveSosRequest request) {
+        if (request.outcome() == com.sheout.notifications.SosResolution.OTHER
+                && (request.note() == null || request.note().isBlank())) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "NOTE_REQUIRED",
+                    "Say what happened - a note is needed when the outcome is Other");
+        }
         CurrentAccount admin = caller();
-        Result<SosAlertSummary, SosError> result = adminService.resolveAlert(alertId, admin.accountId());
+        String note = request.note() == null || request.note().isBlank() ? null : request.note().trim();
+        Result<SosAlertSummary, SosError> result = adminService.resolveAlert(alertId, admin.accountId(), request.outcome(), note);
         if (result.isFailure()) {
             throw switch (result.error()) {
                 case ALERT_NOT_FOUND -> ApiException.notFound("No such SOS alert");
@@ -368,6 +375,11 @@ public class AdminController {
     }
 
     public record BlockRequest(@NotBlank @Size(max = 500) String reason) {
+    }
+
+    /** What the operator found when she closed an SOS - see docs/sos-runbook.md. */
+    public record ResolveSosRequest(@NotNull com.sheout.notifications.SosResolution outcome,
+                                    @Size(max = 500) String note) {
     }
 
     /**

@@ -14,6 +14,7 @@ import com.sheout.notifications.SosDeliveryChannel;
 import com.sheout.notifications.SosTriggerSource;
 import com.sheout.notifications.SosApi;
 import com.sheout.notifications.SosError;
+import com.sheout.notifications.SosResolution;
 import com.sheout.notifications.SosStatus;
 import com.sheout.notifications.internal.channel.NotificationChannel;
 import com.sheout.sharedkernel.Result;
@@ -238,7 +239,8 @@ public class SosService implements SosApi {
      */
     @Override
     @Transactional
-    public Result<SosAlertSummary, SosError> resolve(UUID alertId, UUID resolvedByAccountId) {
+    public Result<SosAlertSummary, SosError> resolve(UUID alertId, UUID resolvedByAccountId,
+                                                      SosResolution outcome, String note) {
         Optional<SosAlertEntity> found = sosAlertRepository.findById(alertId);
         if (found.isEmpty()) {
             return Result.failure(SosError.ALERT_NOT_FOUND);
@@ -247,8 +249,8 @@ public class SosService implements SosApi {
         if (alert.getStatus() == SosStatus.RESOLVED) {
             return Result.failure(SosError.ALREADY_RESOLVED);
         }
-        alert.resolve(resolvedByAccountId);
-        log.info("SOS alert {} resolved by admin {}", alertId, resolvedByAccountId);
+        alert.resolve(resolvedByAccountId, outcome, note);
+        log.info("SOS alert {} resolved by admin {} as {}", alertId, resolvedByAccountId, outcome);
         return Result.success(toSummary(sosAlertRepository.save(alert)));
     }
 
@@ -268,7 +270,9 @@ public class SosService implements SosApi {
                 alert.getTriggerSource(),
                 alert.getDeliveryChannel(),
                 alert.isSmsFallbackOpened(),
-                alert.getTriggeredAt()
+                alert.getTriggeredAt(),
+                alert.getResolutionOutcome(),
+                alert.getResolutionNote()
         );
     }
 

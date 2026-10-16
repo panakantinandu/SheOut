@@ -40,5 +40,5 @@ public interface SosApi {
      * original resolver - who first closed a safety alert is not something
      * a second call should be able to rewrite.
      */
-    Result<SosAlertSummary, SosError> resolve(UUID alertId, UUID resolvedByAccountId);
+    Result<SosAlertSummary, SosError> resolve(UUID alertId, UUID resolvedByAccountId, SosResolution outcome, String note);
 }
