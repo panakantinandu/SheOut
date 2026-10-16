@@ -129,28 +129,28 @@ class PartnerDocumentReviewTest {
     }
 
     @Test
-    void aPrivatePolicyCannotBeApprovedForAPartnerWhoCarriesPassengers() {
+    void aPrivatePolicyIsApprovedAndHerVehicleDecidesWhetherItIsEnough() {
+        // A bike taxi on her own bike and policy, as on other bike-taxi apps. An auto or cab partner with a
+        // private policy is kept offline by readiness (INSURANCE_NOT_COMMERCIAL), which knows her vehicle.
         PartnerDocumentEntity policy = waiting(PartnerDocumentType.VEHICLE_INSURANCE);
 
         var result = service.review(UUID.randomUUID(), operator, PartnerDocumentStatus.VERIFIED, null,
                 facts("POL-2026-000001", TODAY.plusMonths(8), InsuranceUseType.PRIVATE));
 
-        assertThat(result.error()).isEqualTo(VerificationError.INSURANCE_NOT_COMMERCIAL);
-        assertThat(policy.getStatus()).isEqualTo(PartnerDocumentStatus.UNDER_REVIEW);
-        // The reason an operator sees says why, in plain words.
-        assertThat(com.sheout.driververification.internal.web.VerificationControllerAccess
-                .message(VerificationError.INSURANCE_NOT_COMMERCIAL))
-                .contains("A private policy can be refused when she carries paying passengers");
+        assertThat(result.isSuccess()).isTrue();
+        assertThat(result.value().insuranceUseType()).isEqualTo(InsuranceUseType.PRIVATE);
+        assertThat(policy.getStatus()).isEqualTo(PartnerDocumentStatus.VERIFIED);
     }
 
     @Test
-    void anUnknownUsePolicyCannotBeApprovedEither() {
-        waiting(PartnerDocumentType.VEHICLE_INSURANCE);
+    void aPolicyWithItsUseNotSaidIsApprovedToo() {
+        PartnerDocumentEntity policy = waiting(PartnerDocumentType.VEHICLE_INSURANCE);
 
         var result = service.review(UUID.randomUUID(), operator, PartnerDocumentStatus.VERIFIED, null,
                 facts("POL-2026-000001", TODAY.plusMonths(8), null));
 
-        assertThat(result.error()).isEqualTo(VerificationError.INSURANCE_NOT_COMMERCIAL);
+        assertThat(result.isSuccess()).isTrue();
+        assertThat(policy.getStatus()).isEqualTo(PartnerDocumentStatus.VERIFIED);
     }
 
     @Test

@@ -160,23 +160,26 @@ class PartnerDocumentFlowTest {
         assertThat(verification.findDocumentsAwaitingReview()).extracting(PartnerDocumentSummary::id)
                 .contains(licence.id(), rc.id(), policy.id(), puc.id());
 
-        // ---- the operator: the private policy is refused until she brings a commercial one
+        // ---- the operator approves all four. Her own bike on a private policy is enough for a bike taxi;
+        // nothing asks her about policy use.
         approve(licence.id());
         approve(rc.id());
         approve(puc.id());
-        assertThat(documents.review(policy.id(), operator, PartnerDocumentStatus.VERIFIED, null, null).error())
-                .isEqualTo(VerificationError.INSURANCE_NOT_COMMERCIAL);
-        PartnerDocumentSummary commercial = upload(PartnerDocumentType.VEHICLE_INSURANCE, "POL-2026-000078", today.plusMonths(9),
-                InsuranceUseType.COMMERCIAL);
-        approve(commercial.id());
+        approve(policy.id());
 
         PartnerReadiness ready = verification.partnerReadiness(partner, "BIKE");
         assertThat(ready.ready()).isTrue();
         assertThat(ready.blockers()).isEmpty();
+        assertThat(ready.documents()).filteredOn(d -> d.type() == PartnerDocumentType.VEHICLE_INSURANCE)
+                .singleElement().satisfies(d -> assertThat(d.commercialUseRequired()).isFalse());
         assertThat(driverProfiles.isCurrentlyVerified(partner)).isTrue();
-        // An auto would also need a fitness certificate.
-        assertThat(verification.partnerReadiness(partner, "AUTO").firstBlocker().documentType())
-                .isEqualTo(PartnerDocumentType.FITNESS_CERTIFICATE);
+        // An auto runs on a transport plate: it also needs a fitness certificate, and a commercial policy.
+        PartnerReadiness auto = verification.partnerReadiness(partner, "AUTO");
+        assertThat(auto.blockers()).extracting(PartnerReadiness.Blocker::documentType)
+                .contains(PartnerDocumentType.VEHICLE_INSURANCE, PartnerDocumentType.FITNESS_CERTIFICATE);
+        assertThat(auto.blockers()).extracting(PartnerReadiness.Blocker::code).contains(BlockerCode.INSURANCE_NOT_COMMERCIAL);
+        assertThat(auto.documents()).filteredOn(d -> d.type() == PartnerDocumentType.VEHICLE_INSURANCE)
+                .singleElement().satisfies(d -> assertThat(d.commercialUseRequired()).isTrue());
 
         // ---- a renewal waiting for review does not take her off the road
         PartnerDocumentSummary renewal = upload(PartnerDocumentType.PUC, "PUC-100002", today.plusMonths(12), null);

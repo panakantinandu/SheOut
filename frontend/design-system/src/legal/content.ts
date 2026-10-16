@@ -337,7 +337,7 @@ export const PARTNER_TERMS: LegalDocument = {
     {
       heading: 'Insurance',
       paragraphs: [
-        'The app shows whether a trip is insured. A trip is insured only when the app says so. Your own vehicle insurance must be valid and, for rides, for commercial use.',
+        `The app shows whether a trip is insured. A trip is insured only when the app says so. Your own vehicle insurance must be valid; for an auto or a cab it must be a commercial policy. ${TODO_LAWYER}`,
       ],
     },
     {

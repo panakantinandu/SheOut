@@ -403,10 +403,10 @@ public class PartnerDocumentService {
         if (document.getValidUntil() != null && document.getValidUntil().isBefore(today)) {
             return Result.failure(VerificationError.DOCUMENT_ALREADY_EXPIRED);
         }
-        if (type == PartnerDocumentType.VEHICLE_INSURANCE && requirements.commercialInsuranceRequiredForAnyVehicle()
-                && insuranceUseOf(document) != InsuranceUseType.COMMERCIAL) {
-            return Result.failure(VerificationError.INSURANCE_NOT_COMMERCIAL);
-        }
+        // Whether her policy must be commercial depends on her vehicle, which
+        // this review does not have. Readiness has it, and keeps an auto or
+        // cab partner with a private policy offline (INSURANCE_NOT_COMMERCIAL);
+        // the console shows the reviewer that blocker. One rule, in one place.
         if (type == PartnerDocumentType.VEHICLE_RC && pucValidUntil != null) {
             if (pucValidUntil.isBefore(today)) {
                 return Result.failure(VerificationError.DOCUMENT_ALREADY_EXPIRED);
@@ -538,7 +538,7 @@ public class PartnerDocumentService {
             PartnerDocumentEntity inForce = inForce(doc, byId, today);
             boolean renewalWaiting = doc != null && inForce != null && inForce != doc;
             PartnerDocumentEntity described = renewalWaiting ? inForce : doc;
-            states.add(describe(type, isRequired, described, renewalWaiting));
+            states.add(describe(type, isRequired, described, renewalWaiting, type == PartnerDocumentType.VEHICLE_INSURANCE && commercial));
             if (!isRequired) {
                 continue;
             }
@@ -958,15 +958,16 @@ public class PartnerDocumentService {
         }
     }
 
-    private DocumentState describe(PartnerDocumentType type, boolean required, PartnerDocumentEntity doc, boolean renewalWaiting) {
+    private DocumentState describe(PartnerDocumentType type, boolean required, PartnerDocumentEntity doc, boolean renewalWaiting,
+                                   boolean commercialUseRequired) {
         if (doc == null) {
-            return new DocumentState(type, required, null, null, null, null, null, null, null, false);
+            return new DocumentState(type, required, null, null, null, null, null, null, null, false, null, commercialUseRequired);
         }
         return new DocumentState(type, required, doc.getStatus(), doc.getDocumentNumber(), doc.getIssuedOn(),
                 doc.getValidUntil(), doc.getStatus() == PartnerDocumentStatus.REJECTED ? doc.getRejectionReason() : null,
                 type == PartnerDocumentType.VEHICLE_INSURANCE ? insuranceUseOf(doc) : null,
                 doc.getSubmittedAt(), renewalWaiting,
-                doc.getStatus() == PartnerDocumentStatus.REJECTED ? doc.getRejectionCode() : null);
+                doc.getStatus() == PartnerDocumentStatus.REJECTED ? doc.getRejectionCode() : null, commercialUseRequired);
     }
 
     private String describe(PartnerDocumentEntity doc) {

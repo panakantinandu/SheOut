@@ -990,7 +990,7 @@
       "id": "Any one ID: Aadhaar, passport, voter ID or driving licence",
       "licence": "Your driving licence",
       "rc": "Your vehicle's RC - in your name or a family member's",
-      "insurance": "Vehicle insurance - a commercial policy",
+      "insurance": "Valid vehicle insurance",
       "puc": "PUC (pollution) certificate",
       "fitness": "Fitness certificate (for an auto or cab)",
       "police": "Police verification certificate",
@@ -1065,7 +1065,7 @@
       "why": {
         "DRIVING_LICENCE": "Shows you are allowed to drive this kind of vehicle.",
         "VEHICLE_RC": "Shows the vehicle is registered. It can be in your name or a family member's.",
-        "VEHICLE_INSURANCE": "Covers you and your customer. It must be a commercial policy.",
+        "VEHICLE_INSURANCE": "Your vehicle's valid insurance. An auto or a cab needs a commercial policy.",
         "PUC": "Shows the vehicle passed its pollution check.",
         "FITNESS_CERTIFICATE": "Shows an auto or cab is fit to carry passengers.",
         "POLICE_CERTIFICATE": "Confirms you have no police record. Every SheOut partner has one."

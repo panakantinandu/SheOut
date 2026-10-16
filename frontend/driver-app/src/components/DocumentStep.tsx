@@ -66,6 +66,8 @@ export function DocumentForm({
   const [issuedOn, setIssuedOn] = useState('');
   const [validUntil, setValidUntil] = useState('');
   const [use, setUse] = useState<InsuranceUseType | ''>('');
+  /** Only an auto or a cab needs a commercial policy; a bike taxi runs on her own bike's policy. */
+  const commercialAsked = type === 'VEHICLE_INSURANCE' && Boolean(state?.commercialUseRequired);
   const [owner, setOwner] = useState<VehicleOwner | ''>('');
   const [ownerName, setOwnerName] = useState('');
   /** What the photo check noticed and she chose to send anyway. */
@@ -115,7 +117,7 @@ export function DocumentForm({
               ? t('verify.doc.needOwner')
               : rc && !ownerNameOk
                 ? t('verify.doc.needOwnerName')
-                : type === 'VEHICLE_INSURANCE' && !use
+                : commercialAsked && !use
                   ? t('verify.doc.needUse')
                   : null;
   const blocked = Boolean(missing) || Boolean(dateError) || Boolean(issueError);
@@ -308,7 +310,7 @@ export function DocumentForm({
         </div>
       )}
 
-      {type === 'VEHICLE_INSURANCE' && (
+      {commercialAsked && (
         <fieldset className="space-y-2">
           <legend className="mb-1 text-sm font-medium text-text-primary">{t('verify.doc.useQuestion')}</legend>
           <div className="grid gap-2">

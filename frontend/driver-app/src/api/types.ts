@@ -514,6 +514,8 @@ export interface DocumentState {
   submittedAt: string | null;
   /** A newer upload is waiting while this one still counts. */
   renewalUnderReview: boolean;
+  /** Her vehicle insurance must be a commercial policy (an auto or a cab); false for a bike. */
+  commercialUseRequired?: boolean;
   /** Why it was sent back, from the reviewer's list. Null for an older, typed reason. */
   rejectionCode: string | null;
 }

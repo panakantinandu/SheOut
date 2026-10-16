@@ -8,7 +8,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -60,9 +59,14 @@ public class DocumentRequirements {
             @Value("${PARTNER_DOCS_AUTO:DRIVING_LICENCE,VEHICLE_RC,VEHICLE_INSURANCE,PUC,FITNESS_CERTIFICATE}") String autoDocs,
             @Value("${PARTNER_DOCS_CAB:DRIVING_LICENCE,VEHICLE_RC,VEHICLE_INSURANCE,PUC,FITNESS_CERTIFICATE}") String cabDocs,
             @Value("${PARTNER_DOCS_PARCEL:DRIVING_LICENCE,VEHICLE_RC,VEHICLE_INSURANCE,PUC}") String parcelDocs,
-            // Services that carry a paying passenger. A private-use policy
-            // can be refused for exactly those trips.
-            @Value("${COMMERCIAL_INSURANCE_SERVICES:BIKE,AUTO,CAB}") String commercialServices,
+            // Services whose vehicle must carry a commercial policy. Autos and
+            // cabs run on transport (yellow) plates, so theirs is commercial by
+            // law. A bike taxi runs on her own bike and its own policy, as on
+            // other bike-taxi apps: the Motor Vehicle Aggregator Guidelines
+            // 2025 allow non-transport motorcycles where the state permits,
+            // with the platform insuring the passenger (see the insurance
+            // module). Lawyer to confirm for Telangana (legal-open-items O-25).
+            @Value("${COMMERCIAL_INSURANCE_SERVICES:AUTO,CAB}") String commercialServices,
             @Value("${DOCUMENT_REMINDER_DAYS:30,7,1}") String reminderDays,
             // The rollout switch, not a bypass: see the README. While false,
             // missing documents are warnings she is shown, not a refusal.
@@ -111,19 +115,9 @@ public class DocumentRequirements {
         return new ArrayList<>(required);
     }
 
-    /** Whether her insurance must be for commercial use - true when any of her services carries passengers. */
+    /** Whether her insurance must be for commercial use - true when one of her services is in COMMERCIAL_INSURANCE_SERVICES. */
     public boolean commercialInsuranceRequired(String vehicleType) {
         return servicesFor(vehicleType).stream().anyMatch(commercialInsuranceServices::contains);
-    }
-
-    /**
-     * For an operator approving a policy without her vehicle to hand: the
-     * strict answer. Every vehicle SheOut takes carries passengers today, so
-     * this is the same answer in practice.
-     */
-    public boolean commercialInsuranceRequiredForAnyVehicle() {
-        return servicesByVehicle.values().stream().flatMap(Collection::stream)
-                .anyMatch(commercialInsuranceServices::contains);
     }
 
     /** Largest first: 30, 7, 1. */

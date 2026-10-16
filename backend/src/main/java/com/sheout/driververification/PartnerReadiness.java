@@ -68,14 +68,27 @@ public record PartnerReadiness(
             /** A newer upload is waiting for review while this one still counts. */
             boolean renewalUnderReview,
             /** Why a person sent it back, from RejectionReason - the app says it in her language. */
-            String rejectionCode
+            String rejectionCode,
+            /**
+             * Her vehicle insurance must be a commercial policy (an auto or a
+             * cab). False for a bike, and for every other document - so the
+             * app asks about policy use only when the answer matters.
+             */
+            boolean commercialUseRequired
     ) {
 
         public DocumentState(PartnerDocumentType type, boolean required, PartnerDocumentStatus status, String documentNumber,
                              LocalDate issuedOn, LocalDate validUntil, String rejectionReason, InsuranceUseType insuranceUseType,
                              Instant submittedAt, boolean renewalUnderReview) {
             this(type, required, status, documentNumber, issuedOn, validUntil, rejectionReason, insuranceUseType, submittedAt,
-                    renewalUnderReview, null);
+                    renewalUnderReview, null, false);
+        }
+
+        public DocumentState(PartnerDocumentType type, boolean required, PartnerDocumentStatus status, String documentNumber,
+                             LocalDate issuedOn, LocalDate validUntil, String rejectionReason, InsuranceUseType insuranceUseType,
+                             Instant submittedAt, boolean renewalUnderReview, String rejectionCode) {
+            this(type, required, status, documentNumber, issuedOn, validUntil, rejectionReason, insuranceUseType, submittedAt,
+                    renewalUnderReview, rejectionCode, false);
         }
     }
 

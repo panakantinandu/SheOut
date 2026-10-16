@@ -19,7 +19,7 @@ class DocumentRequirementsTest {
                 "DRIVING_LICENCE,VEHICLE_RC,VEHICLE_INSURANCE,PUC,FITNESS_CERTIFICATE",
                 "DRIVING_LICENCE,VEHICLE_RC,VEHICLE_INSURANCE,PUC,FITNESS_CERTIFICATE",
                 "DRIVING_LICENCE,VEHICLE_RC,VEHICLE_INSURANCE,PUC",
-                "BIKE,AUTO,CAB", "30,7,1", true);
+                "AUTO,CAB", "30,7,1", true);
     }
 
     @Test
@@ -49,8 +49,11 @@ class DocumentRequirementsTest {
     }
 
     @Test
-    void passengersNeedACommercialPolicyAndAParcelOnlyVehicleWouldNot() {
-        assertThat(defaults().commercialInsuranceRequired("BIKE")).isTrue();
+    void autosAndCabsNeedACommercialPolicyAndABikeTaxiDoesNot() {
+        // Her own bike on its own policy, as on other bike-taxi apps; autos and cabs run on transport plates.
+        assertThat(defaults().commercialInsuranceRequired("BIKE")).isFalse();
+        assertThat(defaults().commercialInsuranceRequired("AUTO")).isTrue();
+        assertThat(defaults().commercialInsuranceRequired("CAB")).isTrue();
         DocumentRequirements parcelOnly = new DocumentRequirements("PARCEL", "AUTO", "CAB",
                 "DRIVING_LICENCE", "DRIVING_LICENCE", "DRIVING_LICENCE", "DRIVING_LICENCE",
                 "AUTO,CAB", "30", true);
