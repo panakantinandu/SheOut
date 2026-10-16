@@ -31,8 +31,18 @@ export interface PhotoCheckOptions {
 const SIZE = 512;
 /** Variance of the Laplacian below which edges are too soft to read small print. */
 const BLUR_LIMIT = 30;
-/** Share of pixels blown out to white that reads as a glare patch rather than paper. */
-const GLARE_SHARE = 0.1;
+/**
+ * Glare is a patch blown out to pure white - a flash or a lamp on the
+ * laminate - not a white card or bright paper, which sit a little below it.
+ * The photo is cut into a 16 x 16 grid; a cell is a hotspot when most of it
+ * is clipped, and glare means hotspots cover at least this share of the photo.
+ * (The first version counted every near-white pixel anywhere, so a white
+ * Aadhaar card on a desk read as glare.)
+ */
+const GLARE_GRID = 16;
+const CLIPPED = 254;
+const HOT_CELL_SHARE = 0.7;
+const GLARE_SHARE = 0.03;
 /** Mean brightness (0-255) below which print is hard to make out. */
 const DARK_LIMIT = 55;
 
@@ -50,17 +60,15 @@ export async function checkPhoto(file: Blob, options: PhotoCheckOptions = {}): P
   const { data, width, height } = context.getImageData(0, 0, canvas.width, canvas.height);
   const grey = new Float32Array(width * height);
   let sum = 0;
-  let blown = 0;
   for (let i = 0, p = 0; i < data.length; i += 4, p++) {
     const y = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
     grey[p] = y;
     sum += y;
-    if (y >= 250) blown++;
   }
   const warnings: PhotoWarning[] = [];
   const mean = sum / grey.length;
   if (mean < DARK_LIMIT) warnings.push('DARK');
-  if (blown / grey.length > GLARE_SHARE) warnings.push('GLARE');
+  if (hotspotShare(grey, width, height) >= GLARE_SHARE) warnings.push('GLARE');
   if (laplacianVariance(grey, width, height) < BLUR_LIMIT) warnings.push('BLURRY');
   if (options.expectFace) {
     const found = await findFace(canvas, options.findFace);
@@ -78,6 +86,25 @@ async function toCanvas(file: Blob): Promise<HTMLCanvasElement> {
   canvas.getContext('2d')?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
   bitmap.close?.();
   return canvas;
+}
+
+/** Share of the photo covered by cells that are mostly clipped to white. */
+export function hotspotShare(grey: Float32Array, width: number, height: number): number {
+  const cellW = Math.max(1, Math.floor(width / GLARE_GRID));
+  const cellH = Math.max(1, Math.floor(height / GLARE_GRID));
+  let hot = 0;
+  let cells = 0;
+  for (let cy = 0; cy + cellH <= height; cy += cellH) {
+    for (let cx = 0; cx + cellW <= width; cx += cellW) {
+      let clipped = 0;
+      for (let y = cy; y < cy + cellH; y++) {
+        for (let x = cx; x < cx + cellW; x++) if (grey[y * width + x] >= CLIPPED) clipped++;
+      }
+      cells++;
+      if (clipped / (cellW * cellH) >= HOT_CELL_SHARE) hot++;
+    }
+  }
+  return cells === 0 ? 0 : hot / cells;
 }
 
 function laplacianVariance(grey: Float32Array, width: number, height: number): number {

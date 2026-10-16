@@ -1,4 +1,4 @@
-import { BadgeCheck, Check, Clock, Eye, ShieldCheck, Upload, UserCheck } from 'lucide-react';
+import { BadgeCheck, Camera, Check, Clock, Eye, ShieldCheck, Upload, UserCheck } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGoBack } from '../lib/useGoBack';
@@ -268,7 +268,8 @@ export function Verification() {
               <input
                 ref={fileRef}
                 type="file"
-                accept="image/*,application/pdf"
+                accept="image/*"
+                capture="environment"
                 className="hidden"
                 data-testid="verification-file"
                 onChange={(e) => {
@@ -291,7 +292,7 @@ export function Verification() {
                   fullWidth
                   variant="secondary"
                   disabled={uploading}
-                  icon={<Upload className="h-4 w-4" />}
+                  icon={<Camera className="h-4 w-4" />}
                   onClick={() => fileRef.current?.click()}
                 >
                   {status.documentSubmitted ? t('verification.uploadDifferent') : t('verification.choose')}

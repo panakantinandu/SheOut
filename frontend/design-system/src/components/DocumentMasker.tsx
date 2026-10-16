@@ -44,9 +44,18 @@ const MIN_DRAG_PX = 6;
  * Drawn on a canvas sized to the image's own pixels, so a mask lands where
  * she drew it whatever the screen's size or density.
  */
+/**
+ * The longest side, in pixels, of the photo she masks and sends. Plenty to
+ * read a name and a face; a phone camera's 4000 x 3000 original is too big to
+ * repaint on every finger movement on a phone (and over some phones' canvas
+ * limit), which looked like "Use anyway" doing nothing.
+ */
+const WORKING_SIDE = 2000;
+
 export function DocumentMasker({ file, onDone, onCancel, busy = false }: DocumentMaskerProps) {
   const { t } = useTranslation('ds');
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const boxRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
   const [masks, setMasks] = useState<Mask[]>([]);
   const [drawing, setDrawing] = useState<Mask | null>(null);
@@ -59,6 +68,8 @@ export function DocumentMasker({ file, onDone, onCancel, busy = false }: Documen
     image.onload = () => {
       imageRef.current = image;
       setReady(true);
+      // Opened from a notice further up the screen: make sure she sees it.
+      requestAnimationFrame(() => boxRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
     };
     image.onerror = () => setError(t('masker.cannotOpen'));
     image.src = url;
@@ -70,11 +81,14 @@ export function DocumentMasker({ file, onDone, onCancel, busy = false }: Documen
     const canvas = canvasRef.current;
     const image = imageRef.current;
     if (!canvas || !image || !ready) return;
-    canvas.width = image.naturalWidth;
-    canvas.height = image.naturalHeight;
+    const scale = Math.min(1, WORKING_SIDE / Math.max(image.naturalWidth, image.naturalHeight));
+    const width = Math.max(1, Math.round(image.naturalWidth * scale));
+    const height = Math.max(1, Math.round(image.naturalHeight * scale));
+    if (canvas.width !== width) canvas.width = width;
+    if (canvas.height !== height) canvas.height = height;
     const context = canvas.getContext('2d');
     if (!context) return;
-    context.drawImage(image, 0, 0);
+    context.drawImage(image, 0, 0, width, height);
     context.fillStyle = '#111111';
     for (const mask of [...masks, ...(drawing ? [drawing] : [])]) {
       context.fillRect(mask.x, mask.y, mask.width, mask.height);
@@ -147,7 +161,7 @@ export function DocumentMasker({ file, onDone, onCancel, busy = false }: Documen
   }
 
   return (
-    <div className="space-y-3" data-testid="document-masker">
+    <div ref={boxRef} className="scroll-mt-4 space-y-3" data-testid="document-masker">
       <p className="text-sm font-semibold text-text-primary">{t('masker.title')}</p>
       <p className="text-xs leading-relaxed text-text-secondary">{t('masker.instruction')}</p>
 
@@ -196,7 +210,7 @@ export function DocumentMasker({ file, onDone, onCancel, busy = false }: Documen
       </div>
 
       <div className="flex gap-3">
-        <Button variant="secondary" fullWidth disabled={busy} onClick={onCancel}>
+        <Button variant="secondary" fullWidth disabled={busy} onClick={onCancel} data-testid="masker-cancel">
           {t('common.cancel')}
         </Button>
         {/* Usable with no masks drawn: covering the number is hers to decide,

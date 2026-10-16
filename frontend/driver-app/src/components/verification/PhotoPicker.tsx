@@ -25,6 +25,7 @@ export function PhotoPicker({
   disabled,
   testId,
   expectFace,
+  cameraOnly,
 }: {
   file: File | null;
   /** warnings: what the check noticed and she sent anyway; empty when nothing. */
@@ -33,6 +34,8 @@ export function PhotoPicker({
   testId?: string;
   /** A face should be on it - an ID card's photo. */
   expectFace?: boolean;
+  /** A live photo with the camera only - no file from the gallery or a download (her ID). */
+  cameraOnly?: boolean;
 }) {
   const { t } = useTranslation();
   const camera = useRef<HTMLInputElement>(null);
@@ -72,7 +75,11 @@ export function PhotoPicker({
   return (
     <div className="space-y-2" data-testid={testId}>
       <input ref={camera} type="file" accept="image/*" capture="environment" className="hidden" onChange={picked} />
-      <input ref={files} type="file" accept="image/*,.pdf" className="hidden" onChange={picked} data-testid={testId ? `${testId}-input` : undefined} />
+      {cameraOnly ? (
+        <input ref={files} type="file" accept="image/*" capture="environment" className="hidden" onChange={picked} data-testid={testId ? `${testId}-input` : undefined} />
+      ) : (
+        <input ref={files} type="file" accept="image/*,.pdf" className="hidden" onChange={picked} data-testid={testId ? `${testId}-input` : undefined} />
+      )}
 
       {shown ? (
         <div className="flex items-center gap-3 rounded-card border border-border bg-surface p-2">
@@ -95,25 +102,29 @@ export function PhotoPicker({
             >
               <Camera className="h-5 w-5" aria-hidden="true" />
             </button>
-            <button
-              type="button"
-              aria-label={t('verify.doc.chooseFile')}
-              className="rounded-full p-2 text-primary"
-              disabled={disabled || checking}
-              onClick={() => files.current?.click()}
-            >
-              <Upload className="h-5 w-5" aria-hidden="true" />
-            </button>
+            {!cameraOnly && (
+              <button
+                type="button"
+                aria-label={t('verify.doc.chooseFile')}
+                className="rounded-full p-2 text-primary"
+                disabled={disabled || checking}
+                onClick={() => files.current?.click()}
+              >
+                <Upload className="h-5 w-5" aria-hidden="true" />
+              </button>
+            )}
           </span>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-2">
-          <Button size="md" icon={<Camera className="h-4 w-4" />} disabled={disabled || checking} onClick={() => camera.current?.click()}>
+        <div className={cameraOnly ? 'grid gap-2' : 'grid grid-cols-2 gap-2'}>
+          <Button size="md" icon={<Camera className="h-4 w-4" />} disabled={disabled || checking} onClick={() => camera.current?.click()} data-testid={testId ? `${testId}-camera` : undefined}>
             {t('verify.doc.takePhoto')}
           </Button>
-          <Button size="md" variant="secondary" icon={<Upload className="h-4 w-4" />} disabled={disabled || checking} onClick={() => files.current?.click()}>
-            {t('verify.doc.chooseFile')}
-          </Button>
+          {!cameraOnly && (
+            <Button size="md" variant="secondary" icon={<Upload className="h-4 w-4" />} disabled={disabled || checking} onClick={() => files.current?.click()}>
+              {t('verify.doc.chooseFile')}
+            </Button>
+          )}
         </div>
       )}
 

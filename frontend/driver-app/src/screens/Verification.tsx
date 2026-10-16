@@ -851,6 +851,7 @@ function IdBody({ onSent }: { onSent: () => void }) {
               disabled={uploading}
               testId="id-photo"
               expectFace
+              cameraOnly
               onPick={(file, warnings) => {
                 setIdWarnings(warnings);
                 if (file.type.startsWith('image/')) setMasking(file);
