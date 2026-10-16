@@ -949,6 +949,7 @@
   .timeline li.pending::before { background: var(--line); }
   .timeline .t { color: var(--muted); font-size: 12px; }
   .contact-list { list-style: none; margin: 0; padding: 0; }
+  .gov-steps { margin: 6px 0 10px; padding-left: 20px; display: grid; gap: 6px; font-size: 13px; line-height: 1.5; }
   .sos-steps ol { margin: 0; padding-left: 20px; display: grid; gap: 14px; }
   .sos-steps ol > li { font-size: 13px; line-height: 1.5; }
   .sos-steps ol > li p { margin: 4px 0 0; }
@@ -5530,7 +5531,14 @@ function paintIdentityStep(body, v, step, after) {
  */
 const GOV_LINKS = {
   DRIVING_LICENCE: { url: 'https://sarathi.parivahan.gov.in/sarathiservice/stateSelection.do', label: 'Open Sarathi (licence record)', where: 'Sarathi licence record',
-    how: 'Choose Telangana. On the Telangana page open the Others menu (top bar), then DL Search. It first asks for your own mobile number and an OTP (not hers); then enter the licence number and date of birth below. Check the name, validity and vehicle classes it shows. If Sarathi does not load, use the mParivahan app: DL Dashboard, then the licence number.' },
+    how: 'Telangana Sarathi asks for your own mobile number and an OTP before any search - not hers.',
+    steps: [
+      'Choose <b>Telangana</b>. Enter <b>your own</b> mobile number and the captcha, then the OTP sent to you.',
+      '<b>Is it real and hers?</b> Top bar: <b>Others</b> &rarr; <b>DL Search</b>. Enter the licence number and date of birth below. It shows only the name, licence number and father\'s name: check the name and number match her licence.',
+      '<b>Is it valid, and for a bike?</b> Back on the Telangana page: the <b>DL Extract</b> icon (second row, first on the left). Same licence number and date of birth. It lists each <b>class of vehicle</b> with its <b>valid-till date</b>: a bike needs <b>MCWG</b> (it may read MCWOG or 2W) and a date in the future. Type the class below.',
+      'Sarathi not loading, or no OTP within a minute? Use the <b>mParivahan</b> app: <b>DL Dashboard</b> &rarr; licence number. It shows validity and classes too. If she has the licence in <b>DigiLocker</b>, a shared copy is the strongest proof.',
+      'Only the name could be confirmed? Check the validity and class on her licence photo, choose Found, and tick <b>Read from her licence photo</b> below.',
+    ] },
   VEHICLE_RC: { url: 'https://vahan.parivahan.gov.in/vahanservice/vahan/ui/statevalidation/homepage.xhtml', label: 'Open Vahan (vehicle record)', where: 'Vahan vehicle record - or the mParivahan app, RC details',
     how: 'Vahan is often slow. If it does not load in a minute, use the mParivahan app: RC Dashboard, then the vehicle number below.' },
 };
@@ -5546,6 +5554,7 @@ function govPanel(type, v, doc) {
       <div class="rv-checks-h">Step 1 · Check the government record (free)</div>
       <a class="btn btn-primary btn-sm" href="${escValue(link.url)}" target="_blank" rel="noopener noreferrer">${esc(link.label)} ↗</a>
       <p class="subtle">${esc(link.how)}</p>
+      ${link.steps ? `<ol class="gov-steps">${link.steps.map((x) => `<li>${x}</li>`).join('')}</ol>` : ''}
       ${rc ? copyRow('Vehicle number', doc.documentNumber) : copyRow('Licence number', doc.documentNumber) + copyRow('Date of birth', ddmmyyyy(v.dateOfBirth))}
       <div class="gov-result" role="radiogroup" aria-label="What the record shows">
         <label class="rv-check"><input type="radio" name="govResult" value="FOUND"><span>Found in the ${esc(link.where)}, and it matches${rc ? '' : ' her name'}</span></label>
@@ -5557,7 +5566,8 @@ function govPanel(type, v, doc) {
              <label class="field"><span>Insurance valid till (record)</span><input type="date" data-g="insurance"></label>
              <label class="field"><span>PUC valid till (record) - files her PUC</span><input type="date" data-g="puc" min="${todayInIndia()}"></label>
              <small class="subtle">No valid PUC on the record? Leave it empty: she will be asked to get one and upload it.</small>`
-          : `<label class="field"><span>Class of vehicle shown</span><input data-g="cls" maxlength="40" placeholder="e.g. MCWG, LMV"></label>`}
+          : `<label class="field"><span>Class of vehicle shown</span><input data-g="cls" maxlength="40" placeholder="e.g. MCWG, LMV"></label>
+             <label class="rv-check"><input type="checkbox" data-g-photo><span>Read from her licence photo: the record showed only her name, not the validity or class</span></label>`}
       </div>
     </div>`;
 }
@@ -5571,7 +5581,8 @@ function govSummary(body, type) {
     return ['Vahan: found', g('owner') && 'owner ' + g('owner'), g('insurance') && 'insurance till ' + g('insurance'),
       g('puc') ? 'PUC till ' + g('puc') : 'no valid PUC shown'].filter(Boolean).join(', ');
   }
-  return ['Sarathi: found', g('cls') && 'class ' + g('cls')].filter(Boolean).join(', ');
+  const photo = body.querySelector('[data-g-photo]');
+  return ['Sarathi: found', g('cls') && 'class ' + g('cls'), photo && photo.checked && 'validity and class read from her licence photo'].filter(Boolean).join(', ');
 }
 
 function paintDocStep(body, v, step, after) {
