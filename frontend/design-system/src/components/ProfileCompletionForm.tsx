@@ -66,11 +66,28 @@ export function ProfileCompletionForm({
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+  const form = useRef<HTMLFormElement>(null);
 
   const nameProblem = values.name.trim() ? null : t('profileForm.nameRequired');
   const dobProblem = dateOfBirthProblem(values.dateOfBirth);
   const mailProblem = emailProblem(values.email);
   const photoOnFile = hasPhoto || preview !== null;
+  /** What still needs her, in the order she meets it on the form - for the line by the button. */
+  const problems = [!photoOnFile, nameProblem, dobProblem, mailProblem, !extraFieldsValid].filter(Boolean).length;
+
+  /** To the first thing marked wrong, in the form's own order, and focus on it - not a message out of view. */
+  function showFirstProblem() {
+    // Two frames: the errors render first, then the form can be searched for them.
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const first = form.current?.querySelector<HTMLElement>('[data-invalid="true"], [aria-invalid="true"]');
+      if (!first) return;
+      first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const target = first.matches('input, button, select, textarea')
+        ? first
+        : first.querySelector<HTMLElement>('input:not([type="hidden"]):not(.hidden), button');
+      target?.focus({ preventScroll: true });
+    }));
+  }
 
   async function choosePhoto(file: File | undefined) {
     if (!file) return;
@@ -98,11 +115,11 @@ export function ProfileCompletionForm({
     setTouched(true);
     setError(null);
     onAttemptSubmit?.();
-    if (!photoOnFile) {
-      setPhotoError(t('profileForm.photoRequired'));
+    if (!photoOnFile) setPhotoError(t('profileForm.photoRequired'));
+    if (!photoOnFile || nameProblem || dobProblem || mailProblem || !extraFieldsValid) {
+      showFirstProblem();
       return;
     }
-    if (nameProblem || dobProblem || mailProblem || !extraFieldsValid) return;
     setSaving(true);
     try {
       await onSubmit({ name: values.name.trim(), dateOfBirth: values.dateOfBirth, email: values.email.trim() });
@@ -114,8 +131,8 @@ export function ProfileCompletionForm({
   }
 
   return (
-    <form onSubmit={submit} className="space-y-4" noValidate data-testid="profile-completion-form">
-      <div className="flex flex-col items-center gap-2">
+    <form ref={form} onSubmit={submit} className="space-y-4" noValidate data-testid="profile-completion-form">
+      <div className="flex flex-col items-center gap-2" data-invalid={touched && !photoOnFile ? 'true' : undefined} data-testid="profile-photo-block">
         <Avatar url={preview ?? photoUrl} name={values.name} size="xl" />
         <input
           ref={fileInput}
@@ -137,7 +154,7 @@ export function ProfileCompletionForm({
           {uploading ? t('profileForm.uploading') : photoOnFile ? t('profileForm.changePhoto') : t('profileForm.addPhoto')}
         </Button>
         <p className="text-center text-xs text-text-secondary">{photoReason}</p>
-        {photoError && <p className="text-center text-sm text-danger">{photoError}</p>}
+        {photoError && <p className="text-center text-sm text-danger" role="alert" data-testid="photo-error">{photoError}</p>}
       </div>
 
       <TextField
@@ -177,6 +194,16 @@ export function ProfileCompletionForm({
         </p>
       )}
       <p className="text-xs text-text-secondary">{t('profileForm.ageNote')}</p>
+      {touched && problems > 0 && (
+        <button
+          type="button"
+          onClick={showFirstProblem}
+          className="w-full rounded-input bg-accent-red-tint px-3 py-2 text-left text-sm font-medium text-danger"
+          data-testid="profile-fix-above"
+        >
+          {t('profileForm.fixAbove', { count: problems })}
+        </button>
+      )}
       {error && <p className="text-sm text-danger" role="alert">{error}</p>}
       <Button type="submit" fullWidth disabled={saving || uploading}>
         {saving ? t('common.saving') : submitLabel}

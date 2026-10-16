@@ -35,6 +35,8 @@ export function CompleteProfile() {
    * without a consent record, so this is the ask, not the enforcement.
    */
   const [consent, setConsent] = useState(false);
+  /** She pressed Continue at least once: from then on the Terms box says if it is not ticked. */
+  const [attempted, setAttempted] = useState(false);
   /** A friend's code, from her invite link or typed in. Offered only while the server says she can still use one. */
   const [referralCode, setReferralCode] = useState(pendingReferralCode());
   const [canUseReferral, setCanUseReferral] = useState(false);
@@ -81,7 +83,7 @@ export function CompleteProfile() {
       {profile && (
         <ProfileCompletionForm
           extraFieldsValid={consent}
-          extraFieldsProblem={ds('consent.required')}
+          onAttemptSubmit={() => setAttempted(true)}
           initial={{ name: profile.name ?? '', dateOfBirth: profile.dateOfBirth ?? '', email: profile.email ?? '' }}
           photoUrl={profile.profilePhotoUrl}
           hasPhoto={profile.hasProfilePhoto}
@@ -133,6 +135,7 @@ export function CompleteProfile() {
           <ConsentCheckbox
             checked={consent}
             onChange={setConsent}
+            error={attempted && !consent ? ds('consent.required') : null}
             onOpenTerms={() => openLegalDocument('/terms')}
             onOpenPrivacy={() => openLegalDocument('/privacy')}
           />

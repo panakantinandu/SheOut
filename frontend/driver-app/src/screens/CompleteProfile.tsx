@@ -94,7 +94,6 @@ export function CompleteProfile() {
           photoReason={t('profile.photoReason')}
           submitLabel={t('common.continue')}
           extraFieldsValid={vehicle.registration.trim().length > 0 && consent}
-          extraFieldsProblem={vehicle.registration.trim().length === 0 ? null : ds('consent.required')}
           onAttemptSubmit={() => setShowVehicleErrors(true)}
           onUploadPhoto={async (file) => {
             try {
@@ -143,6 +142,7 @@ export function CompleteProfile() {
           <ConsentCheckbox
             checked={consent}
             onChange={setConsent}
+            error={showVehicleErrors && !consent ? ds('consent.required') : null}
             onOpenTerms={() => openLegalDocument('/terms')}
             onOpenPrivacy={() => openLegalDocument('/privacy')}
           />

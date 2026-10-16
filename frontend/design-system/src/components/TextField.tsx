@@ -33,6 +33,8 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
           <input
             ref={ref}
             id={inputId}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error && inputId ? `${inputId}-error` : undefined}
             className={cn(
               'h-full flex-1 bg-transparent text-base text-text-primary outline-none placeholder:text-text-secondary',
               className
@@ -40,7 +42,7 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
             {...props}
           />
         </span>
-        {error && <span className="mt-1 block text-xs text-danger">{error}</span>}
+        {error && <span id={inputId ? `${inputId}-error` : undefined} className="mt-1 block text-xs text-danger">{error}</span>}
       </label>
     );
   }

@@ -8,6 +8,8 @@ export interface ConsentCheckboxProps {
   onOpenTerms: () => void;
   onOpenPrivacy: () => void;
   className?: string;
+  /** Shown under the box in the danger colour once she has tried to continue without ticking it. */
+  error?: string | null;
 }
 
 /**
@@ -27,22 +29,26 @@ export interface ConsentCheckboxProps {
  * The whole row is the target, not the 20px box: this is the last thing
  * between her and the app, and a miss here reads as the app ignoring her.
  */
-export function ConsentCheckbox({ checked, onChange, onOpenTerms, onOpenPrivacy, className }: ConsentCheckboxProps) {
+export function ConsentCheckbox({ checked, onChange, onOpenTerms, onOpenPrivacy, className, error }: ConsentCheckboxProps) {
   const { t } = useTranslation('ds');
+  const invalid = Boolean(error) && !checked;
   return (
+    <div className={className}>
     <label
       className={cn(
         'flex cursor-pointer items-start gap-3 rounded-card border p-3 transition-colors',
-        checked ? 'border-primary bg-primary-light/50' : 'border-border bg-surface',
-        className
+        checked ? 'border-primary bg-primary-light/50' : invalid ? 'border-danger bg-surface' : 'border-border bg-surface'
       )}
       data-testid="consent-row"
+      data-invalid={invalid ? 'true' : undefined}
     >
       <input
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
         className="sr-only"
+        aria-invalid={invalid ? true : undefined}
+        aria-describedby={invalid ? 'consent-error' : undefined}
         data-testid="consent-checkbox"
       />
       <span
@@ -86,5 +92,11 @@ export function ConsentCheckbox({ checked, onChange, onOpenTerms, onOpenPrivacy,
       </span>
       <span className="sr-only">{t('consent.checkboxAria')}</span>
     </label>
+    {invalid && (
+      <p id="consent-error" className="mt-1 px-1 text-sm text-danger" role="alert" data-testid="consent-error">
+        {error}
+      </p>
+    )}
+    </div>
   );
 }

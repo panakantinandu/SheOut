@@ -245,6 +245,8 @@
     }
   },
   "profileForm": {
+    "fixAbove_one": "One thing above needs fixing - tap to go to it.",
+    "fixAbove_other": "{{count}} things above need fixing - tap to go to the first.",
     "nameRequired": "Enter your name.",
     "choosePhoto": "Choose a photo.",
     "uploadError": "Could not upload that photo. Please try again.",
